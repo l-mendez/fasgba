@@ -1,0 +1,122 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export interface Database {
+  public: {
+    Tables: {
+      users: {
+        Row: {
+          id: number
+          auth_id: string | null
+          name: string
+          surname: string
+          birth_date: string
+          birth_gender: string
+          email: string
+          profile_picture: string | null
+          biography: string | null
+          club_id: number | null
+          page_admin: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          auth_id?: string | null
+          name: string
+          surname: string
+          birth_date: string
+          birth_gender: string
+          email: string
+          profile_picture?: string | null
+          biography?: string | null
+          club_id?: number | null
+          page_admin?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          auth_id?: string | null
+          name?: string
+          surname?: string
+          birth_date?: string
+          birth_gender?: string
+          email?: string
+          profile_picture?: string | null
+          biography?: string | null
+          club_id?: number | null
+          page_admin?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      clubs: {
+        Row: {
+          id: number
+          name: string
+          address: string | null
+          telephone: string | null
+          mail: string | null
+          schedule: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          name: string
+          address?: string | null
+          telephone?: string | null
+          mail?: string | null
+          schedule?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          name?: string
+          address?: string | null
+          telephone?: string | null
+          mail?: string | null
+          schedule?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      elohistory: {
+        Row: {
+          id: number
+          user_id: number
+          elo: number
+          recorded_at: string
+        }
+        Insert: {
+          id?: number
+          user_id: number
+          elo: number
+          recorded_at?: string
+        }
+        Update: {
+          id?: number
+          user_id?: number
+          elo?: number
+          recorded_at?: string
+        }
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+  }
+} 
