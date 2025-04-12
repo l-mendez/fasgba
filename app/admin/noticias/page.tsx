@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { supabase, supabaseAdmin } from "@/lib/supabaseClient"
 
 interface News {
   id: number
@@ -52,55 +51,81 @@ interface News {
   updated_at: string
 }
 
-type DatabaseNews = {
-  id: number
-  title: string
-  date: string
-  image: string | null
-  extract: string
-  text: string
-  tags: string[]
-  club_id: number | null
-  club: {
-    id: number
-    name: string
-  } | null
-  created_by_user_id: number | null
-  created_by_user: {
-    id: number
-    name: string
-    surname: string
-    email: string
-    profile_picture: string | null
-  } | null
-  created_at: string
-  updated_at: string
-}
-
-type SupabaseNews = {
-  id: any
-  title: any
-  date: any
-  image: any
-  extract: any
-  text: any
-  tags: any
-  club_id: any
-  club: {
-    id: any
-    name: any
-  } | null
-  created_by_user_id: any
-  created_by_user: {
-    id: any
-    name: any
-    surname: any
-    email: any
-    profile_picture: any
-  } | null
-  created_at: any
-  updated_at: any
-}
+// Mock data for news
+const mockNews: News[] = [
+  {
+    id: 1,
+    title: "Campeonato Nacional de Ajedrez 2023",
+    date: "2023-12-15",
+    image: "https://images.unsplash.com/photo-1580549181132-72d10d1dd0a7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
+    extract: "El Campeonato Nacional de Ajedrez 2023 se celebrará en Buenos Aires del 15 al 22 de diciembre.",
+    text: "El Campeonato Nacional de Ajedrez 2023 se celebrará en Buenos Aires del 15 al 22 de diciembre. Este evento contará con la participación de los mejores ajedrecistas del país y ofrecerá premios en efectivo por un total de $500,000. Las inscripciones ya están abiertas y se pueden realizar a través de la página web de la Federación Argentina de Ajedrez.",
+    tags: ["torneo", "nacional", "2023"],
+    club_id: 1,
+    club: {
+      id: 1,
+      name: "Club de Ajedrez Buenos Aires"
+    },
+    created_by_user_id: 1,
+    created_by_user: {
+      id: 1,
+      name: "Juan",
+      surname: "Pérez",
+      email: "juan.perez@example.com",
+      profile_picture: "https://i.pravatar.cc/150?img=1"
+    },
+    created_at: "2023-11-01T10:00:00Z",
+    updated_at: "2023-11-01T10:00:00Z"
+  },
+  {
+    id: 2,
+    title: "Nueva sede para el Club de Ajedrez La Plata",
+    date: "2023-11-20",
+    image: "https://images.unsplash.com/photo-1511512578047-dfb367046420?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
+    extract: "El Club de Ajedrez La Plata inaugurará su nueva sede el próximo 20 de noviembre.",
+    text: "El Club de Ajedrez La Plata inaugurará su nueva sede el próximo 20 de noviembre. La nueva ubicación cuenta con un espacio de 500 metros cuadrados, salas de entrenamiento, biblioteca y un café. Este proyecto fue posible gracias al apoyo de los socios y patrocinadores del club.",
+    tags: ["club", "inauguración", "la plata"],
+    club_id: 2,
+    club: {
+      id: 2,
+      name: "Club de Ajedrez La Plata"
+    },
+    created_by_user_id: 2,
+    created_by_user: {
+      id: 2,
+      name: "María",
+      surname: "González",
+      email: "maria.gonzalez@example.com",
+      profile_picture: "https://i.pravatar.cc/150?img=5"
+    },
+    created_at: "2023-10-15T14:30:00Z",
+    updated_at: "2023-10-15T14:30:00Z"
+  },
+  {
+    id: 3,
+    title: "Entrevista con el Gran Maestro Carlos Rodríguez",
+    date: "2023-11-10",
+    image: "https://images.unsplash.com/photo-1579547945413-497e1b99dac0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
+    extract: "Entrevista exclusiva con el Gran Maestro Carlos Rodríguez sobre su carrera y sus planes para el futuro.",
+    text: "En esta entrevista exclusiva, el Gran Maestro Carlos Rodríguez nos habla sobre su carrera en el ajedrez, sus mayores logros y sus planes para el futuro. Rodríguez, quien se convirtió en Gran Maestro a los 22 años, ha representado a Argentina en numerosas olimpiadas y ha ganado múltiples torneos internacionales. Actualmente está preparándose para el próximo Campeonato Nacional y tiene planes de abrir una academia de ajedrez en Buenos Aires.",
+    tags: ["entrevista", "gran maestro", "carlos rodríguez"],
+    club_id: 3,
+    club: {
+      id: 3,
+      name: "Club de Ajedrez Rosario"
+    },
+    created_by_user_id: 1,
+    created_by_user: {
+      id: 1,
+      name: "Juan",
+      surname: "Pérez",
+      email: "juan.perez@example.com",
+      profile_picture: "https://i.pravatar.cc/150?img=1"
+    },
+    created_at: "2023-10-05T09:15:00Z",
+    updated_at: "2023-10-05T09:15:00Z"
+  }
+]
 
 export default function AdminNoticiasPage() {
   const [news, setNews] = useState<News[]>([])
@@ -115,53 +140,11 @@ export default function AdminNoticiasPage() {
       setIsLoading(true)
       setError(null)
       
-      const { data, error } = await supabase
-        .from('news')
-        .select(`
-          id,
-          title,
-          date,
-          image,
-          extract,
-          text,
-          tags,
-          club_id,
-          club:clubs(id, name),
-          created_by_user_id,
-          created_by_user:users(id, name, surname, email, profile_picture),
-          created_at,
-          updated_at
-        `)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-
-      const typedData = ((data || []) as unknown as SupabaseNews[]).map(item => ({
-        id: Number(item.id),
-        title: String(item.title),
-        date: String(item.date),
-        image: item.image as string | null,
-        extract: String(item.extract),
-        text: String(item.text),
-        tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
-        club_id: item.club_id ? Number(item.club_id) : null,
-        club: item.club ? {
-          id: Number(item.club.id),
-          name: String(item.club.name)
-        } : null,
-        created_by_user_id: item.created_by_user_id ? Number(item.created_by_user_id) : null,
-        created_by_user: item.created_by_user ? {
-          id: Number(item.created_by_user.id),
-          name: String(item.created_by_user.name),
-          surname: String(item.created_by_user.surname),
-          email: String(item.created_by_user.email),
-          profile_picture: item.created_by_user.profile_picture as string | null
-        } : null,
-        created_at: String(item.created_at),
-        updated_at: String(item.updated_at)
-      })) as News[]
-
-      setNews(typedData)
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Use mock data instead of fetching from Supabase
+      setNews(mockNews)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar las noticias")
     } finally {
@@ -179,38 +162,13 @@ export default function AdminNoticiasPage() {
     try {
       console.log(`Attempting to delete news with ID: ${newsToDelete}`)
       
-      // First, check if the news exists
-      const { data: existingNews, error: fetchError } = await supabase
-        .from('news')
-        .select('id')
-        .eq('id', newsToDelete)
-        .single()
-        
-      if (fetchError) {
-        console.error('Error checking if news exists:', fetchError)
-        throw fetchError
-      }
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500))
       
-      if (!existingNews) {
-        console.error(`News with ID ${newsToDelete} not found`)
-        throw new Error(`La noticia con ID ${newsToDelete} no existe`)
-      }
-      
-      // Use supabaseAdmin to bypass Row Level Security
-      const { error: deleteError } = await supabaseAdmin
-        .from('news')
-        .delete()
-        .eq('id', newsToDelete)
-
-      if (deleteError) {
-        console.error('Error deleting news:', deleteError)
-        throw deleteError
-      }
+      // Update the local state by filtering out the deleted news
+      setNews(prevNews => prevNews.filter(item => item.id !== newsToDelete))
       
       console.log(`Successfully deleted news with ID: ${newsToDelete}`)
-      
-      // Refresh news data after successful deletion
-      await fetchNews()
       
       setShowDeleteDialog(false)
       setNewsToDelete(null)
@@ -252,124 +210,113 @@ export default function AdminNoticiasPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-50 text-red-500 p-4 rounded-md mb-6">
-          {error}
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-terracotta"></div>
         </div>
-      )}
-
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Título</TableHead>
-              <TableHead>Club</TableHead>
-              <TableHead>Autor</TableHead>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="w-[100px]">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
+      ) : error ? (
+        <div className="bg-red-50 p-4 rounded-md text-red-800">
+          <p>{error}</p>
+        </div>
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  Cargando...
-                </TableCell>
+                <TableHead>Título</TableHead>
+                <TableHead>Club</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Creado por</TableHead>
+                <TableHead>Acciones</TableHead>
               </TableRow>
-            ) : filteredNews.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  No se encontraron noticias
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredNews.map((news) => (
-                <TableRow key={news.id}>
-                  <TableCell className="font-medium">{news.title}</TableCell>
-                  <TableCell>{news.club?.name || "Sin club"}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={news.created_by_user?.profile_picture || undefined} />
-                        <AvatarFallback>
-                          {news.created_by_user?.name?.[0]}{news.created_by_user?.surname?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>
-                        {news.created_by_user?.name} {news.created_by_user?.surname}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{new Date(news.date).toLocaleDateString('es-AR')}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      Publicada
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/noticias/${news.id}/editar`} className="cursor-pointer">
-                            <Edit className="mr-2 h-4 w-4" />
-                            <span>Editar</span>
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/noticias/${news.id}`} className="cursor-pointer">
-                            <Eye className="mr-2 h-4 w-4" />
-                            <span>Ver</span>
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="cursor-pointer text-destructive focus:text-destructive"
-                          onClick={() => {
-                            setNewsToDelete(news.id)
-                            setShowDeleteDialog(true)
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          <span>Eliminar</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+            </TableHeader>
+            <TableBody>
+              {filteredNews.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-6">
+                    No se encontraron noticias
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ) : (
+                filteredNews.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.title}</TableCell>
+                    <TableCell>{item.club?.name || "Sin club"}</TableCell>
+                    <TableCell>{new Date(item.date).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={item.created_by_user?.profile_picture || ""} />
+                          <AvatarFallback>
+                            {item.created_by_user
+                              ? `${item.created_by_user.name.charAt(0)}${item.created_by_user.surname.charAt(0)}`
+                              : "??"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>
+                          {item.created_by_user
+                            ? `${item.created_by_user.name} ${item.created_by_user.surname}`
+                            : "Desconocido"}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Abrir menú</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/noticias/${item.id}`} className="flex items-center">
+                              <Eye className="mr-2 h-4 w-4" />
+                              Ver
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/noticias/${item.id}/editar`} className="flex items-center">
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-600 focus:text-red-600"
+                            onClick={() => {
+                              setNewsToDelete(item.id)
+                              setShowDeleteDialog(true)
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Eliminar noticia</DialogTitle>
+            <DialogTitle>¿Estás seguro?</DialogTitle>
             <DialogDescription>
-              ¿Estás seguro de que deseas eliminar esta noticia? Esta acción no se puede deshacer.
+              Esta acción no se puede deshacer. Se eliminará permanentemente la noticia.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowDeleteDialog(false)
-                setNewsToDelete(null)
-              }}
-            >
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Cancelar
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-            >
+            <Button variant="destructive" onClick={handleDelete}>
               Eliminar
             </Button>
           </DialogFooter>

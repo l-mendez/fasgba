@@ -1,9 +1,6 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
-import type { Database } from "@/lib/database.types"
-import { getSupabaseClient, ensureSession } from "@/lib/supabase-client"
 
 // Definir el tipo para el club
 export type Club = {
@@ -39,104 +36,51 @@ export function ClubContextProvider({ children }: { children: ReactNode }) {
   const [clubesAdministrados, setClubesAdministrados] = useState<Club[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Inicializar cliente de Supabase
-  const supabase = getSupabaseClient()
-
   // Cargar clubes administrados al iniciar
   useEffect(() => {
     async function loadClubs() {
       try {
         setIsLoading(true)
         
-        // Get the current user's auth ID
-        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        // Use mock data instead of fetching from Supabase
+        const mockClubs: Club[] = [
+          { id: 1, nombre: "Club de Ajedrez 1", logo: "/images/club1.png" },
+          { id: 2, nombre: "Club de Ajedrez 2", logo: "/images/club2.png" },
+        ]
         
-        if (userError || !user) {
-          console.error("Error getting user:", userError)
-          return
-        }
+        setClubesAdministrados(mockClubs)
         
-        // Get the user's ID from the users table
-        const { data: userData, error: userDataError } = await supabase
-          .from("users")
-          .select("id")
-          .eq("auth_id", user.id)
-          .single()
-        
-        if (userDataError || !userData) {
-          console.error("Error getting user data:", userDataError)
-          return
-        }
-        
-        // Get the clubs that the user is an admin for
-        const { data: clubAdmins, error: clubAdminsError } = await supabase
-          .from("club_admins")
-          .select("club_id")
-          .eq("user_id", userData.id)
-        
-        if (clubAdminsError) {
-          console.error("Error getting club admins:", clubAdminsError)
-          return
-        }
-        
-        if (!clubAdmins || clubAdmins.length === 0) {
-          console.error("User is not a club admin")
-          return
-        }
-        
-        // Get the club details
-        const clubIds = clubAdmins.map(ca => ca.club_id)
-        const { data: clubs, error: clubsError } = await supabase
-          .from("clubs")
-          .select("id, name")
-          .in("id", clubIds)
-        
-        if (clubsError) {
-          console.error("Error getting clubs:", clubsError)
-          return
-        }
-        
-        // Transform the clubs data to match the Club type
-        const formattedClubs: Club[] = clubs.map(club => ({
-          id: club.id,
-          nombre: club.name,
-          logo: "/placeholder.svg?height=40&width=40" // Default logo
-        }))
-        
-        setClubesAdministrados(formattedClubs)
-        
-        // Seleccionamos el primer club por defecto
-        if (formattedClubs.length > 0 && !selectedClub) {
-          setSelectedClub(formattedClubs[0])
+        // Set the first club as selected by default
+        if (mockClubs.length > 0) {
+          setSelectedClub(mockClubs[0])
         }
       } catch (error) {
-        console.error('Error cargando clubes administrados:', error)
+        console.error("Error loading clubs:", error)
       } finally {
         setIsLoading(false)
       }
     }
-
+    
     loadClubs()
-  }, [supabase, selectedClub])
+  }, [])
 
-  // Cambiar el club seleccionado
   const handleClubChange = (clubId: string) => {
-    const club = clubesAdministrados.find((c) => c.id.toString() === clubId)
+    const club = clubesAdministrados.find(c => c.id === parseInt(clubId))
     if (club) {
       setSelectedClub(club)
     }
   }
 
+  const value = {
+    selectedClub,
+    setSelectedClub,
+    clubesAdministrados,
+    handleClubChange,
+    isLoading
+  }
+
   return (
-    <ClubContext.Provider
-      value={{
-        selectedClub,
-        setSelectedClub,
-        clubesAdministrados,
-        handleClubChange,
-        isLoading
-      }}
-    >
+    <ClubContext.Provider value={value}>
       {children}
     </ClubContext.Provider>
   )

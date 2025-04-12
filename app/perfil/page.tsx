@@ -1,9 +1,5 @@
 import Link from "next/link"
-import { Calendar, ChevronLeft, MapPin, Medal, Trophy, User, Edit } from "lucide-react"
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
-import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
-import type { Database } from "@/lib/database.types"
+import { Calendar, ChevronLeft, MapPin, Medal, Trophy, User, Edit, CastleIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
@@ -17,9 +13,9 @@ import { Badge } from "@/components/ui/badge"
 function formatDate(dateString: string) {
   const date = new Date(dateString);
   return date.toLocaleDateString('es-AR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
   });
 }
 
@@ -37,230 +33,315 @@ function calculateAge(birthDateString: string) {
   return age;
 }
 
-export default async function PerfilPage() {
-  // Initialize Supabase client
-  const supabase = createServerComponentClient<Database>({ 
-    cookies
-  })
+export default function PerfilPage() {
+  // Mock user data
+  const user = {
+    id: "1",
+    name: "Juan",
+    surname: "Pérez",
+    birth_date: "1990-05-15",
+    birth_gender: "M",
+    email: "juan.perez@example.com",
+    profile_picture: "/avatars/01.png",
+    biography: "Jugador de ajedrez desde los 8 años. Campeón nacional juvenil en 2010.",
+    club_id: "1",
+    club: {
+      id: "1",
+      name: "Club de Ajedrez Buenos Aires"
+    },
+    page_admin: false,
+    elo: 1850,
+    eloHistory: [
+      { id: "1", user_id: "1", elo: 1850, recorded_at: "2023-12-15T10:30:00Z" },
+      { id: "2", user_id: "1", elo: 1820, recorded_at: "2023-11-10T14:45:00Z" },
+      { id: "3", user_id: "1", elo: 1780, recorded_at: "2023-10-05T09:15:00Z" },
+      { id: "4", user_id: "1", elo: 1750, recorded_at: "2023-09-20T16:20:00Z" },
+      { id: "5", user_id: "1", elo: 1720, recorded_at: "2023-08-12T11:30:00Z" }
+    ]
+  };
 
-  try {
-    // Get the current user's session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-
-    if (sessionError) {
-      console.error('Error getting session:', sessionError.message);
-      redirect('/login');
+  // Mock tournaments data
+  const tournaments = [
+    {
+      id: "1",
+      name: "Torneo Nacional 2023",
+      start_date: "2023-12-01",
+      end_date: "2023-12-10",
+      place: "Buenos Aires",
+      position: 3,
+      score: 6.5,
+      total_players: 32
+    },
+    {
+      id: "2",
+      name: "Torneo Metropolitano",
+      start_date: "2023-10-15",
+      end_date: "2023-10-22",
+      place: "La Plata",
+      position: 1,
+      score: 7.0,
+      total_players: 24
+    },
+    {
+      id: "3",
+      name: "Torneo Provincial",
+      start_date: "2023-08-05",
+      end_date: "2023-08-12",
+      place: "Mar del Plata",
+      position: 2,
+      score: 6.0,
+      total_players: 18
     }
+  ];
 
-    // Redirect to login if not authenticated
-    if (!session) {
-      redirect('/login');
+  // Mock achievements data
+  const achievements = [
+    {
+      id: "1",
+      title: "Campeón Metropolitano 2023",
+      description: "Primer lugar en el Torneo Metropolitano de Ajedrez",
+      date: "2023-10-22",
+      icon: "trophy"
+    },
+    {
+      id: "2",
+      title: "ELO 1800+",
+      description: "Alcanzó un ELO de 1800 puntos",
+      date: "2023-11-15",
+      icon: "medal"
+    },
+    {
+      id: "3",
+      title: "10 Torneos Completados",
+      description: "Participó en 10 torneos oficiales",
+      date: "2023-09-30",
+      icon: "trophy"
     }
+  ];
 
-    // Fetch user data
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select(`
-        id,
-        name,
-        surname,
-        birth_date,
-        birth_gender,
-        email,
-        profile_picture,
-        biography,
-        club_id,
-        club:clubs!club_id(id, name),
-        page_admin
-      `)
-      .eq('auth_id', session.user.id)
-      .single();
-
-    if (userError) {
-      console.error('Error fetching user data:', userError.message);
-      return <div>Error loading profile</div>;
-    }
-
-    // Fetch ELO history
-    const { data: eloData, error: eloError } = await supabase
-      .from('elohistory')
-      .select('id, user_id, elo, recorded_at')
-      .eq('user_id', userData?.id)
-      .order('recorded_at', { ascending: false })
-      .limit(10);
-
-    if (eloError) {
-      console.error('Error fetching ELO history:', eloError.message);
-    }
-
-    // Prepare user data for display
-    const user = {
-      ...userData,
-      elo: eloData && eloData.length > 0 ? eloData[0].elo : 1500,
-      eloHistory: eloData || [],
-      age: calculateAge(userData.birth_date),
-      fullName: `${userData.name} ${userData.surname}`,
-      club: userData.club as { id: number; name: string } | null
-    };
-
-    return (
-      <div className="flex min-h-screen flex-col">
-        <SiteHeader />
-        <main className="flex-1">
-          <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-            <div className="container px-4 md:px-6">
-              <div className="grid gap-8 lg:grid-cols-[1fr_2fr] lg:gap-12">
-                {/* Columna izquierda - Información del perfil */}
-                <div className="space-y-6">
-                  <Card className="border-amber/20">
-                    <CardHeader className="pb-2 flex flex-col items-center text-center">
-                      <div className="relative mb-2">
-                        <Avatar className="h-24 w-24 border-2 border-amber">
-                          <AvatarImage src={user.profile_picture || "/placeholder.svg?height=200&width=200"} alt={user.fullName} />
-                          <AvatarFallback className="bg-amber/10 text-amber-dark text-2xl">
-                            {user.name.charAt(0)}{user.surname.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="absolute bottom-0 right-0 h-8 w-8 rounded-full border-amber bg-background text-amber-dark hover:bg-amber/10"
-                          asChild
-                        >
-                          <Link href="/configuracion">
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Editar perfil</span>
-                          </Link>
-                        </Button>
+  return (
+    <div className="flex min-h-screen flex-col">
+      <SiteHeader />
+      <main className="flex-1">
+        <div className="container py-6">
+          <div className="mb-6">
+            <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Volver al inicio
+            </Link>
+          </div>
+          
+          <div className="grid gap-6 md:grid-cols-[1fr_300px]">
+            <div className="space-y-6">
+              {/* Profile Header */}
+              <Card>
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <Avatar className="h-16 w-16">
+                        <AvatarImage src={user.profile_picture} alt={`${user.name} ${user.surname}`} />
+                        <AvatarFallback>{user.name.charAt(0)}{user.surname.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <CardTitle className="text-2xl">{user.name} {user.surname}</CardTitle>
+                        <CardDescription className="flex items-center">
+                          <MapPin className="mr-1 h-4 w-4" />
+                          {user.club.name}
+                        </CardDescription>
                       </div>
-                      <CardTitle className="text-2xl text-terracotta">
-                        {user.fullName}
-                      </CardTitle>
-                      <CardDescription>
-                        {user.club?.name ?? "Sin club"}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="text-center">
-                      <div className="inline-flex items-center justify-center rounded-full bg-amber/10 px-3 py-1 text-sm font-medium text-amber-dark">
-                        ELO: {user.elo}
-                      </div>
-                      <p className="mt-4 text-sm text-muted-foreground">{user.biography || "Sin biografía"}</p>
-                    </CardContent>
-                  </Card>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      <Edit className="mr-2 h-4 w-4" />
+                      Editar perfil
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <p className="text-sm font-medium">ELO</p>
+                      <p className="text-2xl font-bold text-terracotta">{user.elo}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Edad</p>
+                      <p className="text-2xl font-bold">{calculateAge(user.birth_date)} años</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Email</p>
+                      <p className="text-2xl font-bold">{user.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Fecha de nacimiento</p>
+                      <p className="text-2xl font-bold">{formatDate(user.birth_date)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-                  <Card className="border-amber/20">
-                    <CardHeader>
-                      <CardTitle className="text-terracotta">Información personal</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <User className="h-5 w-5 text-amber" />
-                        <div>
-                          <p className="text-sm font-medium">Edad</p>
-                          <p className="text-sm text-muted-foreground">{user.age} años</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Calendar className="h-5 w-5 text-amber" />
-                        <div>
-                          <p className="text-sm font-medium">Fecha de nacimiento</p>
-                          <p className="text-sm text-muted-foreground">{formatDate(user.birth_date)}</p>
-                        </div>
-                      </div>
-                      {user.club && (
-                        <div className="flex items-center gap-3">
-                          <MapPin className="h-5 w-5 text-amber" />
-                          <div>
-                            <p className="text-sm font-medium">Club</p>
-                            <p className="text-sm text-muted-foreground">
-                              <Link 
-                                href={`/clubes/${user.club.id}`}
-                                className="text-amber-dark hover:underline"
-                              >
-                                {user.club.name}
-                              </Link>
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                    <CardFooter>
-                      <Button asChild variant="outline" className="w-full border-amber text-amber-dark hover:bg-amber/10">
-                        <Link href="/configuracion">Editar información</Link>
-                      </Button>
-                    </CardFooter>
-                  </Card>
-
-                  {/* ELO History Card */}
-                  {user.eloHistory.length > 0 && (
-                    <Card className="border-amber/20">
+              {/* Tabs */}
+              <Tabs defaultValue="tournaments" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="tournaments">Torneos</TabsTrigger>
+                  <TabsTrigger value="achievements">Logros</TabsTrigger>
+                  <TabsTrigger value="elo">ELO</TabsTrigger>
+                </TabsList>
+                
+                {/* Tournaments Tab */}
+                <TabsContent value="tournaments" className="space-y-4">
+                  {tournaments.map((tournament) => (
+                    <Card key={tournament.id}>
                       <CardHeader>
-                        <CardTitle className="text-terracotta">Historial de ELO</CardTitle>
+                        <CardTitle>{tournament.name}</CardTitle>
+                        <CardDescription className="flex items-center">
+                          <Calendar className="mr-1 h-4 w-4" />
+                          {formatDate(tournament.start_date)} - {formatDate(tournament.end_date)}
+                        </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-2">
-                          {user.eloHistory.map((entry, idx) => {
-                            const prevElo = idx < user.eloHistory.length - 1 ? user.eloHistory[idx + 1].elo : entry.elo;
-                            const change = entry.elo - prevElo;
-                            return (
-                              <div key={entry.id} className="flex items-center justify-between text-sm">
-                                <span>{formatDate(entry.recorded_at)}</span>
-                                <div className="flex items-center gap-2">
-                                  <span>{entry.elo}</span>
-                                  {change !== 0 && (
-                                    <span className={change > 0 ? "text-green-500" : "text-red-500"}>
-                                      {change > 0 ? `+${change}` : change}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
+                        <div className="grid gap-4 md:grid-cols-3">
+                          <div>
+                            <p className="text-sm font-medium">Posición</p>
+                            <p className="text-xl font-bold">{tournament.position}° de {tournament.total_players}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Puntuación</p>
+                            <p className="text-xl font-bold">{tournament.score}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Lugar</p>
+                            <p className="text-xl font-bold">{tournament.place}</p>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
-                  )}
-                </div>
-
-                {/* Columna derecha - Pestañas con más información */}
-                <div>
-                  <Tabs defaultValue="actividad" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="actividad">Actividad reciente</TabsTrigger>
-                      <TabsTrigger value="partidas">Partidas</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="actividad" className="space-y-4 pt-4">
-                      <Card className="border-amber/20">
-                        <CardHeader>
-                          <CardTitle className="text-terracotta">Actividad reciente</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-sm text-muted-foreground">No hay actividad reciente para mostrar.</p>
-                        </CardContent>
-                      </Card>
-                    </TabsContent>
-                    <TabsContent value="partidas" className="space-y-4 pt-4">
-                      <Card className="border-amber/20">
-                        <CardHeader>
-                          <CardTitle className="text-terracotta">Partidas recientes</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-sm text-muted-foreground">No hay partidas recientes para mostrar.</p>
-                        </CardContent>
-                      </Card>
-                    </TabsContent>
-                  </Tabs>
-                </div>
-              </div>
+                  ))}
+                </TabsContent>
+                
+                {/* Achievements Tab */}
+                <TabsContent value="achievements" className="space-y-4">
+                  {achievements.map((achievement) => (
+                    <Card key={achievement.id}>
+                      <CardHeader>
+                        <div className="flex items-center">
+                          {achievement.icon === "trophy" ? (
+                            <Trophy className="mr-2 h-5 w-5 text-amber" />
+                          ) : (
+                            <Medal className="mr-2 h-5 w-5 text-amber" />
+                          )}
+                          <CardTitle>{achievement.title}</CardTitle>
+                        </div>
+                        <CardDescription>{formatDate(achievement.date)}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p>{achievement.description}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </TabsContent>
+                
+                {/* ELO Tab */}
+                <TabsContent value="elo" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Historial de ELO</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-[300px] w-full">
+                        <div className="relative h-full w-full">
+                          {/* Y-axis labels */}
+                          <div className="absolute left-0 top-0 flex h-full flex-col justify-between text-xs text-muted-foreground">
+                            <span>2000</span>
+                            <span>1900</span>
+                            <span>1800</span>
+                            <span>1700</span>
+                            <span>1600</span>
+                          </div>
+                          
+                          {/* Chart area */}
+                          <div className="absolute left-8 right-0 top-0 h-full">
+                            {/* Grid lines */}
+                            <div className="absolute inset-0 grid grid-rows-4">
+                              <div className="border-b border-dashed border-muted-foreground/20"></div>
+                              <div className="border-b border-dashed border-muted-foreground/20"></div>
+                              <div className="border-b border-dashed border-muted-foreground/20"></div>
+                              <div className="border-b border-dashed border-muted-foreground/20"></div>
+                            </div>
+                            
+                            {/* Data points and line */}
+                            <div className="relative h-full overflow-hidden">
+                              {/* Line connecting points */}
+                              <svg className="absolute inset-0 h-full w-full">
+                                <polyline
+                                  points={user.eloHistory
+                                    .map((record, index) => {
+                                      const x = (index / (user.eloHistory.length - 1)) * 100;
+                                      const y = 100 - ((record.elo - 1600) / 400) * 100;
+                                      return `${x}%,${y}%`;
+                                    })
+                                    .join(' ')}
+                                  fill="none"
+                                  stroke="hsl(var(--terracotta))"
+                                  strokeWidth="2"
+                                />
+                              </svg>
+                              
+                              {/* Data points */}
+                              {user.eloHistory.map((record, index) => {
+                                const x = (index / (user.eloHistory.length - 1)) * 100;
+                                // Ensure y is within bounds (0-100%)
+                                const y = Math.min(100, Math.max(0, 100 - ((record.elo - 1600) / 400) * 100));
+                                return (
+                                  <div
+                                    key={record.id}
+                                    className="absolute flex flex-col items-center"
+                                    style={{ left: `${x}%`, top: `${y}%` }}
+                                  >
+                                    <div className="h-3 w-3 rounded-full bg-terracotta"></div>
+                                    <div className="mt-1 text-xs font-medium">{record.elo}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {formatDate(record.recorded_at)}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </div>
-          </section>
-        </main>
-        <SiteFooter />
-      </div>
-    );
-  } catch (error) {
-    console.error('Error in PerfilPage:', error);
-    return <div>Error loading profile</div>;
-  }
+            
+            {/* Sidebar */}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Biografía</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p>{user.biography}</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Club</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center space-x-2">
+                    <CastleIcon className="h-5 w-5 text-terracotta" />
+                    <span className="font-medium">{user.club.name}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </main>
+      <SiteFooter />
+    </div>
+  )
 }
 

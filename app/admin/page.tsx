@@ -1,250 +1,177 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowUpRight, BarChart3, Calendar, FileText, Home, MessageSquare, Plus, TrendingUp, Users } from "lucide-react"
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { ArrowUpRight, BarChart3, Calendar, FileText, Home, MessageSquare, Plus, Trophy, TrendingUp, Users } from "lucide-react"
+import { useState, useEffect } from "react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { AuthGuard } from "../components/auth-guard"
-import { getSupabaseClient, ensureSession } from "@/lib/supabase-client"
 
 export default function AdminDashboard() {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(true)
-  const supabase = getSupabaseClient()
+  const [stats, setStats] = useState({
+    usuarios: 0,
+    usuariosNuevos: 0,
+    noticias: 0,
+    torneos: 0,
+    torneosActivos: 0,
+  })
 
+  // Simular carga de estadísticas
   useEffect(() => {
-    async function checkSession() {
-      try {
-        const hasSession = await ensureSession()
-        if (!hasSession) {
-          router.push('/login?redirectedFrom=/admin')
-        }
-      } catch (error) {
-        console.error('Error checking session:', error)
-        router.push('/login?redirectedFrom=/admin')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    
-    checkSession()
-  }, [router])
-
-  // Datos de ejemplo para las estadísticas
-  const stats = [
-    {
-      title: "Total Usuarios",
-      value: "1,234",
-      change: "+12%",
-      changeType: "increase",
-      icon: <Users className="h-5 w-5" />,
-    },
-    {
-      title: "Clubes Afiliados",
-      value: "15",
-      change: "+2",
-      changeType: "increase",
-      icon: <Home className="h-5 w-5" />,
-    },
-    {
-      title: "Torneos Activos",
-      value: "8",
-      change: "+3",
-      changeType: "increase",
-      icon: <Calendar className="h-5 w-5" />,
-    },
-    {
-      title: "Comentarios",
-      value: "342",
-      change: "+24%",
-      changeType: "increase",
-      icon: <MessageSquare className="h-5 w-5" />,
-    },
-  ]
-
-  // Datos de ejemplo para actividad reciente
-  const recentActivity = [
-    {
-      type: "noticia",
-      title: "Nueva entidad se suma a FASGBA: Club Patriotas de Punta Alta",
-      date: "Hace 2 horas",
-      user: "Carlos Martínez",
-    },
-    {
-      type: "torneo",
-      title: "Actualización: Gran Prix FASGBA 2025",
-      date: "Hace 5 horas",
-      user: "Laura Gómez",
-    },
-    {
-      type: "usuario",
-      title: "Nuevo usuario registrado: Martín López",
-      date: "Hace 1 día",
-      user: "Sistema",
-    },
-    {
-      type: "comentario",
-      title: "Comentario eliminado en 'Ajedrez por la memoria verdad y justicia'",
-      date: "Hace 1 día",
-      user: "Roberto Sánchez",
-    },
-    {
-      type: "club",
-      title: "Actualización de datos: Club de Ajedrez Bahía Blanca",
-      date: "Hace 2 días",
-      user: "Carlos Martínez",
-    },
-  ]
-
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Cargando...</div>
-  }
+    setStats({
+      usuarios: Math.floor(Math.random() * 100) + 50,
+      usuariosNuevos: Math.floor(Math.random() * 10) + 1,
+      noticias: Math.floor(Math.random() * 30) + 5,
+      torneos: Math.floor(Math.random() * 20) + 3,
+      torneosActivos: Math.floor(Math.random() * 5) + 1,
+    })
+  }, [])
 
   return (
-    <AuthGuard requiredRole="admin">
-      <div className="container mx-auto py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Panel de Administración</h1>
-          <div className="flex space-x-2">
-            <Button variant="outline" size="sm">
-              <FileText className="mr-2 h-4 w-4" />
-              Generar Reporte
-            </Button>
-            <Button size="sm">
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        <div className="flex items-center space-x-2">
+          <Button asChild>
+            <Link href="/admin/usuarios/nuevo">
               <Plus className="mr-2 h-4 w-4" />
-              Nueva Entidad
-            </Button>
-          </div>
+              Nuevo usuario
+            </Link>
+          </Button>
         </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <Card key={index}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.title}
-                </CardTitle>
-                <div className="text-muted-foreground">
-                  {stat.icon}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className={`text-xs ${stat.changeType === "increase" ? "text-green-500" : "text-red-500"}`}>
-                  {stat.change}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Recent Activity */}
-        <Card className="mb-8">
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Usuarios totales</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.usuarios}</div>
+            <p className="text-xs text-muted-foreground">
+              +{stats.usuariosNuevos} nuevos este mes
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Noticias publicadas</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.noticias}</div>
+            <p className="text-xs text-muted-foreground">
+              +2 esta semana
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Torneos activos</CardTitle>
+            <Trophy className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.torneosActivos}</div>
+            <p className="text-xs text-muted-foreground">
+              de {stats.torneos} totales
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Crecimiento</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">+12.5%</div>
+            <p className="text-xs text-muted-foreground">
+              +2.1% desde el mes pasado
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Actividad Reciente</CardTitle>
+            <CardTitle>Actividad reciente</CardTitle>
             <CardDescription>
               Últimas acciones realizadas en el sistema
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="p-2 bg-muted rounded-full">
-                      {activity.type === "noticia" ? (
-                        <FileText className="h-4 w-4" />
-                      ) : (
-                        <Calendar className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium">{activity.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {activity.date} • {activity.user}
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <ArrowUpRight className="h-4 w-4" />
-                  </Button>
+            <div className="space-y-8">
+              {/* Activity items would go here */}
+              <div className="flex items-center">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    Nuevo usuario registrado
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Hace 2 horas
+                  </p>
                 </div>
-              ))}
+              </div>
+              <div className="flex items-center">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    Nueva noticia publicada
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Hace 3 horas
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    Nuevo torneo creado
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Hace 5 horas
+                  </p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Gestión de Usuarios</CardTitle>
-              <CardDescription>
-                Administra usuarios, roles y permisos
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Button className="w-full justify-start" variant="outline">
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle>Acciones rápidas</CardTitle>
+            <CardDescription>
+              Accede rápidamente a las funciones más utilizadas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              <Button asChild variant="outline" className="w-full justify-start">
+                <Link href="/admin/usuarios/nuevo">
                   <Users className="mr-2 h-4 w-4" />
-                  Ver Todos los Usuarios
-                </Button>
-                <Button className="w-full justify-start" variant="outline">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Crear Nuevo Usuario
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Gestión de Clubes</CardTitle>
-              <CardDescription>
-                Administra clubes y sus configuraciones
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Button className="w-full justify-start" variant="outline">
+                  Nuevo usuario
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full justify-start">
+                <Link href="/admin/noticias/nueva">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Nueva noticia
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full justify-start">
+                <Link href="/admin/torneos/nuevo">
+                  <Trophy className="mr-2 h-4 w-4" />
+                  Nuevo torneo
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full justify-start">
+                <Link href="/admin/clubes/nuevo">
                   <Home className="mr-2 h-4 w-4" />
-                  Ver Todos los Clubes
-                </Button>
-                <Button className="w-full justify-start" variant="outline">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Registrar Nuevo Club
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Estadísticas</CardTitle>
-              <CardDescription>
-                Visualiza datos y métricas del sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Button className="w-full justify-start" variant="outline">
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  Ver Estadísticas Generales
-                </Button>
-                <Button className="w-full justify-start" variant="outline">
-                  <TrendingUp className="mr-2 h-4 w-4" />
-                  Reportes Personalizados
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  Nuevo club
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </AuthGuard>
+    </div>
   )
 }
 

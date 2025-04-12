@@ -24,7 +24,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { supabase } from "@/lib/supabaseClient"
 
 interface Club {
   id: number
@@ -37,6 +36,60 @@ interface Club {
   estado?: string
 }
 
+// Mock data for clubs
+const mockClubs: Club[] = [
+  {
+    id: 1,
+    name: "Club de Ajedrez Buenos Aires",
+    address: "Av. Rivadavia 1234, Buenos Aires",
+    telephone: "(11) 4567-8901",
+    mail: "info@cabuenosaires.com.ar",
+    schedule: "Lunes a Viernes: 10:00 - 22:00, Sábados: 10:00 - 18:00",
+    delegado: "Juan Pérez",
+    estado: "activo"
+  },
+  {
+    id: 2,
+    name: "Club de Ajedrez La Plata",
+    address: "Calle 7 entre 45 y 46, La Plata",
+    telephone: "(221) 123-4567",
+    mail: "contacto@caplata.org",
+    schedule: "Martes a Domingo: 14:00 - 23:00",
+    delegado: "María González",
+    estado: "activo"
+  },
+  {
+    id: 3,
+    name: "Club de Ajedrez Rosario",
+    address: "San Martín 789, Rosario",
+    telephone: "(341) 987-6543",
+    mail: "info@carosario.com",
+    schedule: "Lunes a Sábado: 09:00 - 21:00",
+    delegado: "Carlos Rodríguez",
+    estado: "activo"
+  },
+  {
+    id: 4,
+    name: "Club de Ajedrez Mar del Plata",
+    address: "Av. Colón 2345, Mar del Plata",
+    telephone: "(223) 456-7890",
+    mail: "info@camardelplata.org",
+    schedule: "Miércoles a Domingo: 15:00 - 22:00",
+    delegado: "Ana Martínez",
+    estado: "activo"
+  },
+  {
+    id: 5,
+    name: "Club de Ajedrez Quilmes",
+    address: "Mitre 567, Quilmes",
+    telephone: "(11) 2345-6789",
+    mail: "contacto@caquilmes.com",
+    schedule: "Lunes a Viernes: 16:00 - 23:00",
+    delegado: "Lucas Fernández",
+    estado: "inactivo"
+  }
+]
+
 export default function AdminClubesPage() {
   const [clubes, setClubes] = useState<Club[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -48,30 +101,15 @@ export default function AdminClubesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch clubs from the database
+  // Fetch clubs from mock data
   useEffect(() => {
     async function fetchClubs() {
       try {
-        const { data, error } = await supabase
-          .from('clubs')
-          .select('*')
-          .order('name')
-
-        if (error) throw error
-
-        // Transform the data to match our UI format
-        const transformedClubs: Club[] = (data || []).map((club: any) => ({
-          id: club.id,
-          name: club.name,
-          address: club.address,
-          telephone: club.telephone,
-          mail: club.mail,
-          schedule: club.schedule,
-          delegado: "Por asignar", // This should come from club_admins table in a real implementation
-          estado: "activo" // This should come from a status field in the clubs table in a real implementation
-        }))
-
-        setClubes(transformedClubs)
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // Use mock data instead of fetching from Supabase
+        setClubes(mockClubs)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error al cargar los clubes")
       } finally {
@@ -94,14 +132,12 @@ export default function AdminClubesPage() {
     if (!clubToDelete) return
 
     try {
-      const { error } = await supabase
-        .from('clubs')
-        .delete()
-        .eq('id', clubToDelete)
-
-      if (error) throw error
-
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Update the local state by filtering out the deleted club
       setClubes(clubes.filter((club) => club.id !== clubToDelete))
+      
       setShowDeleteDialog(false)
       setClubToDelete(null)
     } catch (err) {
@@ -114,13 +150,16 @@ export default function AdminClubesPage() {
     if (!selectedClub) return
 
     try {
-      // Here you would typically update the club_admins table
-      // For now, we'll just update the local state
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Update the local state
       setClubes(clubes.map((club) => 
         club.id === selectedClub.id 
           ? { ...club, delegado: newDelegado } 
           : club
       ))
+      
       setShowChangeDelegadoDialog(false)
       setSelectedClub(null)
       setNewDelegado("")
@@ -130,11 +169,21 @@ export default function AdminClubesPage() {
   }
 
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Cargando...</div>
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-terracotta"></div>
+      </div>
+    )
   }
 
   if (error) {
-    return <div className="flex items-center justify-center min-h-screen text-red-500">{error}</div>
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="bg-red-50 p-4 rounded-md text-red-800">
+          <p>{error}</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -193,87 +242,95 @@ export default function AdminClubesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredClubes.map((club) => (
-              <TableRow key={club.id}>
-                <TableCell className="font-medium">{club.name}</TableCell>
-                <TableCell>{club.delegado}</TableCell>
-                <TableCell>
-                  <div className="flex flex-col">
-                    <span className="text-xs">{club.mail}</span>
-                    <span className="text-xs text-muted-foreground">{club.telephone}</span>
-                  </div>
-                </TableCell>
-                <TableCell>{club.schedule}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant={club.estado === "activo" ? "default" : "outline"}
-                    className={
-                      club.estado === "activo" ? "bg-green-500 hover:bg-green-500/80" : "text-muted-foreground"
-                    }
-                  >
-                    {club.estado === "activo" ? "Activo" : "Inactivo"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Abrir menú</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/clubes/${club.id}`}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          Ver detalles
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/clubes/${club.id}/editar`}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setSelectedClub(club)
-                          setNewDelegado(club.delegado || "")
-                          setShowChangeDelegadoDialog(true)
-                        }}
-                      >
-                        <User className="mr-2 h-4 w-4" />
-                        Cambiar delegado
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setClubToDelete(club.id)
-                          setShowDeleteDialog(true)
-                        }}
-                        className="text-red-500 focus:text-red-500"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+            {filteredClubes.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-6">
+                  No se encontraron clubes
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              filteredClubes.map((club) => (
+                <TableRow key={club.id}>
+                  <TableCell className="font-medium">{club.name}</TableCell>
+                  <TableCell>{club.delegado}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="text-xs">{club.mail}</span>
+                      <span className="text-xs text-muted-foreground">{club.telephone}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{club.schedule}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={club.estado === "activo" ? "default" : "outline"}
+                      className={
+                        club.estado === "activo" ? "bg-green-500 hover:bg-green-500/80" : "text-muted-foreground"
+                      }
+                    >
+                      {club.estado === "activo" ? "Activo" : "Inactivo"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Abrir menú</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/clubes/${club.id}`}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Ver detalles
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/clubes/${club.id}/editar`}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedClub(club)
+                            setNewDelegado(club.delegado || "")
+                            setShowChangeDelegadoDialog(true)
+                          }}
+                        >
+                          <User className="mr-2 h-4 w-4" />
+                          Cambiar delegado
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600"
+                          onClick={() => {
+                            setClubToDelete(club.id)
+                            setShowDeleteDialog(true)
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Eliminar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
 
-      {/* Diálogo de confirmación para eliminar club */}
+      {/* Dialog for deleting a club */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar eliminación</DialogTitle>
+            <DialogTitle>¿Estás seguro?</DialogTitle>
             <DialogDescription>
-              ¿Estás seguro de que deseas eliminar este club? Esta acción no se puede deshacer.
+              Esta acción no se puede deshacer. Se eliminará permanentemente el club.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -287,31 +344,29 @@ export default function AdminClubesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Diálogo para cambiar delegado */}
+      {/* Dialog for changing a club's delegate */}
       <Dialog open={showChangeDelegadoDialog} onOpenChange={setShowChangeDelegadoDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Cambiar delegado</DialogTitle>
-            <DialogDescription>Ingresa el nombre del nuevo delegado para {selectedClub?.name}.</DialogDescription>
+            <DialogDescription>
+              Asigna un nuevo delegado para el club {selectedClub?.name}.
+            </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="delegado" className="text-right text-sm font-medium">
-                Delegado
-              </label>
-              <Input
-                id="delegado"
-                value={newDelegado}
-                onChange={(e) => setNewDelegado(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
+          <div className="py-4">
+            <Input
+              placeholder="Nombre del nuevo delegado"
+              value={newDelegado}
+              onChange={(e) => setNewDelegado(e.target.value)}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowChangeDelegadoDialog(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleChangeDelegado}>Guardar cambios</Button>
+            <Button onClick={handleChangeDelegado}>
+              Guardar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

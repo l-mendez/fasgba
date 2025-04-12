@@ -7,7 +7,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-import { supabase } from "@/lib/supabaseClient"
 import { PlayerList } from "@/app/ranking/fasgba/components/PlayerList"
 
 // Function to get player category based on age and gender
@@ -48,21 +47,6 @@ function getPlayerTitle(elo: number, gender: string): string {
 }
 
 // Define interfaces for the data we're working with
-interface User {
-  id: number;
-  name: string;
-  surname: string;
-  birth_date: string;
-  birth_gender: string;
-  profile_picture: string | null;
-  club_id: number | null;
-  club: { id: number; name: string } | null;
-}
-
-interface EloData {
-  elo: number;
-}
-
 export interface Player {
   id: number;
   nombre: string;
@@ -73,70 +57,91 @@ export interface Player {
   edad: number;
 }
 
-// Fetch player data from the database
-async function getPlayers(): Promise<Player[]> {
-  // Get users with their club information
-  const { data, error: usersError } = await supabase
-    .from('users')
-    .select(`
-      id,
-      name,
-      surname,
-      birth_date,
-      birth_gender,
-      profile_picture,
-      club_id,
-      club:club_id(id, name)
-    `)
-    .order('id');
-
-  if (usersError) {
-    console.error("Error fetching users:", usersError);
-    return [];
+// Mock data for players
+const mockPlayers: Player[] = [
+  {
+    id: 1,
+    nombre: "Juan Pérez",
+    club: "Club de Ajedrez Buenos Aires",
+    elo: 2450,
+    categoria: "Absoluto",
+    titulo: "IM",
+    edad: 28
+  },
+  {
+    id: 2,
+    nombre: "María González",
+    club: "Club de Ajedrez La Plata",
+    elo: 2350,
+    categoria: "Femenino",
+    titulo: "WIM",
+    edad: 25
+  },
+  {
+    id: 3,
+    nombre: "Carlos Rodríguez",
+    club: "Club de Ajedrez Rosario",
+    elo: 2200,
+    categoria: "Absoluto",
+    titulo: "FM",
+    edad: 32
+  },
+  {
+    id: 4,
+    nombre: "Ana Martínez",
+    club: "Club de Ajedrez Mar del Plata",
+    elo: 2100,
+    categoria: "Femenino",
+    titulo: "WFM",
+    edad: 22
+  },
+  {
+    id: 5,
+    nombre: "Lucas Fernández",
+    club: "Club de Ajedrez Quilmes",
+    elo: 2000,
+    categoria: "Absoluto",
+    titulo: "",
+    edad: 19
+  },
+  {
+    id: 6,
+    nombre: "Sofía López",
+    club: "Club de Ajedrez San Isidro",
+    elo: 1950,
+    categoria: "Femenino",
+    titulo: "",
+    edad: 17
+  },
+  {
+    id: 7,
+    nombre: "Diego Sánchez",
+    club: "Club de Ajedrez Tigre",
+    elo: 1900,
+    categoria: "Sub-18",
+    titulo: "",
+    edad: 16
+  },
+  {
+    id: 8,
+    nombre: "Valentina Torres",
+    club: "Club de Ajedrez Vicente López",
+    elo: 1850,
+    categoria: "Sub-16",
+    titulo: "",
+    edad: 15
   }
+];
 
-  // Ensure the type is correct
-  const users = data as unknown as User[];
-
-  // Get the latest ELO rating for each user
-  const playerPromises = users.map(async (user) => {
-    const { data: eloData, error: eloError } = await supabase
-      .from('elohistory')
-      .select('elo')
-      .eq('user_id', user.id)
-      .order('recorded_at', { ascending: false })
-      .limit(1);
-
-    if (eloError) {
-      console.error(`Error fetching ELO for user ${user.id}:`, eloError);
-      return null;
-    }
-
-    const elo = eloData.length > 0 ? eloData[0].elo : 0;
-    const age = calculateAge(user.birth_date);
-    const category = getPlayerCategory(age, user.birth_gender);
-    const titulo = getPlayerTitle(elo, user.birth_gender);
-
-    return {
-      id: user.id,
-      nombre: `${user.name} ${user.surname}`,
-      club: user.club?.name || "Sin club",
-      elo: elo,
-      categoria: category,
-      titulo: titulo,
-      edad: age
-    };
-  });
-
-  // Wait for all promises to resolve
-  const players = (await Promise.all(playerPromises)).filter((player: Player | null): player is Player => player !== null);
-  
-  // Sort players by ELO (descending)
-  return players.sort((a: Player, b: Player) => b.elo - a.elo);
+// Get players from mock data
+async function getPlayers(): Promise<Player[]> {
+  // In a real implementation, this would fetch from a database
+  // For now, we'll just return the mock data
+  return mockPlayers;
 }
 
 export default async function RankingPage() {
-  // Fetch players data from database
+  // Get players from mock data
   let jugadores: Player[] = [];
   let errorMessage = "";
   

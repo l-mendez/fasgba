@@ -135,8 +135,9 @@ function NoticiaCard({ noticia }: NoticiaProps): ReactNode {
 }
 
 export default async function Home() {
+  const cookieStore = await cookies()
   const supabase = createServerComponentClient<Database>({ 
-    cookies
+    cookies: () => cookieStore
   })
 
   try {
