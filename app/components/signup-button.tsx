@@ -2,19 +2,20 @@
 
 import { AuthButton } from "./auth-button"
 
-export interface LoginButtonProps {
+export interface SignupButtonProps {
   email: string
   password: string
   className?: string
   children?: React.ReactNode
+  onSuccess?: () => boolean
 }
 
-export function LoginButton(props: LoginButtonProps) {
+export function SignupButton(props: SignupButtonProps) {
   return (
     <AuthButton
       {...props}
-      mode="signin"
-      children={props.children || "Iniciar Sesión"}
+      mode="signup"
+      children={props.children || "Registrarse"}
     />
   )
-} 
+}
