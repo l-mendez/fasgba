@@ -179,12 +179,12 @@ export default function ClubesPage() {
             </div>
 
             {loading ? (
-              <div className="flex justify-center items-center py-12">
+              <div className="flex justify-center items-center py-12 min-h-[400px]">
                 <Loader2 className="h-8 w-8 animate-spin text-terracotta" />
                 <span className="ml-2 text-muted-foreground">Cargando clubes...</span>
               </div>
             ) : clubs.length === 0 ? (
-              <div className="text-center py-12">
+              <div className="text-center py-12 min-h-[400px] flex flex-col justify-center">
                 <h3 className="text-lg font-semibold text-muted-foreground mb-2">
                   {searchTerm ? "No se encontraron clubes" : "No hay clubes disponibles"}
                 </h3>
@@ -195,14 +195,14 @@ export default function ClubesPage() {
                   <Button 
                     onClick={() => handleSearch("")} 
                     variant="outline" 
-                    className="mt-4"
+                    className="mt-4 mx-auto"
                   >
                     Ver todos los clubes
                   </Button>
                 )}
               </div>
             ) : (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 min-h-[400px] transition-opacity duration-200">
                 {clubs.map((club) => (
                   <Card key={club.id} className="flex flex-col group hover:border-amber transition-colors">
                     <CardHeader>
