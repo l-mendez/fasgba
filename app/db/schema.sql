@@ -76,13 +76,11 @@ CREATE TABLE news (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- 7️⃣ Tournaments Table
+-- 7️⃣ Tournaments Table (without direct date fields)
 CREATE TABLE tournaments (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT,
-    start_date TIMESTAMP NOT NULL,
-    end_date TIMESTAMP,
     time TEXT,
     place TEXT,
     location TEXT,
@@ -94,7 +92,14 @@ CREATE TABLE tournaments (
     image TEXT
 );
 
--- 8️⃣ Regulations Table
+-- 8️⃣ Tournament Dates Table (Many-to-Many relationship)
+CREATE TABLE tournamentdates (
+    id SERIAL PRIMARY KEY,
+    tournament_id INT REFERENCES tournaments(id) ON DELETE CASCADE,
+    event_date DATE NOT NULL
+);
+
+-- 9️⃣ Regulations Table
 CREATE TABLE regulations (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
@@ -102,12 +107,11 @@ CREATE TABLE regulations (
     download_link TEXT
 );
 
--- 9️⃣ Courses Table
+-- 🔟 Courses Table
 CREATE TABLE courses (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT,
-    creator_ids INT[] REFERENCES users(id) ON DELETE SET NULL,
     start_date TIMESTAMP NOT NULL,
     end_date TIMESTAMP,
     schedule TEXT,
@@ -125,13 +129,24 @@ CREATE TABLE courses (
     cronogram TEXT
 );
 
+-- 11 Course Creators Table (Many-to-Many relationship)
+CREATE TABLE course_creators (
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    course_id INT REFERENCES courses(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, course_id)
+);
+
 -- 🔹 Indexes for Performance
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_club ON users(club_id);
 CREATE INDEX idx_news_date ON news(date);
 CREATE INDEX idx_news_club ON news(club_id);
 CREATE INDEX idx_news_created_by ON news(created_by_user_id);
-CREATE INDEX idx_tournaments_start_date ON tournaments(start_date);
+CREATE INDEX idx_tournaments_title ON tournaments(title);
+CREATE INDEX idx_tournamentdates_tournament_id ON tournamentdates(tournament_id);
+CREATE INDEX idx_tournamentdates_event_date ON tournamentdates(event_date);
+CREATE INDEX idx_course_creators_user_id ON course_creators(user_id);
+CREATE INDEX idx_course_creators_course_id ON course_creators(course_id);
 CREATE INDEX idx_elo_user ON elohistory(user_id);
 
 -- 🔒 Row Level Security Policies for News
@@ -231,4 +246,40 @@ CREATE POLICY "Allow users to update their own data or if admin" ON users
 
 -- Allow users to delete their own data or if they're an admin
 CREATE POLICY "Allow users to delete their own data or if admin" ON users
+    FOR DELETE USING (true);  -- More permissive for testing
+
+-- Enable RLS for tournaments table
+ALTER TABLE tournaments ENABLE ROW LEVEL SECURITY;
+
+-- Allow anyone to read tournaments
+CREATE POLICY "Allow public read access to tournaments" ON tournaments
+    FOR SELECT USING (true);
+
+-- Allow authenticated users to create tournaments
+CREATE POLICY "Allow authenticated users to create tournaments" ON tournaments
+    FOR INSERT WITH CHECK (true);  -- More permissive for testing
+
+-- Allow authenticated users to update tournaments
+CREATE POLICY "Allow authenticated users to update tournaments" ON tournaments
+    FOR UPDATE USING (true);  -- More permissive for testing
+
+-- Allow authenticated users to delete tournaments
+CREATE POLICY "Allow authenticated users to delete tournaments" ON tournaments
+    FOR DELETE USING (true);  -- More permissive for testing
+
+-- Enable RLS for tournamentdates table
+ALTER TABLE tournamentdates ENABLE ROW LEVEL SECURITY;
+
+-- Allow anyone to read tournament dates
+CREATE POLICY "Allow public read access to tournamentdates" ON tournamentdates
+    FOR SELECT USING (true);
+
+-- Allow authenticated users to manage tournament dates
+CREATE POLICY "Allow authenticated users to create tournamentdates" ON tournamentdates
+    FOR INSERT WITH CHECK (true);  -- More permissive for testing
+
+CREATE POLICY "Allow authenticated users to update tournamentdates" ON tournamentdates
+    FOR UPDATE USING (true);  -- More permissive for testing
+
+CREATE POLICY "Allow authenticated users to delete tournamentdates" ON tournamentdates
     FOR DELETE USING (true);  -- More permissive for testing
