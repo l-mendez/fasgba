@@ -1,24 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import type { Player } from "../page";
 
 interface PlayerListProps {
   players: Player[];
+  currentPage: number;
+  totalPages: number;
+  totalPlayers: number;
 }
 
-export function PlayerList({ players }: PlayerListProps) {
-  const [searchTerm, setSearchTerm] = useState("");
+export function PlayerList({ players, currentPage, totalPages, totalPlayers }: PlayerListProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
   
-  // Filter players based on search term
-  const filteredPlayers = players.filter((player) => 
-    player.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    player.club.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Update URL when search term changes
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (searchTerm) {
+      params.set('search', searchTerm);
+      params.set('page', '1'); // Reset to first page when searching
+    } else {
+      params.delete('search');
+    }
+    router.push(`?${params.toString()}`);
+  }, [searchTerm, router, searchParams]);
 
   // Get unique categories
   const categories = [...new Set(players.map(player => player.categoria))];
@@ -42,29 +55,65 @@ export function PlayerList({ players }: PlayerListProps) {
         <TabsList className="w-full mb-6 grid grid-cols-2 md:grid-cols-5">
           <TabsTrigger value="all">Todos</TabsTrigger>
           {categories.map((category) => (
-            <TabsTrigger key={category} value={category}>
+            <TabsTrigger key={`tab-${category}`} value={category}>
               {category}
             </TabsTrigger>
           ))}
         </TabsList>
         
         <TabsContent value="all" className="space-y-4">
-          <RankingTable players={filteredPlayers} />
+          <RankingTable players={players} currentPage={currentPage} />
         </TabsContent>
         
         {categories.map((category) => (
-          <TabsContent key={category} value={category} className="space-y-4">
+          <TabsContent key={`content-${category}`} value={category} className="space-y-4">
             <RankingTable 
-              players={filteredPlayers.filter(player => player.categoria === category)} 
+              players={players.filter(player => player.categoria === category)} 
+              currentPage={currentPage}
             />
           </TabsContent>
         ))}
       </Tabs>
+
+      <div className="mt-6 flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          Mostrando {players.length} de {totalPlayers} jugadores
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            disabled={currentPage === 1}
+            onClick={() => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.set('page', (currentPage - 1).toString());
+              router.push(`?${params.toString()}`);
+            }}
+          >
+            Anterior
+          </Button>
+          <span className="text-sm">
+            Página {currentPage} de {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            disabled={currentPage === totalPages}
+            onClick={() => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.set('page', (currentPage + 1).toString());
+              router.push(`?${params.toString()}`);
+            }}
+          >
+            Siguiente
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
 
-function RankingTable({ players }: { players: Player[] }) {
+function RankingTable({ players, currentPage }: { players: Player[]; currentPage: number }) {
+  const pageSize = 50; // This should match the pageSize in page.tsx
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -79,15 +128,17 @@ function RankingTable({ players }: { players: Player[] }) {
         </TableHeader>
         <TableBody>
           {players.length === 0 ? (
-            <TableRow>
+            <TableRow key="no-players">
               <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
                 No se encontraron jugadores
               </TableCell>
             </TableRow>
           ) : (
             players.map((player, index) => (
-              <TableRow key={player.id}>
-                <TableCell className="font-medium">{index + 1}</TableCell>
+              <TableRow key={`player-${player.id || index}`}>
+                <TableCell className="font-medium">
+                  {((currentPage - 1) * pageSize) + index + 1}
+                </TableCell>
                 <TableCell>
                   {player.titulo && (
                     <span className="mr-1 font-medium text-primary">{player.titulo}</span>

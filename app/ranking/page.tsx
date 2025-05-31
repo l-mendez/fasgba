@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Search } from "lucide-react"
 import Link from "next/link"
 
@@ -7,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-import { PlayerList } from "@/app/ranking/fasgba/components/PlayerList"
+import { PlayerList } from "@/app/ranking/components/PlayerList"
 
 // Function to get player category based on age and gender
 function getPlayerCategory(age: number, gender: string): string {
@@ -57,101 +58,65 @@ export interface Player {
   edad: number;
 }
 
-// Mock data for players
-const mockPlayers: Player[] = [
-  {
-    id: 1,
-    nombre: "Juan Pérez",
-    club: "Club de Ajedrez Buenos Aires",
-    elo: 2450,
-    categoria: "Absoluto",
-    titulo: "IM",
-    edad: 28
-  },
-  {
-    id: 2,
-    nombre: "María González",
-    club: "Club de Ajedrez La Plata",
-    elo: 2350,
-    categoria: "Femenino",
-    titulo: "WIM",
-    edad: 25
-  },
-  {
-    id: 3,
-    nombre: "Carlos Rodríguez",
-    club: "Club de Ajedrez Rosario",
-    elo: 2200,
-    categoria: "Absoluto",
-    titulo: "FM",
-    edad: 32
-  },
-  {
-    id: 4,
-    nombre: "Ana Martínez",
-    club: "Club de Ajedrez Mar del Plata",
-    elo: 2100,
-    categoria: "Femenino",
-    titulo: "WFM",
-    edad: 22
-  },
-  {
-    id: 5,
-    nombre: "Lucas Fernández",
-    club: "Club de Ajedrez Quilmes",
-    elo: 2000,
-    categoria: "Absoluto",
-    titulo: "",
-    edad: 19
-  },
-  {
-    id: 6,
-    nombre: "Sofía López",
-    club: "Club de Ajedrez San Isidro",
-    elo: 1950,
-    categoria: "Femenino",
-    titulo: "",
-    edad: 17
-  },
-  {
-    id: 7,
-    nombre: "Diego Sánchez",
-    club: "Club de Ajedrez Tigre",
-    elo: 1900,
-    categoria: "Sub-18",
-    titulo: "",
-    edad: 16
-  },
-  {
-    id: 8,
-    nombre: "Valentina Torres",
-    club: "Club de Ajedrez Vicente López",
-    elo: 1850,
-    categoria: "Sub-16",
-    titulo: "",
-    edad: 15
-  }
-];
-
-// Get players from mock data
-async function getPlayers(): Promise<Player[]> {
-  // In a real implementation, this would fetch from a database
-  // For now, we'll just return the mock data
-  return mockPlayers;
+interface ApiResponse {
+  players: Player[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
-export default async function RankingPage() {
-  // Get players from mock data
-  let jugadores: Player[] = [];
-  let errorMessage = "";
-  
-  try {
-    jugadores = await getPlayers();
-  } catch (error) {
-    console.error("Error fetching players:", error);
-    errorMessage = "Hubo un problema al cargar los datos del ranking. Por favor, intenta nuevamente más tarde.";
-  }
+// Get players from API
+async function getPlayers(page: number = 1, pageSize: number = 50, search: string = ''): Promise<ApiResponse> {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const searchParams = new URLSearchParams({
+    page: page.toString(),
+    pageSize: pageSize.toString(),
+    ...(search && { search })
+  });
 
+  const response = await fetch(
+    `${baseUrl}/api/data?${searchParams.toString()}`,
+    { 
+      cache: 'no-store',
+      next: { revalidate: 0 }
+    }
+  );
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch data: ${response.statusText}`);
+  }
+  
+  return response.json();
+}
+
+function LoadingState() {
+  return (
+    <div className="container px-4 md:px-6">
+      <div className="animate-pulse space-y-4">
+        <div className="h-10 bg-muted rounded-md w-full max-w-md mx-auto" />
+        <div className="h-96 bg-muted rounded-md w-full" />
+      </div>
+    </div>
+  );
+}
+
+function ErrorState({ message }: { message: string }) {
+  return (
+    <div className="container px-4 md:px-6">
+      <div className="rounded-md bg-red-50 p-6 text-center">
+        <h3 className="text-lg font-medium text-red-800 mb-2">Error de conexión</h3>
+        <p className="text-red-700">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+export default async function RankingPage({
+  searchParams,
+}: {
+  searchParams: { page?: string; search?: string };
+}) {
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
@@ -169,20 +134,37 @@ export default async function RankingPage() {
           </div>
         </section>
         <section className="w-full py-12 md:py-24 lg:py-32">
-          {errorMessage ? (
-            <div className="container px-4 md:px-6">
-              <div className="rounded-md bg-red-50 p-6 text-center">
-                <h3 className="text-lg font-medium text-red-800 mb-2">Error de conexión</h3>
-                <p className="text-red-700">{errorMessage}</p>
-              </div>
-            </div>
-          ) : (
-            <PlayerList players={jugadores} />
-          )}
+          <Suspense fallback={<LoadingState />}>
+            <RankingContent searchParams={searchParams} />
+          </Suspense>
         </section>
       </main>
       <SiteFooter />
     </div>
-  )
+  );
 }
 
+async function RankingContent({ 
+  searchParams,
+}: { 
+  searchParams: { page?: string; search?: string };
+}) {
+  // Await the searchParams before using them
+  const params = await Promise.resolve(searchParams);
+  const page = parseInt(params.page || '1');
+  const pageSize = 50;
+  const search = params.search || '';
+
+  try {
+    const data = await getPlayers(page, pageSize, search);
+    return <PlayerList 
+      players={data.players} 
+      currentPage={data.page}
+      totalPages={data.totalPages}
+      totalPlayers={data.total}
+    />;
+  } catch (error) {
+    console.error("Error fetching players:", error);
+    return <ErrorState message="Hubo un problema al cargar los datos del ranking. Por favor, intenta nuevamente más tarde." />;
+  }
+} 

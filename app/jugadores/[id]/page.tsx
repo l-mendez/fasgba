@@ -150,7 +150,7 @@ export default function JugadorPerfilPage({ params }: { params: { id: string } }
             <h1 className="text-2xl font-bold text-terracotta mb-4">Jugador no encontrado</h1>
             <p className="text-muted-foreground mb-6">El jugador que estás buscando no existe o ha sido eliminado.</p>
             <Button asChild className="bg-terracotta hover:bg-terracotta/90 text-white">
-              <Link href="/ranking/fasgba">Volver al ranking</Link>
+              <Link href="/ranking">Volver al ranking</Link>
             </Button>
           </div>
         </main>
@@ -171,7 +171,7 @@ export default function JugadorPerfilPage({ params }: { params: { id: string } }
               size="sm"
               className="mb-6 border-amber text-amber-dark hover:bg-amber/10"
             >
-              <Link href="/ranking/fasgba">
+              <Link href="/ranking">
                 <ChevronLeft className="mr-1 h-4 w-4" />
                 Volver al ranking
               </Link>
