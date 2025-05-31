@@ -1,5 +1,11 @@
-import { supabase } from "./supabaseClient"
+import { createClient } from '@supabase/supabase-js'
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+// Basic club information
 export interface Club {
   id: number
   name: string
@@ -9,37 +15,28 @@ export interface Club {
   schedule: string | null
 }
 
-export interface ClubWithStats {
-  id: number
-  name: string
-  address: string | null
-  telephone: string | null
-  mail: string | null
-  schedule: string | null
+// Club with additional statistics
+export interface ClubWithStats extends Club {
   memberCount: number
   adminCount: number
   followersCount: number
   newsCount: number
 }
 
-export interface ClubAdmin {
-  user_id: number
-  club_id: number
-  user_name: string
-  user_surname: string
-  user_email: string
-}
-
+// Club member information (now just from auth.users)
 export interface ClubMember {
-  id: number
-  name: string
-  surname: string
+  id: string // auth UUID
   email: string
-  profile_picture: string | null
-  biography: string | null
-  current_elo: number | null
+  // Additional profile info would come from user_metadata if needed
 }
 
+// Club admin information (now just from auth.users)
+export interface ClubAdmin {
+  id: string // auth UUID
+  email: string
+}
+
+// Club news information
 export interface ClubNews {
   id: number
   title: string
@@ -47,72 +44,89 @@ export interface ClubNews {
   image: string | null
   extract: string | null
   text: string
-  tags: string[] | null
-  created_by_user_id: number | null
+  tags: string[]
+  created_by_auth_id: string | null
   created_at: string
   updated_at: string
   author_name?: string
+  author_email?: string
 }
 
 /**
- * Gets all clubs
+ * Gets all clubs with optional filtering
  */
-export async function getAllClubs(): Promise<Club[]> {
-  const { data, error } = await supabase
-    .from('clubs')
-    .select('*')
-    .order('name')
+export async function getAllClubs(options: {
+  search?: string
+  hasContact?: boolean
+  includeStats?: boolean
+} = {}): Promise<Club[] | ClubWithStats[]> {
+  let query = supabase.from('clubs').select('*')
+
+  // Apply search filter
+  if (options.search) {
+    query = query.ilike('name', `%${options.search}%`)
+  }
+
+  // Apply contact filter
+  if (options.hasContact) {
+    query = query.not('mail', 'is', null).not('telephone', 'is', null)
+  }
+
+  const { data: clubs, error } = await query
 
   if (error) {
     console.error('Error fetching clubs:', error)
-    return []
+    throw new Error('Failed to fetch clubs')
   }
 
-  return data || []
+  if (!options.includeStats) {
+    return clubs || []
+  }
+
+  // Get additional statistics for each club
+  const clubsWithStats = await Promise.all(
+    (clubs || []).map(async (club): Promise<ClubWithStats> => {
+      const [memberCount, adminCount, followersCount, newsCount] = await Promise.all([
+        getClubMemberCount(club.id),
+        getClubAdminCount(club.id),
+        getClubFollowersCount(club.id),
+        getClubNewsCount(club.id)
+      ])
+
+      return {
+        ...club,
+        memberCount,
+        adminCount,
+        followersCount,
+        newsCount
+      }
+    })
+  )
+
+  return clubsWithStats
 }
 
 /**
- * Gets a specific club by ID
+ * Gets a club by ID
  */
-export async function getClubById(clubId: number): Promise<Club | null> {
-  const { data, error } = await supabase
+export async function getClubById(clubId: number, includeStats = false): Promise<Club | ClubWithStats | null> {
+  const { data: club, error } = await supabase
     .from('clubs')
     .select('*')
     .eq('id', clubId)
     .single()
 
   if (error) {
+    if (error.code === 'PGRST116') {
+      return null // Club not found
+    }
     console.error('Error fetching club:', error)
-    return null
+    throw new Error('Failed to fetch club')
   }
 
-  return data
-}
-
-/**
- * Gets a club by name
- */
-export async function getClubByName(clubName: string): Promise<Club | null> {
-  const { data, error } = await supabase
-    .from('clubs')
-    .select('*')
-    .eq('name', clubName)
-    .single()
-
-  if (error) {
-    console.error('Error fetching club by name:', error)
-    return null
+  if (!includeStats) {
+    return club
   }
-
-  return data
-}
-
-/**
- * Gets club with statistics (member count, admin count, etc.)
- */
-export async function getClubWithStats(clubId: number): Promise<ClubWithStats | null> {
-  const club = await getClubById(clubId)
-  if (!club) return null
 
   const [memberCount, adminCount, followersCount, newsCount] = await Promise.all([
     getClubMemberCount(clubId),
@@ -131,317 +145,18 @@ export async function getClubWithStats(clubId: number): Promise<ClubWithStats | 
 }
 
 /**
- * Gets all members of a club
- */
-export async function getClubMembers(clubId: number): Promise<ClubMember[]> {
-  const { data, error } = await supabase
-    .from('users')
-    .select(`
-      id,
-      name,
-      surname,
-      email,
-      profile_picture,
-      biography
-    `)
-    .eq('club_id', clubId)
-    .order('name')
-
-  if (error) {
-    console.error('Error fetching club members:', error)
-    return []
-  }
-
-  // Get current ELO for each member
-  const membersWithElo = await Promise.all(
-    (data || []).map(async (member) => {
-      const currentElo = await getCurrentElo(member.id)
-      return {
-        ...member,
-        current_elo: currentElo
-      }
-    })
-  )
-
-  return membersWithElo
-}
-
-/**
- * Gets all admins of a club
- */
-export async function getClubAdmins(clubId: number): Promise<ClubAdmin[]> {
-  const { data, error } = await supabase
-    .from('club_admins')
-    .select(`
-      user_id,
-      club_id,
-      users!inner (
-        name,
-        surname,
-        email
-      )
-    `)
-    .eq('club_id', clubId)
-
-  if (error) {
-    console.error('Error fetching club admins:', error)
-    return []
-  }
-
-  return (data || []).map(item => ({
-    user_id: item.user_id,
-    club_id: item.club_id,
-    user_name: (item.users as any)?.name || '',
-    user_surname: (item.users as any)?.surname || '',
-    user_email: (item.users as any)?.email || ''
-  }))
-}
-
-/**
- * Gets news from a specific club
- */
-export async function getClubNews(clubId: number, limit?: number): Promise<ClubNews[]> {
-  let query = supabase
-    .from('news')
-    .select(`
-      *,
-      users (
-        name,
-        surname
-      )
-    `)
-    .eq('club_id', clubId)
-    .order('date', { ascending: false })
-
-  if (limit) {
-    query = query.limit(limit)
-  }
-
-  const { data, error } = await query
-
-  if (error) {
-    console.error('Error fetching club news:', error)
-    return []
-  }
-
-  return (data || []).map(item => ({
-    id: item.id,
-    title: item.title,
-    date: item.date,
-    image: item.image,
-    extract: item.extract,
-    text: item.text,
-    tags: item.tags,
-    created_by_user_id: item.created_by_user_id,
-    created_at: item.created_at,
-    updated_at: item.updated_at,
-    author_name: item.users ? `${item.users.name} ${item.users.surname}` : undefined
-  }))
-}
-
-/**
- * Gets the count of members in a club
- */
-export async function getClubMemberCount(clubId: number): Promise<number> {
-  const { count, error } = await supabase
-    .from('users')
-    .select('*', { count: 'exact', head: true })
-    .eq('club_id', clubId)
-
-  if (error) {
-    console.error('Error fetching club member count:', error)
-    return 0
-  }
-
-  return count || 0
-}
-
-/**
- * Gets the count of admins in a club
- */
-export async function getClubAdminCount(clubId: number): Promise<number> {
-  const { count, error } = await supabase
-    .from('club_admins')
-    .select('*', { count: 'exact', head: true })
-    .eq('club_id', clubId)
-
-  if (error) {
-    console.error('Error fetching club admin count:', error)
-    return 0
-  }
-
-  return count || 0
-}
-
-/**
- * Gets the count of followers of a club
- */
-export async function getClubFollowersCount(clubId: number): Promise<number> {
-  const { count, error } = await supabase
-    .from('user_follows_club')
-    .select('*', { count: 'exact', head: true })
-    .eq('club_id', clubId)
-
-  if (error) {
-    console.error('Error fetching club followers count:', error)
-    return 0
-  }
-
-  return count || 0
-}
-
-/**
- * Gets the count of news from a club
- */
-export async function getClubNewsCount(clubId: number): Promise<number> {
-  const { count, error } = await supabase
-    .from('news')
-    .select('*', { count: 'exact', head: true })
-    .eq('club_id', clubId)
-
-  if (error) {
-    console.error('Error fetching club news count:', error)
-    return 0
-  }
-
-  return count || 0
-}
-
-/**
- * Checks if a user is an admin of a specific club
- */
-export async function isUserClubAdmin(userId: number, clubId: number): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('club_admins')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('club_id', clubId)
-    .single()
-
-  if (error) {
-    return false
-  }
-
-  return data !== null
-}
-
-/**
- * Checks if a user is following a specific club
- */
-export async function isUserFollowingClub(userId: number, clubId: number): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('user_follows_club')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('club_id', clubId)
-    .single()
-
-  if (error) {
-    return false
-  }
-
-  return data !== null
-}
-
-/**
- * Follow a club
- */
-export async function followClub(userId: number, clubId: number): Promise<boolean> {
-  const { error } = await supabase
-    .from('user_follows_club')
-    .insert([{ user_id: userId, club_id: clubId }])
-
-  if (error) {
-    console.error('Error following club:', error)
-    return false
-  }
-
-  return true
-}
-
-/**
- * Unfollow a club
- */
-export async function unfollowClub(userId: number, clubId: number): Promise<boolean> {
-  const { error } = await supabase
-    .from('user_follows_club')
-    .delete()
-    .eq('user_id', userId)
-    .eq('club_id', clubId)
-
-  if (error) {
-    console.error('Error unfollowing club:', error)
-    return false
-  }
-
-  return true
-}
-
-/**
- * Gets clubs that a user is following
- */
-export async function getUserFollowedClubs(userId: number): Promise<Club[]> {
-  const { data, error } = await supabase
-    .from('user_follows_club')
-    .select(`
-      clubs!inner (
-        id,
-        name,
-        address,
-        telephone,
-        mail,
-        schedule
-      )
-    `)
-    .eq('user_id', userId)
-
-  if (error) {
-    console.error('Error fetching followed clubs:', error)
-    return []
-  }
-
-  return (data || []).map(item => (item.clubs as any)).filter(club => club !== null)
-}
-
-/**
- * Gets clubs that a user administers
- */
-export async function getUserAdminClubs(userId: number): Promise<Club[]> {
-  const { data, error } = await supabase
-    .from('club_admins')
-    .select(`
-      clubs!inner (
-        id,
-        name,
-        address,
-        telephone,
-        mail,
-        schedule
-      )
-    `)
-    .eq('user_id', userId)
-
-  if (error) {
-    console.error('Error fetching admin clubs:', error)
-    return []
-  }
-
-  return (data || []).map(item => (item.clubs as any)).filter(club => club !== null)
-}
-
-/**
  * Creates a new club
  */
-export async function createClub(clubData: Omit<Club, 'id'>): Promise<Club | null> {
+export async function createClub(clubData: Omit<Club, 'id'>): Promise<Club> {
   const { data, error } = await supabase
     .from('clubs')
-    .insert([clubData])
+    .insert(clubData)
     .select()
     .single()
 
   if (error) {
     console.error('Error creating club:', error)
-    return null
+    throw new Error('Failed to create club')
   }
 
   return data
@@ -458,7 +173,7 @@ export async function updateClub(clubId: number, updates: Partial<Omit<Club, 'id
 
   if (error) {
     console.error('Error updating club:', error)
-    return false
+    throw new Error('Failed to update club')
   }
 
   return true
@@ -475,6 +190,90 @@ export async function deleteClub(clubId: number): Promise<boolean> {
 
   if (error) {
     console.error('Error deleting club:', error)
+    throw new Error('Failed to delete club')
+  }
+
+  return true
+}
+
+/**
+ * Gets all members of a club (currently returns empty array since we don't have a members relationship)
+ */
+export async function getClubMembers(clubId: number): Promise<ClubMember[]> {
+  // For now, return empty array since we don't have a members table
+  // This would need to be implemented if there's a specific membership system
+  return []
+}
+
+/**
+ * Gets member count for a club
+ */
+export async function getClubMemberCount(clubId: number): Promise<number> {
+  // For now, return 0 since we don't have a members table
+  // This would need to be implemented if there's a specific membership system
+  return 0
+}
+
+/**
+ * Gets all admins of a club
+ */
+export async function getClubAdmins(clubId: number): Promise<ClubAdmin[]> {
+  const { data, error } = await supabase
+    .from('club_admins')
+    .select('auth_id')
+    .eq('club_id', clubId)
+
+  if (error) {
+    console.error('Error fetching club admins:', error)
+    throw new Error('Failed to fetch club admins')
+  }
+
+  // Get user details from auth.users for each admin
+  const admins: ClubAdmin[] = []
+  
+  for (const item of data || []) {
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(item.auth_id)
+    
+    if (!userError && userData.user) {
+      admins.push({
+        id: item.auth_id,
+        email: userData.user.email || ''
+      })
+    }
+  }
+
+  return admins
+}
+
+/**
+ * Gets admin count for a club
+ */
+export async function getClubAdminCount(clubId: number): Promise<number> {
+  const { count, error } = await supabase
+    .from('club_admins')
+    .select('*', { count: 'exact', head: true })
+    .eq('club_id', clubId)
+
+  if (error) {
+    console.error('Error fetching club admin count:', error)
+    return 0
+  }
+
+  return count || 0
+}
+
+/**
+ * Checks if a user is an admin of a club
+ */
+export async function isUserClubAdmin(clubId: number, authId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('club_admins')
+    .select('auth_id')
+    .eq('club_id', clubId)
+    .eq('auth_id', authId)
+    .single()
+
+  if (error || !data) {
     return false
   }
 
@@ -482,56 +281,156 @@ export async function deleteClub(clubId: number): Promise<boolean> {
 }
 
 /**
- * Gets current ELO for a user (helper function)
+ * Adds a user as admin to a club
  */
-async function getCurrentElo(userId: number): Promise<number | null> {
+export async function addClubAdmin(clubId: number, authId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('club_admins')
+    .insert({
+      club_id: clubId,
+      auth_id: authId
+    })
+
+  if (error) {
+    console.error('Error adding club admin:', error)
+    throw new Error('Failed to add club admin')
+  }
+
+  return true
+}
+
+/**
+ * Removes a user as admin from a club
+ */
+export async function removeClubAdmin(clubId: number, authId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('club_admins')
+    .delete()
+    .eq('club_id', clubId)
+    .eq('auth_id', authId)
+
+  if (error) {
+    console.error('Error removing club admin:', error)
+    throw new Error('Failed to remove club admin')
+  }
+
+  return true
+}
+
+/**
+ * Gets follower count for a club
+ */
+export async function getClubFollowersCount(clubId: number): Promise<number> {
+  const { count, error } = await supabase
+    .from('user_follows_club')
+    .select('*', { count: 'exact', head: true })
+    .eq('club_id', clubId)
+
+  if (error) {
+    console.error('Error fetching club followers count:', error)
+    return 0
+  }
+
+  return count || 0
+}
+
+/**
+ * Checks if a user is following a club
+ */
+export async function isUserFollowingClub(clubId: number, authId: string): Promise<boolean> {
   const { data, error } = await supabase
-    .from('elohistory')
-    .select('elo')
-    .eq('user_id', userId)
-    .order('recorded_at', { ascending: false })
-    .limit(1)
+    .from('user_follows_club')
+    .select('auth_id')
+    .eq('club_id', clubId)
+    .eq('auth_id', authId)
     .single()
 
-  if (error) {
-    return null
+  if (error || !data) {
+    return false
   }
 
-  return data?.elo || null
+  return true
 }
 
 /**
- * Searches clubs by name (useful for search functionality)
+ * Follows a club
  */
-export async function searchClubsByName(searchTerm: string): Promise<Club[]> {
-  const { data, error } = await supabase
-    .from('clubs')
-    .select('*')
-    .ilike('name', `%${searchTerm}%`)
-    .order('name')
+export async function followClub(clubId: number, authId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('user_follows_club')
+    .insert({
+      club_id: clubId,
+      auth_id: authId
+    })
 
   if (error) {
-    console.error('Error searching clubs:', error)
-    return []
+    console.error('Error following club:', error)
+    throw new Error('Failed to follow club')
   }
 
-  return data || []
+  return true
 }
 
 /**
- * Gets clubs with contact information (filters out clubs without email or phone)
+ * Unfollows a club
  */
-export async function getClubsWithContact(): Promise<Club[]> {
-  const { data, error } = await supabase
-    .from('clubs')
-    .select('*')
-    .or('mail.is.not.null,telephone.is.not.null')
-    .order('name')
+export async function unfollowClub(clubId: number, authId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('user_follows_club')
+    .delete()
+    .eq('club_id', clubId)
+    .eq('auth_id', authId)
 
   if (error) {
-    console.error('Error fetching clubs with contact:', error)
-    return []
+    console.error('Error unfollowing club:', error)
+    throw new Error('Failed to unfollow club')
   }
 
-  return data || []
+  return true
+}
+
+/**
+ * Gets news from a club
+ */
+export async function getClubNews(clubId: number, limit?: number): Promise<ClubNews[]> {
+  let query = supabase
+    .from('news')
+    .select('*')
+    .eq('club_id', clubId)
+    .order('date', { ascending: false })
+
+  if (limit) {
+    query = query.limit(limit)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    console.error('Error fetching club news:', error)
+    throw new Error('Failed to fetch club news')
+  }
+
+  return (data || []).map(item => ({
+    ...item,
+    tags: item.tags || [],
+    author_name: undefined, // Can be fetched separately if needed
+    author_email: undefined
+  }))
+}
+
+/**
+ * Gets news count for a club
+ */
+export async function getClubNewsCount(clubId: number): Promise<number> {
+  const { count, error } = await supabase
+    .from('news')
+    .select('*', { count: 'exact', head: true })
+    .eq('club_id', clubId)
+
+  if (error) {
+    console.error('Error fetching club news count:', error)
+    return 0
+  }
+
+  return count || 0
 }

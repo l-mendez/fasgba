@@ -1,0 +1,104 @@
+import { NextRequest } from 'next/server'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { getNewsById, updateNews, deleteNews, canUserEditNews } from '@/lib/newsUtils'
+import { validateNewsId, validateUpdateNews } from '@/lib/schemas/newsSchemas'
+import { apiSuccess, handleError, notFoundError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
+import { ERROR_MESSAGES } from '@/lib/utils/constants'
+
+interface RouteParams {
+  params: {
+    id: string
+  }
+}
+
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  try {
+    const newsId = validateNewsId(params.id)
+    const { searchParams } = new URL(request.url)
+    
+    // Determine what to include
+    const includeParam = searchParams.get('include')
+    const include = includeParam ? includeParam.split(',').map(i => i.trim()) as Array<'author' | 'club'> : ['author', 'club']
+    
+    const news = await getNewsById(newsId, include)
+    
+    if (!news) {
+      return notFoundError(ERROR_MESSAGES.NEWS_NOT_FOUND || 'News not found', `No news found with ID ${newsId}`)
+    }
+    
+    return apiSuccess(news)
+  } catch (error) {
+    return handleError(error)
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    // Check authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError || !session) {
+      return unauthorizedError(ERROR_MESSAGES.AUTHENTICATION_REQUIRED)
+    }
+
+    const newsId = validateNewsId(params.id)
+    
+    // Check if news exists
+    const existingNews = await getNewsById(newsId, [])
+    if (!existingNews) {
+      return notFoundError(ERROR_MESSAGES.NEWS_NOT_FOUND || 'News not found', `No news found with ID ${newsId}`)
+    }
+
+    // Check if user can edit this news
+    const canEdit = await canUserEditNews(newsId, session.user.id)
+    if (!canEdit) {
+      return forbiddenError('You do not have permission to edit this news item')
+    }
+
+    // Parse and validate request body
+    const body = await request.json()
+    const validatedData = validateUpdateNews(body)
+
+    // Update the news item
+    await updateNews(newsId, validatedData)
+    
+    return apiSuccess({ success: true })
+  } catch (error) {
+    return handleError(error)
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  try {
+    const supabase = createServerComponentClient({ cookies })
+    
+    // Check authentication
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError || !session) {
+      return unauthorizedError(ERROR_MESSAGES.AUTHENTICATION_REQUIRED)
+    }
+
+    const newsId = validateNewsId(params.id)
+    
+    // Check if news exists
+    const existingNews = await getNewsById(newsId, [])
+    if (!existingNews) {
+      return notFoundError(ERROR_MESSAGES.NEWS_NOT_FOUND || 'News not found', `No news found with ID ${newsId}`)
+    }
+
+    // Check if user can delete this news
+    const canEdit = await canUserEditNews(newsId, session.user.id)
+    if (!canEdit) {
+      return forbiddenError('You do not have permission to delete this news item')
+    }
+
+    // Delete the news item
+    await deleteNews(newsId)
+    
+    return new Response(null, { status: 204 })
+  } catch (error) {
+    return handleError(error)
+  }
+} 

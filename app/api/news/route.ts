@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getAllClubs, createClub } from '@/lib/clubUtils'
-import { apiSuccess, handleError, unauthorizedError } from '@/lib/utils/apiResponse'
+import { getAllNews, createNews } from '@/lib/newsUtils'
+import { validateCreateNews, validateNewsQuery } from '@/lib/schemas/newsSchemas'
+import { apiSuccess, handleError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
 // Create a Supabase client for server-side operations
@@ -12,16 +13,19 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
+    const queryParams = validateNewsQuery(searchParams)
     
-    const options = {
-      search: searchParams.get('search') || undefined,
-      hasContact: searchParams.get('hasContact') === 'true',
-      includeStats: searchParams.get('include') === 'stats'
-    }
+    const result = await getAllNews(queryParams)
     
-    const clubs = await getAllClubs(options)
-    
-    return apiSuccess(clubs)
+    return apiSuccess({
+      news: result.data,
+      pagination: {
+        page: queryParams.page || 1,
+        limit: queryParams.limit || 10,
+        total: result.total,
+        totalPages: Math.ceil(result.total / (queryParams.limit || 10))
+      }
+    })
   } catch (error) {
     return handleError(error)
   }
@@ -45,31 +49,19 @@ export async function POST(request: NextRequest) {
       return unauthorizedError(ERROR_MESSAGES.UNAUTHORIZED)
     }
 
-    // Check if user is an admin
-    const { data: admin, error: adminError } = await supabase
-      .from('admins')
-      .select('auth_id')
-      .eq('auth_id', user.id)
-      .single()
-
-    if (adminError || !admin) {
-      return unauthorizedError('Admin access required')
-    }
-
     // Parse and validate request body
     const body = await request.json()
-    
-    const clubData = {
-      name: body.name,
-      address: body.address || null,
-      telephone: body.telephone || null,
-      mail: body.mail || null,
-      schedule: body.schedule || null
+    const validatedData = validateCreateNews(body)
+
+    // Create the news item with auth_id directly
+    const newsData = {
+      ...validatedData,
+      created_by_auth_id: user.id
     }
 
-    const newClub = await createClub(clubData)
+    const createdNews = await createNews(newsData)
     
-    return apiSuccess(newClub, 201)
+    return apiSuccess(createdNews, 201)
   } catch (error) {
     return handleError(error)
   }

@@ -21,7 +21,7 @@ import {
   Save
 } from "lucide-react"
 import { Chess } from "chess.js"
-import { supabase, supabaseAdmin } from "@/lib/supabaseClient"
+import { supabase } from "@/lib/supabaseClient"
 import { useToast } from "@/components/ui/use-toast"
 
 import { Button } from "@/components/ui/button"
@@ -45,6 +45,60 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { X } from "lucide-react"
+
+// Tipos de bloques de contenido
+const BLOCK_TYPES = {
+  TEXT: "text",
+  CHESS_GAME: "chess_game",
+  IMAGE: "image",
+} as const
+
+// Alineaciones de imagen
+const IMAGE_ALIGNMENTS = {
+  LEFT: "left",
+  CENTER: "center",
+  RIGHT: "right",
+} as const
+
+// TypeScript types
+type BlockType = typeof BLOCK_TYPES[keyof typeof BLOCK_TYPES]
+type ImageAlignment = typeof IMAGE_ALIGNMENTS[keyof typeof IMAGE_ALIGNMENTS]
+
+interface TextBlockContent {
+  type: typeof BLOCK_TYPES.TEXT
+  content: string
+}
+
+interface ImageBlockContent {
+  type: typeof BLOCK_TYPES.IMAGE
+  content: {
+    file: File | null
+    imageUrl: string | null
+    caption: string
+    alignment: ImageAlignment
+  }
+}
+
+interface ChessGameBlockContent {
+  type: typeof BLOCK_TYPES.CHESS_GAME
+  content: {
+    pgn: string
+    whitePlayer: { type: string; value: string }
+    blackPlayer: { type: string; value: string }
+  }
+}
+
+type BlockContent = TextBlockContent | ImageBlockContent | ChessGameBlockContent
+
+interface FormData {
+  titulo: string
+  extracto: string
+  categoria: string
+  imagen: File | null
+  imagenPreview: string | null
+  publicarAhora: boolean
+  bloques: BlockContent[]
+}
 
 interface News {
   id: number
@@ -71,25 +125,11 @@ interface News {
   updated_at: string
 }
 
-// Tipos de bloques de contenido
-const BLOCK_TYPES = {
-  TEXT: "text",
-  CHESS_GAME: "chess_game",
-  IMAGE: "image",
-}
-
-// Alineaciones de imagen
-const IMAGE_ALIGNMENTS = {
-  LEFT: "left",
-  CENTER: "center",
-  RIGHT: "right",
-}
-
 // Componente para visualizar el tablero de ajedrez
-const ChessBoard = ({ pgn }) => {
-  const [position, setPosition] = useState(null)
+const ChessBoard = ({ pgn }: { pgn: string }) => {
+  const [position, setPosition] = useState<string | null>(null)
   const [currentMove, setCurrentMove] = useState(0)
-  const [moves, setMoves] = useState([])
+  const [moves, setMoves] = useState<Array<{ number: number; white: string; black: string }>>([])
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -107,7 +147,7 @@ const ChessBoard = ({ pgn }) => {
       chess.reset()
 
       // Generar todas las posiciones
-      const allMoves = []
+      const allMoves: Array<{ number: number; white: string; black: string }> = []
       for (let i = 0; i < history.length; i++) {
         chess.move(history[i])
         allPositions.push(chess.fen())
@@ -132,7 +172,7 @@ const ChessBoard = ({ pgn }) => {
     }
   }, [pgn])
 
-  const handleMoveChange = (moveIndex) => {
+  const handleMoveChange = (moveIndex: number) => {
     if (!moves.length) return
     setCurrentMove(moveIndex)
     // Aquí actualizaríamos la posición del tablero
@@ -202,9 +242,21 @@ const ChessBoard = ({ pgn }) => {
 }
 
 // Componente para seleccionar jugadores
-const PlayerSelector = ({ label, type, value, onChange, onTypeChange }) => {
+const PlayerSelector = ({ 
+  label, 
+  type, 
+  value, 
+  onChange, 
+  onTypeChange 
+}: {
+  label: string
+  type: string
+  value: string
+  onChange: (value: string) => void
+  onTypeChange: (type: string) => void
+}) => {
   const [searchTerm, setSearchTerm] = useState("")
-  const [searchResults, setSearchResults] = useState([])
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; elo: number }>>([])
 
   // Simulación de búsqueda de usuarios
   useEffect(() => {
@@ -287,7 +339,23 @@ const PlayerSelector = ({ label, type, value, onChange, onTypeChange }) => {
 }
 
 // Componente para un bloque de texto
-const TextBlock = ({ value, onChange, onDelete, onMoveUp, onMoveDown, index, totalBlocks }) => {
+const TextBlock = ({ 
+  value, 
+  onChange, 
+  onDelete, 
+  onMoveUp, 
+  onMoveDown, 
+  index, 
+  totalBlocks 
+}: {
+  value: string
+  onChange: (value: string) => void
+  onDelete: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  index: number
+  totalBlocks: number
+}) => {
   return (
     <div className="border rounded-md p-4 mb-4">
       <div className="flex justify-between items-center mb-2">
@@ -337,17 +405,27 @@ const ImageBlock = ({
   onMoveDown,
   index,
   totalBlocks,
+}: {
+  value: ImageBlockContent['content']
+  onImageChange: (file: File, imageUrl: string) => void
+  onCaptionChange: (caption: string) => void
+  onAlignmentChange: (alignment: ImageAlignment) => void
+  onDelete: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  index: number
+  totalBlocks: number
 }) => {
   const [isOpen, setIsOpen] = useState(true)
-  const fileInputRef = useRef(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState(value.imageUrl || null)
 
   const handleImageClick = () => {
-    fileInputRef.current.click()
+    fileInputRef.current?.click()
   }
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0]
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
     if (!file) return
 
     // Crear una URL para previsualizar la imagen
@@ -443,8 +521,8 @@ const ImageBlock = ({
             <ToggleGroup
               type="single"
               value={value.alignment}
-              onValueChange={(val) => {
-                if (val) onAlignmentChange(val)
+              onValueChange={(val: string) => {
+                if (val) onAlignmentChange(val as ImageAlignment)
               }}
               className="justify-start"
             >
@@ -478,6 +556,18 @@ const ChessGameBlock = ({
   onMoveDown,
   index,
   totalBlocks,
+}: {
+  value: ChessGameBlockContent['content']
+  onPgnChange: (pgn: string) => void
+  onWhitePlayerChange: (value: string) => void
+  onBlackPlayerChange: (value: string) => void
+  onWhitePlayerTypeChange: (type: string) => void
+  onBlackPlayerTypeChange: (type: string) => void
+  onDelete: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  index: number
+  totalBlocks: number
 }) => {
   const [isOpen, setIsOpen] = useState(true)
   const [previewPgn, setPreviewPgn] = useState("")
@@ -575,7 +665,15 @@ const ChessGameBlock = ({
 }
 
 // Componente para añadir un nuevo bloque
-const AddBlockButton = ({ onAddTextBlock, onAddChessGameBlock, onAddImageBlock }) => {
+const AddBlockButton = ({ 
+  onAddTextBlock, 
+  onAddChessGameBlock, 
+  onAddImageBlock 
+}: {
+  onAddTextBlock: () => void
+  onAddChessGameBlock: () => void
+  onAddImageBlock: () => void
+}) => {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
@@ -639,7 +737,7 @@ export default function NewNewsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     titulo: "",
     extracto: "",
     categoria: "",
@@ -648,12 +746,12 @@ export default function NewNewsPage() {
     publicarAhora: true,
     bloques: [
       // Iniciar con un bloque de texto vacío
-      { type: BLOCK_TYPES.TEXT, content: "" },
+      { type: BLOCK_TYPES.TEXT, content: "" } as TextBlockContent,
     ],
   })
 
-  const handleChange = (e) => {
-    const { name, value, files } = e.target
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, files } = e.target as HTMLInputElement
     
     if (name === "imagen" && files && files[0]) {
       const file = files[0]
@@ -668,15 +766,15 @@ export default function NewNewsPage() {
     }
   }
 
-  const handleSelectChange = (name, value) => {
+  const handleSelectChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleCheckboxChange = (name, checked) => {
+  const handleCheckboxChange = (name: string, checked: boolean) => {
     setFormData((prev) => ({ ...prev, [name]: checked }))
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     try {
@@ -685,103 +783,28 @@ export default function NewNewsPage() {
       
       console.log('Starting news creation process...')
       
-      // Verificar que el servicio de admin está disponible
-      if (!supabaseAdmin) {
-        console.error('Error: supabaseAdmin client is not available')
-        throw new Error('Error de configuración del servidor. Contacte al administrador.')
-      }
+      // Check authentication first
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
-      // 1. Obtener sesión de usuario
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-      
-      console.log('Session check result:', { 
-        hasSession: !!sessionData?.session, 
-        sessionError: sessionError?.message 
-      })
-      
-      // Try to continue even if session appears null but user might be logged in
       if (sessionError) {
         console.error('Session error:', sessionError)
+        throw new Error('Error al verificar la sesión: ' + sessionError.message)
       }
       
-      // 2. Obtener usuario vinculado a la cuenta de auth - intentar con getUser si getSession falla
-      let userId = null
-      
-      if (sessionData?.session) {
-        // Si hay sesión, usa el ID de la sesión
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('auth_id', sessionData.session.user.id)
-          .single()
-        
-        if (userError) {
-          console.error('Error fetching user with session ID:', userError)
-        } else if (userData) {
-          userId = userData.id
-        }
+      if (!session?.access_token) {
+        console.error('No session or access token found')
+        throw new Error('No estás autenticado. Por favor, inicia sesión nuevamente.')
       }
       
-      // Si no se pudo obtener el ID a través de la sesión, intenta con getUser
-      if (!userId) {
-        const { data: authUser } = await supabase.auth.getUser()
-        console.log('getUser result:', { hasUser: !!authUser?.user })
-        
-        if (authUser?.user) {
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('id')
-            .eq('auth_id', authUser.user.id)
-            .single()
-          
-          if (userError) {
-            console.error('Error fetching user with getUser ID:', userError)
-          } else if (userData) {
-            userId = userData.id
-          }
-        }
-      }
-            
-      // Add admin version fallback method after trying all other methods:
-      // Si no se pudo obtener el ID a través de ninguno de los métodos anteriores, usar método fallback para administradores
-      if (!userId) {
-        console.log('Attempting admin fallback method...');
-        
-        // Para administradores, podemos intentar obtener cualquier usuario con rol page_admin=true
-        const { data: adminUsers, error: adminError } = await supabaseAdmin
-          .from('users')
-          .select('id')
-          .eq('page_admin', true)
-          .limit(1);
-        
-        if (!adminError && adminUsers && adminUsers.length > 0) {
-          userId = adminUsers[0].id;
-          console.log('Using admin fallback user ID:', userId);
-        } else {
-          // Último recurso - usar un valor fijo para permitir la funcionalidad en desarrollo
-          // NOTA: Esto debe eliminarse en producción
-          console.warn('Using EMERGENCY FALLBACK for admin user - THIS SHOULD BE REMOVED IN PRODUCTION!');
-          const { data: anyUser } = await supabaseAdmin
-            .from('users')
-            .select('id')
-            .limit(1);
-            
-          if (anyUser && anyUser.length > 0) {
-            userId = anyUser[0].id;
-            console.log('Using any available user as emergency fallback:', userId);
-          }
-        }
-      }
+      console.log('Session found:', { 
+        userId: session.user.id, 
+        email: session.user.email
+      })
       
-      if (!userId) {
-        console.error('Could not determine user ID through any method')
-        throw new Error('No se pudo determinar el usuario para crear la noticia. Por favor, contacte al administrador del sistema o verifique que existen usuarios en la base de datos.')
-      }
-      
-      // 3. Procesar contenido de la noticia
+      // 1. Process content blocks (upload images if needed)
       const processedContent = await processNewsContent(formData.bloques)
       
-      // 4. Subir imagen destacada si existe
+      // 2. Upload featured image if exists
       let imagePath = null
       if (formData.imagen) {
         const file = formData.imagen
@@ -789,7 +812,7 @@ export default function NewNewsPage() {
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`
         const filePath = `news/${fileName}`
         
-        const { error: uploadError } = await supabaseAdmin.storage
+        const { error: uploadError } = await supabase.storage
           .from('images')
           .upload(filePath, file)
         
@@ -800,57 +823,48 @@ export default function NewNewsPage() {
         imagePath = filePath
       }
       
-      // 5. Preparar datos para insertar en BD
+      // 3. Prepare data for API
       const newsData = {
         title: formData.titulo,
         extract: formData.extracto,
         text: JSON.stringify(processedContent),
-        date: new Date().toISOString(),
         image: imagePath,
         tags: formData.categoria ? [formData.categoria] : [],
-        created_by_user_id: userId,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        // club_id can be added here if needed
       }
       
-      console.log('Using admin client to bypass RLS policies')
+      console.log('Calling API to create news...')
       
-      try {
-        const { data: newsItem, error: insertError } = await supabaseAdmin
-          .from('news')
-          .insert([newsData])
-          .select()
-        
-        if (insertError) {
-          console.error('Error details:', {
-            message: insertError.message,
-            details: insertError.details,
-            hint: insertError.hint,
-            code: insertError.code
-          })
-          
-          // Proporcionar mensaje más amigable para error de RLS
-          if (insertError.message.includes('violates row-level security policy')) {
-            throw new Error('No tienes permiso para crear noticias. Contacta al administrador del sistema o verifica que tienes los roles correctos asignados a tu cuenta.')
-          }
-          
-          throw new Error('Error al crear noticia: ' + insertError.message)
-        }
-        
-        console.log('News created successfully:', newsItem)
-        
-        // 7. Mostrar notificación y redirigir
-        toast({
-          title: "Noticia creada",
-          description: `La noticia "${formData.titulo}" ha sido creada exitosamente.`,
-          duration: 5000,
-        })
-        
-        router.push("/admin/noticias")
-      } catch (insertErr) {
-        console.error('Insert operation failed:', insertErr)
-        throw insertErr
+      // 4. Call the API to create news
+      const response = await fetch('/api/news', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(newsData),
+      })
+      
+      console.log('API response status:', response.status)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('API error response:', errorData)
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
       }
+      
+      const newsItem = await response.json()
+      console.log('News created successfully:', newsItem)
+      
+      // 5. Show success message and redirect
+      toast({
+        title: "Noticia creada",
+        description: `La noticia "${formData.titulo}" ha sido creada exitosamente.`,
+        duration: 5000,
+      })
+      
+      router.push("/admin/noticias")
+      
     } catch (err) {
       console.error('Error al crear noticia:', err)
       setError(err instanceof Error ? err.message : 'Ocurrió un error al crear la noticia')
@@ -860,7 +874,14 @@ export default function NewNewsPage() {
   }
   
   // Función para procesar el contenido antes de guardar
-  const processNewsContent = async (bloques) => {
+  const processNewsContent = async (bloques: BlockContent[]) => {
+    // Get session once for all image uploads
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.access_token) {
+      throw new Error('No estás autenticado. Por favor, inicia sesión nuevamente.')
+    }
+
     // Convertir los bloques en un formato adecuado para guardar
     const processedBlocks = await Promise.all(bloques.map(async (bloque, index) => {
       if (bloque.type === BLOCK_TYPES.TEXT) {
@@ -880,7 +901,7 @@ export default function NewNewsPage() {
           const filePath = `news/blocks/${fileName}`
           
           try {
-            const { error: uploadError } = await supabaseAdmin.storage
+            const { error: uploadError } = await supabase.storage
               .from('images')
               .upload(filePath, file)
             
@@ -924,7 +945,7 @@ export default function NewNewsPage() {
   const addTextBlock = () => {
     setFormData((prev) => ({
       ...prev,
-      bloques: [...prev.bloques, { type: BLOCK_TYPES.TEXT, content: "" }],
+      bloques: [...prev.bloques, { type: BLOCK_TYPES.TEXT, content: "" } as TextBlockContent],
     }))
   }
 
@@ -941,7 +962,7 @@ export default function NewNewsPage() {
             caption: "",
             alignment: IMAGE_ALIGNMENTS.CENTER,
           },
-        },
+        } as ImageBlockContent,
       ],
     }))
   }
@@ -958,132 +979,134 @@ export default function NewNewsPage() {
             whitePlayer: { type: "user", value: "" },
             blackPlayer: { type: "user", value: "" },
           },
-        },
+        } as ChessGameBlockContent,
       ],
     }))
   }
 
-  const updateTextBlock = (index, newContent) => {
+  const updateTextBlock = (index: number, newContent: string) => {
     const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = { ...updatedBloques[index], content: newContent }
+    if (updatedBloques[index].type === BLOCK_TYPES.TEXT) {
+      (updatedBloques[index] as TextBlockContent).content = newContent
+    }
     setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const updateImageFile = (index, file, imageUrl) => {
+  const updateImageFile = (index: number, file: File, imageUrl: string) => {
     const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
+    if (updatedBloques[index].type === BLOCK_TYPES.IMAGE) {
+      const imageBlock = updatedBloques[index] as ImageBlockContent
+      imageBlock.content = {
+        ...imageBlock.content,
         file: file,
         imageUrl: imageUrl,
-      },
+      }
     }
     setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const updateImageCaption = (index, caption) => {
+  const updateImageCaption = (index: number, caption: string) => {
     const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
+    if (updatedBloques[index].type === BLOCK_TYPES.IMAGE) {
+      const imageBlock = updatedBloques[index] as ImageBlockContent
+      imageBlock.content = {
+        ...imageBlock.content,
         caption: caption,
-      },
+      }
     }
     setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const updateImageAlignment = (index, alignment) => {
+  const updateImageAlignment = (index: number, alignment: ImageAlignment) => {
     const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
+    if (updatedBloques[index].type === BLOCK_TYPES.IMAGE) {
+      const imageBlock = updatedBloques[index] as ImageBlockContent
+      imageBlock.content = {
+        ...imageBlock.content,
         alignment: alignment,
-      },
+      }
     }
     setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const updateChessGamePgn = (index, newPgn) => {
+  const updateChessGamePgn = (index: number, newPgn: string) => {
     const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
+    if (updatedBloques[index].type === BLOCK_TYPES.CHESS_GAME) {
+      const chessBlock = updatedBloques[index] as ChessGameBlockContent
+      chessBlock.content = {
+        ...chessBlock.content,
         pgn: newPgn,
-      },
+      }
     }
     setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const updateChessGameWhitePlayer = (index, newValue) => {
+  const updateChessGameWhitePlayer = (index: number, newValue: string) => {
     const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
+    if (updatedBloques[index].type === BLOCK_TYPES.CHESS_GAME) {
+      const chessBlock = updatedBloques[index] as ChessGameBlockContent
+      chessBlock.content = {
+        ...chessBlock.content,
         whitePlayer: {
-          ...updatedBloques[index].content.whitePlayer,
+          ...chessBlock.content.whitePlayer,
           value: newValue,
         },
-      },
+      }
     }
     setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const updateChessGameBlackPlayer = (index, newValue) => {
+  const updateChessGameBlackPlayer = (index: number, newValue: string) => {
     const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
+    if (updatedBloques[index].type === BLOCK_TYPES.CHESS_GAME) {
+      const chessBlock = updatedBloques[index] as ChessGameBlockContent
+      chessBlock.content = {
+        ...chessBlock.content,
         blackPlayer: {
-          ...updatedBloques[index].content.blackPlayer,
+          ...chessBlock.content.blackPlayer,
           value: newValue,
         },
-      },
+      }
     }
     setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const updateChessGameWhitePlayerType = (index, newType) => {
+  const updateChessGameWhitePlayerType = (index: number, newType: string) => {
     const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
+    if (updatedBloques[index].type === BLOCK_TYPES.CHESS_GAME) {
+      const chessBlock = updatedBloques[index] as ChessGameBlockContent
+      chessBlock.content = {
+        ...chessBlock.content,
         whitePlayer: {
           type: newType,
           value: "", // Resetear el valor al cambiar el tipo
         },
-      },
+      }
     }
     setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const updateChessGameBlackPlayerType = (index, newType) => {
+  const updateChessGameBlackPlayerType = (index: number, newType: string) => {
     const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
+    if (updatedBloques[index].type === BLOCK_TYPES.CHESS_GAME) {
+      const chessBlock = updatedBloques[index] as ChessGameBlockContent
+      chessBlock.content = {
+        ...chessBlock.content,
         blackPlayer: {
           type: newType,
           value: "", // Resetear el valor al cambiar el tipo
         },
-      },
+      }
     }
     setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const deleteBlock = (index) => {
+  const deleteBlock = (index: number) => {
     const updatedBloques = formData.bloques.filter((_, i) => i !== index)
     setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const moveBlockUp = (index) => {
+  const moveBlockUp = (index: number) => {
     if (index === 0) return
     const updatedBloques = [...formData.bloques]
     const temp = updatedBloques[index]
@@ -1092,7 +1115,7 @@ export default function NewNewsPage() {
     setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const moveBlockDown = (index) => {
+  const moveBlockDown = (index: number) => {
     if (index === formData.bloques.length - 1) return
     const updatedBloques = [...formData.bloques]
     const temp = updatedBloques[index]
@@ -1263,7 +1286,7 @@ export default function NewNewsPage() {
               <Checkbox
                 id="publicarAhora"
                 checked={formData.publicarAhora}
-                onCheckedChange={(checked) => handleCheckboxChange("publicarAhora", checked)}
+                onCheckedChange={(checked) => handleCheckboxChange("publicarAhora", checked as boolean)}
               />
               <Label htmlFor="publicarAhora" className="text-sm font-normal">
                 Publicar inmediatamente (si no se marca, se guardará como borrador)

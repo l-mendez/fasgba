@@ -18,10 +18,17 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { useAuth } from "@/hooks/useAuth"
+import { supabase } from "@/lib/supabaseClient"
 
 export function SiteHeader() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
+  const { isAuthenticated, isAdmin, isClubAdmin, isLoading } = useAuth()
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-amber/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -81,34 +88,79 @@ export function SiteHeader() {
             </Link>
           </nav>
         </div>
+        
+        {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-4">
-          <Link href="/perfil">
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="/avatars/01.png" alt="@user" />
-                <AvatarFallback>U</AvatarFallback>
-              </Avatar>
-            </Button>
-          </Link>
-          <Link
-            href="/admin"
-            className={cn(
-              "rounded-md bg-terracotta/10 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-terracotta/20",
-              pathname === "/admin" ? "text-terracotta" : "text-muted-foreground"
-            )}
-          >
-            Admin
-          </Link>
-          <Link
-            href="/club-admin"
-            className={cn(
-              "rounded-md bg-amber/10 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-amber/20",
-              pathname === "/club-admin" ? "text-amber" : "text-muted-foreground"
-            )}
-          >
-            Club Admin
-          </Link>
+          {!isLoading && (
+            <>
+              {!isAuthenticated ? (
+                // Show login/signup buttons when not authenticated
+                <>
+                  <Link href="/login">
+                    <Button variant="ghost" className="text-sm font-medium transition-colors hover:text-amber">
+                      Iniciar Sesión
+                    </Button>
+                  </Link>
+                  <Link href="/registro">
+                    <Button className="bg-terracotta hover:bg-terracotta/90 text-white text-sm font-medium">
+                      Registrarse
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                // Show authenticated user content
+                <>
+                  <Link href="/perfil">
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src="/avatars/01.png" alt="@user" />
+                        <AvatarFallback>U</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </Link>
+                  
+                  {/* Show admin button only if user is admin */}
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      className={cn(
+                        "rounded-md bg-terracotta/10 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-terracotta/20",
+                        pathname === "/admin" ? "text-terracotta" : "text-muted-foreground"
+                      )}
+                    >
+                      Admin
+                    </Link>
+                  )}
+                  
+                  {/* Show club admin button only if user is club admin */}
+                  {isClubAdmin && (
+                    <Link
+                      href="/club-admin"
+                      className={cn(
+                        "rounded-md bg-amber/10 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-amber/20",
+                        pathname === "/club-admin" ? "text-amber" : "text-muted-foreground"
+                      )}
+                    >
+                      Club Admin
+                    </Link>
+                  )}
+                  
+                  {/* Logout button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleLogout}
+                    className="text-muted-foreground hover:text-red-500"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </>
+          )}
         </div>
+
+        {/* Mobile Navigation */}
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
             <Button
@@ -175,31 +227,79 @@ export function SiteHeader() {
                 <FileText className="mr-2 h-5 w-5 text-amber" />
                 <span>Noticias</span>
               </Link>
-              <div className="my-2 border-t border-amber/20" />
-              <Link
-                href="/perfil"
-                className="flex items-center text-muted-foreground hover:text-amber"
-                onClick={() => setIsOpen(false)}
-              >
-                <User className="mr-2 h-5 w-5 text-amber" />
-                <span>Perfil</span>
-              </Link>
-              <Link
-                href="/admin"
-                className="flex items-center text-muted-foreground hover:text-terracotta"
-                onClick={() => setIsOpen(false)}
-              >
-                <Shield className="mr-2 h-5 w-5 text-terracotta" />
-                <span>Admin</span>
-              </Link>
-              <Link
-                href="/club-admin"
-                className="flex items-center text-muted-foreground hover:text-amber"
-                onClick={() => setIsOpen(false)}
-              >
-                <ChessKnight className="mr-2 h-5 w-5 text-amber" />
-                <span>Club Admin</span>
-              </Link>
+              
+              {!isLoading && (
+                <>
+                  <div className="my-2 border-t border-amber/20" />
+                  
+                  {!isAuthenticated ? (
+                    // Mobile login/signup buttons
+                    <>
+                      <Link
+                        href="/login"
+                        className="flex items-center text-muted-foreground hover:text-amber"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <User className="mr-2 h-5 w-5 text-amber" />
+                        <span>Iniciar Sesión</span>
+                      </Link>
+                      <Link
+                        href="/registro"
+                        className="flex items-center text-muted-foreground hover:text-terracotta"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <User className="mr-2 h-5 w-5 text-terracotta" />
+                        <span>Registrarse</span>
+                      </Link>
+                    </>
+                  ) : (
+                    // Mobile authenticated content
+                    <>
+                      <Link
+                        href="/perfil"
+                        className="flex items-center text-muted-foreground hover:text-amber"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <User className="mr-2 h-5 w-5 text-amber" />
+                        <span>Perfil</span>
+                      </Link>
+                      
+                      {isAdmin && (
+                        <Link
+                          href="/admin"
+                          className="flex items-center text-muted-foreground hover:text-terracotta"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <Shield className="mr-2 h-5 w-5 text-terracotta" />
+                          <span>Admin</span>
+                        </Link>
+                      )}
+                      
+                      {isClubAdmin && (
+                        <Link
+                          href="/club-admin"
+                          className="flex items-center text-muted-foreground hover:text-amber"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <ChessKnight className="mr-2 h-5 w-5 text-amber" />
+                          <span>Club Admin</span>
+                        </Link>
+                      )}
+                      
+                      <button
+                        onClick={() => {
+                          handleLogout()
+                          setIsOpen(false)
+                        }}
+                        className="flex items-center text-muted-foreground hover:text-red-500 text-left"
+                      >
+                        <LogOut className="mr-2 h-5 w-5 text-red-500" />
+                        <span>Cerrar Sesión</span>
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
             </nav>
           </SheetContent>
         </Sheet>

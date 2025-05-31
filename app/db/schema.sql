@@ -11,57 +11,34 @@ CREATE TABLE clubs (
     schedule TEXT
 );
 
--- 2️⃣ Users Table
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    surname TEXT NOT NULL,
-    birth_date DATE NOT NULL,
-    birth_gender TEXT CHECK (birth_gender IN ('Male', 'Female')),
-    email TEXT UNIQUE NOT NULL,
-    profile_picture TEXT,
-    biography TEXT,
-    page_admin BOOLEAN DEFAULT FALSE,
-    club_id INT REFERENCES clubs(id) ON DELETE SET NULL,
-    auth_id UUID UNIQUE
+-- 2️⃣ Admins Table (Site-wide administrators)
+CREATE TABLE admins (
+    auth_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
--- Add auth_id column if it doesn't exist
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 
-        FROM information_schema.columns 
-        WHERE table_name = 'users' 
-        AND column_name = 'auth_id'
-    ) THEN
-        ALTER TABLE users ADD COLUMN auth_id UUID UNIQUE;
-    END IF;
-END $$;
-
--- 3️⃣ Table for ELO History (Tracks Changes Over Time)
+-- 3️⃣ Table for ELO History (Tracks Changes Over Time) - Now uses auth_id
 CREATE TABLE elohistory (
     id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    auth_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     elo INT NOT NULL,
     recorded_at TIMESTAMP DEFAULT NOW()
 );
 
--- 4️⃣ Table for Club Admins (Many-to-Many Relationship)
+-- 4️⃣ Table for Club Admins (Many-to-Many Relationship) - Now uses auth_id
 CREATE TABLE club_admins (
-    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    auth_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     club_id INT REFERENCES clubs(id) ON DELETE CASCADE,
-    PRIMARY KEY (user_id, club_id)
+    PRIMARY KEY (auth_id, club_id)
 );
 
--- 5️⃣ Table for Users Following Clubs (Many-to-Many)
+-- 5️⃣ Table for Users Following Clubs (Many-to-Many) - Now uses auth_id
 CREATE TABLE user_follows_club (
-    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    auth_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     club_id INT REFERENCES clubs(id) ON DELETE CASCADE,
-    PRIMARY KEY (user_id, club_id)
+    PRIMARY KEY (auth_id, club_id)
 );
 
--- 6️⃣ News Table
+-- 6️⃣ News Table - Now uses created_by_auth_id
 CREATE TABLE news (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
@@ -71,7 +48,7 @@ CREATE TABLE news (
     text TEXT NOT NULL,
     tags TEXT[],
     club_id INT REFERENCES clubs(id) ON DELETE SET NULL,
-    created_by_user_id INT REFERENCES users(id) ON DELETE SET NULL,
+    created_by_auth_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -129,157 +106,101 @@ CREATE TABLE courses (
     cronogram TEXT
 );
 
--- 11 Course Creators Table (Many-to-Many relationship)
+-- 1️⃣1️⃣ Course Creators Table (Many-to-Many relationship) - Now uses auth_id
 CREATE TABLE course_creators (
-    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    auth_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     course_id INT REFERENCES courses(id) ON DELETE CASCADE,
-    PRIMARY KEY (user_id, course_id)
+    PRIMARY KEY (auth_id, course_id)
 );
 
 -- 🔹 Indexes for Performance
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_club ON users(club_id);
+CREATE INDEX idx_admins_auth_id ON admins(auth_id);
+CREATE INDEX idx_club_admins_auth_id ON club_admins(auth_id);
+CREATE INDEX idx_club_admins_club_id ON club_admins(club_id);
+CREATE INDEX idx_user_follows_club_auth_id ON user_follows_club(auth_id);
+CREATE INDEX idx_user_follows_club_club_id ON user_follows_club(club_id);
 CREATE INDEX idx_news_date ON news(date);
 CREATE INDEX idx_news_club ON news(club_id);
-CREATE INDEX idx_news_created_by ON news(created_by_user_id);
+CREATE INDEX idx_news_created_by_auth_id ON news(created_by_auth_id);
 CREATE INDEX idx_tournaments_title ON tournaments(title);
 CREATE INDEX idx_tournamentdates_tournament_id ON tournamentdates(tournament_id);
 CREATE INDEX idx_tournamentdates_event_date ON tournamentdates(event_date);
-CREATE INDEX idx_course_creators_user_id ON course_creators(user_id);
+CREATE INDEX idx_course_creators_auth_id ON course_creators(auth_id);
 CREATE INDEX idx_course_creators_course_id ON course_creators(course_id);
-CREATE INDEX idx_elo_user ON elohistory(user_id);
+CREATE INDEX idx_elo_auth_id ON elohistory(auth_id);
 
--- 🔒 Row Level Security Policies for News
+-- 🔒 Row Level Security Policies
+
+-- Enable RLS for all tables
+ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE club_admins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_follows_club ENABLE ROW LEVEL SECURITY;
 ALTER TABLE news ENABLE ROW LEVEL SECURITY;
-
--- Allow anyone to read news
-CREATE POLICY "Allow public read access to news" ON news
-    FOR SELECT USING (true);
-
--- Allow authenticated users to create news
-CREATE POLICY "Allow authenticated users to create news" ON news
-    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
--- Allow users to update their own news or if they're an admin
-CREATE POLICY "Allow users to update their own news or if admin" ON news
-    FOR UPDATE USING (
-        auth.uid() = created_by_user_id OR 
-        EXISTS (
-            SELECT 1 FROM users 
-            WHERE id = created_by_user_id 
-            AND page_admin = true
-        )
-    );
-
--- Allow users to delete their own news or if they're an admin
-CREATE POLICY "Allow users to delete their own news or if admin" ON news
-    FOR DELETE USING (
-        auth.uid() = created_by_user_id OR 
-        EXISTS (
-            SELECT 1 FROM users 
-            WHERE id = created_by_user_id 
-            AND page_admin = true
-        )
-    );
-
--- Add new columns to news table
-ALTER TABLE news
-ADD COLUMN IF NOT EXISTS club_id INT REFERENCES clubs(id) ON DELETE SET NULL,
-ADD COLUMN IF NOT EXISTS created_by_user_id INT REFERENCES users(id) ON DELETE SET NULL,
-ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW(),
-ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
-
--- Add new indexes for the new columns
-CREATE INDEX IF NOT EXISTS idx_news_club ON news(club_id);
-CREATE INDEX IF NOT EXISTS idx_news_created_by ON news(created_by_user_id);
-
--- Enable RLS if not already enabled
-ALTER TABLE news ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Allow public read access to news" ON news;
-DROP POLICY IF EXISTS "Allow authenticated users to create news" ON news;
-DROP POLICY IF EXISTS "Allow users to update their own news or if admin" ON news;
-DROP POLICY IF EXISTS "Allow users to delete their own news or if admin" ON news;
-
--- Create new policies
-CREATE POLICY "Allow public read access to news" ON news
-    FOR SELECT USING (true);
-
-CREATE POLICY "Allow authenticated users to create news" ON news
-    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
-CREATE POLICY "Allow users to update their own news or if admin" ON news
-    FOR UPDATE USING (
-        auth.uid() = created_by_user_id OR 
-        EXISTS (
-            SELECT 1 FROM users 
-            WHERE id = created_by_user_id 
-            AND page_admin = true
-        )
-    );
-
-CREATE POLICY "Allow users to delete their own news or if admin" ON news
-    FOR DELETE USING (
-        auth.uid() = created_by_user_id OR 
-        EXISTS (
-            SELECT 1 FROM users 
-            WHERE id = created_by_user_id 
-            AND page_admin = true
-        )
-    );
-
--- Enable RLS for users table
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-
--- Allow anyone to read users
-CREATE POLICY "Allow public read access to users" ON users
-    FOR SELECT USING (true);
-
--- Allow service role to create users
-CREATE POLICY "Allow service role to create users" ON users
-    FOR INSERT WITH CHECK (true);  -- More permissive for testing
-
--- Allow users to update their own data or if they're an admin
-CREATE POLICY "Allow users to update their own data or if admin" ON users
-    FOR UPDATE USING (true);  -- More permissive for testing
-
--- Allow users to delete their own data or if they're an admin
-CREATE POLICY "Allow users to delete their own data or if admin" ON users
-    FOR DELETE USING (true);  -- More permissive for testing
-
--- Enable RLS for tournaments table
 ALTER TABLE tournaments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tournamentdates ENABLE ROW LEVEL SECURITY;
 
--- Allow anyone to read tournaments
+-- Admins table policies
+CREATE POLICY "Allow public read access to admins" ON admins
+    FOR SELECT USING (true);
+
+CREATE POLICY "Allow service role to manage admins" ON admins
+    FOR ALL USING (true);
+
+-- Club admins table policies
+CREATE POLICY "Allow public read access to club_admins" ON club_admins
+    FOR SELECT USING (true);
+
+CREATE POLICY "Allow authenticated users to manage club_admins" ON club_admins
+    FOR ALL USING (auth.role() = 'authenticated');
+
+-- User follows club table policies
+CREATE POLICY "Allow public read access to user_follows_club" ON user_follows_club
+    FOR SELECT USING (true);
+
+CREATE POLICY "Allow users to manage their own follows" ON user_follows_club
+    FOR ALL USING (auth.uid() = auth_id);
+
+-- News table policies
+CREATE POLICY "Allow public read access to news" ON news
+    FOR SELECT USING (true);
+
+CREATE POLICY "Allow authenticated users to create news" ON news
+    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Allow users to update their own news or if admin" ON news
+    FOR UPDATE USING (
+        auth.uid() = created_by_auth_id OR 
+        EXISTS (SELECT 1 FROM admins WHERE auth_id = auth.uid())
+    );
+
+CREATE POLICY "Allow users to delete their own news or if admin" ON news
+    FOR DELETE USING (
+        auth.uid() = created_by_auth_id OR 
+        EXISTS (SELECT 1 FROM admins WHERE auth_id = auth.uid())
+    );
+
+-- Tournament table policies (public access for now)
 CREATE POLICY "Allow public read access to tournaments" ON tournaments
     FOR SELECT USING (true);
 
--- Allow authenticated users to create tournaments
 CREATE POLICY "Allow authenticated users to create tournaments" ON tournaments
-    FOR INSERT WITH CHECK (true);  -- More permissive for testing
+    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
--- Allow authenticated users to update tournaments
 CREATE POLICY "Allow authenticated users to update tournaments" ON tournaments
-    FOR UPDATE USING (true);  -- More permissive for testing
+    FOR UPDATE USING (auth.role() = 'authenticated');
 
--- Allow authenticated users to delete tournaments
 CREATE POLICY "Allow authenticated users to delete tournaments" ON tournaments
-    FOR DELETE USING (true);  -- More permissive for testing
+    FOR DELETE USING (auth.role() = 'authenticated');
 
--- Enable RLS for tournamentdates table
-ALTER TABLE tournamentdates ENABLE ROW LEVEL SECURITY;
-
--- Allow anyone to read tournament dates
+-- Tournament dates table policies
 CREATE POLICY "Allow public read access to tournamentdates" ON tournamentdates
     FOR SELECT USING (true);
 
--- Allow authenticated users to manage tournament dates
 CREATE POLICY "Allow authenticated users to create tournamentdates" ON tournamentdates
-    FOR INSERT WITH CHECK (true);  -- More permissive for testing
+    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
 CREATE POLICY "Allow authenticated users to update tournamentdates" ON tournamentdates
-    FOR UPDATE USING (true);  -- More permissive for testing
+    FOR UPDATE USING (auth.role() = 'authenticated');
 
 CREATE POLICY "Allow authenticated users to delete tournamentdates" ON tournamentdates
-    FOR DELETE USING (true);  -- More permissive for testing
+    FOR DELETE USING (auth.role() = 'authenticated');
