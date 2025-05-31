@@ -50,6 +50,19 @@ export function AuthButton({
           password,
         })
       } else {
+        // First check if the user already exists
+        const { data: existingUser } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+        
+        if (existingUser?.user) {
+          setError("Este email ya está registrado")
+          setIsLoading(false)
+          return
+        }
+
+        // If no existing user, proceed with signup
         response = await supabase.auth.signUp({
           email,
           password,
@@ -84,9 +97,9 @@ export function AuthButton({
 
       if (data?.user) {
         if (mode === "signup") {
-          setError("Por favor, revisa tu email para confirmar tu cuenta.")
+          router.push('/confirmar-email')
         } else {
-          router.push('/perfil')
+          router.push('/')
         }
       }
     } catch (error: any) {
