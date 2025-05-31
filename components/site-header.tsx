@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { CastleIcon as ChessKnight, Menu, X, Bell, User, Settings, Trophy, Calendar, Home, FileText, Shield, LogOut } from "lucide-react"
+import { CastleIcon as ChessKnight, Menu, X, Bell, User, Settings, Trophy, Calendar, Home, FileText, Shield, LogOut, BarChart3 } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -60,6 +60,15 @@ export function SiteHeader() {
               )}
             >
               Clubes
+            </Link>
+            <Link
+              href="/ranking"
+              className={cn(
+                "transition-colors hover:text-amber",
+                pathname === "/ranking" ? "text-amber" : "text-muted-foreground"
+              )}
+            >
+              Ranking
             </Link>
             <Link
               href="/noticias"
@@ -149,6 +158,14 @@ export function SiteHeader() {
               >
                 <ChessKnight className="mr-2 h-5 w-5 text-amber" />
                 <span>Clubes</span>
+              </Link>
+              <Link
+                href="/ranking"
+                className="flex items-center text-muted-foreground hover:text-amber"
+                onClick={() => setIsOpen(false)}
+              >
+                <BarChart3 className="mr-2 h-5 w-5 text-amber" />
+                <span>Ranking</span>
               </Link>
               <Link
                 href="/noticias"
