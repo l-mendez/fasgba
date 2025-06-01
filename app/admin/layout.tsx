@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   BarChart3,
   BookOpen,
@@ -17,20 +17,83 @@ import {
   Shield,
   Trophy,
   Users,
+  Loader2,
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { useAuth } from "@/hooks/useAuth"
 
 interface AdminLayoutProps {
   children: ReactNode
 }
 
+// Loading component for authentication check
+function AdminLoadingPage() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="text-center space-y-4">
+        <div className="flex justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-terracotta" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold text-terracotta">Verificando permisos</h2>
+          <p className="text-muted-foreground">
+            Comprobando tu acceso al panel de administración...
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const { isAuthenticated, isAdmin, isLoading, user, permissions, error } = useAuth()
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🎯 Admin Layout Debug:', {
+      isLoading,
+      isAuthenticated,
+      isAdmin,
+      user: user ? { id: user.id, email: user.email } : null,
+      permissions,
+      error
+    })
+  }, [isLoading, isAuthenticated, isAdmin, user, permissions, error])
+
+  // Handle authentication and authorization
+  useEffect(() => {
+    // Don't redirect while still loading
+    if (isLoading) {
+      console.log('⏳ Still loading authentication...')
+      return
+    }
+
+    // If not authenticated or not admin, redirect to 404
+    if (!isAuthenticated || !isAdmin) {
+      console.log('❌ Client-side: Redirecting to 404. Auth:', isAuthenticated, 'Admin:', isAdmin)
+      router.replace('/not-found')
+      return
+    }
+
+    console.log('✅ Client-side: Admin access granted')
+  }, [isAuthenticated, isAdmin, isLoading, router])
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return <AdminLoadingPage />
+  }
+
+  // If not authenticated or not admin, show nothing (redirect is in progress)
+  if (!isAuthenticated || !isAdmin) {
+    return null
+  }
 
   return (
     <div className="flex min-h-screen">

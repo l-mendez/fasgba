@@ -2,50 +2,80 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { ArrowLeft, AlertCircle, CheckCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { supabase, supabaseAdmin } from "@/lib/supabaseClient"
+import { Badge } from "@/components/ui/badge"
+import { supabase } from "@/lib/supabaseClient"
 
 interface Club {
   id: number
   name: string
 }
 
-interface User {
-  id: number
-  name: string
-  surname: string
+interface UserWithPermissions {
+  id: string
   email: string
-  profile_picture: string | null
-  biography: string | null
-  club_id: number | null
-  birth_date: string
-  birth_gender: string
-  page_admin: boolean
+  emailVerified: boolean
+  lastSignIn: string | null
+  createdAt: string
+  nombre?: string
+  apellido?: string
+  isAdmin: boolean
+  isClubAdmin: boolean
+  adminClubs: string[]
 }
 
 interface ClubAdmin {
   club_id: number
-  user_id: number
+  auth_id: string
   club: {
     id: number
     name: string
   }
+}
+
+// API utility functions
+async function getAuthToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession()
+  return session?.access_token || null
+}
+
+async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
+  const token = await getAuthToken()
+  
+  if (!token) {
+    throw new Error('No authentication token available')
+  }
+
+  const response = await fetch(endpoint, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
+  }
+
+  if (response.status === 204) {
+    return null
+  }
+
+  const data = await response.json()
+  
+  if (data && typeof data === 'object' && data.error) {
+    throw new Error(data.error)
+  }
+  
+  return data
 }
 
 export default function EditarUsuarioPage() {
@@ -53,25 +83,17 @@ export default function EditarUsuarioPage() {
   const params = useParams()
   const userId = params.id as string
   
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<UserWithPermissions | null>(null)
   const [clubs, setClubs] = useState<Club[]>([])
   const [clubsAdmin, setClubsAdmin] = useState<ClubAdmin[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   
-  // Form data state
-  const [formData, setFormData] = useState({
-    name: "",
-    surname: "",
-    email: "",
-    club_id: "",
-    birth_date: "",
-    birth_gender: "",
-    biography: "",
-    page_admin: false,
+  // Form data state for permissions
+  const [permissions, setPermissions] = useState({
+    isAdmin: false,
     selectedClubAdmins: [] as number[],
   })
 
@@ -82,14 +104,15 @@ export default function EditarUsuarioPage() {
         setIsLoading(true)
         setError(null)
         
-        // Fetch user data
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('id, name, surname, email, profile_picture, biography, club_id, birth_date, birth_gender, page_admin')
-          .eq('id', userId)
-          .single()
+        // Fetch all users and find the specific one
+        const users = await apiCall('/api/auth/users')
         
-        if (userError) throw userError
+        if (!Array.isArray(users)) {
+          console.error('API response is not an array:', users)
+          throw new Error('Invalid response from user API')
+        }
+        
+        const userData = users.find((u: UserWithPermissions) => u.id === userId)
         
         if (!userData) {
           throw new Error('Usuario no encontrado')
@@ -109,60 +132,34 @@ export default function EditarUsuarioPage() {
         // Fetch club admin relationships
         const { data: clubAdminsData, error: clubAdminsError } = await supabase
           .from('club_admins')
-          .select('club_id, user_id, club:club_id(id, name)')
-          .eq('user_id', userId)
+          .select(`
+            club_id, 
+            auth_id, 
+            club:clubs(id, name)
+          `)
+          .eq('auth_id', userId)
         
         if (clubAdminsError) throw clubAdminsError
         
-        console.log('Club admins data structure:', JSON.stringify(clubAdminsData, null, 2))
-        
-        // Transform the data to match our ClubAdmin interface using type assertion
-        const transformedClubAdmins: ClubAdmin[] = (clubAdminsData || []).map(item => {
-          // Use type assertion to handle unknown shape
-          const anyItem = item as any;
-          const club_id = anyItem.club_id;
-          const user_id = anyItem.user_id;
-          
-          // Handle club data safely
-          let club = { id: 0, name: '' };
-          
-          if (anyItem.club) {
-            if (Array.isArray(anyItem.club) && anyItem.club.length > 0) {
-              club = {
-                id: Number(anyItem.club[0].id) || 0,
-                name: String(anyItem.club[0].name) || ''
-              };
-            } else {
-              club = {
-                id: Number(anyItem.club.id) || 0,
-                name: String(anyItem.club.name) || ''
-              };
-            }
+        const transformedClubAdmins: ClubAdmin[] = (clubAdminsData || []).map((item: any) => ({
+          club_id: item.club_id,
+          auth_id: item.auth_id,
+          club: {
+            id: item.club?.id || 0,
+            name: item.club?.name || ''
           }
-          
-          return {
-            club_id,
-            user_id,
-            club
-          };
-        });
+        }))
         
         setClubsAdmin(transformedClubAdmins)
         
-        // Set initial form data
-        setFormData({
-          name: userData.name,
-          surname: userData.surname,
-          email: userData.email,
-          club_id: userData.club_id ? userData.club_id.toString() : "none",
-          birth_date: new Date(userData.birth_date).toISOString().split('T')[0],
-          birth_gender: userData.birth_gender,
-          biography: userData.biography || "",
-          page_admin: userData.page_admin,
-          selectedClubAdmins: (clubAdminsData || []).map(ca => ca.club_id),
+        // Set initial permissions
+        setPermissions({
+          isAdmin: userData.isAdmin,
+          selectedClubAdmins: (clubAdminsData || []).map((ca: any) => ca.club_id),
         })
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error al cargar los datos del usuario")
+        const errorMessage = err instanceof Error ? err.message : "Error al cargar los datos del usuario"
+        setError(errorMessage)
         console.error('Error loading user data:', err)
       } finally {
         setIsLoading(false)
@@ -174,71 +171,54 @@ export default function EditarUsuarioPage() {
     }
   }, [userId])
   
-  const validateForm = () => {
-    const errors: Record<string, string> = {}
+  const handlePermissionsSubmit = async () => {
+    if (!user) return
     
-    if (!formData.name.trim()) errors.name = "El nombre es requerido"
-    if (!formData.surname.trim()) errors.surname = "El apellido es requerido"
-    if (!formData.email.trim()) errors.email = "El email es requerido"
-    if (!formData.birth_date) errors.birth_date = "La fecha de nacimiento es requerida"
-    if (!formData.birth_gender) errors.birth_gender = "Debes seleccionar un género"
-
-    setValidationErrors(errors)
-    return Object.keys(errors).length === 0
-  }
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setSuccess(null)
-    setValidationErrors({})
-
-    if (!validateForm()) {
-      return
-    }
-
     try {
       setIsSubmitting(true)
+      setError(null)
+      setSuccess(null)
       
-      // 1. Update user data
-      const userData = {
-        name: formData.name,
-        surname: formData.surname,
-        email: formData.email,
-        club_id: formData.club_id && formData.club_id !== "none" ? parseInt(formData.club_id) : null,
-        birth_date: new Date(formData.birth_date).toISOString().split('T')[0],
-        birth_gender: formData.birth_gender,
-        biography: formData.biography,
-        page_admin: formData.page_admin,
+      const token = await getAuthToken()
+      if (!token) {
+        throw new Error('No authentication token available')
+      }
+
+      // 1. Update admin permissions
+      if (permissions.isAdmin && !user.isAdmin) {
+        // Add to admins table
+        const { error: adminInsertError } = await supabase
+          .from('admins')
+          .upsert({ auth_id: userId })
+        
+        if (adminInsertError) throw adminInsertError
+      } else if (!permissions.isAdmin && user.isAdmin) {
+        // Remove from admins table
+        const { error: adminDeleteError } = await supabase
+          .from('admins')
+          .delete()
+          .eq('auth_id', userId)
+        
+        if (adminDeleteError) throw adminDeleteError
       }
       
-      const { error: updateError } = await supabase
-        .from('users')
-        .update(userData)
-        .eq('id', userId)
-      
-      if (updateError) throw updateError
-      
       // 2. Update club admin relationships
-      
-      // First, get current club admin relationships
       const { data: currentClubAdmins } = await supabase
         .from('club_admins')
         .select('club_id')
-        .eq('user_id', userId)
+        .eq('auth_id', userId)
       
-      const currentClubIds = (currentClubAdmins || []).map(ca => ca.club_id)
+      const currentClubIds = (currentClubAdmins || []).map((ca: any) => ca.club_id)
       
-      // Calculate clubs to add and remove
-      const clubsToAdd = formData.selectedClubAdmins.filter(clubId => !currentClubIds.includes(clubId))
-      const clubsToRemove = currentClubIds.filter(clubId => !formData.selectedClubAdmins.includes(clubId))
+      const clubsToAdd = permissions.selectedClubAdmins.filter((clubId: number) => !currentClubIds.includes(clubId))
+      const clubsToRemove = currentClubIds.filter((clubId: any) => !permissions.selectedClubAdmins.includes(clubId))
       
       // Remove user from clubs
       if (clubsToRemove.length > 0) {
         const { error: removeError } = await supabase
           .from('club_admins')
           .delete()
-          .eq('user_id', userId)
+          .eq('auth_id', userId)
           .in('club_id', clubsToRemove)
         
         if (removeError) throw removeError
@@ -247,7 +227,7 @@ export default function EditarUsuarioPage() {
       // Add user to new clubs
       if (clubsToAdd.length > 0) {
         const newClubAdmins = clubsToAdd.map(clubId => ({
-          user_id: parseInt(userId),
+          auth_id: userId,
           club_id: clubId
         }))
         
@@ -258,69 +238,43 @@ export default function EditarUsuarioPage() {
         if (addError) throw addError
       }
       
-      setSuccess("Usuario actualizado correctamente")
+      setSuccess("Permisos actualizados correctamente")
       
-      // Refresh club admin data after changes
-      const { data: updatedClubAdmins } = await supabase
-        .from('club_admins')
-        .select('club_id, user_id, club:club_id(id, name)')
-        .eq('user_id', userId)
-      
-      console.log('Updated club admins data:', JSON.stringify(updatedClubAdmins, null, 2))
-      
-      // Transform the data to match our ClubAdmin interface using type assertion
-      const transformedUpdatedClubAdmins: ClubAdmin[] = (updatedClubAdmins || []).map(item => {
-        // Use type assertion to handle unknown shape
-        const anyItem = item as any;
-        const club_id = anyItem.club_id;
-        const user_id = anyItem.user_id;
-        
-        // Handle club data safely
-        let club = { id: 0, name: '' };
-        
-        if (anyItem.club) {
-          if (Array.isArray(anyItem.club) && anyItem.club.length > 0) {
-            club = {
-              id: Number(anyItem.club[0].id) || 0,
-              name: String(anyItem.club[0].name) || ''
-            };
-          } else {
-            club = {
-              id: Number(anyItem.club.id) || 0,
-              name: String(anyItem.club.name) || ''
-            };
-          }
-        }
-        
-        return {
-          club_id,
-          user_id,
-          club
-        };
-      });
-      
-      setClubsAdmin(transformedUpdatedClubAdmins)
+      // Update user state
+      setUser(prev => prev ? {
+        ...prev,
+        isAdmin: permissions.isAdmin,
+        isClubAdmin: permissions.selectedClubAdmins.length > 0
+      } : null)
       
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al actualizar el usuario")
-      console.error('Error updating user:', err)
+      setError(err instanceof Error ? err.message : "Error al actualizar los permisos")
+      console.error('Error updating permissions:', err)
     } finally {
       setIsSubmitting(false)
     }
   }
-  
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+
+  const handleBanUser = async () => {
+    if (!user || !confirm('¿Estás seguro de que quieres suspender a este usuario?')) return
     
-    // Clear validation error when user starts typing
-    if (validationErrors[name]) {
-      setValidationErrors(prev => ({ ...prev, [name]: "" }))
+    try {
+      setIsSubmitting(true)
+      setError(null)
+      
+      // TODO: Implement user ban functionality
+      // This would typically involve calling Supabase Auth admin API to disable the user
+      setError("Funcionalidad de suspensión no implementada aún")
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al suspender el usuario")
+    } finally {
+      setIsSubmitting(false)
     }
   }
-  
+
   const toggleClubAdmin = (clubId: number) => {
-    setFormData(prev => {
+    setPermissions(prev => {
       if (prev.selectedClubAdmins.includes(clubId)) {
         return {
           ...prev,
@@ -338,7 +292,7 @@ export default function EditarUsuarioPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Cargando datos del usuario...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-terracotta"></div>
       </div>
     )
   }
@@ -346,34 +300,44 @@ export default function EditarUsuarioPage() {
   if (!user) {
     return (
       <div className="flex flex-col gap-8 p-8">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+        <Alert>
+          <span className="text-red-600 mr-2">⚠️</span>
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>Usuario no encontrado</AlertDescription>
         </Alert>
-        <Button variant="outline" onClick={() => router.push("/admin/usuarios")}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Volver a la lista de usuarios
+        <Button onClick={() => router.push("/admin/usuarios")}>
+          ← Volver a la lista de usuarios
         </Button>
       </div>
     )
+  }
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Nunca'
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
   
   return (
     <div className="flex flex-col gap-8 p-8">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push("/admin/usuarios")}>
-          <ArrowLeft className="h-4 w-4" />
+        <Button onClick={() => router.push("/admin/usuarios")}>
+          ←
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Editar Usuario</h1>
-          <p className="text-muted-foreground">Edita la información y permisos del usuario.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Administrar Usuario</h1>
+          <p className="text-muted-foreground">Gestiona permisos y acceso del usuario.</p>
         </div>
       </div>
       
       {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+        <Alert>
+          <span className="text-red-600 mr-2">⚠️</span>
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -381,273 +345,177 @@ export default function EditarUsuarioPage() {
       
       {success && (
         <Alert className="bg-green-50 border-green-500 text-green-700">
-          <CheckCircle className="h-4 w-4" />
+          <span className="text-green-600 mr-2">✓</span>
           <AlertTitle>Éxito</AlertTitle>
           <AlertDescription>{success}</AlertDescription>
         </Alert>
       )}
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* User Information Form */}
-        <div className="md:col-span-2">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Información Personal</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label htmlFor="name" className="text-sm font-medium">
-                      Nombre
-                    </label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      required
-                      className={validationErrors.name ? "border-destructive" : ""}
-                    />
-                    {validationErrors.name && (
-                      <p className="text-sm text-destructive">{validationErrors.name}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="surname" className="text-sm font-medium">
-                      Apellido
-                    </label>
-                    <Input
-                      id="surname"
-                      name="surname"
-                      value={formData.surname}
-                      onChange={handleChange}
-                      required
-                      className={validationErrors.surname ? "border-destructive" : ""}
-                    />
-                    {validationErrors.surname && (
-                      <p className="text-sm text-destructive">{validationErrors.surname}</p>
+        {/* User Information Display */}
+        <div className="md:col-span-2 space-y-6">
+          
+          {/* User Identity Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Información del Usuario</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Email</label>
+                  <p className="text-sm font-mono bg-gray-100 p-2 rounded">{user.email}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">UID</label>
+                  <p className="text-sm font-mono bg-gray-100 p-2 rounded break-all">{user.id}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Email Verificado</label>
+                  <div className="mt-1">
+                    {user.emailVerified ? (
+                      <Badge className="bg-green-100 text-green-800">Verificado</Badge>
+                    ) : (
+                      <Badge className="bg-red-100 text-red-800">No verificado</Badge>
                     )}
                   </div>
                 </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Último acceso</label>
+                  <p className="text-sm">{formatDate(user.lastSignIn)}</p>
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Fecha de registro</label>
+                <p className="text-sm">{formatDate(user.createdAt)}</p>
+              </div>
+            </CardContent>
+          </Card>
 
-                <div className="space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium">
-                    Email
-                  </label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    className={validationErrors.email ? "border-destructive" : ""}
-                  />
-                  {validationErrors.email && (
-                    <p className="text-sm text-destructive">{validationErrors.email}</p>
-                  )}
+          {/* Permissions Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Gestión de Permisos</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="isAdmin" 
+                  checked={permissions.isAdmin}
+                  onCheckedChange={(checked: boolean | "indeterminate") => 
+                    setPermissions(prev => ({ ...prev, isAdmin: Boolean(checked) }))
+                  }
+                />
+                <label htmlFor="isAdmin" className="text-sm font-medium">
+                  Administrador del sitio
+                </label>
+              </div>
+              
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Administrador de clubes</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {clubs.map((club) => (
+                    <div key={club.id} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`club-${club.id}`} 
+                        checked={permissions.selectedClubAdmins.includes(club.id)}
+                        onCheckedChange={() => toggleClubAdmin(club.id)}
+                      />
+                      <label htmlFor={`club-${club.id}`} className="text-sm">
+                        {club.name}
+                      </label>
+                    </div>
+                  ))}
                 </div>
+              </div>
+              
+              <div className="flex gap-3 pt-4 border-t">
+                <Button onClick={handlePermissionsSubmit} disabled={isSubmitting}>
+                  {isSubmitting ? "Guardando..." : "Guardar permisos"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-                <div className="space-y-2">
-                  <label htmlFor="club_id" className="text-sm font-medium">
-                    Club Principal
-                  </label>
-                  <Select
-                    value={formData.club_id}
-                    onValueChange={(value) => {
-                      setFormData(prev => ({ ...prev, club_id: value }))
-                      if (validationErrors.club_id) {
-                        setValidationErrors(prev => ({ ...prev, club_id: "" }))
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un club" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Ninguno</SelectItem>
-                      {clubs.map((club) => (
-                        <SelectItem key={club.id} value={club.id.toString()}>
-                          {club.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label htmlFor="birth_date" className="text-sm font-medium">
-                      Fecha de nacimiento
-                    </label>
-                    <Input
-                      id="birth_date"
-                      name="birth_date"
-                      type="date"
-                      value={formData.birth_date}
-                      onChange={handleChange}
-                      required
-                      className={validationErrors.birth_date ? "border-destructive" : ""}
-                    />
-                    {validationErrors.birth_date && (
-                      <p className="text-sm text-destructive">{validationErrors.birth_date}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="birth_gender" className="text-sm font-medium">
-                      Género
-                    </label>
-                    <Select
-                      value={formData.birth_gender}
-                      onValueChange={(value) => {
-                        setFormData(prev => ({ ...prev, birth_gender: value }))
-                        if (validationErrors.birth_gender) {
-                          setValidationErrors(prev => ({ ...prev, birth_gender: "" }))
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona un género" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Male">Masculino</SelectItem>
-                        <SelectItem value="Female">Femenino</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {validationErrors.birth_gender && (
-                      <p className="text-sm text-destructive">{validationErrors.birth_gender}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="biography" className="text-sm font-medium">
-                    Biografía
-                  </label>
-                  <Textarea
-                    id="biography"
-                    name="biography"
-                    value={formData.biography}
-                    onChange={handleChange}
-                    rows={4}
-                    placeholder="Escribe una breve biografía del usuario..."
-                  />
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Roles y Permisos</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="page_admin" 
-                    checked={formData.page_admin}
-                    onCheckedChange={(checked) => 
-                      setFormData(prev => ({ ...prev, page_admin: Boolean(checked) }))
-                    }
-                  />
-                  <label
-                    htmlFor="page_admin"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Administrador del sitio
-                  </label>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Administrador de clubes
-                  </label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                    {clubs.map((club) => (
-                      <div key={club.id} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={`club-${club.id}`} 
-                          checked={formData.selectedClubAdmins.includes(club.id)}
-                          onCheckedChange={() => toggleClubAdmin(club.id)}
-                        />
-                        <label
-                          htmlFor={`club-${club.id}`}
-                          className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                          {club.name}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <div className="flex justify-end gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push("/admin/usuarios")}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Guardando..." : "Guardar cambios"}
-              </Button>
-            </div>
-          </form>
+          {/* Moderation Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-red-600">Acciones de Moderación</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                <h4 className="font-medium text-red-800 mb-2">Suspender Usuario</h4>
+                <p className="text-sm text-red-700 mb-3">
+                  El usuario no podrá acceder al sistema hasta que se reactive su cuenta.
+                </p>
+                <Button 
+                  onClick={handleBanUser}
+                  disabled={isSubmitting}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Suspender Usuario
+                </Button>
+              </div>
+              
+              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                <h4 className="font-medium text-yellow-800 mb-2">Timeout Temporal</h4>
+                <p className="text-sm text-yellow-700 mb-3">
+                  Suspender temporalmente al usuario por 24 horas.
+                </p>
+                <Button 
+                  className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+                  disabled={true}
+                >
+                  Timeout 24h (Próximamente)
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
         
         {/* User Profile Preview */}
         <div>
           <Card>
             <CardHeader>
-              <CardTitle>Vista previa</CardTitle>
+              <CardTitle>Resumen</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col items-center text-center">
-              <Avatar className="h-24 w-24 mb-4">
-                <AvatarImage src={user.profile_picture || undefined} alt={`${formData.name} ${formData.surname}`} />
+            <CardContent className="flex flex-col items-center text-center space-y-4">
+              <Avatar className="h-16 w-16">
                 <AvatarFallback className="bg-amber/10 text-amber-dark text-lg">
-                  {formData.name.charAt(0)}{formData.surname.charAt(0)}
+                  {user.email.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               
-              <h3 className="text-xl font-bold">{formData.name} {formData.surname}</h3>
-              <p className="text-sm text-muted-foreground mb-2">{formData.email}</p>
+              <div>
+                <h3 className="font-medium">{user.nombre && user.apellido ? `${user.nombre} ${user.apellido}` : 'Usuario'}</h3>
+                <p className="text-sm text-muted-foreground">{user.email}</p>
+              </div>
               
-              <div className="flex flex-wrap gap-2 justify-center mt-2 mb-4">
-                {formData.page_admin && (
-                  <Badge variant="outline" className="border-amber bg-amber/10 text-amber-dark">
-                    Administrador
-                  </Badge>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {user.isAdmin && (
+                  <Badge className="bg-red-100 text-red-800">Admin Global</Badge>
                 )}
-                
-                {formData.club_id && formData.club_id !== "none" && (
-                  <Badge variant="outline">
-                    {clubs.find(c => c.id.toString() === formData.club_id)?.name || 'Club'}
-                  </Badge>
+                {user.isClubAdmin && (
+                  <Badge className="bg-blue-100 text-blue-800">Admin Club</Badge>
+                )}
+                {!user.isAdmin && !user.isClubAdmin && (
+                  <Badge className="bg-gray-100 text-gray-800">Usuario</Badge>
                 )}
               </div>
               
-              {formData.biography && (
-                <div className="text-sm text-left mt-4 border-t pt-4">
-                  <p className="font-medium mb-1">Biografía</p>
-                  <p className="text-muted-foreground">{formData.biography}</p>
-                </div>
-              )}
-              
-              {formData.selectedClubAdmins.length > 0 && (
-                <div className="text-sm text-left mt-4 border-t pt-4 w-full">
-                  <p className="font-medium mb-1">Administrador de:</p>
+              {clubsAdmin.length > 0 && (
+                <div className="text-sm text-left border-t pt-4 w-full">
+                  <p className="font-medium mb-2">Administrador de:</p>
                   <ul className="space-y-1">
-                    {formData.selectedClubAdmins.map(clubId => {
-                      const club = clubs.find(c => c.id === clubId)
-                      return club ? (
-                        <li key={club.id} className="text-muted-foreground">• {club.name}</li>
-                      ) : null
-                    })}
+                    {clubsAdmin.map(admin => (
+                      <li key={admin.club_id} className="text-muted-foreground text-xs">
+                        • {admin.club.name}
+                      </li>
+                    ))}
                   </ul>
                 </div>
               )}

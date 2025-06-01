@@ -1,30 +1,95 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowUpRight, BarChart3, Calendar, FileText, Home, MessageSquare, Plus, Trophy, TrendingUp, Users } from "lucide-react"
+import { FileText, Home, Plus, Trophy, Users } from "lucide-react"
 import { useState, useEffect } from "react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { supabase } from "@/lib/supabaseClient"
 
-export default function AdminDashboard() {
-  const [stats, setStats] = useState({
-    usuarios: 0,
-    usuariosNuevos: 0,
-    noticias: 0,
-    torneos: 0,
-    torneosActivos: 0,
+// Type definitions for our stats
+interface DashboardStats {
+  usuarios: number
+  usuariosNuevos: number
+  usuariosNuevosHoy: number
+  usuariosVerificados: number
+  noticias: number
+  noticiasEstesMes: number
+  clubes: number
+  clubesConContacto: number
+  torneos: number
+  torneosActivos: number
+  torneosProximos: number
+  crecimientoMensual: string
+  loading: boolean
+  error?: string
+}
+
+// Helper function to make authenticated API calls
+async function apiCall(endpoint: string) {
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  if (!session?.access_token) {
+    throw new Error('No authentication token available')
+  }
+
+  const response = await fetch(`/api${endpoint}`, {
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
   })
 
-  // Simular carga de estadísticas
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Network error' }))
+    throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+  }
+
+  return response.json()
+}
+
+export default function AdminDashboard() {
+  const [stats, setStats] = useState<DashboardStats>({
+    usuarios: 0,
+    usuariosNuevos: 0,
+    usuariosNuevosHoy: 0,
+    usuariosVerificados: 0,
+    noticias: 0,
+    noticiasEstesMes: 0,
+    clubes: 0,
+    clubesConContacto: 0,
+    torneos: 0,
+    torneosActivos: 0,
+    torneosProximos: 0,
+    crecimientoMensual: "0%",
+    loading: true,
+  })
+
+  // Load actual statistics from the new admin stats API
   useEffect(() => {
-    setStats({
-      usuarios: Math.floor(Math.random() * 100) + 50,
-      usuariosNuevos: Math.floor(Math.random() * 10) + 1,
-      noticias: Math.floor(Math.random() * 30) + 5,
-      torneos: Math.floor(Math.random() * 20) + 3,
-      torneosActivos: Math.floor(Math.random() * 5) + 1,
-    })
+    async function loadStats() {
+      try {
+        setStats(prev => ({ ...prev, loading: true, error: undefined }))
+
+        // Fetch statistics from the dedicated admin stats endpoint
+        const statsData = await apiCall('/admin/stats')
+
+        setStats({
+          ...statsData,
+          loading: false
+        })
+      } catch (error) {
+        console.error('Error loading dashboard stats:', error)
+        setStats(prev => ({
+          ...prev,
+          loading: false,
+          error: error instanceof Error ? error.message : 'Failed to load statistics'
+        }))
+      }
+    }
+
+    loadStats()
   }, [])
 
   return (
@@ -32,14 +97,23 @@ export default function AdminDashboard() {
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         <div className="flex items-center space-x-2">
-          <Button asChild>
-            <Link href="/admin/usuarios/nuevo">
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo usuario
-            </Link>
-          </Button>
+          
         </div>
       </div>
+
+      {stats.error && (
+        <div className="rounded-md bg-red-50 p-4">
+          <div className="flex">
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error cargando estadísticas</h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>{stats.error}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -47,9 +121,11 @@ export default function AdminDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.usuarios}</div>
+            <div className="text-2xl font-bold">
+              {stats.loading ? "..." : stats.usuarios.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +{stats.usuariosNuevos} nuevos este mes
+              +{stats.loading ? "..." : stats.usuariosNuevos} nuevos este mes
             </p>
           </CardContent>
         </Card>
@@ -59,9 +135,11 @@ export default function AdminDashboard() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.noticias}</div>
+            <div className="text-2xl font-bold">
+              {stats.loading ? "..." : stats.noticias.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +2 esta semana
+              +{stats.loading ? "..." : stats.noticiasEstesMes} este mes
             </p>
           </CardContent>
         </Card>
@@ -71,21 +149,25 @@ export default function AdminDashboard() {
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.torneosActivos}</div>
+            <div className="text-2xl font-bold">
+              {stats.loading ? "..." : stats.torneosActivos}
+            </div>
             <p className="text-xs text-muted-foreground">
-              de {stats.torneos} totales
+              {stats.loading ? "..." : stats.torneosProximos} próximos, {stats.loading ? "..." : stats.torneos} totales
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Crecimiento</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Clubes registrados</CardTitle>
+            <Home className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+12.5%</div>
+            <div className="text-2xl font-bold">
+              {stats.loading ? "..." : stats.clubes}
+            </div>
             <p className="text-xs text-muted-foreground">
-              +2.1% desde el mes pasado
+              {stats.loading ? "..." : stats.clubesConContacto} con información de contacto
             </p>
           </CardContent>
         </Card>
@@ -100,37 +182,56 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-8">
-              {/* Activity items would go here */}
-              <div className="flex items-center">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    Nuevo usuario registrado
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Hace 2 horas
-                  </p>
+              {stats.loading ? (
+                <div className="flex items-center space-x-4">
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    Nueva noticia publicada
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Hace 3 horas
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    Nuevo torneo creado
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Hace 5 horas
-                  </p>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="flex items-center">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {stats.usuariosNuevosHoy > 0 ? 
+                          `${stats.usuariosNuevosHoy} nuevo${stats.usuariosNuevosHoy > 1 ? 's' : ''} usuario${stats.usuariosNuevosHoy > 1 ? 's' : ''} registrado${stats.usuariosNuevosHoy > 1 ? 's' : ''} hoy` :
+                          stats.usuariosNuevos > 0 ? "Nuevos usuarios este mes" : "Sistema inicializado"
+                        }
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {stats.usuariosVerificados} usuarios verificados
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {stats.noticiasEstesMes > 0 ? 
+                          `${stats.noticiasEstesMes} noticia${stats.noticiasEstesMes > 1 ? 's' : ''} este mes` :
+                          stats.noticias > 0 ? "Noticias disponibles" : "Sistema configurado"
+                        }
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Crecimiento: {stats.crecimientoMensual}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {stats.torneosActivos > 0 ? 
+                          `${stats.torneosActivos} torneo${stats.torneosActivos > 1 ? 's' : ''} activo${stats.torneosActivos > 1 ? 's' : ''}` :
+                          stats.torneosProximos > 0 ? `${stats.torneosProximos} torneos próximos` : "Torneos listos"
+                        }
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Total: {stats.torneos} torneos
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -143,25 +244,25 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
-              <Button asChild variant="outline" className="w-full justify-start">
+              <Button asChild className="w-full justify-start" variant="outline">
                 <Link href="/admin/usuarios/nuevo">
                   <Users className="mr-2 h-4 w-4" />
                   Nuevo usuario
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="w-full justify-start">
+              <Button asChild className="w-full justify-start" variant="outline">
                 <Link href="/admin/noticias/nueva">
                   <FileText className="mr-2 h-4 w-4" />
                   Nueva noticia
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="w-full justify-start">
+              <Button asChild className="w-full justify-start" variant="outline">
                 <Link href="/admin/torneos/nuevo">
                   <Trophy className="mr-2 h-4 w-4" />
                   Nuevo torneo
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="w-full justify-start">
+              <Button asChild className="w-full justify-start" variant="outline">
                 <Link href="/admin/clubes/nuevo">
                   <Home className="mr-2 h-4 w-4" />
                   Nuevo club
