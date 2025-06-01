@@ -64,15 +64,27 @@ export function ClubSelector() {
             </SelectValue>
           </div>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="max-h-60 !bg-white !backdrop-blur-none !bg-opacity-100 border border-border shadow-lg">
           {clubesAdministrados.map((club) => (
-            <SelectItem key={club.id} value={club.id.toString()}>
-              <div className="flex flex-col">
-                <span className="font-medium">{club.name}</span>
+            <SelectItem 
+              key={club.id} 
+              value={club.id.toString()} 
+              className={`!py-2 !px-4 !pl-4 flex items-start ${
+                selectedClub?.id === club.id 
+                  ? '!bg-terracotta/10 !text-terracotta' 
+                  : 'hover:!bg-gray-50'
+              } [&>span:first-child]:hidden`}
+            >
+              <div className="w-full">
+                <div className="font-medium text-sm leading-tight">{club.name}</div>
                 {club.address && (
-                  <span className="text-xs text-muted-foreground">
+                  <div className={`text-xs leading-tight mt-0.5 ${
+                    selectedClub?.id === club.id 
+                      ? 'text-terracotta/70' 
+                      : 'text-muted-foreground'
+                  }`}>
                     {club.address}
-                  </span>
+                  </div>
                 )}
               </div>
             </SelectItem>

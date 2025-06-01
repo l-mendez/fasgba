@@ -36,7 +36,7 @@ export const useClubContext = () => {
 }
 
 // Helper function para hacer llamadas a la API
-async function apiCall(endpoint: string, options: RequestInit = {}) {
+export async function apiCall(endpoint: string, options: RequestInit = {}) {
   const { data: { session } } = await supabase.auth.getSession()
   
   if (!session) {

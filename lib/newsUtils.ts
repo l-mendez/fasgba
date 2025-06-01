@@ -282,7 +282,7 @@ export async function deleteNews(id: number): Promise<boolean> {
 export async function canUserEditNews(newsId: number, authId: string): Promise<boolean> {
   const { data: news, error } = await supabase
     .from('news')
-    .select('created_by_auth_id')
+    .select('created_by_auth_id, club_id')
     .eq('id', newsId)
     .single()
 
@@ -295,18 +295,32 @@ export async function canUserEditNews(newsId: number, authId: string): Promise<b
     return true
   }
 
-  // Check if user is an admin
+  // Check if user is a site admin
   const { data: admin, error: adminError } = await supabase
     .from('admins')
     .select('auth_id')
     .eq('auth_id', authId)
     .single()
 
-  if (adminError || !admin) {
-    return false
+  if (!adminError && admin) {
+    return true
   }
 
-  return true
+  // Check if user is a club admin for the club associated with this news
+  if (news.club_id) {
+    const { data: clubAdmin, error: clubAdminError } = await supabase
+      .from('club_admins')
+      .select('auth_id')
+      .eq('auth_id', authId)
+      .eq('club_id', news.club_id)
+      .single()
+
+    if (!clubAdminError && clubAdmin) {
+      return true
+    }
+  }
+
+  return false
 }
 
 /**
