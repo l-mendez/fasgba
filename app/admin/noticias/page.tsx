@@ -51,81 +51,6 @@ interface News {
   updated_at: string
 }
 
-// Mock data for news
-const mockNews: News[] = [
-  {
-    id: 1,
-    title: "Campeonato Nacional de Ajedrez 2023",
-    date: "2023-12-15",
-    image: "https://images.unsplash.com/photo-1580549181132-72d10d1dd0a7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-    extract: "El Campeonato Nacional de Ajedrez 2023 se celebrará en Buenos Aires del 15 al 22 de diciembre.",
-    text: "El Campeonato Nacional de Ajedrez 2023 se celebrará en Buenos Aires del 15 al 22 de diciembre. Este evento contará con la participación de los mejores ajedrecistas del país y ofrecerá premios en efectivo por un total de $500,000. Las inscripciones ya están abiertas y se pueden realizar a través de la página web de la Federación Argentina de Ajedrez.",
-    tags: ["torneo", "nacional", "2023"],
-    club_id: 1,
-    club: {
-      id: 1,
-      name: "Club de Ajedrez Buenos Aires"
-    },
-    created_by_user_id: 1,
-    created_by_user: {
-      id: 1,
-      name: "Juan",
-      surname: "Pérez",
-      email: "juan.perez@example.com",
-      profile_picture: "https://i.pravatar.cc/150?img=1"
-    },
-    created_at: "2023-11-01T10:00:00Z",
-    updated_at: "2023-11-01T10:00:00Z"
-  },
-  {
-    id: 2,
-    title: "Nueva sede para el Club de Ajedrez La Plata",
-    date: "2023-11-20",
-    image: "https://images.unsplash.com/photo-1511512578047-dfb367046420?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-    extract: "El Club de Ajedrez La Plata inaugurará su nueva sede el próximo 20 de noviembre.",
-    text: "El Club de Ajedrez La Plata inaugurará su nueva sede el próximo 20 de noviembre. La nueva ubicación cuenta con un espacio de 500 metros cuadrados, salas de entrenamiento, biblioteca y un café. Este proyecto fue posible gracias al apoyo de los socios y patrocinadores del club.",
-    tags: ["club", "inauguración", "la plata"],
-    club_id: 2,
-    club: {
-      id: 2,
-      name: "Club de Ajedrez La Plata"
-    },
-    created_by_user_id: 2,
-    created_by_user: {
-      id: 2,
-      name: "María",
-      surname: "González",
-      email: "maria.gonzalez@example.com",
-      profile_picture: "https://i.pravatar.cc/150?img=5"
-    },
-    created_at: "2023-10-15T14:30:00Z",
-    updated_at: "2023-10-15T14:30:00Z"
-  },
-  {
-    id: 3,
-    title: "Entrevista con el Gran Maestro Carlos Rodríguez",
-    date: "2023-11-10",
-    image: "https://images.unsplash.com/photo-1579547945413-497e1b99dac0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-    extract: "Entrevista exclusiva con el Gran Maestro Carlos Rodríguez sobre su carrera y sus planes para el futuro.",
-    text: "En esta entrevista exclusiva, el Gran Maestro Carlos Rodríguez nos habla sobre su carrera en el ajedrez, sus mayores logros y sus planes para el futuro. Rodríguez, quien se convirtió en Gran Maestro a los 22 años, ha representado a Argentina en numerosas olimpiadas y ha ganado múltiples torneos internacionales. Actualmente está preparándose para el próximo Campeonato Nacional y tiene planes de abrir una academia de ajedrez en Buenos Aires.",
-    tags: ["entrevista", "gran maestro", "carlos rodríguez"],
-    club_id: 3,
-    club: {
-      id: 3,
-      name: "Club de Ajedrez Rosario"
-    },
-    created_by_user_id: 1,
-    created_by_user: {
-      id: 1,
-      name: "Juan",
-      surname: "Pérez",
-      email: "juan.perez@example.com",
-      profile_picture: "https://i.pravatar.cc/150?img=1"
-    },
-    created_at: "2023-10-05T09:15:00Z",
-    updated_at: "2023-10-05T09:15:00Z"
-  }
-]
 
 export default function AdminNoticiasPage() {
   const [news, setNews] = useState<News[]>([])
@@ -140,13 +65,46 @@ export default function AdminNoticiasPage() {
       setIsLoading(true)
       setError(null)
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500))
+      const response = await fetch('/api/news?include=author,club', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
       
-      // Use mock data instead of fetching from Supabase
-      setNews(mockNews)
+      // The API returns an object with news array and pagination
+      if (data.news && Array.isArray(data.news)) {
+        // Map the API response to match our News interface
+        const mappedNews: News[] = data.news.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          date: item.date,
+          image: item.image,
+          extract: item.extract,
+          text: item.text,
+          tags: item.tags || [],
+          club_id: item.club_id,
+          club: item.club,
+          created_by_user_id: item.created_by_auth_id,
+          created_by_user: item.created_by_user,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+        }))
+        
+        setNews(mappedNews)
+      } else {
+        setNews([])
+      }
     } catch (err) {
+      console.error('Error fetching news:', err)
       setError(err instanceof Error ? err.message : "Error al cargar las noticias")
+      setNews([]) // Set empty array on error
     } finally {
       setIsLoading(false)
     }

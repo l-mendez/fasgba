@@ -14,7 +14,7 @@ export const createNewsSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255, 'Title must be less than 255 characters'),
   extract: z.string().max(500, 'Extract must be less than 500 characters').optional(),
   text: z.string().min(1, 'Content is required'),
-  image: z.string().url('Image must be a valid URL').optional().or(z.literal('')),
+  image: z.string().min(1, 'Image must not be empty').nullable().optional(),
   tags: z.array(z.string()).max(10, 'Maximum 10 tags allowed').optional(),
   club_id: z.number().int().positive('Club ID must be a positive integer').optional(),
 })
@@ -24,7 +24,7 @@ export const updateNewsSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255, 'Title must be less than 255 characters').optional(),
   extract: z.string().max(500, 'Extract must be less than 500 characters').optional(),
   text: z.string().min(1, 'Content is required').optional(),
-  image: z.string().url('Image must be a valid URL').optional().or(z.literal('')),
+  image: z.string().min(1, 'Image must not be empty').nullable().optional(),
   tags: z.array(z.string()).max(10, 'Maximum 10 tags allowed').optional(),
   club_id: z.number().int().positive('Club ID must be a positive integer').optional(),
 })
