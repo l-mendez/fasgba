@@ -61,10 +61,10 @@ async function getUserStats() {
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
 
   const total = users.length
-  const newThisMonth = users.filter(user => new Date(user.created_at) >= startOfMonth).length
-  const newToday = users.filter(user => new Date(user.created_at) >= startOfToday).length
-  const verified = users.filter(user => user.email_confirmed_at !== null).length
-  const newLastMonth = users.filter(user => {
+  const newThisMonth = users.filter((user: any) => new Date(user.created_at) >= startOfMonth).length
+  const newToday = users.filter((user: any) => new Date(user.created_at) >= startOfToday).length
+  const verified = users.filter((user: any) => user.email_confirmed_at !== null).length
+  const newLastMonth = users.filter((user: any) => {
     const createdAt = new Date(user.created_at)
     return createdAt >= startOfLastMonth && createdAt < startOfMonth
   }).length
@@ -122,7 +122,7 @@ async function getClubStats() {
   }
 
   const total = clubs.length
-  const withContact = clubs.filter(club => club.mail || club.telephone).length
+  const withContact = clubs.filter((club: any) => club.mail || club.telephone).length
 
   return {
     total,
@@ -151,12 +151,12 @@ async function getTournamentStats() {
   let active = 0
   let upcoming = 0
 
-  tournaments.forEach(tournament => {
+  tournaments.forEach((tournament: any) => {
     const dates = tournament.tournament_dates?.map((d: any) => new Date(d.event_date)) || []
     
     if (dates.length === 0) return
 
-    dates.sort((a, b) => a.getTime() - b.getTime())
+    dates.sort((a: Date, b: Date) => a.getTime() - b.getTime())
     const startDate = dates[0]
     const endDate = dates[dates.length - 1]
 

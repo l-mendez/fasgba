@@ -434,3 +434,81 @@ export async function getClubNewsCount(clubId: number): Promise<number> {
 
   return count || 0
 }
+
+/**
+ * Gets clubs administered by a specific user (by auth UUID)
+ */
+export async function getUserAdminClubs(authId: string): Promise<Club[]> {
+  try {
+    // Get club IDs where the user is an admin
+    const { data: adminRelations, error: adminError } = await supabase
+      .from('club_admins')
+      .select('club_id')
+      .eq('auth_id', authId)
+
+    if (adminError) {
+      console.error('Error fetching user admin relations:', adminError)
+      throw new Error('Failed to fetch user admin clubs')
+    }
+
+    if (!adminRelations || adminRelations.length === 0) {
+      return []
+    }
+
+    // Get the actual club data
+    const clubIds = adminRelations.map(relation => relation.club_id)
+    const { data: clubs, error: clubsError } = await supabase
+      .from('clubs')
+      .select('*')
+      .in('id', clubIds)
+
+    if (clubsError) {
+      console.error('Error fetching clubs:', clubsError)
+      throw new Error('Failed to fetch clubs')
+    }
+
+    return clubs || []
+  } catch (error) {
+    console.error('Error in getUserAdminClubs:', error)
+    throw error
+  }
+}
+
+/**
+ * Gets clubs followed by a specific user (by auth UUID)
+ */
+export async function getUserFollowedClubs(authId: string): Promise<Club[]> {
+  try {
+    // Get club IDs that the user follows
+    const { data: followRelations, error: followError } = await supabase
+      .from('user_follows_club')
+      .select('club_id')
+      .eq('auth_id', authId)
+
+    if (followError) {
+      console.error('Error fetching user follow relations:', followError)
+      throw new Error('Failed to fetch user followed clubs')
+    }
+
+    if (!followRelations || followRelations.length === 0) {
+      return []
+    }
+
+    // Get the actual club data
+    const clubIds = followRelations.map(relation => relation.club_id)
+    const { data: clubs, error: clubsError } = await supabase
+      .from('clubs')
+      .select('*')
+      .in('id', clubIds)
+
+    if (clubsError) {
+      console.error('Error fetching clubs:', clubsError)
+      throw new Error('Failed to fetch clubs')
+    }
+
+    return clubs || []
+  } catch (error) {
+    console.error('Error in getUserFollowedClubs:', error)
+    throw error
+  }
+}

@@ -11,7 +11,6 @@ import {
   MessageSquare,
   Plus,
   Trophy,
-  Users,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -19,6 +18,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ClubContextProvider } from "./context/club-context"
+import { ClubSelector } from "./components/club-selector"
 
 interface ClubAdminLayoutProps {
   children: ReactNode
@@ -44,6 +44,10 @@ export default function ClubAdminLayout({ children }: ClubAdminLayoutProps) {
               <span className="font-bold text-terracotta">Club Admin</span>
             </Link>
           </div>
+          
+          {/* Club Selector */}
+          <ClubSelector />
+          
           <ScrollArea className="h-[calc(100vh-3.5rem)]">
             <div className="space-y-4 py-4">
               <div className="px-3 py-2">
@@ -57,16 +61,6 @@ export default function ClubAdminLayout({ children }: ClubAdminLayoutProps) {
                   >
                     <BarChart3 className="mr-2 h-4 w-4" />
                     Dashboard
-                  </Link>
-                  <Link
-                    href="/club-admin/miembros"
-                    className={cn(
-                      "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
-                      pathname.startsWith("/club-admin/miembros") ? "bg-amber/10 text-amber" : "text-muted-foreground"
-                    )}
-                  >
-                    <Users className="mr-2 h-4 w-4" />
-                    Miembros
                   </Link>
                   <Link
                     href="/club-admin/noticias"

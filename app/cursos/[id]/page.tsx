@@ -204,7 +204,7 @@ const cursos = [
   },
 ]
 
-export default function CursoDetailPage({ params }) {
+export default function CursoDetailPage({ params }: { params: { id: string } }) {
   const curso = cursos.find((c) => c.id === params.id)
   const [inscripcionExitosa, setInscripcionExitosa] = useState(false)
 

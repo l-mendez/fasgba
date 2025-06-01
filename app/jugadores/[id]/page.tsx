@@ -136,9 +136,12 @@ const jugadoresDB = [
   // Podríamos añadir más jugadores aquí
 ]
 
-export default function JugadorPerfilPage({ params }: { params: { id: string } }) {
+export default async function JugadorPerfilPage({ params }: { params: Promise<{ id: string }> }) {
+  // Await params before using its properties (Next.js 15 requirement)
+  const { id } = await params
+  
   // Buscar el jugador por ID
-  const jugador = jugadoresDB.find((j) => j.id.toString() === params.id)
+  const jugador = jugadoresDB.find((j) => j.id.toString() === id)
 
   // Si no se encuentra el jugador, mostrar mensaje de error
   if (!jugador) {

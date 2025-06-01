@@ -8,11 +8,8 @@ export async function GET(request: NextRequest) {
     // Require authentication
     const user = await requireAuth(request)
     
-    // Get user ID from the database profile
-    // Note: This would typically come from a user profile lookup
-    const userNumericId = parseInt(user.id) || 0 // This is a simplification
-    
-    const adminClubs = await getUserAdminClubs(userNumericId)
+    // Use the auth UUID directly (not numeric conversion)
+    const adminClubs = await getUserAdminClubs(user.id)
     return apiSuccess(adminClubs)
   } catch (error) {
     return handleError(error)

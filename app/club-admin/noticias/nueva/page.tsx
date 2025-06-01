@@ -50,20 +50,96 @@ const BLOCK_TYPES = {
   TEXT: "text",
   CHESS_GAME: "chess_game",
   IMAGE: "image",
-}
+} as const
 
 // Alineaciones de imagen
 const IMAGE_ALIGNMENTS = {
   LEFT: "left",
   CENTER: "center",
   RIGHT: "right",
+} as const
+
+// Interfaces para TypeScript
+interface ChessBoardProps {
+  pgn: string
+}
+
+interface PlayerSelectorProps {
+  label: string
+  type: string
+  value: string
+  onChange: (value: string) => void
+  onTypeChange: (type: string) => void
+}
+
+interface TextBlockProps {
+  value: string
+  onChange: (value: string) => void
+  onDelete: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  index: number
+  totalBlocks: number
+}
+
+interface ImageBlockProps {
+  value: {
+    file: File | null
+    imageUrl: string | null
+    caption: string
+    alignment: string
+  }
+  onImageChange: (file: File, imageUrl: string) => void
+  onCaptionChange: (caption: string) => void
+  onAlignmentChange: (alignment: string) => void
+  onDelete: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  index: number
+  totalBlocks: number
+}
+
+interface ChessGameBlockProps {
+  value: {
+    pgn: string
+    whitePlayer: { type: string; value: string }
+    blackPlayer: { type: string; value: string }
+  }
+  onPgnChange: (pgn: string) => void
+  onWhitePlayerChange: (value: string) => void
+  onBlackPlayerChange: (value: string) => void
+  onWhitePlayerTypeChange: (type: string) => void
+  onBlackPlayerTypeChange: (type: string) => void
+  onDelete: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  index: number
+  totalBlocks: number
+}
+
+interface AddBlockButtonProps {
+  onAddTextBlock: () => void
+  onAddChessGameBlock: () => void
+  onAddImageBlock: () => void
+}
+
+interface Move {
+  number: number
+  white: string
+  black: string
+}
+
+interface SearchResult {
+  id: string
+  name: string
+  elo: number
 }
 
 // Componente para visualizar el tablero de ajedrez
-const ChessBoard = ({ pgn }) => {
-  const [position, setPosition] = useState(null)
+const ChessBoard = ({ pgn }: ChessBoardProps) => {
+  const [position, setPosition] = useState<string | null>(null)
   const [currentMove, setCurrentMove] = useState(0)
-  const [moves, setMoves] = useState([])
+  const [moves, setMoves] = useState<Move[]>([])
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -106,7 +182,7 @@ const ChessBoard = ({ pgn }) => {
     }
   }, [pgn])
 
-  const handleMoveChange = (moveIndex) => {
+  const handleMoveChange = (moveIndex: number) => {
     if (!moves.length) return
     setCurrentMove(moveIndex)
     // Aquí actualizaríamos la posición del tablero
@@ -176,15 +252,15 @@ const ChessBoard = ({ pgn }) => {
 }
 
 // Componente para seleccionar jugadores
-const PlayerSelector = ({ label, type, value, onChange, onTypeChange }) => {
+const PlayerSelector = ({ label, type, value, onChange, onTypeChange }: PlayerSelectorProps) => {
   const [searchTerm, setSearchTerm] = useState("")
-  const [searchResults, setSearchResults] = useState([])
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
 
   // Simulación de búsqueda de usuarios
   useEffect(() => {
     if (type === "user" && searchTerm.length > 2) {
       // En producción, esto sería una llamada a la API
-      const mockResults = [
+      const mockResults: SearchResult[] = [
         { id: "1", name: "Juan Pérez", elo: 1850 },
         { id: "2", name: "María García", elo: 2100 },
         { id: "3", name: "Carlos López", elo: 1750 },
@@ -261,7 +337,7 @@ const PlayerSelector = ({ label, type, value, onChange, onTypeChange }) => {
 }
 
 // Componente para un bloque de texto
-const TextBlock = ({ value, onChange, onDelete, onMoveUp, onMoveDown, index, totalBlocks }) => {
+const TextBlock = ({ value, onChange, onDelete, onMoveUp, onMoveDown, index, totalBlocks }: TextBlockProps) => {
   return (
     <div className="border rounded-md p-4 mb-4">
       <div className="flex justify-between items-center mb-2">
@@ -311,17 +387,17 @@ const ImageBlock = ({
   onMoveDown,
   index,
   totalBlocks,
-}) => {
+}: ImageBlockProps) => {
   const [isOpen, setIsOpen] = useState(true)
-  const fileInputRef = useRef(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState(value.imageUrl || null)
 
   const handleImageClick = () => {
-    fileInputRef.current.click()
+    fileInputRef.current?.click()
   }
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0]
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
     if (!file) return
 
     // Crear una URL para previsualizar la imagen
@@ -452,7 +528,7 @@ const ChessGameBlock = ({
   onMoveDown,
   index,
   totalBlocks,
-}) => {
+}: ChessGameBlockProps) => {
   const [isOpen, setIsOpen] = useState(true)
   const [previewPgn, setPreviewPgn] = useState("")
 
@@ -549,7 +625,7 @@ const ChessGameBlock = ({
 }
 
 // Componente para añadir un nuevo bloque
-const AddBlockButton = ({ onAddTextBlock, onAddChessGameBlock, onAddImageBlock }) => {
+const AddBlockButton = ({ onAddTextBlock, onAddChessGameBlock, onAddImageBlock }: AddBlockButtonProps) => {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
@@ -684,76 +760,30 @@ export default function NuevaNoticiaPage() {
         throw new Error('Error de configuración del servidor. Contacte al administrador.')
       }
       
-      // 1. Obtener sesión de usuario
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      // 1. Obtener usuario autenticado usando el patrón correcto
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
       
-      console.log('Session check result:', { 
-        hasSession: !!sessionData?.session, 
-        sessionError: sessionError?.message 
-      })
-      
-      // Try to continue even if session appears null but user might be logged in
-      if (sessionError) {
-        console.error('Session error:', sessionError)
-        // Continue execution to see if we can still get user data another way
+      if (userError) {
+        console.error('Error getting user:', userError)
+        throw new Error('No se pudo obtener la información del usuario. Por favor, inicie sesión nuevamente.')
       }
       
-      // 2. Obtener usuario vinculado a la cuenta de auth - intentar con getUser si getSession falla
-      let userId = null
-      
-      if (sessionData?.session) {
-        // Si hay sesión, usa el ID de la sesión
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('auth_id', sessionData.session.user.id)
-          .single()
-        
-        if (userError) {
-          console.error('Error fetching user with session ID:', userError)
-        } else if (userData) {
-          userId = userData.id
-        }
+      if (!user) {
+        throw new Error('No hay usuario autenticado. Por favor, inicie sesión.')
       }
       
-      // Si no se pudo obtener el ID a través de la sesión, intenta con getUser
-      if (!userId) {
-        const { data: authUser } = await supabase.auth.getUser()
-        console.log('getUser result:', { hasUser: !!authUser?.user })
-        
-        if (authUser?.user) {
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('id')
-            .eq('auth_id', authUser.user.id)
-            .single()
-          
-          if (userError) {
-            console.error('Error fetching user with getUser ID:', userError)
-          } else if (userData) {
-            userId = userData.id
-          }
-        }
-      }
+      console.log('User authenticated:', { id: user.id, email: user.email })
       
-      // Si todavía no hay userId, intenta obtener el primer usuario administrador del club como fallback
-      if (!userId) {
-        const { data: adminUser, error: adminError } = await supabase
-          .from('club_admins')
-          .select('user_id')
-          .eq('club_id', selectedClub.id)
-          .limit(1)
-          .single()
-        
-        if (!adminError && adminUser) {
-          userId = adminUser.user_id
-          console.log('Using club admin as fallback user:', userId)
-        }
-      }
+      // 2. Verificar que el usuario es administrador del club
+      const { data: clubAdminData, error: clubAdminError } = await supabase
+        .from('club_admins')
+        .select('auth_id')
+        .eq('auth_id', user.id)
+        .eq('club_id', selectedClub.id)
+        .single()
       
-      if (!userId) {
-        console.error('Could not determine user ID through any method')
-        throw new Error('No se pudo determinar el usuario para crear la noticia. Por favor, intente cerrar sesión y volver a iniciar sesión.')
+      if (clubAdminError || !clubAdminData) {
+        throw new Error('No tienes permisos para crear noticias en este club.')
       }
       
       // 3. Procesar contenido de la noticia
@@ -787,50 +817,34 @@ export default function NuevaNoticiaPage() {
         image: imagePath,
         tags: formData.categoria ? [formData.categoria] : [],
         club_id: selectedClub.id,
-        created_by_user_id: userId,
+        created_by_auth_id: user.id,  // Usar auth_id directamente
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
       
       // 6. Insertar noticia en la base de datos
-      console.log('Using admin client to bypass RLS policies')
+      console.log('Inserting news with data:', newsData)
       
-      try {
-        const { data: newsItem, error: insertError } = await supabaseAdmin
-          .from('news')
-          .insert([newsData])
-          .select()
-        
-        if (insertError) {
-          console.error('Error details:', {
-            message: insertError.message,
-            details: insertError.details,
-            hint: insertError.hint,
-            code: insertError.code
-          })
-          
-          // Proporcionar mensaje más amigable para error de RLS
-          if (insertError.message.includes('violates row-level security policy')) {
-            throw new Error('No tienes permiso para crear noticias. Contacta al administrador del sistema o verifica que tienes los roles correctos asignados a tu cuenta.')
-          }
-          
-          throw new Error('Error al crear noticia: ' + insertError.message)
-        }
-        
-        console.log('News created successfully:', newsItem)
-        
-        // 7. Mostrar notificación y redirigir
-        toast({
-          title: "Noticia creada",
-          description: `La noticia "${formData.titulo}" ha sido creada exitosamente.`,
-          duration: 5000,
-        })
-        
-        router.push("/club-admin/noticias")
-      } catch (insertErr) {
-        console.error('Insert operation failed:', insertErr)
-        throw insertErr
+      const { data: newsItem, error: insertError } = await supabaseAdmin
+        .from('news')
+        .insert([newsData])
+        .select()
+      
+      if (insertError) {
+        console.error('Error inserting news:', insertError)
+        throw new Error('Error al crear noticia: ' + insertError.message)
       }
+      
+      console.log('News created successfully:', newsItem)
+      
+      // 7. Mostrar notificación y redirigir
+      toast({
+        title: "Noticia creada",
+        description: `La noticia "${formData.titulo}" ha sido creada exitosamente.`,
+        duration: 5000,
+      })
+      
+      router.push("/club-admin/noticias")
     } catch (err) {
       console.error('Error al crear noticia:', err)
       setError(err instanceof Error ? err.message : 'Ocurrió un error al crear la noticia')
@@ -1092,7 +1106,7 @@ export default function NuevaNoticiaPage() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-terracotta">Nueva Noticia</h1>
-          <p className="text-muted-foreground">Crea una nueva noticia para {selectedClub.nombre}.</p>
+          <p className="text-muted-foreground">Crea una nueva noticia para {selectedClub.name}.</p>
         </div>
       </div>
 

@@ -28,8 +28,8 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { useClubContext } from "../context/club-context"
 
-// Define el tipo para noticias
-interface Noticia {
+// Define el tipo para noticias según la nueva API
+interface NewsDisplay {
   id: number
   title: string
   date: string
@@ -37,34 +37,68 @@ interface Noticia {
   extract: string | null
   text: string
   tags: string[] | null
-  club_id: number
-  created_by_user_id: number
+  club_id: number | null
+  created_by_auth_id: string
   created_at: string
   updated_at: string
-  // Relaciones
-  created_by_user?: {
+  // Relaciones incluidas por la API
+  club?: {
     id: number
     name: string
-    surname: string
-    email: string
+    address: string | null
+    telephone: string | null
+    mail: string | null
+    schedule: string | null
   }
-  // Campos calculados
+  // Campos calculados localmente
   estado: 'publicada' | 'borrador'
   fecha_formateada: string
   autor: string
   categoria: string
 }
 
+// Helper function para hacer llamadas a la API
+async function apiCall(endpoint: string, options: RequestInit = {}) {
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  if (!session) {
+    throw new Error('No hay sesión activa')
+  }
+
+  const url = `/api${endpoint}`
+  const config: RequestInit = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      ...options.headers
+    },
+    ...options
+  }
+
+  const response = await fetch(url, config)
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
+    throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
+  }
+  
+  if (response.status === 204) {
+    return null // No content
+  }
+  
+  return response.json()
+}
+
 export default function ClubAdminNoticiasPage() {
   const { selectedClub } = useClubContext()
-  const [noticias, setNoticias] = useState<Noticia[]>([])
+  const [noticias, setNoticias] = useState<NewsDisplay[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [noticiaToDelete, setNoticiaToDelete] = useState<number | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  // Cargar noticias del club seleccionado
+  // Cargar noticias del club seleccionado usando la nueva API
   useEffect(() => {
     async function fetchNoticias() {
       if (!selectedClub) {
@@ -78,40 +112,17 @@ export default function ClubAdminNoticiasPage() {
         
         console.log('Fetching news for club:', selectedClub.id)
         
-        // Consultar noticias que pertenecen al club seleccionado
-        const { data, error } = await supabase
-          .from('news')
-          .select(`
-            id,
-            title,
-            date,
-            image,
-            extract,
-            text,
-            tags,
-            club_id,
-            created_by_user_id,
-            created_at,
-            updated_at,
-            created_by_user:created_by_user_id (
-              id,
-              name,
-              surname,
-              email
-            )
-          `)
-          .eq('club_id', selectedClub.id)
-          .order('created_at', { ascending: false })
+        // Usar la nueva API para obtener noticias del club
+        const response = await apiCall(`/news?clubId=${selectedClub.id}&include=author,club&limit=100&orderBy=created_at&order=desc`)
         
-        if (error) {
-          console.error('Error fetching news:', error)
-          throw new Error(`Error al cargar noticias: ${error.message}`)
-        }
+        console.log('API response:', response)
         
-        console.log('Found news:', data?.length)
+        const newsData = response.news || []
+        
+        console.log('Found news:', newsData.length)
         
         // Procesar los datos para el formato que necesitamos
-        const processedNoticias = data.map(noticia => {
+        const processedNoticias: NewsDisplay[] = newsData.map((noticia: any) => {
           // Determinar la categoría basada en tags, o 'General' si no hay tags
           const categoria = noticia.tags && noticia.tags.length > 0 
             ? noticia.tags[0] 
@@ -121,12 +132,14 @@ export default function ClubAdminNoticiasPage() {
           const fecha = new Date(noticia.date || noticia.created_at)
           const fecha_formateada = fecha.toLocaleDateString('es-ES')
           
-          // Nombre completo del autor
-          const autor = noticia.created_by_user 
-            ? `${noticia.created_by_user.name} ${noticia.created_by_user.surname}`
-            : 'Autor desconocido'
+          // Nombre del autor (ahora viene del auth, podríamos necesitar obtenerlo de otra manera)
+          // Por ahora usamos el auth_id o un placeholder
+          // TODO: Mejorar mostrando el nombre real del usuario desde el metadata de auth
+          const autor = noticia.created_by_auth_id ? 
+            `Usuario ${noticia.created_by_auth_id.substring(0, 8)}...` : 
+            'Autor desconocido'
           
-          // Estado de la noticia (por ahora todas publicadas, podríamos añadir un campo 'draft' en la base de datos)
+          // Estado de la noticia (por ahora todas publicadas)
           const estado = 'publicada'
           
           return {
@@ -141,7 +154,7 @@ export default function ClubAdminNoticiasPage() {
         setNoticias(processedNoticias)
       } catch (err) {
         console.error('Error al cargar noticias:', err instanceof Error ? err.message : JSON.stringify(err))
-        setError('Ocurrió un error al cargar las noticias del club')
+        setError(err instanceof Error ? err.message : 'Ocurrió un error al cargar las noticias del club')
       } finally {
         setIsLoading(false)
       }
@@ -158,17 +171,12 @@ export default function ClubAdminNoticiasPage() {
       noticia.categoria.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  // Función para eliminar una noticia
+  // Función para eliminar una noticia usando la nueva API
   const handleDeleteNoticia = async () => {
     if (!noticiaToDelete) return
     
     try {
-      const { error } = await supabase
-        .from('news')
-        .delete()
-        .eq('id', noticiaToDelete)
-      
-      if (error) throw error
+      await apiCall(`/news/${noticiaToDelete}`, { method: 'DELETE' })
       
       // Actualizar el estado local
       setNoticias(noticias.filter((noticia) => noticia.id !== noticiaToDelete))
@@ -176,7 +184,7 @@ export default function ClubAdminNoticiasPage() {
       setNoticiaToDelete(null)
     } catch (err) {
       console.error('Error al eliminar noticia:', err)
-      setError('Ocurrió un error al eliminar la noticia')
+      setError(err instanceof Error ? err.message : 'Ocurrió un error al eliminar la noticia')
     }
   }
 
@@ -197,7 +205,7 @@ export default function ClubAdminNoticiasPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-terracotta">Noticias</h1>
-          <p className="text-muted-foreground">Gestiona las noticias publicadas por {selectedClub.nombre}.</p>
+          <p className="text-muted-foreground">Gestiona las noticias publicadas por {selectedClub.name}.</p>
         </div>
         <Button asChild>
           <Link href="/club-admin/noticias/nueva">

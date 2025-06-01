@@ -28,10 +28,13 @@ interface News {
 }
 
 // Server component
-export default async function NoticiaPage({ params }: { params: { id: string } }) {
+export default async function NoticiaPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = createServerComponentClient({ 
     cookies
   })
+  
+  // Await params before using its properties (Next.js 15 requirement)
+  const { id } = await params
   
   // Fetch the specific news item
   const { data: newsItem, error } = await supabase
@@ -49,7 +52,7 @@ export default async function NoticiaPage({ params }: { params: { id: string } }
       created_at,
       updated_at
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
   
   // Handle not found or error

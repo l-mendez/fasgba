@@ -2,13 +2,11 @@ import Link from "next/link"
 import { Home, ChevronLeft, Search, Trophy, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 
 export default function NotFound() {
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
       <main className="flex-1">
         {/* Hero section with 404 message */}
         <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-terracotta/10 to-amber/5 relative">
