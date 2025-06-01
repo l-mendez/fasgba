@@ -62,9 +62,14 @@ export interface TournamentSummary {
 export function transformTournamentToDisplay(tournamentWithDates: TournamentWithDates): TournamentDisplay {
   const { tournament_dates, ...tournament } = tournamentWithDates;
   
-  // Parse all dates and sort them
+  // Parse all dates as local dates to avoid timezone issues
+  // The database stores dates as YYYY-MM-DD, so we need to parse them as local dates
   const allDates = tournament_dates
-    .map(td => new Date(td.event_date))
+    .map(td => {
+      // Parse as local date to avoid timezone offset issues
+      const [year, month, day] = td.event_date.split('-').map(Number);
+      return new Date(year, month - 1, day); // month is 0-indexed in Date constructor
+    })
     .sort((a, b) => a.getTime() - b.getTime());
   
   if (allDates.length === 0) {
@@ -109,9 +114,14 @@ export function transformTournamentToDisplay(tournamentWithDates: TournamentWith
 export function transformTournamentToSummary(tournamentWithDates: TournamentWithDates): TournamentSummary {
   const { tournament_dates, ...tournament } = tournamentWithDates;
   
-  // Parse all dates and sort them
+  // Parse all dates as local dates to avoid timezone issues
+  // The database stores dates as YYYY-MM-DD, so we need to parse them as local dates
   const allDates = tournament_dates
-    .map(td => new Date(td.event_date))
+    .map(td => {
+      // Parse as local date to avoid timezone offset issues
+      const [year, month, day] = td.event_date.split('-').map(Number);
+      return new Date(year, month - 1, day); // month is 0-indexed in Date constructor
+    })
     .sort((a, b) => a.getTime() - b.getTime());
   
   if (allDates.length === 0) {
@@ -327,7 +337,11 @@ export async function getAllTournamentsWithDates(supabase: any): Promise<Tournam
       .from('tournaments')
       .select(`
         *,
-        tournament_dates:tournamentdates(*)
+        tournament_dates:tournamentdates(
+          id,
+          tournament_id,
+          event_date
+        )
       `)
       .order('id', { ascending: true });
 
@@ -443,26 +457,60 @@ export async function getTournamentsWithPagination(
       throw new Error('Failed to get tournament count');
     }
 
-    // Get paginated data
-    const { data, error } = await supabase
-      .from('tournaments')
-      .select('*')
-      .order(orderBy, { ascending })
-      .range(from, to);
+    // For ordering by start_date, we need to use the tournamentdates table
+    if (orderBy === 'start_date') {
+      // Get all tournaments with dates and sort client-side for now
+      const tournamentsWithDates = await getAllTournamentsWithDates(supabase);
+      const tournamentsDisplay = tournamentsWithDates.map(transformTournamentToDisplay);
+      const sorted = sortTournamentsByDate(tournamentsDisplay, ascending ? 'asc' : 'desc');
+      const paginated = sorted.slice(from, from + pageSize);
+      
+      // Convert back to Tournament interface
+      const tournaments = paginated.map(t => ({
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        time: t.time,
+        place: t.place,
+        location: t.location,
+        rounds: t.rounds,
+        pace: t.pace,
+        inscription_details: t.inscription_details,
+        cost: t.cost,
+        prizes: t.prizes,
+        image: t.image,
+      }));
 
-    if (error) {
-      console.error('Error fetching tournaments:', error);
-      throw new Error('Failed to fetch tournaments');
+      const total = count || 0;
+      const hasMore = from + pageSize < total;
+
+      return {
+        tournaments,
+        total,
+        hasMore,
+      };
+    } else {
+      // For other fields, we can order directly
+      const { data, error } = await supabase
+        .from('tournaments')
+        .select('*')
+        .order(orderBy, { ascending })
+        .range(from, to);
+
+      if (error) {
+        console.error('Error fetching tournaments:', error);
+        throw new Error('Failed to fetch tournaments');
+      }
+
+      const total = count || 0;
+      const hasMore = from + pageSize < total;
+
+      return {
+        tournaments: data || [],
+        total,
+        hasMore,
+      };
     }
-
-    const total = count || 0;
-    const hasMore = from + pageSize < total;
-
-    return {
-      tournaments: data || [],
-      total,
-      hasMore,
-    };
   } catch (error) {
     console.error('Database error:', error);
     throw error;
@@ -474,24 +522,29 @@ export async function getTournamentsWithPagination(
  */
 export async function getUpcomingTournaments(supabase: any, limit?: number): Promise<Tournament[]> {
   try {
-    let query = supabase
-      .from('tournaments')
-      .select('*')
-      .gte('start_date', new Date().toISOString())
-      .order('start_date', { ascending: true });
+    // Since tournaments no longer have direct date fields, we need to use the tournamentdates table
+    // This is a more complex query, so for now we'll use the comprehensive function and filter
+    const tournamentsWithDates = await getAllTournamentsWithDates(supabase);
+    const tournamentsDisplay = tournamentsWithDates.map(transformTournamentToDisplay);
+    const upcoming = tournamentsDisplay.filter(t => t.is_upcoming);
+    
+    // Convert back to Tournament interface (without display-specific fields)
+    const result = upcoming.map(t => ({
+      id: t.id,
+      title: t.title,
+      description: t.description,
+      time: t.time,
+      place: t.place,
+      location: t.location,
+      rounds: t.rounds,
+      pace: t.pace,
+      inscription_details: t.inscription_details,
+      cost: t.cost,
+      prizes: t.prizes,
+      image: t.image,
+    }));
 
-    if (limit) {
-      query = query.limit(limit);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching upcoming tournaments:', error);
-      throw new Error('Failed to fetch upcoming tournaments');
-    }
-
-    return data || [];
+    return limit ? result.slice(0, limit) : result;
   } catch (error) {
     console.error('Database error:', error);
     throw error;
@@ -503,21 +556,26 @@ export async function getUpcomingTournaments(supabase: any, limit?: number): Pro
  */
 export async function getOngoingTournaments(supabase: any): Promise<Tournament[]> {
   try {
-    const now = new Date().toISOString();
+    // Since tournaments no longer have direct date fields, we need to use the tournamentdates table
+    const tournamentsWithDates = await getAllTournamentsWithDates(supabase);
+    const tournamentsDisplay = tournamentsWithDates.map(transformTournamentToDisplay);
+    const ongoing = tournamentsDisplay.filter(t => t.is_ongoing);
     
-    const { data, error } = await supabase
-      .from('tournaments')
-      .select('*')
-      .lte('start_date', now)
-      .or(`end_date.gte.${now},end_date.is.null`)
-      .order('start_date', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching ongoing tournaments:', error);
-      throw new Error('Failed to fetch ongoing tournaments');
-    }
-
-    return data || [];
+    // Convert back to Tournament interface (without display-specific fields)
+    return ongoing.map(t => ({
+      id: t.id,
+      title: t.title,
+      description: t.description,
+      time: t.time,
+      place: t.place,
+      location: t.location,
+      rounds: t.rounds,
+      pace: t.pace,
+      inscription_details: t.inscription_details,
+      cost: t.cost,
+      prizes: t.prizes,
+      image: t.image,
+    }));
   } catch (error) {
     console.error('Database error:', error);
     throw error;
@@ -537,7 +595,7 @@ export async function searchTournaments(
       .from('tournaments')
       .select('*')
       .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
-      .order('start_date', { ascending: true })
+      .order('id', { ascending: true })
       .limit(limit);
 
     if (error) {

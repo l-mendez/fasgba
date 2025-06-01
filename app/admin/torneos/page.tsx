@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ChevronDown, Edit, Eye, MoreHorizontal, Plus, Search, Trash2, Users } from "lucide-react"
+import { ChevronDown, Edit, Eye, MoreHorizontal, Plus, Search, Trash2, Users, Loader2, AlertCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,101 +24,271 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
+import { useAuth } from "@/hooks/useAuth"
+import { supabase } from "@/lib/supabaseClient"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
-// Datos de ejemplo para los torneos
-const torneosData = [
-  {
-    id: "gran-prix-2025",
-    nombre: "Gran Prix FASGBA 2025",
-    fechaInicio: "15/04/2025",
-    fechaFin: "15/04/2025",
-    lugar: "Club de Ajedrez Bahía Blanca",
-    organizador: "Carlos Martínez",
-    estado: "próximo",
-    inscripciones: 45,
-  },
-  {
-    id: "torneo-rapido-mayo",
-    nombre: "Torneo Rápido de Mayo",
-    fechaInicio: "25/05/2025",
-    fechaFin: "25/05/2025",
-    lugar: "Círculo de Ajedrez Punta Alta",
-    organizador: "Laura Gómez",
-    estado: "próximo",
-    inscripciones: 32,
-  },
-  {
-    id: "campeonato-regional-junio",
-    nombre: "Campeonato Regional Individual",
-    fechaInicio: "10/06/2025",
-    fechaFin: "12/06/2025",
-    lugar: "Club de Ajedrez Tres Arroyos",
-    organizador: "Roberto Sánchez",
-    estado: "próximo",
-    inscripciones: 28,
-  },
-  {
-    id: "regional-equipos-2024",
-    nombre: "Campeonato Regional por Equipos",
-    fechaInicio: "01/03/2025",
-    fechaFin: "30/05/2025",
-    lugar: "Sedes rotativas",
-    organizador: "María López",
-    estado: "en curso",
-    inscripciones: 12,
-  },
-  {
-    id: "torneo-escolar-2024",
-    nombre: "Torneo Escolar FASGBA",
-    fechaInicio: "01/04/2025",
-    fechaFin: "30/06/2025",
-    lugar: "Club de Ajedrez Bahía Blanca",
-    organizador: "Juan Pérez",
-    estado: "en curso",
-    inscripciones: 35,
-  },
-  {
-    id: "abierto-verano-2024",
-    nombre: "Abierto de Verano 2024",
-    fechaInicio: "05/01/2024",
-    fechaFin: "07/01/2024",
-    lugar: "Club de Ajedrez Monte Hermoso",
-    organizador: "Ana Rodríguez",
-    estado: "finalizado",
-    inscripciones: 48,
-  },
-  {
-    id: "copa-aniversario-2023",
-    nombre: "Copa Aniversario FASGBA 2023",
-    fechaInicio: "15/05/2023",
-    fechaFin: "15/05/2023",
-    lugar: "Círculo de Ajedrez Pigüé",
-    organizador: "Pedro González",
-    estado: "finalizado",
-    inscripciones: 52,
-  },
-]
+// Tournament type based on the API response format
+interface Tournament {
+  id: string
+  title: string
+  description?: string | null
+  time?: string | null
+  place?: string | null
+  location?: string | null
+  rounds?: number | null
+  pace?: string | null
+  inscription_details?: string | null
+  cost?: string | null
+  prizes?: string | null
+  image?: string | null
+  start_date: Date
+  end_date: Date | null
+  formatted_start_date: string
+  formatted_end_date?: string | null
+  is_upcoming: boolean
+  is_ongoing: boolean
+  is_past: boolean
+  status: "upcoming" | "ongoing" | "past"
+  participants?: number
+}
+
+// API helper function
+async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  if (!session) {
+    throw new Error('No hay sesión autenticada')
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
+  const url = `${baseUrl}${endpoint}`
+  
+  const config: RequestInit = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      ...options.headers
+    },
+    ...options
+  }
+
+  const response = await fetch(url, config)
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
+  }
+  
+  if (response.status === 204) {
+    return null // No content
+  }
+  
+  return response.json()
+}
 
 export default function AdminTorneosPage() {
-  const [torneos, setTorneos] = useState(torneosData)
+  const [torneos, setTorneos] = useState<Tournament[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [torneoToDelete, setTorneoToDelete] = useState(null)
+  const [torneoToDelete, setTorneoToDelete] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
+
+  // Fetch tournaments from API
+  const fetchTournaments = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      // Fetch tournaments with display format for better UI data
+      const response = await apiCall('/api/tournaments?format=display&limit=100')
+      
+      // Transform API data to match our interface
+      const transformedTournaments = response.map((tournament: any) => {
+        // Determine status from API response or calculate it
+        let status: "upcoming" | "ongoing" | "past" = "upcoming"
+        
+        if (tournament.is_past) {
+          status = "past"
+        } else if (tournament.is_ongoing) {
+          status = "ongoing"
+        } else if (tournament.is_upcoming) {
+          status = "upcoming"
+        } else {
+          // Fallback: calculate status from dates
+          const now = new Date()
+          const startDate = new Date(tournament.start_date)
+          const endDate = tournament.end_date ? new Date(tournament.end_date) : null
+          
+          if (endDate && endDate < now) {
+            status = "past"
+          } else if (startDate <= now && (!endDate || endDate >= now)) {
+            status = "ongoing"
+          } else {
+            status = "upcoming"
+          }
+        }
+        
+        return {
+          id: tournament.id.toString(),
+          title: tournament.title || 'Sin título',
+          description: tournament.description || '',
+          time: tournament.time || '',
+          place: tournament.place || '',
+          location: tournament.location || 'Ubicación no especificada',
+          rounds: tournament.rounds || 0,
+          pace: tournament.pace || '',
+          inscription_details: tournament.inscription_details || '',
+          cost: tournament.cost || '',
+          prizes: tournament.prizes || '',
+          image: tournament.image || '',
+          start_date: new Date(tournament.start_date),
+          end_date: tournament.end_date ? new Date(tournament.end_date) : null,
+          formatted_start_date: tournament.formatted_start_date || '',
+          formatted_end_date: tournament.formatted_end_date || '',
+          is_upcoming: tournament.is_upcoming || false,
+          is_ongoing: tournament.is_ongoing || false,
+          is_past: tournament.is_past || false,
+          status,
+          participants: tournament.participants || 0
+        }
+      })
+      
+      setTorneos(transformedTournaments)
+    } catch (err) {
+      console.error('Error fetching tournaments:', err)
+      setError(err instanceof Error ? err.message : 'Error al cargar los torneos')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Fetch tournaments when component mounts and user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      fetchTournaments()
+    }
+  }, [isAuthenticated, authLoading])
 
   // Filtrar torneos según término de búsqueda
   const filteredTorneos = torneos.filter(
     (torneo) =>
-      torneo.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      torneo.lugar.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      torneo.organizador.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      torneo.estado.toLowerCase().includes(searchTerm.toLowerCase()),
+      torneo.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (torneo.location && torneo.location.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (torneo.description && torneo.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      torneo.status.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   // Función para eliminar un torneo
-  const handleDeleteTorneo = () => {
-    setTorneos(torneos.filter((torneo) => torneo.id !== torneoToDelete))
-    setShowDeleteDialog(false)
-    setTorneoToDelete(null)
+  const handleDeleteTorneo = async () => {
+    if (!torneoToDelete) return
+
+    try {
+      setIsDeleting(true)
+      setError(null)
+      
+      await apiCall(`/api/tournaments/${torneoToDelete}`, {
+        method: 'DELETE'
+      })
+      
+      setTorneos(torneos.filter((torneo) => torneo.id !== torneoToDelete))
+      setShowDeleteDialog(false)
+      setTorneoToDelete(null)
+    } catch (err) {
+      console.error('Error deleting tournament:', err)
+      setError(err instanceof Error ? err.message : 'Error al eliminar el torneo')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'Fecha no especificada'
+    try {
+      return new Date(dateString).toLocaleDateString('es-AR')
+    } catch {
+      return 'Fecha inválida'
+    }
+  }
+
+  // Get date range display
+  const getDateRange = (startDate: Date | string, endDate: Date | string | null) => {
+    const formattedStart = typeof startDate === 'string' ? startDate : formatDate(startDate.toString())
+    const formattedEnd = endDate ? (typeof endDate === 'string' ? endDate : formatDate(endDate.toString())) : null
+    
+    if (!formattedEnd || formattedStart === formattedEnd) {
+      return formattedStart
+    }
+    return `${formattedStart} al ${formattedEnd}`
+  }
+
+  // Get status badge variant
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case "upcoming":
+        return "default"
+      case "ongoing":
+        return "default"
+      case "past":
+        return "outline"
+      default:
+        return "outline"
+    }
+  }
+
+  // Get status badge class
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "upcoming":
+        return "bg-blue-500 hover:bg-blue-500/80"
+      case "ongoing":
+        return "bg-green-500 hover:bg-green-500/80"
+      case "past":
+        return "text-muted-foreground"
+      default:
+        return ""
+    }
+  }
+
+  // Get status display text
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "upcoming":
+        return "Próximo"
+      case "ongoing":
+        return "En curso"
+      case "past":
+        return "Finalizado"
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1)
+    }
+  }
+
+  if (authLoading) {
+    return (
+      <div className="flex flex-col gap-8 p-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col gap-8 p-8">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Debes estar autenticado para acceder a esta página.
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
   }
 
   return (
@@ -136,12 +306,19 @@ export default function AdminTorneosPage() {
         </Button>
       </div>
 
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex items-center gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Buscar por nombre, lugar u organizador..."
+            placeholder="Buscar por nombre, lugar o descripción..."
             className="pl-8 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -158,11 +335,21 @@ export default function AdminTorneosPage() {
             <DropdownMenuLabel>Filtrar por estado</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setSearchTerm("")}>Todos</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSearchTerm("próximo")}>Próximos</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSearchTerm("en curso")}>En curso</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSearchTerm("finalizado")}>Finalizados</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSearchTerm("upcoming")}>Próximos</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSearchTerm("ongoing")}>En curso</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSearchTerm("past")}>Finalizados</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <Button 
+          variant="outline" 
+          onClick={fetchTournaments}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : null}
+          Actualizar
+        </Button>
       </div>
 
       <div className="rounded-md border">
@@ -172,83 +359,90 @@ export default function AdminTorneosPage() {
               <TableHead>Nombre</TableHead>
               <TableHead>Fechas</TableHead>
               <TableHead>Lugar</TableHead>
-              <TableHead>Organizador</TableHead>
               <TableHead>Estado</TableHead>
-              <TableHead>Inscripciones</TableHead>
+              <TableHead>Participantes</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTorneos.map((torneo) => (
-              <TableRow key={torneo.id}>
-                <TableCell className="font-medium">{torneo.nombre}</TableCell>
-                <TableCell>
-                  {torneo.fechaInicio === torneo.fechaFin
-                    ? torneo.fechaInicio
-                    : `${torneo.fechaInicio} al ${torneo.fechaFin}`}
-                </TableCell>
-                <TableCell>{torneo.lugar}</TableCell>
-                <TableCell>{torneo.organizador}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant={torneo.estado === "finalizado" ? "outline" : "default"}
-                    className={
-                      torneo.estado === "próximo"
-                        ? "bg-blue-500 hover:bg-blue-500/80"
-                        : torneo.estado === "en curso"
-                          ? "bg-green-500 hover:bg-green-500/80"
-                          : "text-muted-foreground"
-                    }
-                  >
-                    {torneo.estado.charAt(0).toUpperCase() + torneo.estado.slice(1)}
-                  </Badge>
-                </TableCell>
-                <TableCell>{torneo.inscripciones}</TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Abrir menú</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href={`/torneos/${torneo.id}`} target="_blank">
-                          <Eye className="mr-2 h-4 w-4" />
-                          Ver en sitio
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/torneos/${torneo.id}/editar`}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/torneos/${torneo.id}/inscripciones`}>
-                          <Users className="mr-2 h-4 w-4" />
-                          Ver inscripciones
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setTorneoToDelete(torneo.id)
-                          setShowDeleteDialog(true)
-                        }}
-                        className="text-red-500 focus:text-red-500"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                  <p className="mt-2 text-muted-foreground">Cargando torneos...</p>
                 </TableCell>
               </TableRow>
-            ))}
+            ) : filteredTorneos.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  <p className="text-muted-foreground">
+                    {searchTerm ? 'No se encontraron torneos que coincidan con la búsqueda.' : 'No hay torneos disponibles.'}
+                  </p>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredTorneos.map((torneo) => (
+                <TableRow key={torneo.id}>
+                  <TableCell className="font-medium">{torneo.title}</TableCell>
+                  <TableCell>
+                    {getDateRange(torneo.start_date, torneo.end_date)}
+                  </TableCell>
+                  <TableCell>{torneo.location}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={getStatusBadgeVariant(torneo.status)}
+                      className={getStatusBadgeClass(torneo.status)}
+                    >
+                      {getStatusText(torneo.status)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{torneo.participants || 0}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Abrir menú</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link href={`/torneos/${torneo.id}`} target="_blank">
+                            <Eye className="mr-2 h-4 w-4" />
+                            Ver en sitio
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/torneos/${torneo.id}/editar`}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/torneos/${torneo.id}/inscripciones`}>
+                            <Users className="mr-2 h-4 w-4" />
+                            Ver inscripciones
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setTorneoToDelete(torneo.id)
+                            setShowDeleteDialog(true)
+                          }}
+                          className="text-red-500 focus:text-red-500"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Eliminar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
@@ -263,11 +457,26 @@ export default function AdminTorneosPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+            >
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleDeleteTorneo}>
-              Eliminar
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteTorneo}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Eliminando...
+                </>
+              ) : (
+                'Eliminar'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -19,31 +19,33 @@ export async function GET(request: NextRequest) {
     
     // Handle search first if provided
     if (queryParams.search) {
-      const searchResults = await searchTournaments(supabase, queryParams.search, queryParams.limit * queryParams.page)
-      
-      // Apply format transformation
-      if (queryParams.format === 'display') {
-        const transformedResults = searchResults.map(tournament => {
-          // For search results, we need to add tournament_dates property
-          const tournamentWithDates = {
-            ...tournament,
-            tournament_dates: [] // Search doesn't return dates, would need separate query
-          }
-          return transformTournamentToDisplay(tournamentWithDates)
-        })
-        return apiSuccess(transformedResults)
-      } else if (queryParams.format === 'summary') {
-        const transformedResults = searchResults.map(tournament => {
-          const tournamentWithDates = {
-            ...tournament,
-            tournament_dates: []
-          }
-          return transformTournamentToSummary(tournamentWithDates)
-        })
-        return apiSuccess(transformedResults)
+      // For search with format transformations, we need to get tournaments with dates
+      if (queryParams.format === 'display' || queryParams.format === 'summary') {
+        const allTournamentsWithDates = await getAllTournamentsWithDates(supabase)
+        
+        // Filter by search term
+        const searchResults = allTournamentsWithDates.filter(tournament => 
+          tournament.title.toLowerCase().includes(queryParams.search!.toLowerCase()) ||
+          (tournament.description && tournament.description.toLowerCase().includes(queryParams.search!.toLowerCase()))
+        )
+        
+        // Apply pagination
+        const startIndex = (queryParams.page - 1) * queryParams.limit
+        const endIndex = startIndex + queryParams.limit
+        const paginatedResults = searchResults.slice(startIndex, endIndex)
+        
+        if (queryParams.format === 'display') {
+          const transformedResults = paginatedResults.map(transformTournamentToDisplay)
+          return apiSuccess(transformedResults)
+        } else if (queryParams.format === 'summary') {
+          const transformedResults = paginatedResults.map(transformTournamentToSummary)
+          return apiSuccess(transformedResults)
+        }
+      } else {
+        // For raw format, use the simpler search function
+        const searchResults = await searchTournaments(supabase, queryParams.search, queryParams.limit * queryParams.page)
+        return apiSuccess(searchResults)
       }
-      
-      return apiSuccess(searchResults)
     }
     
     // Handle different response formats
