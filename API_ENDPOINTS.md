@@ -206,12 +206,14 @@ This document outlines the RESTful API endpoints designed based on the simplifie
 
 ## 2. Tournament Management Endpoints
 
+### 2.1 Tournament CRUD Operations
+
 #### GET /api/tournaments
 **Description:** Retrieve tournaments with various filtering options
 **Path Parameters:** None
 **Query Parameters:**
 - `page?: number` - Page number for pagination (default: 1)
-- `limit?: number` - Items per page (default: 10)
+- `limit?: number` - Items per page (default: 10, max: 100)
 - `orderBy?: string` - Order by field ("start_date" | "title", default: "start_date")
 - `order?: string` - Sort order ("asc" | "desc", default: "asc")
 - `status?: string` - Filter by status ("upcoming" | "ongoing" | "past" | "all", default: "all")
@@ -239,6 +241,99 @@ This document outlines the RESTful API endpoints designed based on the simplifie
 - **Body:** `Tournament` or `TournamentDisplay` (if format=display)
 - **Error:** 404 Not Found, 500 Internal Server Error
 
+#### POST /api/tournaments
+**Description:** Create a new tournament (admin only)
+**Path Parameters:** None
+**Request Body:** 
+```json
+{
+  "title": "string (required)",
+  "description": "string (optional)",
+  "time": "string (optional)",
+  "place": "string (optional)",
+  "location": "string (optional)",
+  "rounds": "number (optional)",
+  "pace": "string (optional)",
+  "inscription_details": "string (optional)",
+  "cost": "string (optional)",
+  "prizes": "string (optional)",
+  "image": "string (optional)",
+  "dates": ["string[] (required, YYYY-MM-DD format)"]
+}
+```
+
+**Response:**
+- **Success:** 201 Created
+- **Body:** `Tournament`
+- **Error:** 400 Bad Request, 401 Unauthorized, 403 Forbidden
+
+#### PUT /api/tournaments/{id}
+**Description:** Update a tournament (admin only)
+**Path Parameters:**
+- `id: number` - Tournament identifier
+
+**Request Body:** `Partial<CreateTournamentData>`
+```json
+{
+  "title": "string (optional)",
+  "description": "string (optional)",
+  "time": "string (optional)",
+  "place": "string (optional)",
+  "location": "string (optional)",
+  "rounds": "number (optional)",
+  "pace": "string (optional)",
+  "inscription_details": "string (optional)",
+  "cost": "string (optional)",
+  "prizes": "string (optional)",
+  "image": "string (optional)",
+  "dates": ["string[] (optional, YYYY-MM-DD format)"]
+}
+```
+
+**Response:**
+- **Success:** 200 OK
+- **Body:** `{ "success": true }`
+- **Error:** 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found
+
+#### PATCH /api/tournaments/{id}
+**Description:** Partially update a tournament (admin only). Same functionality as PUT but semantically intended for partial updates.
+**Path Parameters:**
+- `id: number` - Tournament identifier
+
+**Request Body:** `Partial<CreateTournamentData>`
+```json
+{
+  "title": "string (optional)",
+  "description": "string (optional)",
+  "time": "string (optional)",
+  "place": "string (optional)",
+  "location": "string (optional)",
+  "rounds": "number (optional)",
+  "pace": "string (optional)",
+  "inscription_details": "string (optional)",
+  "cost": "string (optional)",
+  "prizes": "string (optional)",
+  "image": "string (optional)",
+  "dates": ["string[] (optional, YYYY-MM-DD format)"]
+}
+```
+
+**Response:**
+- **Success:** 200 OK
+- **Body:** `{ "success": true }`
+- **Error:** 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found
+
+#### DELETE /api/tournaments/{id}
+**Description:** Delete a tournament and its associated dates (admin only)
+**Path Parameters:**
+- `id: number` - Tournament identifier
+
+**Response:**
+- **Success:** 204 No Content
+- **Error:** 401 Unauthorized, 403 Forbidden, 404 Not Found
+
+### 2.2 Tournament Utility Endpoints
+
 #### GET /api/tournaments/health
 **Description:** Check tournaments table status (admin only)
 **Path Parameters:** None
@@ -248,9 +343,9 @@ This document outlines the RESTful API endpoints designed based on the simplifie
 - **Body:** 
 ```json
 {
-  "tableExists": boolean,
-  "rowCount": number,
-  "sampleData": any[],
+  "tableExists": "boolean",
+  "rowCount": "number",
+  "sampleData": "any[]",
   "error": "string | undefined"
 }
 ```
@@ -614,13 +709,25 @@ This document outlines the RESTful API endpoints designed based on the simplifie
 1. **admins**: Contains auth_id (UUID) for site-wide administrators
 2. **club_admins**: Many-to-many relationship between auth_id (UUID) and club_id
 3. **user_follows_club**: Many-to-many relationship between auth_id (UUID) and club_id
+4. **tournamentdates**: Many-to-many relationship between tournament_id and event_date
 
 ### Modified Tables:
 1. **news**: Now uses `created_by_auth_id` (UUID) instead of `created_by_user_id`
 2. **elohistory**: Now uses `auth_id` (UUID) instead of `user_id`
+3. **tournaments**: Removed direct date fields (`start_date`, `end_date`) - dates are now managed via `tournamentdates` table
 
 ### Removed Tables:
 1. **users**: No longer needed as all user data is stored in Supabase Auth
+
+### Tournament Date Management:
+- **tournamentdates** table structure:
+  - `id`: Primary key
+  - `tournament_id`: Foreign key to tournaments table
+  - `event_date`: DATE field in YYYY-MM-DD format
+- Tournaments can have multiple dates (multi-day events)
+- Tournament status (upcoming/ongoing/past) is calculated based on date ranges
+- When creating/updating tournaments, dates are managed automatically
+- Deleting a tournament cascades to delete all associated dates
 
 ---
 
@@ -646,4 +753,9 @@ All error responses follow this structure:
 7. **Performance**: Reduced joins and complexity in most queries
 8. **Scalability**: Better suited for large numbers of users
 9. **Migration**: Existing data needs to be migrated to use auth UUIDs
-10. **Testing**: Use `/api/auth/debug` to verify authentication setup 
+10. **Testing**: Use `/api/auth/debug` to verify authentication setup
+11. **Tournament Dates**: Tournaments use separate `tournamentdates` table for flexible multi-day events
+12. **Date Parsing**: Improved timezone handling to prevent date offset issues
+13. **Tournament Status**: Automatically calculated based on current date vs tournament date ranges
+14. **Cascade Deletion**: Tournament deletion automatically removes associated dates
+15. **Date Validation**: Tournament dates must be in YYYY-MM-DD format and at least one date is required 

@@ -297,6 +297,264 @@ curl -X GET "https://api.example.com/api/clubs/1/news?limit=5"
 
 ---
 
+## Tournaments
+
+### Get All Tournaments
+
+**Endpoint:** `GET /api/tournaments`
+
+**Description:** Retrieve tournaments with filtering, pagination, and multiple response formats.
+
+**Parameters:**
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 10, max: 100)
+- `orderBy` (optional): Order by field ("start_date" | "title", default: "start_date")
+- `order` (optional): Sort order ("asc" | "desc", default: "asc")
+- `status` (optional): Filter by status ("upcoming" | "ongoing" | "past" | "all", default: "all")
+- `search` (optional): Search by title or description
+- `format` (optional): Response format ("raw" | "display" | "summary", default: "raw")
+
+**Example Request - Basic:**
+```bash
+curl -X GET "https://api.example.com/api/tournaments"
+```
+
+**Example Request - With Filtering:**
+```bash
+curl -X GET "https://api.example.com/api/tournaments?status=upcoming&format=display&limit=5"
+```
+
+**Example Request - Search:**
+```bash
+curl -X GET "https://api.example.com/api/tournaments?search=Gran%20Prix&format=summary"
+```
+
+**Example Response (format=display):**
+```json
+[
+  {
+    "id": 1,
+    "title": "Gran Prix FASGBA 2025",
+    "description": "Torneo válido para el ranking FIDE con importantes premios en efectivo y trofeos.",
+    "time": "10:00 AM",
+    "place": "Club de Ajedrez Bahía Blanca",
+    "location": "Av. Colón 123, Bahía Blanca",
+    "rounds": 7,
+    "pace": "90 min + 30 seg",
+    "inscription_details": "Inscripción abierta hasta el 14 de Abril. Contactar: torneos@fasgba.com.ar",
+    "cost": "$5000 general, $3000 sub-18",
+    "prizes": "Premios en efectivo para los primeros 5 puestos y trofeos para los 3 primeros.",
+    "image": "tournament1.jpg",
+    "start_date": "2025-04-15T00:00:00.000Z",
+    "end_date": null,
+    "formatted_start_date": "martes, 15 de abril de 2025",
+    "formatted_end_date": null,
+    "duration_days": 1,
+    "is_upcoming": true,
+    "is_ongoing": false,
+    "is_past": false,
+    "all_dates": ["2025-04-15T00:00:00.000Z"],
+    "formatted_all_dates": ["martes, 15 de abril de 2025"]
+  }
+]
+```
+
+### Get Tournament by ID
+
+**Endpoint:** `GET /api/tournaments/{id}`
+
+**Description:** Retrieve a specific tournament.
+
+**Parameters:**
+- `id` (required): Tournament identifier
+- `format` (optional): Response format ("raw" | "display", default: "raw")
+
+**Example Request:**
+```bash
+curl -X GET "https://api.example.com/api/tournaments/1?format=display"
+```
+
+**Example Response:**
+```json
+{
+  "id": 1,
+  "title": "Gran Prix FASGBA 2025",
+  "description": "Torneo válido para el ranking FIDE con importantes premios en efectivo y trofeos.",
+  "time": "10:00 AM",
+  "place": "Club de Ajedrez Bahía Blanca",
+  "location": "Av. Colón 123, Bahía Blanca",
+  "rounds": 7,
+  "pace": "90 min + 30 seg",
+  "inscription_details": "Inscripción abierta hasta el 14 de Abril. Contactar: torneos@fasgba.com.ar",
+  "cost": "$5000 general, $3000 sub-18",
+  "prizes": "Premios en efectivo para los primeros 5 puestos y trofeos para los 3 primeros.",
+  "image": "tournament1.jpg",
+  "start_date": "2025-04-15T00:00:00.000Z",
+  "end_date": null,
+  "formatted_start_date": "martes, 15 de abril de 2025",
+  "formatted_end_date": null,
+  "duration_days": 1,
+  "is_upcoming": true,
+  "is_ongoing": false,
+  "is_past": false,
+  "all_dates": ["2025-04-15T00:00:00.000Z"],
+  "formatted_all_dates": ["martes, 15 de abril de 2025"]
+}
+```
+
+### Create a Tournament
+
+**Endpoint:** `POST /api/tournaments`
+
+**Description:** Create a new tournament (admin only).
+
+**Request Body:**
+```json
+{
+  "title": "Nuevo Torneo de Ajedrez",
+  "description": "Descripción detallada del torneo",
+  "time": "14:00 hs",
+  "place": "Club de Ajedrez Local",
+  "location": "Calle Falsa 123, Ciudad",
+  "rounds": 6,
+  "pace": "60 min + 30 seg",
+  "inscription_details": "Inscripción abierta hasta el 20 de junio",
+  "cost": "$3000 general, $2000 sub-18",
+  "prizes": "Trofeos para los primeros 3 puestos",
+  "image": "https://example.com/tournament-image.jpg",
+  "dates": ["2025-06-25", "2025-06-26", "2025-06-27"]
+}
+```
+
+**Example Request:**
+```bash
+curl -X POST "https://api.example.com/api/tournaments" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_jwt_token" \
+  -d '{
+    "title": "Nuevo Torneo de Ajedrez",
+    "description": "Descripción detallada del torneo",
+    "time": "14:00 hs",
+    "place": "Club de Ajedrez Local",
+    "location": "Calle Falsa 123, Ciudad",
+    "rounds": 6,
+    "pace": "60 min + 30 seg",
+    "inscription_details": "Inscripción abierta hasta el 20 de junio",
+    "cost": "$3000 general, $2000 sub-18",
+    "prizes": "Trofeos para los primeros 3 puestos",
+    "image": "https://example.com/tournament-image.jpg",
+    "dates": ["2025-06-25", "2025-06-26", "2025-06-27"]
+  }'
+```
+
+**Example Response:**
+```json
+{
+  "id": 6,
+  "title": "Nuevo Torneo de Ajedrez",
+  "description": "Descripción detallada del torneo",
+  "time": "14:00 hs",
+  "place": "Club de Ajedrez Local",
+  "location": "Calle Falsa 123, Ciudad",
+  "rounds": 6,
+  "pace": "60 min + 30 seg",
+  "inscription_details": "Inscripción abierta hasta el 20 de junio",
+  "cost": "$3000 general, $2000 sub-18",
+  "prizes": "Trofeos para los primeros 3 puestos",
+  "image": "https://example.com/tournament-image.jpg"
+}
+```
+
+### Update a Tournament
+
+**Endpoint:** `PUT /api/tournaments/{id}` or `PATCH /api/tournaments/{id}`
+
+**Description:** Update an existing tournament (admin only). Both methods support partial updates.
+
+**Request Body (all fields optional):**
+```json
+{
+  "title": "Título Actualizado",
+  "description": "Nueva descripción",
+  "cost": "$4000 general, $2500 sub-18",
+  "dates": ["2025-06-28", "2025-06-29"]
+}
+```
+
+**Example Request (using PUT):**
+```bash
+curl -X PUT "https://api.example.com/api/tournaments/6" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_jwt_token" \
+  -d '{
+    "title": "Título Actualizado",
+    "cost": "$4000 general, $2500 sub-18"
+  }'
+```
+
+**Example Request (using PATCH):**
+```bash
+curl -X PATCH "https://api.example.com/api/tournaments/6" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_jwt_token" \
+  -d '{
+    "cost": "$4000 general, $2500 sub-18",
+    "prizes": "Trofeos y medallas para los primeros 3 puestos"
+  }'
+```
+
+**Example Response:**
+```json
+{
+  "success": true
+}
+```
+
+### Delete a Tournament
+
+**Endpoint:** `DELETE /api/tournaments/{id}`
+
+**Description:** Delete a tournament and all its associated dates (admin only).
+
+**Example Request:**
+```bash
+curl -X DELETE "https://api.example.com/api/tournaments/6" \
+  -H "Authorization: Bearer your_jwt_token"
+```
+
+**Example Response:**
+```
+Status: 204 No Content
+```
+
+### Tournament Health Check
+
+**Endpoint:** `GET /api/tournaments/health`
+
+**Description:** Check tournaments table status (admin only).
+
+**Example Request:**
+```bash
+curl -X GET "https://api.example.com/api/tournaments/health" \
+  -H "Authorization: Bearer your_jwt_token"
+```
+
+**Example Response:**
+```json
+{
+  "tableExists": true,
+  "rowCount": 5,
+  "sampleData": [
+    {
+      "id": 1,
+      "title": "Gran Prix FASGBA 2025"
+    }
+  ]
+}
+```
+
+---
+
 ## News
 
 ### Get All News
@@ -590,6 +848,43 @@ async function examples() {
     const followedClubs = await apiCall('/api/users/me/following');
     console.log('Followed clubs:', followedClubs);
     
+    // Get tournaments with display format
+    const tournaments = await apiCall('/api/tournaments?format=display&status=upcoming&limit=5');
+    console.log('Upcoming tournaments:', tournaments);
+    
+    // Get specific tournament
+    const tournament = await apiCall('/api/tournaments/1?format=display');
+    console.log('Tournament details:', tournament);
+    
+    // Create a new tournament (admin only)
+    const newTournament = await apiCall('/api/tournaments', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: 'Torneo de Prueba API',
+        description: 'Un torneo creado usando la API',
+        time: '15:00 hs',
+        place: 'Club de Ajedrez API',
+        location: 'Calle de la API 123',
+        rounds: 5,
+        pace: '90 min + 30 seg',
+        inscription_details: 'Inscripción por API solamente',
+        cost: '$2000 general',
+        prizes: 'Trofeo API al ganador',
+        dates: ['2025-12-15', '2025-12-16']
+      })
+    });
+    console.log('Created tournament:', newTournament);
+    
+    // Update the tournament
+    await apiCall(`/api/tournaments/${newTournament.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        cost: '$2500 general, $1500 sub-18',
+        prizes: 'Trofeos y medallas para los primeros 3 puestos'
+      })
+    });
+    console.log('Tournament updated');
+    
     // Create news
     const newNews = await apiCall('/api/news', {
       method: 'POST',
@@ -617,47 +912,14 @@ async function examples() {
     });
     console.log('Profile updated');
     
+    // Clean up: delete the test tournament
+    await apiCall(`/api/tournaments/${newTournament.id}`, {
+      method: 'DELETE'
+    });
+    console.log('Test tournament deleted');
+    
   } catch (error) {
     console.error('API Error:', error.message);
   }
 }
 ```
-
----
-
-## Best Practices
-
-1. **Always handle errors** - API calls can fail for various reasons
-2. **Use appropriate HTTP methods** - GET for reading, POST for creating, PATCH for updating, DELETE for removing
-3. **Include authentication** - All endpoints require a valid JWT token from Supabase Auth
-4. **Validate input** - Check data before sending to the API
-5. **Use pagination** - For large datasets, use page and limit parameters
-6. **Cache responses** - Where appropriate, cache API responses to improve performance
-7. **Respect rate limits** - Implement appropriate delays between requests if needed
-8. **Filter effectively** - Use query parameters to get only the data you need
-9. **Handle permissions** - Check user permissions before attempting operations
-10. **Use debug endpoint** - Leverage `/api/auth/debug` for troubleshooting authentication issues
-
----
-
-## Migration Notes
-
-### From Previous Version:
-- User IDs are now UUIDs from Supabase Auth instead of integer IDs
-- No more separate user database table - all user data is in Supabase Auth
-- Admin permissions are managed via the `admins` table
-- Club admin permissions are managed via the `club_admins` table
-- News creators are referenced by `created_by_auth_id` (UUID)
-- User follows and club relationships use auth UUIDs
-
-### Breaking Changes:
-- All user ID references changed from `number` to `string` (UUID)
-- User profile data structure changed to use Supabase Auth user_metadata
-- Authentication endpoints simplified
-- Some user utility endpoints removed or simplified
-
----
-
-## Support
-
-For additional help or questions about the API, please contact the development team or refer to the API documentation. 

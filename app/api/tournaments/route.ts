@@ -7,10 +7,18 @@ import {
   searchTournaments,
   transformTournamentToDisplay,
   transformTournamentToSummary,
-  filterTournamentsByStatus
+  filterTournamentsByStatus,
+  createTournament
 } from '@/lib/tournamentUtils'
-import { validateTournamentQuery } from '@/lib/schemas/tournamentSchemas'
-import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
+import { validateTournamentQuery, validateCreateTournament } from '@/lib/schemas/tournamentSchemas'
+import { apiSuccess, handleError, unauthorizedError } from '@/lib/utils/apiResponse'
+import { ERROR_MESSAGES } from '@/lib/utils/constants'
+import { createClient } from '@supabase/supabase-js'
+
+// Create a Supabase client for server-side operations
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function GET(request: NextRequest) {
   try {
@@ -92,6 +100,48 @@ export async function GET(request: NextRequest) {
     const paginatedTournaments = filtered.slice(startIndex, endIndex)
     
     return apiSuccess(paginatedTournaments)
+  } catch (error) {
+    return handleError(error)
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Get the authorization header
+    const authHeader = request.headers.get('authorization')
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return unauthorizedError(ERROR_MESSAGES.UNAUTHORIZED)
+    }
+
+    const token = authHeader.substring(7) // Remove 'Bearer ' prefix
+
+    // Verify the JWT token with Supabase
+    const { data: { user }, error: authError } = await serverSupabase.auth.getUser(token)
+    
+    if (authError || !user) {
+      return unauthorizedError(ERROR_MESSAGES.UNAUTHORIZED)
+    }
+
+    // Check if user is an admin
+    const { data: admin, error: adminError } = await serverSupabase
+      .from('admins')
+      .select('auth_id')
+      .eq('auth_id', user.id)
+      .single()
+
+    if (adminError || !admin) {
+      return unauthorizedError('Admin access required')
+    }
+
+    // Parse and validate request body
+    const body = await request.json()
+    const validatedData = validateCreateTournament(body)
+
+    // Create the tournament
+    const newTournament = await createTournament(serverSupabase, validatedData)
+    
+    return apiSuccess(newTournament, 201)
   } catch (error) {
     return handleError(error)
   }

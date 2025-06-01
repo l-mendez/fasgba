@@ -12,6 +12,38 @@ export const tournamentIdSchema = z.object({
   }),
 })
 
+// Schema for creating a tournament
+export const createTournamentSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(255, 'Title too long'),
+  description: z.string().max(1000, 'Description too long').optional(),
+  time: z.string().max(50, 'Time too long').optional(),
+  place: z.string().max(255, 'Place too long').optional(),
+  location: z.string().max(255, 'Location too long').optional(),
+  rounds: z.number().int().positive('Rounds must be positive').optional(),
+  pace: z.string().max(100, 'Pace too long').optional(),
+  inscription_details: z.string().max(1000, 'Inscription details too long').optional(),
+  cost: z.string().max(255, 'Cost too long').optional(),
+  prizes: z.string().max(1000, 'Prizes too long').optional(),
+  image: z.string().max(255, 'Image URL too long').optional(),
+  dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')).min(1, 'At least one date is required')
+})
+
+// Schema for updating a tournament
+export const updateTournamentSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(255, 'Title too long').optional(),
+  description: z.string().max(1000, 'Description too long').optional(),
+  time: z.string().max(50, 'Time too long').optional(),
+  place: z.string().max(255, 'Place too long').optional(),
+  location: z.string().max(255, 'Location too long').optional(),
+  rounds: z.number().int().positive('Rounds must be positive').optional(),
+  pace: z.string().max(100, 'Pace too long').optional(),
+  inscription_details: z.string().max(1000, 'Inscription details too long').optional(),
+  cost: z.string().max(255, 'Cost too long').optional(),
+  prizes: z.string().max(1000, 'Prizes too long').optional(),
+  image: z.string().max(255, 'Image URL too long').optional(),
+  dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')).min(1, 'At least one date is required').optional()
+})
+
 // Schema for tournament query parameters
 export const tournamentQuerySchema = z.object({
   page: z.string().transform((val) => {
@@ -102,6 +134,32 @@ export function validateSingleTournamentQuery(searchParams: URLSearchParams) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       const validationError = new Error(`Query validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      validationError.name = 'ValidationError'
+      throw validationError
+    }
+    throw error
+  }
+}
+
+export function validateCreateTournament(data: any) {
+  try {
+    return createTournamentSchema.parse(data)
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const validationError = new Error(`Validation failed: ${error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}`)
+      validationError.name = 'ValidationError'
+      throw validationError
+    }
+    throw error
+  }
+}
+
+export function validateUpdateTournament(data: any) {
+  try {
+    return updateTournamentSchema.parse(data)
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const validationError = new Error(`Validation failed: ${error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }

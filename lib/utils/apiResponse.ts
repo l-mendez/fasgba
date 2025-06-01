@@ -154,7 +154,8 @@ export function handleError(error: unknown): NextResponse {
       return notFoundError(error.message)
     }
     
-    return internalServerError('An unexpected error occurred')
+    // Return the actual error message for debugging
+    return internalServerError(error.message)
   }
 
   return internalServerError('An unknown error occurred')
