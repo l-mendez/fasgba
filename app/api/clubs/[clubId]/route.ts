@@ -1,30 +1,26 @@
 import { NextRequest } from 'next/server'
-import { getClubById, getClubWithStats, updateClub, deleteClub } from '@/lib/clubUtils'
+import { getClubById, updateClub, deleteClub } from '@/lib/clubUtils'
 import { requireAdmin } from '@/lib/middleware/auth'
 import { validateClubId, validateUpdateClub, validateClubQuery } from '@/lib/schemas/clubSchemas'
 import { apiSuccess, noContent, handleError, notFoundError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     clubId: string
-  }
+  }>
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const clubId = validateClubId(params.clubId)
+    const { clubId: clubIdParam } = await params
+    const clubId = validateClubId(clubIdParam)
     const { searchParams } = new URL(request.url)
     const queryParams = validateClubQuery(searchParams)
     
-    let club
-    
-    // Handle include=stats
-    if (queryParams.include === 'stats') {
-      club = await getClubWithStats(clubId)
-    } else {
-      club = await getClubById(clubId)
-    }
+    // Handle include=stats by passing includeStats parameter
+    const includeStats = queryParams.include === 'stats'
+    const club = await getClubById(clubId, includeStats)
     
     if (!club) {
       return notFoundError(ERROR_MESSAGES.CLUB_NOT_FOUND, `No club found with ID ${clubId}`)
@@ -41,7 +37,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Require admin authentication
     await requireAdmin(request)
     
-    const clubId = validateClubId(params.clubId)
+    const { clubId: clubIdParam } = await params
+    const clubId = validateClubId(clubIdParam)
     
     // Check if club exists
     const existingClub = await getClubById(clubId)
@@ -71,7 +68,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     // Require admin authentication
     await requireAdmin(request)
     
-    const clubId = validateClubId(params.clubId)
+    const { clubId: clubIdParam } = await params
+    const clubId = validateClubId(clubIdParam)
     
     // Check if club exists
     const existingClub = await getClubById(clubId)

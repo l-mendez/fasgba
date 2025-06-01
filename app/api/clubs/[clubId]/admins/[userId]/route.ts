@@ -5,16 +5,17 @@ import { apiSuccess, handleError, notFoundError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     clubId: string
     userId: string
-  }
+  }>
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const clubId = validateClubId(params.clubId)
-    const userId = validateUserId(params.userId)
+    const { clubId: clubIdParam, userId: userIdParam } = await params
+    const clubId = validateClubId(clubIdParam)
+    const userId = validateUserId(userIdParam)
     
     // Check if club exists
     const club = await getClubById(clubId)

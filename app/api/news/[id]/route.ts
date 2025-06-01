@@ -5,16 +5,18 @@ import { getNewsById, updateNews, deleteNews, canUserEditNews } from '@/lib/news
 import { validateNewsId, validateUpdateNews } from '@/lib/schemas/newsSchemas'
 import { apiSuccess, handleError, notFoundError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
+import { requireAuth } from '@/lib/middleware/auth'
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const newsId = validateNewsId(params.id)
+    const { id: idParam } = await params
+    const newsId = validateNewsId(idParam)
     const { searchParams } = new URL(request.url)
     
     // Determine what to include
@@ -35,15 +37,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const supabase = createServerComponentClient({ cookies })
-    
-    // Check authentication
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    if (sessionError || !session) {
-      return unauthorizedError(ERROR_MESSAGES.AUTHENTICATION_REQUIRED)
-    }
-
-    const newsId = validateNewsId(params.id)
+    const user = await requireAuth(request)
+    const { id: idParam } = await params
+    const newsId = validateNewsId(idParam)
     
     // Check if news exists
     const existingNews = await getNewsById(newsId, [])
@@ -52,7 +48,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if user can edit this news
-    const canEdit = await canUserEditNews(newsId, session.user.id)
+    const canEdit = await canUserEditNews(newsId, user.id)
     if (!canEdit) {
       return forbiddenError('You do not have permission to edit this news item')
     }
@@ -72,15 +68,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const supabase = createServerComponentClient({ cookies })
-    
-    // Check authentication
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    if (sessionError || !session) {
-      return unauthorizedError(ERROR_MESSAGES.AUTHENTICATION_REQUIRED)
-    }
-
-    const newsId = validateNewsId(params.id)
+    const user = await requireAuth(request)
+    const { id: idParam } = await params
+    const newsId = validateNewsId(idParam)
     
     // Check if news exists
     const existingNews = await getNewsById(newsId, [])
@@ -89,7 +79,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if user can delete this news
-    const canEdit = await canUserEditNews(newsId, session.user.id)
+    const canEdit = await canUserEditNews(newsId, user.id)
     if (!canEdit) {
       return forbiddenError('You do not have permission to delete this news item')
     }

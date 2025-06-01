@@ -5,32 +5,28 @@ import { apiSuccess, handleError, notFoundError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const newsId = validateNewsId(params.id)
-    const { searchParams } = new URL(request.url)
-    
-    // Parse limit parameter
-    const limitParam = searchParams.get('limit')
-    const limit = limitParam ? parseInt(limitParam, 10) : 4
-    
-    if (isNaN(limit) || limit <= 0 || limit > 20) {
-      throw new Error('Limit must be between 1 and 20')
-    }
+    const { id: idParam } = await params
+    const newsId = validateNewsId(idParam)
     
     // Check if the news item exists
-    const newsExists = await getNewsById(newsId, [])
-    if (!newsExists) {
+    const news = await getNewsById(newsId, [])
+    if (!news) {
       return notFoundError(ERROR_MESSAGES.NEWS_NOT_FOUND || 'News not found', `No news found with ID ${newsId}`)
     }
     
-    const relatedNews = await getRelatedNews(newsId, limit)
-    return apiSuccess({ related: relatedNews })
+    const { searchParams } = new URL(request.url)
+    const limitParam = searchParams.get('limit')
+    const limit = limitParam ? Math.min(parseInt(limitParam), 20) : 4
+    
+    const related = await getRelatedNews(newsId, limit)
+    return apiSuccess({ related })
   } catch (error) {
     return handleError(error)
   }

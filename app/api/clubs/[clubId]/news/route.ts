@@ -5,22 +5,24 @@ import { apiSuccess, handleError, notFoundError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     clubId: string
-  }
+  }>
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const clubId = validateClubId(params.clubId)
-    const { searchParams } = new URL(request.url)
-    const queryParams = validateClubNewsQuery(searchParams)
+    const { clubId: clubIdParam } = await params
+    const clubId = validateClubId(clubIdParam)
     
     // Check if club exists
     const club = await getClubById(clubId)
     if (!club) {
       return notFoundError(ERROR_MESSAGES.CLUB_NOT_FOUND, `No club found with ID ${clubId}`)
     }
+    
+    const { searchParams } = new URL(request.url)
+    const queryParams = validateClubNewsQuery(searchParams)
     
     const news = await getClubNews(clubId, queryParams.limit)
     return apiSuccess(news)

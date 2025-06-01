@@ -1,8 +1,13 @@
 import { NextRequest } from 'next/server'
-import { getCurrentUser, getUserPermissions, hasPermission } from '@/lib/userUtils'
+import { createClient } from '@supabase/supabase-js'
 import { unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { User } from '@supabase/supabase-js'
+
+// Create a server-side Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export interface AuthenticatedUser extends User {
   permissions?: {
@@ -33,6 +38,28 @@ function extractToken(request: NextRequest): string | null {
 }
 
 /**
+ * Gets user permissions by checking the admins table
+ */
+async function getUserPermissions(userId: string): Promise<AuthenticatedUser['permissions']> {
+  // Check if user is admin
+  const { data: admin } = await serverSupabase
+    .from('admins')
+    .select('auth_id')
+    .eq('auth_id', userId)
+    .single()
+
+  const isAdmin = !!admin
+
+  return {
+    canEditProfile: true, // All authenticated users can edit their profile
+    canViewAdmin: isAdmin,
+    canManageUsers: isAdmin,
+    canManageContent: isAdmin,
+    isAdmin
+  }
+}
+
+/**
  * Gets the current authenticated user from the request
  */
 export async function getAuthenticatedUser(request: NextRequest): Promise<AuthenticatedUser | null> {
@@ -43,15 +70,16 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<Authen
       return null
     }
 
-    // Use the existing userUtils function to get the current user
-    const user = await getCurrentUser()
+    // Validate the JWT token using Supabase
+    const { data: { user }, error } = await serverSupabase.auth.getUser(token)
     
-    if (!user) {
+    if (error || !user) {
+      console.error('Token validation error:', error)
       return null
     }
 
     // Get user permissions
-    const permissions = await getUserPermissions()
+    const permissions = await getUserPermissions(user.id)
 
     return {
       ...user,
@@ -64,13 +92,43 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<Authen
 }
 
 /**
+ * Checks if the user has a specific permission
+ */
+export async function hasPermission(permission: keyof NonNullable<AuthenticatedUser['permissions']>, userId?: string): Promise<boolean> {
+  if (!userId) {
+    // If no userId provided, we can't check permissions
+    return false
+  }
+
+  const permissions = await getUserPermissions(userId)
+  return permissions[permission]
+}
+
+/**
+ * Custom error classes for authentication
+ */
+export class UnauthorizedError extends Error {
+  constructor(message: string = ERROR_MESSAGES.UNAUTHORIZED) {
+    super(message)
+    this.name = 'UnauthorizedError'
+  }
+}
+
+export class ForbiddenError extends Error {
+  constructor(message: string = ERROR_MESSAGES.FORBIDDEN) {
+    super(message)
+    this.name = 'ForbiddenError'
+  }
+}
+
+/**
  * Middleware to require authentication
  */
 export async function requireAuth(request: NextRequest): Promise<AuthenticatedUser> {
   const user = await getAuthenticatedUser(request)
   
   if (!user) {
-    throw new Error('UnauthorizedError')
+    throw new UnauthorizedError()
   }
 
   return user
@@ -82,10 +140,10 @@ export async function requireAuth(request: NextRequest): Promise<AuthenticatedUs
 export async function requireAdmin(request: NextRequest): Promise<AuthenticatedUser> {
   const user = await requireAuth(request)
   
-  const isAdmin = await hasPermission('isAdmin')
+  const isAdmin = await hasPermission('isAdmin', user.id)
   
   if (!isAdmin) {
-    throw new Error('ForbiddenError')
+    throw new ForbiddenError('Admin access required')
   }
 
   return user
@@ -100,10 +158,10 @@ export async function requirePermission(
 ): Promise<AuthenticatedUser> {
   const user = await requireAuth(request)
   
-  const hasRequiredPermission = await hasPermission(permission)
+  const hasRequiredPermission = await hasPermission(permission, user.id)
   
   if (!hasRequiredPermission) {
-    throw new Error('ForbiddenError')
+    throw new ForbiddenError(`Permission ${permission} required`)
   }
 
   return user
@@ -115,11 +173,11 @@ export async function requirePermission(
 export async function requireContentManager(request: NextRequest): Promise<AuthenticatedUser> {
   const user = await requireAuth(request)
   
-  const canManageContent = await hasPermission('canManageContent')
-  const isAdmin = await hasPermission('isAdmin')
+  const canManageContent = await hasPermission('canManageContent', user.id)
+  const isAdmin = await hasPermission('isAdmin', user.id)
   
   if (!canManageContent && !isAdmin) {
-    throw new Error('ForbiddenError')
+    throw new ForbiddenError('Content management permission required')
   }
 
   return user
@@ -131,11 +189,11 @@ export async function requireContentManager(request: NextRequest): Promise<Authe
 export async function requireUserManager(request: NextRequest): Promise<AuthenticatedUser> {
   const user = await requireAuth(request)
   
-  const canManageUsers = await hasPermission('canManageUsers')
-  const isAdmin = await hasPermission('isAdmin')
+  const canManageUsers = await hasPermission('canManageUsers', user.id)
+  const isAdmin = await hasPermission('isAdmin', user.id)
   
   if (!canManageUsers && !isAdmin) {
-    throw new Error('ForbiddenError')
+    throw new ForbiddenError('User management permission required')
   }
 
   return user
@@ -167,9 +225,9 @@ export async function requireOwnership(
   
   if (userIdStr !== resourceUserIdStr) {
     // Check if user is admin (admins can access any resource)
-    const isAdmin = await hasPermission('isAdmin')
+    const isAdmin = await hasPermission('isAdmin', user.id)
     if (!isAdmin) {
-      throw new Error('ForbiddenError')
+      throw new ForbiddenError('You can only access your own resources')
     }
   }
 
@@ -191,23 +249,6 @@ export async function requireSelfOrAdmin(
   }
   
   return await requireOwnership(request, urlUserId)
-}
-
-/**
- * Custom error classes for authentication
- */
-export class UnauthorizedError extends Error {
-  constructor(message: string = ERROR_MESSAGES.UNAUTHORIZED) {
-    super(message)
-    this.name = 'UnauthorizedError'
-  }
-}
-
-export class ForbiddenError extends Error {
-  constructor(message: string = ERROR_MESSAGES.FORBIDDEN) {
-    super(message)
-    this.name = 'ForbiddenError'
-  }
 }
 
 /**

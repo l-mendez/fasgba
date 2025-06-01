@@ -1,24 +1,46 @@
 import { NextRequest } from 'next/server'
-import { hasPermission } from '@/lib/userUtils'
 import { requireAuth } from '@/lib/middleware/auth'
 import { validatePermissionParam } from '@/lib/schemas/userSchemas'
-import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
+import { apiSuccess, handleError, forbiddenError } from '@/lib/utils/apiResponse'
+import { supabase } from '@/lib/supabaseClient'
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     permission: string
-  }
+  }>
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    // Require authentication
-    await requireAuth(request)
+    const user = await requireAuth(request)
+    const { permission: permissionParam } = await params
+    const permission = validatePermissionParam(permissionParam)
     
-    const permission = validatePermissionParam(params.permission)
-    const hasRequiredPermission = await hasPermission(permission)
+    // Check if user is admin
+    const { data: admin } = await supabase
+      .from('admins')
+      .select('auth_id')
+      .eq('auth_id', user.id)
+      .single()
     
-    return apiSuccess({ hasPermission: hasRequiredPermission })
+    const isAdmin = !!admin
+    
+    let hasPermission = false
+    
+    switch (permission) {
+      case 'canEditProfile':
+        hasPermission = true // All authenticated users can edit their profile
+        break
+      case 'canViewAdmin':
+      case 'canManageUsers':
+      case 'canManageContent':
+        hasPermission = isAdmin
+        break
+      default:
+        return forbiddenError('Unknown permission')
+    }
+    
+    return apiSuccess({ hasPermission })
   } catch (error) {
     return handleError(error)
   }
