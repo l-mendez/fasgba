@@ -1,11 +1,17 @@
 import Link from "next/link"
 import { BookOpen, Download, FileText } from "lucide-react"
+import type { Metadata } from 'next'
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+
+export const metadata: Metadata = {
+  title: 'Reglamentos FIDE',
+  description: 'Consulta los reglamentos oficiales de la FIDE y FASGBA para competiciones de ajedrez',
+}
 
 // Datos de ejemplo para los reglamentos
 const reglamentos = [

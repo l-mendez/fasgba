@@ -1,9 +1,15 @@
 import { CalendarDays } from "lucide-react"
+import type { Metadata } from 'next'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+
+export const metadata: Metadata = {
+  title: 'Historia',
+  description: 'Conoce la historia y evolución de la Federación de Ajedrez del Sur de Buenos Aires desde 1985',
+}
 
 export default function HistoriaPage() {
   return (

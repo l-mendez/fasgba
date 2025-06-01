@@ -2,8 +2,11 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'FASGBA',
-  description: 'FASGBA',
+  title: {
+    template: '%s | FASGBA',
+    default: 'FASGBA - Federación de Ajedrez del Sur de Buenos Aires',
+  },
+  description: 'Federación de Ajedrez del Sur de Buenos Aires - Promoviendo el ajedrez en la región sur de Buenos Aires desde 1985',
   generator: 'FASGBA',
   icons: {
     icon: '/favicon.png',
