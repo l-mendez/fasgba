@@ -90,15 +90,13 @@ export async function getAllClubs(options: {
     
     // Add stats if requested
     const clubsWithStats = await Promise.all((data || []).map(async (club) => {
-      const [memberCount, adminCount, newsCount] = await Promise.all([
-        getClubMemberCount(club.id),
+      const [adminCount, newsCount] = await Promise.all([
         getClubAdminCount(club.id),
         getClubNewsCount(club.id)
       ])
       
       return {
         ...club,
-        memberCount,
         adminCount,
         newsCount
       }
@@ -147,8 +145,7 @@ export async function getClubById(clubId: number, includeStats = false): Promise
     return club
   }
 
-  const [memberCount, adminCount, followersCount, newsCount] = await Promise.all([
-    getClubMemberCount(clubId),
+  const [adminCount, followersCount, newsCount] = await Promise.all([
     getClubAdminCount(clubId),
     getClubFollowersCount(clubId),
     getClubNewsCount(clubId)
@@ -156,7 +153,6 @@ export async function getClubById(clubId: number, includeStats = false): Promise
 
   return {
     ...club,
-    memberCount,
     adminCount,
     followersCount,
     newsCount
@@ -213,24 +209,6 @@ export async function deleteClub(clubId: number): Promise<boolean> {
   }
 
   return true
-}
-
-/**
- * Gets all members of a club (currently returns empty array since we don't have a members relationship)
- */
-export async function getClubMembers(clubId: number): Promise<ClubMember[]> {
-  // For now, return empty array since we don't have a members table
-  // This would need to be implemented if there's a specific membership system
-  return []
-}
-
-/**
- * Gets member count for a club
- */
-export async function getClubMemberCount(clubId: number): Promise<number> {
-  // For now, return 0 since we don't have a members table
-  // This would need to be implemented if there's a specific membership system
-  return 0
 }
 
 /**

@@ -16,21 +16,19 @@ import {
   isUserFollowingClub, 
   followClub, 
   unfollowClub,
-  getClubMemberCount,
   type Club 
 } from "@/lib/clubUtils"
 import { getCurrentUser } from "@/lib/userUtils"
 
 interface ClubWithFollowState extends Club {
   isFollowing: boolean
-  memberCount: number
 }
 
 export default function ClubesPage() {
   const [clubs, setClubs] = useState<ClubWithFollowState[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   useEffect(() => {
     loadClubs()
@@ -41,9 +39,7 @@ export default function ClubesPage() {
     try {
       const user = await getCurrentUser()
       if (user) {
-        // Convert auth user ID to database user ID - you may need to adjust this
-        // depending on how you link auth users to database users
-        setCurrentUserId(1) // Placeholder - you'll need proper user ID mapping
+        setCurrentUserId(user.id) // Use the auth UUID directly
       }
     } catch (error) {
       console.error('Error loading current user:', error)
@@ -58,14 +54,10 @@ export default function ClubesPage() {
       // Load additional data for each club
       const clubsWithExtraData = await Promise.all(
         clubsData.map(async (club) => {
-          const [memberCount, isFollowing] = await Promise.all([
-            getClubMemberCount(club.id),
-            currentUserId ? isUserFollowingClub(club.id, currentUserId) : false
-          ])
+          const isFollowing = currentUserId ? await isUserFollowingClub(club.id, currentUserId) : false
           
           return {
             ...club,
-            memberCount,
             isFollowing
           }
         })
@@ -92,14 +84,10 @@ export default function ClubesPage() {
       
       const clubsWithExtraData = await Promise.all(
         searchResults.map(async (club) => {
-          const [memberCount, isFollowing] = await Promise.all([
-            getClubMemberCount(club.id),
-            currentUserId ? isUserFollowingClub(club.id, currentUserId) : false
-          ])
+          const isFollowing = currentUserId ? await isUserFollowingClub(club.id, currentUserId) : false
           
           return {
             ...club,
-            memberCount,
             isFollowing
           }
         })
@@ -213,9 +201,7 @@ export default function ClubesPage() {
                       </CardTitle>
                       <CardDescription>
                         <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {club.memberCount} miembros
-                          </Badge>
+                          {/* Member count removed as it's no longer used */}
                         </div>
                       </CardDescription>
                     </CardHeader>

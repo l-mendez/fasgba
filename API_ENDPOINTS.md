@@ -114,6 +114,56 @@ This document outlines the RESTful API endpoints designed based on the simplifie
 - **Body:** `ClubAdmin[]` (contains auth_id and email)
 - **Error:** 404 Not Found, 500 Internal Server Error
 
+#### POST /api/clubs/{clubId}/admins
+**Description:** Add a new admin to a club (site admin or club admin only)
+**Path Parameters:**
+- `clubId: number` - Club identifier
+
+**Request Body:**
+```json
+{
+  "email": "string (required) - Email of the user to make admin"
+}
+```
+
+**Response:**
+- **Success:** 201 Created
+- **Body:** 
+```json
+{
+  "success": true,
+  "message": "User email@example.com added as admin to club 1",
+  "admin": {
+    "id": "string (auth UUID)",
+    "email": "string"
+  }
+}
+```
+- **Error:** 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 409 Conflict (already admin)
+
+#### DELETE /api/clubs/{clubId}/admins
+**Description:** Remove an admin from a club using request body (site admin or club admin only)
+**Path Parameters:**
+- `clubId: number` - Club identifier
+
+**Request Body:**
+```json
+{
+  "userId": "string (required) - Auth UUID of the user to remove as admin"
+}
+```
+
+**Response:**
+- **Success:** 200 OK
+- **Body:** 
+```json
+{
+  "success": true,
+  "message": "User user-uuid removed as admin from club 1"
+}
+```
+- **Error:** 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found
+
 #### GET /api/clubs/{clubId}/admins/count
 **Description:** Get admin count for a club
 **Path Parameters:**
@@ -134,6 +184,54 @@ This document outlines the RESTful API endpoints designed based on the simplifie
 - **Success:** 200 OK
 - **Body:** `{ "isAdmin": boolean }`
 - **Error:** 404 Not Found, 500 Internal Server Error
+
+#### POST /api/clubs/{clubId}/admins/{authId}
+**Description:** Add a specific user as admin to a club (site admin or club admin only)
+**Path Parameters:**
+- `clubId: number` - Club identifier
+- `authId: string` - User's Supabase Auth UUID
+
+**Response:**
+- **Success:** 201 Created
+- **Body:** 
+```json
+{
+  "success": true,
+  "message": "User user-uuid added as admin to club 1",
+  "admin": {
+    "id": "string (auth UUID)",
+    "email": "string"
+  }
+}
+```
+- **Error:** 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 409 Conflict (already admin)
+
+#### DELETE /api/clubs/{clubId}/admins/{authId}
+**Description:** Remove a specific user as admin from a club (site admin or club admin only)
+**Path Parameters:**
+- `clubId: number` - Club identifier
+- `authId: string` - User's Supabase Auth UUID
+
+**Response:**
+- **Success:** 200 OK
+- **Body:** 
+```json
+{
+  "success": true,
+  "message": "User user-uuid removed as admin from club 1"
+}
+```
+- **Error:** 401 Unauthorized, 403 Forbidden, 404 Not Found
+
+**Notes for Club Admin Management:**
+- **Authorization:** All admin management endpoints require authentication
+- **Permissions:** Only site admins (users in `admins` table) or existing club admins can add/remove other club admins
+- **Self-removal:** Users can always remove themselves as club admins
+- **Email lookup:** The POST `/api/clubs/{clubId}/admins` endpoint searches for users by email
+- **UUID direct:** The POST/DELETE `/api/clubs/{clubId}/admins/{authId}` endpoints work with Supabase Auth UUIDs directly
+- **Validation:** All endpoints validate that the club exists before performing operations
+- **Conflict handling:** Attempting to add an existing admin returns an error
+- **Not found handling:** Attempting to remove a non-admin user returns an error
 
 ### 1.4 Club Followers
 

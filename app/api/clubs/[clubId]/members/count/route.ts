@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { getClubMemberCount, getClubById } from '@/lib/clubUtils'
+import { getClubById } from '@/lib/clubUtils'
 import { validateClubId } from '@/lib/schemas/clubSchemas'
 import { apiSuccess, handleError, notFoundError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
@@ -21,8 +21,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return notFoundError(ERROR_MESSAGES.CLUB_NOT_FOUND, `No club found with ID ${clubId}`)
     }
     
-    const count = await getClubMemberCount(clubId)
-    return apiSuccess({ count })
+    // Members functionality is no longer used, return count of 0
+    return apiSuccess({ count: 0 })
   } catch (error) {
     return handleError(error)
   }

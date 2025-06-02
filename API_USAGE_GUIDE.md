@@ -339,6 +339,163 @@ curl -X GET "https://api.example.com/api/clubs/1/followers/count"
 }
 ```
 
+### Club Admin Management
+
+#### Add Club Admin by Email
+
+**Endpoint:** `POST /api/clubs/{clubId}/admins`
+
+**Description:** Add a new admin to a club using their email address.
+
+**Request Body:**
+```json
+{
+  "email": "newadmin@example.com"
+}
+```
+
+**Example Request:**
+```bash
+curl -X POST "https://api.example.com/api/clubs/1/admins" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_jwt_token" \
+  -d '{
+    "email": "newadmin@example.com"
+  }'
+```
+
+**Example Response:**
+```json
+{
+  "success": true,
+  "message": "User newadmin@example.com added as admin to club 1",
+  "admin": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "email": "newadmin@example.com"
+  }
+}
+```
+
+**Error Response Examples:**
+```json
+{
+  "error": "User not found",
+  "code": "NOT_FOUND",
+  "details": "No user found with email newadmin@example.com"
+}
+```
+```json
+{
+  "error": "User is already an admin of this club",
+  "code": "CONFLICT"
+}
+```
+```json
+{
+  "error": "You must be a site admin or club admin to add club admins",
+  "code": "FORBIDDEN"
+}
+```
+
+#### Remove Club Admin by User ID
+
+**Endpoint:** `DELETE /api/clubs/{clubId}/admins`
+
+**Description:** Remove an admin from a club using their user ID.
+
+**Request Body:**
+```json
+{
+  "userId": "123e4567-e89b-12d3-a456-426614174000"
+}
+```
+
+**Example Request:**
+```bash
+curl -X DELETE "https://api.example.com/api/clubs/1/admins" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_jwt_token" \
+  -d '{
+    "userId": "123e4567-e89b-12d3-a456-426614174000"
+  }'
+```
+
+**Example Response:**
+```json
+{
+  "success": true,
+  "message": "User 123e4567-e89b-12d3-a456-426614174000 removed as admin from club 1"
+}
+```
+
+#### Add Club Admin by User ID (Alternative)
+
+**Endpoint:** `POST /api/clubs/{clubId}/admins/{userId}`
+
+**Description:** Add a specific user as admin using their UUID directly.
+
+**Example Request:**
+```bash
+curl -X POST "https://api.example.com/api/clubs/1/admins/123e4567-e89b-12d3-a456-426614174000" \
+  -H "Authorization: Bearer your_jwt_token"
+```
+
+**Example Response:**
+```json
+{
+  "success": true,
+  "message": "User 123e4567-e89b-12d3-a456-426614174000 added as admin to club 1",
+  "admin": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "email": "newadmin@example.com"
+  }
+}
+```
+
+#### Remove Club Admin by User ID (Alternative)
+
+**Endpoint:** `DELETE /api/clubs/{clubId}/admins/{userId}`
+
+**Description:** Remove a specific user as admin using their UUID directly.
+
+**Example Request:**
+```bash
+curl -X DELETE "https://api.example.com/api/clubs/1/admins/123e4567-e89b-12d3-a456-426614174000" \
+  -H "Authorization: Bearer your_jwt_token"
+```
+
+**Example Response:**
+```json
+{
+  "success": true,
+  "message": "User 123e4567-e89b-12d3-a456-426614174000 removed as admin from club 1"
+}
+```
+
+**Error Response Examples:**
+```json
+{
+  "error": "User is not an admin of this club",
+  "code": "NOT_FOUND",
+  "details": "User 123e4567-e89b-12d3-a456-426614174000 is not an admin of club 1"
+}
+```
+```json
+{
+  "error": "You must be a site admin or club admin to remove club admins",
+  "code": "FORBIDDEN"
+}
+```
+
+**Notes:**
+- **Authorization Required:** All club admin management operations require authentication
+- **Permission Levels:** 
+  - Site admins (users in `admins` table) can manage admins for any club
+  - Club admins can only manage admins within their own clubs
+  - Users can always remove themselves as club admins
+- **Two Methods:** You can add/remove admins either by email (search-based) or by UUID (direct)
+- **Validation:** All operations validate that the club exists and the user has proper permissions
+
 ### Get Club News
 
 **Endpoint:** `GET /api/clubs/{clubId}/news`
@@ -1444,10 +1601,247 @@ async function examples() {
       console.log(`${index + 1}. ${follower.email} (followed on ${new Date(follower.created_at).toLocaleDateString()})`);
     });
     
-    // Follow multiple clubs example
+    // Club Admin Management Examples
+    
+    // Add a club admin by email
+    try {
+      const newAdmin = await apiCall('/api/clubs/1/admins', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: 'newadmin@example.com'
+        })
+      });
+      console.log('Added club admin:', newAdmin);
+    } catch (error) {
+      console.error('Error adding club admin:', error.message);
+    }
+    
+    // Get all club admins
+    const clubAdmins = await apiCall('/api/clubs/1/admins');
+    console.log('Club 1 admins:', clubAdmins);
+    
+    // Check if a specific user is a club admin
+    const adminCheck = await apiCall('/api/clubs/1/admins/123e4567-e89b-12d3-a456-426614174000');
+    console.log('Is user an admin?', adminCheck.isAdmin);
+    
+    // Add a club admin by user ID (alternative method)
+    try {
+      const adminByUserId = await apiCall('/api/clubs/1/admins/123e4567-e89b-12d3-a456-426614174000', {
+        method: 'POST'
+      });
+      console.log('Added club admin by user ID:', adminByUserId);
+    } catch (error) {
+      console.error('Error adding club admin by user ID:', error.message);
+    }
+    
+    // Remove a club admin by user ID in request body
+    try {
+      const removeAdmin = await apiCall('/api/clubs/1/admins', {
+        method: 'DELETE',
+        body: JSON.stringify({
+          userId: '123e4567-e89b-12d3-a456-426614174000'
+        })
+      });
+      console.log('Removed club admin:', removeAdmin);
+    } catch (error) {
+      console.error('Error removing club admin:', error.message);
+    }
+    
+    // Remove a club admin by user ID in URL (alternative method)
+    try {
+      const removeAdminAlt = await apiCall('/api/clubs/1/admins/123e4567-e89b-12d3-a456-426614174000', {
+        method: 'DELETE'
+      });
+      console.log('Removed club admin (alternative):', removeAdminAlt);
+    } catch (error) {
+      console.error('Error removing club admin (alternative):', error.message);
+    }
+    
+    // Get club admin count
+    const adminCount = await apiCall('/api/clubs/1/admins/count');
+    console.log('Club 1 admin count:', adminCount);
+    
+    // Get all followers of a club
+    const allFollowers = await apiCall('/api/clubs/1/followers');
+    console.log('All followers of club 1:', allFollowers);
     
   } catch (error) {
     console.error('API Error:', error.message);
+  }
+}
+
+// Comprehensive helper function for club admin management
+async function clubAdminManager() {
+  const clubId = 1;
+  const userEmail = 'newadmin@example.com';
+  const userId = '123e4567-e89b-12d3-a456-426614174000';
+  
+  try {
+    console.log('=== Club Admin Management Demo ===');
+    
+    // 1. Check current admin status
+    console.log('\n1. Checking current admin status...');
+    const currentAdmins = await apiCall(`/api/clubs/${clubId}/admins`);
+    console.log(`Club ${clubId} currently has ${currentAdmins.length} admins:`, currentAdmins);
+    
+    const adminCount = await apiCall(`/api/clubs/${clubId}/admins/count`);
+    console.log(`Admin count: ${adminCount.count}`);
+    
+    // 2. Add admin by email
+    console.log('\n2. Adding admin by email...');
+    try {
+      const addByEmail = await apiCall(`/api/clubs/${clubId}/admins`, {
+        method: 'POST',
+        body: JSON.stringify({ email: userEmail })
+      });
+      console.log('✅ Successfully added admin by email:', addByEmail);
+    } catch (error) {
+      if (error.message.includes('already an admin')) {
+        console.log('ℹ️ User is already an admin');
+      } else if (error.message.includes('User not found')) {
+        console.log('❌ User with that email does not exist');
+      } else {
+        console.error('❌ Error adding admin by email:', error.message);
+      }
+    }
+    
+    // 3. Check if specific user is admin
+    console.log('\n3. Checking if specific user is admin...');
+    const isAdminCheck = await apiCall(`/api/clubs/${clubId}/admins/${userId}`);
+    console.log(`Is user ${userId} an admin?`, isAdminCheck.isAdmin);
+    
+    // 4. Add admin by user ID (alternative method)
+    console.log('\n4. Adding admin by user ID (alternative)...');
+    try {
+      const addByUserId = await apiCall(`/api/clubs/${clubId}/admins/${userId}`, {
+        method: 'POST'
+      });
+      console.log('✅ Successfully added admin by user ID:', addByUserId);
+    } catch (error) {
+      if (error.message.includes('already an admin')) {
+        console.log('ℹ️ User is already an admin');
+      } else if (error.message.includes('User not found')) {
+        console.log('❌ User with that ID does not exist');
+      } else {
+        console.error('❌ Error adding admin by user ID:', error.message);
+      }
+    }
+    
+    // 5. Get updated admin list
+    console.log('\n5. Getting updated admin list...');
+    const updatedAdmins = await apiCall(`/api/clubs/${clubId}/admins`);
+    console.log(`Club ${clubId} now has ${updatedAdmins.length} admins:`, updatedAdmins);
+    
+    // 6. Remove admin by user ID (request body method)
+    console.log('\n6. Removing admin by user ID (request body)...');
+    try {
+      const removeByBody = await apiCall(`/api/clubs/${clubId}/admins`, {
+        method: 'DELETE',
+        body: JSON.stringify({ userId: userId })
+      });
+      console.log('✅ Successfully removed admin (request body method):', removeByBody);
+    } catch (error) {
+      if (error.message.includes('not an admin')) {
+        console.log('ℹ️ User is not an admin of this club');
+      } else {
+        console.error('❌ Error removing admin (request body):', error.message);
+      }
+    }
+    
+    // 7. Remove admin by user ID (URL path method)
+    console.log('\n7. Removing admin by user ID (URL path)...');
+    try {
+      const removeByPath = await apiCall(`/api/clubs/${clubId}/admins/${userId}`, {
+        method: 'DELETE'
+      });
+      console.log('✅ Successfully removed admin (URL path method):', removeByPath);
+    } catch (error) {
+      if (error.message.includes('not an admin')) {
+        console.log('ℹ️ User is not an admin of this club');
+      } else {
+        console.error('❌ Error removing admin (URL path):', error.message);
+      }
+    }
+    
+    // 8. Final admin count
+    console.log('\n8. Final admin count...');
+    const finalCount = await apiCall(`/api/clubs/${clubId}/admins/count`);
+    console.log(`Final admin count: ${finalCount.count}`);
+    
+    const finalAdmins = await apiCall(`/api/clubs/${clubId}/admins`);
+    console.log('Final admin list:', finalAdmins);
+    
+    console.log('\n=== Club Admin Management Demo Complete ===');
+    
+  } catch (error) {
+    console.error('Critical error in club admin management:', error.message);
+  }
+}
+
+// Bulk club admin operations helper
+async function bulkClubAdminOperations() {
+  const clubId = 1;
+  const adminEmails = ['admin1@example.com', 'admin2@example.com', 'admin3@example.com'];
+  
+  console.log('=== Bulk Club Admin Operations ===');
+  
+  try {
+    // Add multiple admins
+    console.log('\n1. Adding multiple admins by email...');
+    const addResults = [];
+    
+    for (const email of adminEmails) {
+      try {
+        const result = await apiCall(`/api/clubs/${clubId}/admins`, {
+          method: 'POST',
+          body: JSON.stringify({ email })
+        });
+        addResults.push({ email, success: true, result });
+        console.log(`✅ Added ${email}:`, result);
+      } catch (error) {
+        addResults.push({ email, success: false, error: error.message });
+        console.log(`❌ Failed to add ${email}:`, error.message);
+      }
+    }
+    
+    // Get current admin list
+    console.log('\n2. Current admin list...');
+    const currentAdmins = await apiCall(`/api/clubs/${clubId}/admins`);
+    console.log(`Club ${clubId} admins:`, currentAdmins);
+    
+    // Remove admins that were successfully added
+    console.log('\n3. Removing successfully added admins...');
+    const removeResults = [];
+    
+    for (const result of addResults) {
+      if (result.success && result.result.admin) {
+        try {
+          const removeResult = await apiCall(`/api/clubs/${clubId}/admins`, {
+            method: 'DELETE',
+            body: JSON.stringify({ userId: result.result.admin.id })
+          });
+          removeResults.push({ userId: result.result.admin.id, success: true, result: removeResult });
+          console.log(`✅ Removed ${result.email}:`, removeResult);
+        } catch (error) {
+          removeResults.push({ userId: result.result.admin.id, success: false, error: error.message });
+          console.log(`❌ Failed to remove ${result.email}:`, error.message);
+        }
+      }
+    }
+    
+    // Final status
+    console.log('\n4. Final status...');
+    const finalAdmins = await apiCall(`/api/clubs/${clubId}/admins`);
+    const finalCount = await apiCall(`/api/clubs/${clubId}/admins/count`);
+    console.log(`Final admin count: ${finalCount.count}`);
+    console.log('Final admin list:', finalAdmins);
+    
+    console.log('\n=== Summary ===');
+    console.log('Add results:', addResults);
+    console.log('Remove results:', removeResults);
+    
+  } catch (error) {
+    console.error('Error in bulk admin operations:', error.message);
   }
 }
 

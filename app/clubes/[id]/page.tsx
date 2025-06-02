@@ -12,8 +12,6 @@ import { SiteFooter } from "@/components/site-footer"
 import { Badge } from "@/components/ui/badge"
 import {
   getClubById,
-  getClubWithStats,
-  getClubMembers,
   getClubAdmins,
   getClubNews,
   isUserFollowingClub,
@@ -22,7 +20,6 @@ import {
   getClubFollowersCount,
   type Club,
   type ClubWithStats,
-  type ClubMember,
   type ClubAdmin,
   type ClubNews
 } from "@/lib/clubUtils"
@@ -37,13 +34,12 @@ interface ClubDetailPageProps {
 export default function ClubDetailPage({ params }: ClubDetailPageProps) {
   const resolvedParams = use(params)
   const [club, setClub] = useState<ClubWithStats | null>(null)
-  const [members, setMembers] = useState<ClubMember[]>([])
   const [admins, setAdmins] = useState<ClubAdmin[]>([])
   const [news, setNews] = useState<ClubNews[]>([])
   const [loading, setLoading] = useState(true)
   const [followersCount, setFollowersCount] = useState(0)
   const [isFollowing, setIsFollowing] = useState(false)
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const clubId = parseInt(resolvedParams.id)
@@ -62,9 +58,7 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
     try {
       const user = await getCurrentUser()
       if (user) {
-        // Convert auth user ID to database user ID - you may need to adjust this
-        // depending on how you link auth users to database users
-        setCurrentUserId(1) // Placeholder - you'll need proper user ID mapping
+        setCurrentUserId(user.id) // Use the auth UUID directly
       }
     } catch (error) {
       console.error('Error loading current user:', error)
@@ -77,7 +71,7 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
       setError(null)
 
       // Load club basic info with stats
-      const clubData = await getClubWithStats(clubId)
+      const clubData = await getClubById(clubId, true) as ClubWithStats | null
       if (!clubData) {
         setError("Club no encontrado")
         return
@@ -86,15 +80,13 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
       setClub(clubData)
 
       // Load additional data in parallel
-      const [membersData, adminsData, newsData, followersCountData, isFollowingData] = await Promise.all([
-        getClubMembers(clubId),
+      const [adminsData, newsData, followersCountData, isFollowingData] = await Promise.all([
         getClubAdmins(clubId),
         getClubNews(clubId, 5), // Limit to 5 most recent news
         getClubFollowersCount(clubId),
-        currentUserId ? isUserFollowingClub(currentUserId, clubId) : false
+        currentUserId ? isUserFollowingClub(clubId, currentUserId) : false
       ])
 
-      setMembers(membersData)
       setAdmins(adminsData)
       setNews(newsData)
       setFollowersCount(followersCountData)
@@ -113,10 +105,10 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
 
     try {
       if (isFollowing) {
-        await unfollowClub(currentUserId, club.id)
+        await unfollowClub(club.id, currentUserId)
         setFollowersCount(prev => prev - 1)
       } else {
-        await followClub(currentUserId, club.id)
+        await followClub(club.id, currentUserId)
         setFollowersCount(prev => prev + 1)
       }
       setIsFollowing(!isFollowing)
@@ -182,7 +174,6 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
                   <div>
                     <h1 className="text-3xl font-bold tracking-tight text-terracotta">{club.name}</h1>
                     <div className="mt-2 flex items-center gap-4">
-                      <Badge variant="secondary">{club.memberCount} miembros</Badge>
                       <Badge variant="secondary">{club.adminCount} administradores</Badge>
                       <Badge variant="secondary">{club.newsCount} noticias</Badge>
                     </div>
@@ -204,7 +195,7 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
                 </div>
 
                 <Tabs defaultValue="informacion" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4 bg-muted border border-amber/20 mb-6">
+                  <TabsList className="grid w-full grid-cols-3 bg-muted border border-amber/20 mb-6">
                     <TabsTrigger
                       value="informacion"
                       className="data-[state=active]:bg-amber data-[state=active]:text-white"
@@ -216,12 +207,6 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
                       className="data-[state=active]:bg-amber data-[state=active]:text-white"
                     >
                       Noticias
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="miembros"
-                      className="data-[state=active]:bg-amber data-[state=active]:text-white"
-                    >
-                      Miembros
                     </TabsTrigger>
                     <TabsTrigger
                       value="administradores"
@@ -330,44 +315,6 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
                     </div>
                   </TabsContent>
 
-                  {/* Pestaña de Miembros */}
-                  <TabsContent value="miembros">
-                    <div className="space-y-6">
-                      <h3 className="text-xl font-bold text-terracotta">Miembros del Club</h3>
-                      {members.length === 0 ? (
-                        <Card className="border-amber/20">
-                          <CardContent className="p-6 text-center">
-                            <p className="text-muted-foreground">No hay miembros registrados para este club.</p>
-                          </CardContent>
-                        </Card>
-                      ) : (
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          {members.map((member) => (
-                            <Card key={member.id} className="border-amber/20">
-                              <CardContent className="p-6">
-                                <div className="flex items-center gap-4">
-                                  <div className="h-12 w-12 rounded-full bg-amber/10 flex items-center justify-center">
-                                    <User className="h-6 w-6 text-amber" />
-                                  </div>
-                                  <div>
-                                    <h4 className="font-bold text-terracotta">
-                                      <Link href={`/jugadores/${member.id}`} className="hover:underline">
-                                        {member.name} {member.surname}
-                                      </Link>
-                                    </h4>
-                                    {member.current_elo && (
-                                      <p className="text-sm text-muted-foreground">ELO: {member.current_elo}</p>
-                                    )}
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-
                   {/* Pestaña de Administradores */}
                   <TabsContent value="administradores">
                     <div className="space-y-6">
@@ -381,7 +328,7 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
                       ) : (
                         <div className="grid gap-4 sm:grid-cols-2">
                           {admins.map((admin) => (
-                            <Card key={admin.user_id} className="border-amber/20">
+                            <Card key={admin.id} className="border-amber/20">
                               <CardContent className="p-6">
                                 <div className="flex items-center gap-4">
                                   <div className="h-12 w-12 rounded-full bg-amber/10 flex items-center justify-center">
@@ -390,11 +337,9 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
                                   <div>
                                     <h4 className="font-bold text-terracotta">
                                       <Badge className="mr-2 bg-amber text-white">ADMIN</Badge>
-                                      <Link href={`/jugadores/${admin.user_id}`} className="hover:underline">
-                                        {admin.user_name} {admin.user_surname}
-                                      </Link>
+                                      {admin.email}
                                     </h4>
-                                    <p className="text-sm text-muted-foreground">{admin.user_email}</p>
+                                    <p className="text-sm text-muted-foreground">ID: {admin.id.slice(0, 8)}...</p>
                                   </div>
                                 </div>
                               </CardContent>
