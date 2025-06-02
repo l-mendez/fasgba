@@ -193,14 +193,59 @@ This document outlines the RESTful API endpoints designed based on the simplifie
 - **Error:** 404 Not Found, 500 Internal Server Error
 
 #### GET /api/clubs/{clubId}/news/count
-**Description:** Get news count for a club
+**Description:** Get news count for a club with optional date filtering
 **Path Parameters:**
 - `clubId: number` - Club identifier
+
+**Query Parameters:**
+- `startDate?: string` - Start date filter in YYYY-MM-DD format (inclusive)
+- `endDate?: string` - End date filter in YYYY-MM-DD format (inclusive)
 
 **Response:**
 - **Success:** 200 OK
 - **Body:** `{ "count": number }`
-- **Error:** 404 Not Found, 500 Internal Server Error
+- **Error:** 400 Bad Request (invalid date format or range), 404 Not Found, 500 Internal Server Error
+
+#### GET /api/clubs/{clubId}/tournaments/count
+**Description:** Get tournament count for a club with optional date filtering based on tournament dates
+**Path Parameters:**
+- `clubId: number` - Club identifier
+
+**Query Parameters:**
+- `startDate?: string` - Start date filter in YYYY-MM-DD format (inclusive) - filters tournaments whose date range overlaps with or starts after this date
+- `endDate?: string` - End date filter in YYYY-MM-DD format (inclusive) - filters tournaments whose date range overlaps with or ends before this date
+
+**Response:**
+- **Success:** 200 OK
+- **Body:** `{ "count": number }`
+- **Error:** 400 Bad Request (invalid date format or range), 404 Not Found, 500 Internal Server Error
+
+**Notes:**
+- Date filtering is based on tournament date ranges (earliest to latest tournament date)
+- A tournament is included if its date range overlaps with the specified filter range
+- For multi-day tournaments, the entire date span is considered for filtering
+
+#### GET /api/clubs/{clubId}/tournaments
+**Description:** Get tournaments created by a club with optional date filtering and pagination
+**Path Parameters:**
+- `clubId: number` - Club identifier
+
+**Query Parameters:**
+- `startDate?: string` - Start date filter in YYYY-MM-DD format (inclusive) - filters tournaments whose date range overlaps with or starts after this date
+- `endDate?: string` - End date filter in YYYY-MM-DD format (inclusive) - filters tournaments whose date range overlaps with or ends before this date
+- `limit?: number` - Maximum number of tournaments to return (1-100, default: all)
+
+**Response:**
+- **Success:** 200 OK
+- **Body:** `{ "tournaments": TournamentWithDates[] }`
+  - Each tournament includes its complete data plus `tournament_dates` array
+- **Error:** 400 Bad Request (invalid parameters), 404 Not Found, 500 Internal Server Error
+
+**Notes:**
+- Date filtering uses the same logic as the count endpoint
+- Tournaments are ordered by ID descending (newest first)
+- Each tournament includes its associated dates from the `tournamentdates` table
+- Date filtering considers the full date range of tournaments (from earliest to latest tournament date)
 
 ---
 

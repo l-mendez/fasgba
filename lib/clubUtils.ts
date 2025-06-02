@@ -52,6 +52,12 @@ export interface ClubNews {
   author_email?: string
 }
 
+// Interface for date filtering options
+export interface DateFilterOptions {
+  startDate?: string  // YYYY-MM-DD format
+  endDate?: string    // YYYY-MM-DD format
+}
+
 /**
  * Gets all clubs with optional filtering
  */
@@ -419,13 +425,24 @@ export async function getClubNews(clubId: number, limit?: number): Promise<ClubN
 }
 
 /**
- * Gets news count for a club
+ * Gets news count for a club with optional date filtering
  */
-export async function getClubNewsCount(clubId: number): Promise<number> {
-  const { count, error } = await supabase
+export async function getClubNewsCount(clubId: number, options: DateFilterOptions = {}): Promise<number> {
+  let query = supabase
     .from('news')
     .select('*', { count: 'exact', head: true })
     .eq('club_id', clubId)
+
+  // Apply date filters if provided
+  if (options.startDate) {
+    query = query.gte('date', options.startDate)
+  }
+
+  if (options.endDate) {
+    query = query.lte('date', options.endDate)
+  }
+
+  const { count, error } = await query
 
   if (error) {
     console.error('Error fetching club news count:', error)
@@ -433,6 +450,165 @@ export async function getClubNewsCount(clubId: number): Promise<number> {
   }
 
   return count || 0
+}
+
+/**
+ * Gets tournament count for a club with optional date filtering
+ */
+export async function getClubTournamentCount(clubId: number, options: DateFilterOptions = {}): Promise<number> {
+  let query = supabase
+    .from('tournaments')
+    .select('id', { count: 'exact', head: true })
+    .eq('created_by_club_id', clubId)
+
+  // If date filters are provided, we need to join with tournamentdates and filter
+  if (options.startDate || options.endDate) {
+    // For date filtering, we need to find tournaments where their date range overlaps with the specified range
+    // This means: tournament's earliest date <= endDate AND tournament's latest date >= startDate
+    
+    let tournamentIdsQuery = supabase
+      .from('tournaments')
+      .select(`
+        id,
+        tournament_dates:tournamentdates(event_date)
+      `)
+      .eq('created_by_club_id', clubId)
+
+    const { data: tournamentsWithDates, error: tournamentError } = await tournamentIdsQuery
+
+    if (tournamentError) {
+      console.error('Error fetching tournaments with dates:', tournamentError)
+      return 0
+    }
+
+    if (!tournamentsWithDates || tournamentsWithDates.length === 0) {
+      return 0
+    }
+
+    // Filter tournaments based on date range overlap
+    const filteredTournamentIds = tournamentsWithDates
+      .filter(tournament => {
+        const dates = tournament.tournament_dates.map((d: any) => d.event_date).sort()
+        if (dates.length === 0) return false
+
+        const earliestDate = dates[0]
+        const latestDate = dates[dates.length - 1]
+
+        // Check if tournament date range overlaps with filter range
+        let overlaps = true
+
+        if (options.endDate && earliestDate > options.endDate) {
+          overlaps = false
+        }
+
+        if (options.startDate && latestDate < options.startDate) {
+          overlaps = false
+        }
+
+        return overlaps
+      })
+      .map(tournament => tournament.id)
+
+    return filteredTournamentIds.length
+  }
+
+  // If no date filters, just count directly
+  const { count, error } = await query
+
+  if (error) {
+    console.error('Error fetching club tournament count:', error)
+    return 0
+  }
+
+  return count || 0
+}
+
+/**
+ * Gets tournaments created by a club with optional date filtering
+ */
+export async function getClubTournaments(clubId: number, options: DateFilterOptions & { limit?: number } = {}): Promise<any[]> {
+  // If date filters are provided, we need to join with tournamentdates and filter
+  if (options.startDate || options.endDate) {
+    // For date filtering, we need to find tournaments where their date range overlaps with the specified range
+    let tournamentIdsQuery = supabase
+      .from('tournaments')
+      .select(`
+        *,
+        tournament_dates:tournamentdates(
+          id,
+          tournament_id,
+          event_date
+        )
+      `)
+      .eq('created_by_club_id', clubId)
+      .order('id', { ascending: false })
+
+    const { data: tournamentsWithDates, error: tournamentError } = await tournamentIdsQuery
+
+    if (tournamentError) {
+      console.error('Error fetching tournaments with dates:', tournamentError)
+      throw new Error('Failed to fetch club tournaments')
+    }
+
+    if (!tournamentsWithDates || tournamentsWithDates.length === 0) {
+      return []
+    }
+
+    // Filter tournaments based on date range overlap
+    const filteredTournaments = tournamentsWithDates
+      .filter(tournament => {
+        const dates = tournament.tournament_dates.map((d: any) => d.event_date).sort()
+        if (dates.length === 0) return false
+
+        const earliestDate = dates[0]
+        const latestDate = dates[dates.length - 1]
+
+        // Check if tournament date range overlaps with filter range
+        let overlaps = true
+
+        if (options.endDate && earliestDate > options.endDate) {
+          overlaps = false
+        }
+
+        if (options.startDate && latestDate < options.startDate) {
+          overlaps = false
+        }
+
+        return overlaps
+      })
+
+    // Apply limit if specified
+    const result = options.limit ? filteredTournaments.slice(0, options.limit) : filteredTournaments
+
+    return result
+  }
+
+  // If no date filters, query directly with optional limit
+  let query = supabase
+    .from('tournaments')
+    .select(`
+      *,
+      tournament_dates:tournamentdates(
+        id,
+        tournament_id,
+        event_date
+      )
+    `)
+    .eq('created_by_club_id', clubId)
+    .order('id', { ascending: false })
+
+  if (options.limit) {
+    query = query.limit(options.limit)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    console.error('Error fetching club tournaments:', error)
+    throw new Error('Failed to fetch club tournaments')
+  }
+
+  return data || []
 }
 
 /**

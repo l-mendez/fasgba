@@ -66,7 +66,8 @@ CREATE TABLE tournaments (
     inscription_details TEXT,
     cost TEXT,
     prizes TEXT,
-    image TEXT
+    image TEXT,
+    created_by_club_id INT REFERENCES clubs(id) ON DELETE SET NULL
 );
 
 -- 8️⃣ Tournament Dates Table (Many-to-Many relationship)
@@ -123,6 +124,7 @@ CREATE INDEX idx_news_date ON news(date);
 CREATE INDEX idx_news_club ON news(club_id);
 CREATE INDEX idx_news_created_by_auth_id ON news(created_by_auth_id);
 CREATE INDEX idx_tournaments_title ON tournaments(title);
+CREATE INDEX idx_tournaments_created_by_club ON tournaments(created_by_club_id);
 CREATE INDEX idx_tournamentdates_tournament_id ON tournamentdates(tournament_id);
 CREATE INDEX idx_tournamentdates_event_date ON tournamentdates(event_date);
 CREATE INDEX idx_course_creators_auth_id ON course_creators(auth_id);

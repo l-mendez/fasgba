@@ -295,6 +295,235 @@ curl -X GET "https://api.example.com/api/clubs/1/news?limit=5"
 ]
 ```
 
+### Get Club News Count
+
+**Endpoint:** `GET /api/clubs/{clubId}/news/count`
+
+**Description:** Get news count for a specific club with optional date filtering.
+
+**Parameters:**
+- `startDate` (optional): Start date filter in YYYY-MM-DD format (inclusive)
+- `endDate` (optional): End date filter in YYYY-MM-DD format (inclusive)
+
+**Example Request - Total Count:**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/news/count"
+```
+
+**Example Request - Date Range:**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/news/count?startDate=2024-01-01&endDate=2024-03-31"
+```
+
+**Example Request - From Date Only:**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/news/count?startDate=2024-03-01"
+```
+
+**Example Request - Until Date Only:**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/news/count?endDate=2024-12-31"
+```
+
+**Example Response:**
+```json
+{
+  "count": 12
+}
+```
+
+**Error Response Examples:**
+```json
+{
+  "error": "Invalid startDate format. Use YYYY-MM-DD format.",
+  "code": "VALIDATION_ERROR",
+  "details": "INVALID_DATE_FORMAT"
+}
+```
+
+```json
+{
+  "error": "startDate must be before or equal to endDate.",
+  "code": "VALIDATION_ERROR", 
+  "details": "INVALID_DATE_RANGE"
+}
+```
+
+### Get Club Tournament Count
+
+**Endpoint:** `GET /api/clubs/{clubId}/tournaments/count`
+
+**Description:** Get tournament count for a specific club with optional date filtering based on tournament dates.
+
+**Parameters:**
+- `startDate` (optional): Start date filter in YYYY-MM-DD format (inclusive) - includes tournaments whose date range overlaps with or starts after this date
+- `endDate` (optional): End date filter in YYYY-MM-DD format (inclusive) - includes tournaments whose date range overlaps with or ends before this date
+
+**Example Request - Total Count:**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/tournaments/count"
+```
+
+**Example Request - Date Range (tournaments in Q2 2024):**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/tournaments/count?startDate=2024-04-01&endDate=2024-06-30"
+```
+
+**Example Request - From Date Only (tournaments from June 2024 onward):**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/tournaments/count?startDate=2024-06-01"
+```
+
+**Example Request - Until Date Only (tournaments ending by December 2024):**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/tournaments/count?endDate=2024-12-31"
+```
+
+**Example Response:**
+```json
+{
+  "count": 8
+}
+```
+
+**Error Response Examples:**
+```json
+{
+  "error": "Invalid startDate format. Use YYYY-MM-DD format.",
+  "code": "VALIDATION_ERROR",
+  "details": "INVALID_DATE_FORMAT"
+}
+```
+
+```json
+{
+  "error": "startDate must be before or equal to endDate.",
+  "code": "VALIDATION_ERROR", 
+  "details": "INVALID_DATE_RANGE"
+}
+```
+
+**Notes:**
+- Date filtering considers the full date range of tournaments (from earliest to latest tournament date)
+- A tournament is included if any part of its date range overlaps with the specified filter range
+- For single-day tournaments, the tournament date must fall within the specified range
+- For multi-day tournaments, the tournament is included if any day falls within the range
+
+### Get Club Tournaments
+
+**Endpoint:** `GET /api/clubs/{clubId}/tournaments`
+
+**Description:** Get tournaments created by a specific club with optional date filtering and limit.
+
+**Parameters:**
+- `startDate` (optional): Start date filter in YYYY-MM-DD format (inclusive) - includes tournaments whose date range overlaps with or starts after this date
+- `endDate` (optional): End date filter in YYYY-MM-DD format (inclusive) - includes tournaments whose date range overlaps with or ends before this date
+- `limit` (optional): Maximum number of tournaments to return (1-100, default: all)
+
+**Example Request - All Tournaments:**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/tournaments"
+```
+
+**Example Request - With Limit:**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/tournaments?limit=5"
+```
+
+**Example Request - Date Range (tournaments in Q2 2024):**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/tournaments?startDate=2024-04-01&endDate=2024-06-30"
+```
+
+**Example Request - From Date Only (tournaments from June 2024 onward):**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/tournaments?startDate=2024-06-01&limit=10"
+```
+
+**Example Request - Until Date Only (tournaments ending by December 2024):**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/tournaments?endDate=2024-12-31"
+```
+
+**Example Response:**
+```json
+{
+  "tournaments": [
+    {
+      "id": 1,
+      "title": "Gran Prix FASGBA 2025",
+      "description": "Torneo válido para el ranking FIDE con importantes premios en efectivo y trofeos.",
+      "time": "10:00 AM",
+      "place": "Club de Ajedrez Bahía Blanca",
+      "location": "Av. Colón 123, Bahía Blanca",
+      "rounds": 7,
+      "pace": "90 min + 30 seg",
+      "inscription_details": "Inscripción abierta hasta el 14 de Abril. Contactar: torneos@fasgba.com.ar",
+      "cost": "$5000 general, $3000 sub-18",
+      "prizes": "Premios en efectivo para los primeros 5 puestos y trofeos para los 3 primeros.",
+      "image": "tournament1.jpg",
+      "created_by_club_id": 1,
+      "tournament_dates": [
+        {
+          "id": 1,
+          "tournament_id": 1,
+          "event_date": "2025-04-15"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Torneo Rápido de Mayo",
+      "description": "Torneo rápido conmemorativo del 25 de Mayo con premios especiales.",
+      "time": "14:00 hs",
+      "place": "Círculo de Ajedrez Punta Alta",
+      "location": "Rivadavia 450, Punta Alta",
+      "rounds": 9,
+      "pace": "10 min + 5 seg",
+      "inscription_details": "Inscripción online en fasgba.com.ar hasta el 24 de Mayo",
+      "cost": "$2500 general, $1500 sub-16",
+      "prizes": "Trofeos para los primeros 6 puestos",
+      "image": "tournament2.jpg",
+      "created_by_club_id": 1,
+      "tournament_dates": [
+        {
+          "id": 2,
+          "tournament_id": 2,
+          "event_date": "2025-05-25"
+        },
+        {
+          "id": 3,
+          "tournament_id": 2,
+          "event_date": "2025-05-26"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Error Response Examples:**
+```json
+{
+  "error": "Invalid limit parameter. Must be a number between 1 and 100.",
+  "code": "VALIDATION_ERROR"
+}
+```
+
+```json
+{
+  "error": "Invalid startDate format. Use YYYY-MM-DD format.",
+  "code": "VALIDATION_ERROR"
+}
+```
+
+**Notes:**
+- Tournaments are ordered by ID descending (newest first)
+- Each tournament includes its complete data plus associated dates
+- Date filtering considers the full date range of tournaments (from earliest to latest tournament date)
+- A tournament is included if any part of its date range overlaps with the specified filter range
+- The `created_by_club_id` field indicates which club created the tournament
+
 ---
 
 ## Tournaments
@@ -897,6 +1126,64 @@ async function examples() {
       })
     });
     console.log('Created news:', newNews);
+    
+    // Get club news count examples
+    
+    // Total news count for a club
+    const totalNewsCount = await apiCall('/api/clubs/1/news/count');
+    console.log('Total news count for club 1:', totalNewsCount);
+    
+    // News count for a specific date range
+    const dateRangeCount = await apiCall('/api/clubs/1/news/count?startDate=2024-01-01&endDate=2024-03-31');
+    console.log('News count Q1 2024:', dateRangeCount);
+    
+    // News count from a specific date onward
+    const fromDateCount = await apiCall('/api/clubs/1/news/count?startDate=2024-06-01');
+    console.log('News count from June 2024:', fromDateCount);
+    
+    // News count until a specific date
+    const untilDateCount = await apiCall('/api/clubs/1/news/count?endDate=2024-12-31');
+    console.log('News count until end of 2024:', untilDateCount);
+    
+    // Get club tournament count examples
+    
+    // Total tournament count for a club
+    const totalTournamentCount = await apiCall('/api/clubs/1/tournaments/count');
+    console.log('Total tournament count for club 1:', totalTournamentCount);
+    
+    // Tournament count for a specific date range (Q2 2024)
+    const tournamentDateRangeCount = await apiCall('/api/clubs/1/tournaments/count?startDate=2024-04-01&endDate=2024-06-30');
+    console.log('Tournament count Q2 2024:', tournamentDateRangeCount);
+    
+    // Tournament count from a specific date onward
+    const tournamentFromDateCount = await apiCall('/api/clubs/1/tournaments/count?startDate=2024-06-01');
+    console.log('Tournament count from June 2024:', tournamentFromDateCount);
+    
+    // Tournament count until a specific date
+    const tournamentUntilDateCount = await apiCall('/api/clubs/1/tournaments/count?endDate=2024-12-31');
+    console.log('Tournament count until end of 2024:', tournamentUntilDateCount);
+    
+    // Get club tournaments examples
+    
+    // Get all tournaments for a club
+    const allTournaments = await apiCall('/api/clubs/1/tournaments');
+    console.log('All tournaments for club 1:', allTournaments);
+    
+    // Get latest 5 tournaments for a club
+    const latestTournaments = await apiCall('/api/clubs/1/tournaments?limit=5');
+    console.log('Latest 5 tournaments for club 1:', latestTournaments);
+    
+    // Get tournaments in a specific date range (Q2 2024)
+    const tournamentsQ2 = await apiCall('/api/clubs/1/tournaments?startDate=2024-04-01&endDate=2024-06-30');
+    console.log('Tournaments Q2 2024:', tournamentsQ2);
+    
+    // Get tournaments from June 2024 onward (limited to 10)
+    const tournamentsFromJune = await apiCall('/api/clubs/1/tournaments?startDate=2024-06-01&limit=10');
+    console.log('Tournaments from June 2024:', tournamentsFromJune);
+    
+    // Get tournaments ending by December 2024
+    const tournamentsUntilDec = await apiCall('/api/clubs/1/tournaments?endDate=2024-12-31');
+    console.log('Tournaments until end of 2024:', tournamentsUntilDec);
     
     // Follow a club
     await apiCall(`/api/clubs/1/followers`, { method: 'POST' });
