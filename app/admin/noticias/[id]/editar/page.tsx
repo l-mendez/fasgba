@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { supabase, supabaseAdmin } from "@/lib/supabaseClient"
 import { ArrowLeft, Save } from "lucide-react"
 
@@ -61,8 +61,7 @@ export default function EditNewsPage({ params }: { params: { id: string } }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [newTag, setNewTag] = useState("")
-  const [tags, setTags] = useState<string[]>([])
+  const [categoria, setCategoria] = useState("")
   const [contentBlocks, setContentBlocks] = useState<any[]>([])
   
   // Unwrap params using React.use() to fix the warning
@@ -148,7 +147,10 @@ export default function EditNewsPage({ params }: { params: { id: string } }) {
           created_at: String(typedData.created_at),
           updated_at: String(typedData.updated_at)
         })
-        setTags(typedData.tags || [])
+        
+        // Set category from tags (assume first tag is the category)
+        const firstTag = typedData.tags && typedData.tags.length > 0 ? typedData.tags[0] : ""
+        setCategoria(String(firstTag))
       } catch (err) {
         setDebugInfo(prev => prev + "\nError in fetchNews: " + (err instanceof Error ? err.message : String(err)));
         setError(err instanceof Error ? err.message : "Error al cargar la noticia")
@@ -182,14 +184,16 @@ export default function EditNewsPage({ params }: { params: { id: string } }) {
         date: formattedDate,
         extract: news.extract,
         text: contentJson, // Save the structured content
-        tags: tags,
+        tags: categoria ? [categoria] : [],
         updated_at: new Date().toISOString()
       };
       
       setDebugInfo(prev => prev + "\nUpdate data prepared");
       
-      // Use supabaseAdmin to bypass Row Level Security
-      const { data, error } = await supabaseAdmin
+      // Use supabaseAdmin to bypass Row Level Security, fallback to regular client
+      const client = supabaseAdmin || supabase;
+      
+      const { data, error } = await client
         .from('news')
         .update(updateData)
         .eq('id', news.id)
@@ -216,18 +220,10 @@ export default function EditNewsPage({ params }: { params: { id: string } }) {
     }
   }
 
-  const handleAddTag = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && newTag.trim()) {
-      e.preventDefault()
-      if (!tags.includes(newTag.trim())) {
-        setTags([...tags, newTag.trim()])
-      }
-      setNewTag("")
+  const handleSelectChange = (name: string, value: string) => {
+    if (name === 'categoria') {
+      setCategoria(value)
     }
-  }
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove))
   }
 
   // Function to add a new content block
@@ -312,20 +308,21 @@ export default function EditNewsPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="flex flex-col gap-4 md:gap-8 p-4 md:p-8">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/admin/noticias')}>
+        <div className="flex items-center gap-2 md:gap-4">
+          <Button variant="ghost" size="sm" className="md:size-icon" onClick={() => router.push('/admin/noticias')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-terracotta">Editar Noticia</h1>
-            <p className="text-muted-foreground">Modifica los detalles de la noticia.</p>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-terracotta">Editar Noticia</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Modifica los detalles de la noticia.</p>
           </div>
         </div>
-        <Button onClick={handleSubmit} disabled={isSaving}>
-          <Save className="mr-2 h-4 w-4" />
-          {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+        <Button onClick={handleSubmit} disabled={isSaving} className="text-sm md:text-base" size="sm">
+          <Save className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+          <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Guardar Cambios'}</span>
+          <span className="sm:hidden">{isSaving ? 'Guardando...' : 'Guardar'}</span>
         </Button>
       </div>
 
@@ -334,133 +331,167 @@ export default function EditNewsPage({ params }: { params: { id: string } }) {
       {error && (
         <Alert variant="destructive">
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="text-sm">{error}</AlertDescription>
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="grid gap-4">
+      <form onSubmit={handleSubmit} className="space-y-4 md:space-y-8">
+        <div className="grid gap-3 md:gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="title">Título</Label>
+            <Label htmlFor="title" className="text-sm md:text-sm font-medium">Título</Label>
             <Input
               id="title"
               value={news.title}
               onChange={(e) => setNews({ ...news, title: e.target.value })}
               required
+              className="text-sm md:text-base"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="date">Fecha</Label>
+            <Label htmlFor="date" className="text-sm md:text-sm font-medium">Fecha</Label>
             <Input
               id="date"
               type="date"
               value={news.date}
               onChange={(e) => setNews({ ...news, date: e.target.value })}
               required
+              className="text-sm md:text-base"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="extract">Extracto</Label>
+            <Label htmlFor="extract" className="text-sm md:text-sm font-medium">Extracto</Label>
             <Textarea
               id="extract"
               value={news.extract}
               onChange={(e) => setNews({ ...news, extract: e.target.value })}
               placeholder="Breve descripción de la noticia..."
+              className="text-sm md:text-base min-h-[80px] md:min-h-[100px]"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label>Contenido</Label>
-            <div className="border rounded-md p-4 space-y-4">
+            <Label className="text-sm md:text-sm font-medium">Contenido</Label>
+            <div className="border rounded-md p-3 md:p-4 space-y-3 md:space-y-4">
               {contentBlocks.map((block, index) => (
-                <div key={index} className="border rounded-md p-4 relative">
-                  <div className="absolute right-2 top-2 flex space-x-2">
-                    <Button variant="ghost" size="sm" onClick={() => moveBlock(index, 'up')} disabled={index === 0} type="button">↑</Button>
-                    <Button variant="ghost" size="sm" onClick={() => moveBlock(index, 'down')} disabled={index === contentBlocks.length - 1} type="button">↓</Button>
-                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => removeContentBlock(index)} type="button">×</Button>
+                <div key={index} className="border rounded-md p-3 md:p-4 relative">
+                  <div className="absolute right-2 top-2 flex space-x-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => moveBlock(index, 'up')} 
+                      disabled={index === 0} 
+                      type="button"
+                      className="h-7 w-7 md:h-8 md:w-8 p-0 text-xs"
+                    >
+                      ↑
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => moveBlock(index, 'down')} 
+                      disabled={index === contentBlocks.length - 1} 
+                      type="button"
+                      className="h-7 w-7 md:h-8 md:w-8 p-0 text-xs"
+                    >
+                      ↓
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-destructive h-7 w-7 md:h-8 md:w-8 p-0 text-xs" 
+                      onClick={() => removeContentBlock(index)} 
+                      type="button"
+                    >
+                      ×
+                    </Button>
                   </div>
                   
                   {block.type === 'text' && (
-                    <div className="pt-6">
+                    <div className="pt-8 md:pt-6">
                       <Textarea
                         value={block.content}
                         onChange={(e) => updateContentBlock(index, { ...block, content: e.target.value })}
-                        className="min-h-[150px]"
+                        className="min-h-[120px] md:min-h-[150px] text-sm md:text-base"
                         placeholder="Escribe el contenido aquí..."
                       />
                     </div>
                   )}
                   
                   {block.type === 'image' && (
-                    <div className="pt-6 space-y-2">
+                    <div className="pt-8 md:pt-6 space-y-2">
                       <Input
                         placeholder="URL de la imagen"
                         value={block.url}
                         onChange={(e) => updateContentBlock(index, { ...block, url: e.target.value })}
+                        className="text-sm md:text-base"
                       />
                       <Input
                         placeholder="Pie de foto (opcional)"
                         value={block.caption}
                         onChange={(e) => updateContentBlock(index, { ...block, caption: e.target.value })}
+                        className="text-sm md:text-base"
                       />
                       {block.url && (
                         <div className="mt-2">
-                          <img src={block.url} alt={block.caption} className="max-h-48 object-contain" />
+                          <img src={block.url} alt={block.caption} className="max-h-32 md:max-h-48 object-contain w-full" />
                         </div>
                       )}
                     </div>
                   )}
                   
                   {block.type === 'chess' && (
-                    <div className="pt-6 space-y-2">
+                    <div className="pt-8 md:pt-6 space-y-2">
                       <Input
                         placeholder="FEN (posición)"
                         value={block.fen}
                         onChange={(e) => updateContentBlock(index, { ...block, fen: e.target.value })}
+                        className="text-sm md:text-base"
                       />
                       <Textarea
                         placeholder="PGN (notación)"
                         value={block.pgn}
                         onChange={(e) => updateContentBlock(index, { ...block, pgn: e.target.value })}
+                        className="text-sm md:text-base min-h-[100px] md:min-h-[120px]"
                       />
                       <div className="mt-2 p-2 border rounded-md bg-muted">
-                        <p className="text-sm text-muted-foreground">Vista previa del tablero no disponible en el editor</p>
+                        <p className="text-xs md:text-sm text-muted-foreground">Vista previa del tablero no disponible en el editor</p>
                       </div>
                     </div>
                   )}
                 </div>
               ))}
               
-              <div className="flex space-x-2 mt-4">
-                <Button type="button" variant="outline" onClick={() => addContentBlock('text')}>+ Texto</Button>
-                <Button type="button" variant="outline" onClick={() => addContentBlock('image')}>+ Imagen</Button>
-                <Button type="button" variant="outline" onClick={() => addContentBlock('chess')}>+ Partida de ajedrez</Button>
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mt-4">
+                <Button type="button" variant="outline" onClick={() => addContentBlock('text')} size="sm" className="text-sm w-full sm:w-auto">
+                  + Texto
+                </Button>
+                <Button type="button" variant="outline" onClick={() => addContentBlock('image')} size="sm" className="text-sm w-full sm:w-auto">
+                  + Imagen
+                </Button>
+                <Button type="button" variant="outline" onClick={() => addContentBlock('chess')} size="sm" className="text-sm w-full sm:w-auto">
+                  + Partida de ajedrez
+                </Button>
               </div>
             </div>
           </div>
 
           <div className="grid gap-2">
-            <Label>Etiquetas</Label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="cursor-pointer"
-                  onClick={() => handleRemoveTag(tag)}
-                >
-                  {tag} ×
-                </Badge>
-              ))}
-            </div>
-            <Input
-              placeholder="Agregar etiqueta (presiona Enter)"
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              onKeyDown={handleAddTag}
-            />
+            <Label className="text-sm md:text-sm font-medium">Categoría</Label>
+            <Select value={categoria} onValueChange={(value) => handleSelectChange("categoria", value)}>
+              <SelectTrigger className="text-sm md:text-base">
+                <SelectValue placeholder="Seleccionar categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="torneos">Torneos</SelectItem>
+                <SelectItem value="resultados">Resultados</SelectItem>
+                <SelectItem value="institucional">Institucional</SelectItem>
+                <SelectItem value="clases">Clases</SelectItem>
+                <SelectItem value="eventos">Eventos</SelectItem>
+                <SelectItem value="partidas">Partidas</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </form>

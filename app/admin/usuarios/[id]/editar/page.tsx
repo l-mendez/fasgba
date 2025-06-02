@@ -324,14 +324,14 @@ export default function EditarUsuarioPage() {
   }
   
   return (
-    <div className="flex flex-col gap-8 p-8">
-      <div className="flex items-center gap-4">
-        <Button onClick={() => router.push("/admin/usuarios")}>
+    <div className="flex flex-col gap-4 md:gap-8 p-4 md:p-8">
+      <div className="flex items-center gap-2 md:gap-4">
+        <Button onClick={() => router.push("/admin/usuarios")} size="sm" className="md:h-10">
           ←
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Administrar Usuario</h1>
-          <p className="text-muted-foreground">Gestiona permisos y acceso del usuario.</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-terracotta">Administrar Usuario</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Gestiona permisos y acceso del usuario.</p>
         </div>
       </div>
       
@@ -339,7 +339,7 @@ export default function EditarUsuarioPage() {
         <Alert>
           <span className="text-red-600 mr-2">⚠️</span>
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="text-sm">{error}</AlertDescription>
         </Alert>
       )}
       
@@ -347,61 +347,61 @@ export default function EditarUsuarioPage() {
         <Alert className="bg-green-50 border-green-500 text-green-700">
           <span className="text-green-600 mr-2">✓</span>
           <AlertTitle>Éxito</AlertTitle>
-          <AlertDescription>{success}</AlertDescription>
+          <AlertDescription className="text-sm">{success}</AlertDescription>
         </Alert>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
         {/* User Information Display */}
-        <div className="md:col-span-2 space-y-6">
+        <div className="md:col-span-2 space-y-4 md:space-y-6">
           
           {/* User Identity Card */}
           <Card>
-            <CardHeader>
-              <CardTitle>Información del Usuario</CardTitle>
+            <CardHeader className="pb-3 md:pb-6">
+              <CardTitle className="text-lg md:text-xl">Información del Usuario</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-3 md:space-y-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Email</label>
-                  <p className="text-sm font-mono bg-muted p-2 rounded">{user.email}</p>
+                  <label className="text-xs md:text-sm font-medium text-muted-foreground">Email</label>
+                  <p className="text-xs md:text-sm font-mono bg-muted p-2 rounded break-all">{user.email}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">UID</label>
-                  <p className="text-sm font-mono bg-muted p-2 rounded break-all">{user.id}</p>
+                  <label className="text-xs md:text-sm font-medium text-muted-foreground">UID</label>
+                  <p className="text-xs md:text-sm font-mono bg-muted p-2 rounded break-all">{user.id}</p>
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Email Verificado</label>
+                  <label className="text-xs md:text-sm font-medium text-muted-foreground">Email Verificado</label>
                   <div className="mt-1">
                     {user.emailVerified ? (
-                      <Badge className="bg-green-100 text-green-800">Verificado</Badge>
+                      <Badge className="bg-green-100 text-green-800 text-xs">Verificado</Badge>
                     ) : (
-                      <Badge className="bg-red-100 text-red-800">No verificado</Badge>
+                      <Badge className="bg-red-100 text-red-800 text-xs">No verificado</Badge>
                     )}
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Último acceso</label>
-                  <p className="text-sm">{formatDate(user.lastSignIn)}</p>
+                  <label className="text-xs md:text-sm font-medium text-muted-foreground">Último acceso</label>
+                  <p className="text-xs md:text-sm">{formatDate(user.lastSignIn)}</p>
                 </div>
               </div>
               
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Fecha de registro</label>
-                <p className="text-sm">{formatDate(user.createdAt)}</p>
+                <label className="text-xs md:text-sm font-medium text-muted-foreground">Fecha de registro</label>
+                <p className="text-xs md:text-sm">{formatDate(user.createdAt)}</p>
               </div>
             </CardContent>
           </Card>
 
           {/* Permissions Management */}
           <Card>
-            <CardHeader>
-              <CardTitle>Gestión de Permisos</CardTitle>
+            <CardHeader className="pb-3 md:pb-6">
+              <CardTitle className="text-lg md:text-xl">Gestión de Permisos</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 md:space-y-6">
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="isAdmin" 
@@ -409,23 +409,25 @@ export default function EditarUsuarioPage() {
                   onCheckedChange={(checked: boolean | "indeterminate") => 
                     setPermissions(prev => ({ ...prev, isAdmin: Boolean(checked) }))
                   }
+                  className="h-5 w-5 md:h-4 md:w-4"
                 />
-                <label htmlFor="isAdmin" className="text-sm font-medium">
+                <label htmlFor="isAdmin" className="text-sm md:text-sm font-medium leading-relaxed">
                   Administrador del sitio
                 </label>
               </div>
               
               <div className="space-y-3">
                 <label className="text-sm font-medium">Administrador de clubes</label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-2">
                   {clubs.map((club) => (
-                    <div key={club.id} className="flex items-center space-x-2">
+                    <div key={club.id} className="flex items-center space-x-2 py-1">
                       <Checkbox 
                         id={`club-${club.id}`} 
                         checked={permissions.selectedClubAdmins.includes(club.id)}
                         onCheckedChange={() => toggleClubAdmin(club.id)}
+                        className="h-5 w-5 md:h-4 md:w-4"
                       />
-                      <label htmlFor={`club-${club.id}`} className="text-sm">
+                      <label htmlFor={`club-${club.id}`} className="text-sm leading-relaxed">
                         {club.name}
                       </label>
                     </div>
@@ -434,7 +436,11 @@ export default function EditarUsuarioPage() {
               </div>
               
               <div className="flex gap-3 pt-4 border-t">
-                <Button onClick={handlePermissionsSubmit} disabled={isSubmitting}>
+                <Button 
+                  onClick={handlePermissionsSubmit} 
+                  disabled={isSubmitting}
+                  className="w-full md:w-auto"
+                >
                   {isSubmitting ? "Guardando..." : "Guardar permisos"}
                 </Button>
               </div>
@@ -443,33 +449,35 @@ export default function EditarUsuarioPage() {
 
           {/* Moderation Actions */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-red-600">Acciones de Moderación</CardTitle>
+            <CardHeader className="pb-3 md:pb-6">
+              <CardTitle className="text-lg md:text-xl text-red-600">Acciones de Moderación</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-red-50 dark:bg-red-950/50 p-4 rounded-lg border border-red-200 dark:border-red-800">
-                <h4 className="font-medium text-red-800 dark:text-red-200 mb-2">Suspender Usuario</h4>
-                <p className="text-sm text-red-700 dark:text-red-300 mb-3">
+              <div className="bg-red-50 dark:bg-red-950/50 p-3 md:p-4 rounded-lg border border-red-200 dark:border-red-800">
+                <h4 className="font-medium text-red-800 dark:text-red-200 mb-2 text-sm md:text-base">Suspender Usuario</h4>
+                <p className="text-xs md:text-sm text-red-700 dark:text-red-300 mb-3">
                   El usuario no podrá acceder al sistema hasta que se reactive su cuenta.
                 </p>
                 <Button 
                   onClick={handleBanUser}
                   disabled={isSubmitting}
-                  className="bg-red-700 hover:bg-red-800 dark:bg-red-800 dark:hover:bg-red-900 text-white"
+                  className="bg-red-700 hover:bg-red-800 dark:bg-red-800 dark:hover:bg-red-900 text-white w-full md:w-auto"
+                  size="sm"
                 >
                   Suspender Usuario
                 </Button>
               </div>
               
-              <div className="bg-yellow-50 dark:bg-yellow-950/50 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">Timeout Temporal</h4>
-                <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-3">
+              <div className="bg-yellow-50 dark:bg-yellow-950/50 p-3 md:p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2 text-sm md:text-base">Timeout Temporal</h4>
+                <p className="text-xs md:text-sm text-yellow-700 dark:text-yellow-300 mb-3">
                   Suspender temporalmente al usuario por 24 horas.
                 </p>
                 <Button 
                   variant="outline"
-                  className="border-yellow-400 dark:border-yellow-600 text-yellow-800 dark:text-yellow-200 hover:bg-yellow-100 dark:hover:bg-yellow-900/50"
+                  className="border-yellow-400 dark:border-yellow-600 text-yellow-800 dark:text-yellow-200 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 w-full md:w-auto"
                   disabled={true}
+                  size="sm"
                 >
                   Timeout 24h (Próximamente)
                 </Button>

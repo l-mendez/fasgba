@@ -95,6 +95,18 @@ async function fetchAllUsers(): Promise<UserWithPermissions[]> {
   }
 }
 
+// Add delete user function
+async function deleteUser(userId: string): Promise<void> {
+  try {
+    await apiCall(`/api/auth/users/${userId}`, {
+      method: 'DELETE',
+    })
+  } catch (error) {
+    console.error('Error deleting user:', error)
+    throw error
+  }
+}
+
 export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [users, setUsers] = useState<UserWithPermissions[]>([])
@@ -103,6 +115,7 @@ export default function UsersPage() {
   const [sortBy, setSortBy] = useState<string | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
   const [originalOrder, setOriginalOrder] = useState<UserWithPermissions[]>([])
+  const [isDeleting, setIsDeleting] = useState<string | null>(null)
 
   // Load users on component mount
   useEffect(() => {
@@ -122,6 +135,31 @@ export default function UsersPage() {
 
     loadUsers()
   }, [])
+
+  // Add delete user handler
+  const handleDeleteUser = async (userId: string, userEmail: string) => {
+    if (!confirm(`¿Estás seguro de que quieres eliminar al usuario ${userEmail}? Esta acción no se puede deshacer.`)) {
+      return
+    }
+
+    try {
+      setIsDeleting(userId)
+      await deleteUser(userId)
+      
+      // Update the users list by removing the deleted user
+      const updatedUsers = users.filter(user => user.id !== userId)
+      setUsers(updatedUsers)
+      setOriginalOrder(updatedUsers)
+      
+      // Show success message (you could replace this with a toast notification)
+      alert('Usuario eliminado correctamente')
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      alert(error instanceof Error ? error.message : 'Error al eliminar el usuario')
+    } finally {
+      setIsDeleting(null)
+    }
+  }
 
   // Sorting functions
   const handleSort = (field: string) => {
@@ -409,18 +447,17 @@ export default function UsersPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                           <DropdownMenuItem>
-                            <Link href={`/admin/usuarios/${user.id}`} className="flex w-full">
-                              Ver detalles
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
                             <Link href={`/admin/usuarios/${user.id}/editar`} className="flex w-full">
                               Editar permisos
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600" disabled>
-                            Gestionar acceso
+                          <DropdownMenuItem 
+                            className="text-red-600"
+                            onClick={() => handleDeleteUser(user.id, user.email)}
+                            disabled={isDeleting === user.id}
+                          >
+                            {isDeleting === user.id ? 'Eliminando...' : 'Eliminar usuario'}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

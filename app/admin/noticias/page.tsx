@@ -515,7 +515,7 @@ export default function AdminNoticiasPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                         <DropdownMenuItem asChild>
-                          <Link href={`/admin/noticias/${item.id}`} className="flex items-center">
+                          <Link href={`/noticias/${item.id}`} className="flex items-center">
                             <Eye className="mr-2 h-4 w-4" />
                             Ver
                           </Link>
