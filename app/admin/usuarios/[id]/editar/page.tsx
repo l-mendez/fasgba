@@ -364,11 +364,11 @@ export default function EditarUsuarioPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Email</label>
-                  <p className="text-sm font-mono bg-gray-100 p-2 rounded">{user.email}</p>
+                  <p className="text-sm font-mono bg-muted p-2 rounded">{user.email}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">UID</label>
-                  <p className="text-sm font-mono bg-gray-100 p-2 rounded break-all">{user.id}</p>
+                  <p className="text-sm font-mono bg-muted p-2 rounded break-all">{user.id}</p>
                 </div>
               </div>
               
@@ -447,27 +447,28 @@ export default function EditarUsuarioPage() {
               <CardTitle className="text-red-600">Acciones de Moderación</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                <h4 className="font-medium text-red-800 mb-2">Suspender Usuario</h4>
-                <p className="text-sm text-red-700 mb-3">
+              <div className="bg-red-50 dark:bg-red-950/50 p-4 rounded-lg border border-red-200 dark:border-red-800">
+                <h4 className="font-medium text-red-800 dark:text-red-200 mb-2">Suspender Usuario</h4>
+                <p className="text-sm text-red-700 dark:text-red-300 mb-3">
                   El usuario no podrá acceder al sistema hasta que se reactive su cuenta.
                 </p>
                 <Button 
                   onClick={handleBanUser}
                   disabled={isSubmitting}
-                  className="bg-red-600 hover:bg-red-700 text-white"
+                  className="bg-red-700 hover:bg-red-800 dark:bg-red-800 dark:hover:bg-red-900 text-white"
                 >
                   Suspender Usuario
                 </Button>
               </div>
               
-              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                <h4 className="font-medium text-yellow-800 mb-2">Timeout Temporal</h4>
-                <p className="text-sm text-yellow-700 mb-3">
+              <div className="bg-yellow-50 dark:bg-yellow-950/50 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">Timeout Temporal</h4>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-3">
                   Suspender temporalmente al usuario por 24 horas.
                 </p>
                 <Button 
-                  className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+                  variant="outline"
+                  className="border-yellow-400 dark:border-yellow-600 text-yellow-800 dark:text-yellow-200 hover:bg-yellow-100 dark:hover:bg-yellow-900/50"
                   disabled={true}
                 >
                   Timeout 24h (Próximamente)

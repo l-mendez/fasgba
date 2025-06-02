@@ -490,7 +490,7 @@ export default function EditClubNewsPage({ params }: { params: { id: string } })
                         value={block.content.blackPlayer?.value || ''}
                         onChange={(e) => updateContentBlock(index, { ...block, content: { ...block.content, blackPlayer: { ...block.content.blackPlayer, value: e.target.value } } })}
                       />
-                      <div className="mt-2 p-2 border rounded-md bg-gray-50">
+                      <div className="mt-2 p-2 border rounded-md bg-muted">
                         <p className="text-sm text-muted-foreground">Vista previa del tablero no disponible en el editor</p>
                       </div>
                     </div>

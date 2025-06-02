@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useTheme } from "next-themes"
 import { Bell, Moon, LogOut, Trash2, Settings as SettingsIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,7 +17,7 @@ export default function AjustesPage() {
   const [torneos, setTorneos] = useState<string>("todos")
   const [noticias, setNoticias] = useState<string>("todos")
   const [ranking, setRanking] = useState<boolean>(true)
-  const [modoOscuro, setModoOscuro] = useState<boolean>(false)
+  const { theme, setTheme } = useTheme()
 
   const handleLogout = () => {
     // TODO: Implement logout functionality
@@ -26,6 +27,26 @@ export default function AjustesPage() {
   const handleDeleteAccount = () => {
     // TODO: Implement account deletion functionality
     console.log("Eliminar cuenta")
+  }
+
+  const handleSaveNotifications = () => {
+    // TODO: Implement save functionality
+    console.log("Guardando configuración de notificaciones:", {
+      notificaciones,
+      torneos,
+      noticias,
+      ranking
+    })
+  }
+
+  const handleCancelNotifications = () => {
+    // TODO: Reset to original values from database/server
+    console.log("Cancelando cambios en notificaciones")
+    // For now, reset to default values
+    setNotificaciones("todas")
+    setTorneos("todos")
+    setNoticias("todos")
+    setRanking(true)
   }
 
   return (
@@ -121,6 +142,23 @@ export default function AjustesPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Save and Cancel buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-amber/20">
+                  <Button
+                    onClick={handleSaveNotifications}
+                    className="bg-terracotta hover:bg-terracotta/90 text-white"
+                  >
+                    Guardar cambios
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleCancelNotifications}
+                    className="border-amber text-amber-dark hover:bg-amber/10"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
@@ -145,8 +183,8 @@ export default function AjustesPage() {
                   </div>
                   <Switch
                     id="modo-oscuro"
-                    checked={modoOscuro}
-                    onCheckedChange={setModoOscuro}
+                    checked={theme === "dark"}
+                    onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
                   />
                 </div>
               </CardContent>

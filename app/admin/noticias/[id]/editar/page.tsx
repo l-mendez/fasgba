@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface News {
   id: number
@@ -31,14 +32,7 @@ interface News {
     id: number
     name: string
   } | null
-  created_by_user_id: number | null
-  created_by_user: {
-    id: number
-    name: string
-    surname: string
-    email: string
-    profile_picture: string | null
-  } | null
+  created_by_auth_id: string | null
   created_at: string
   updated_at: string
 }
@@ -56,14 +50,7 @@ type SupabaseNews = {
     id: any
     name: any
   } | null
-  created_by_user_id: any
-  created_by_user: {
-    id: any
-    name: any
-    surname: any
-    email: any
-    profile_picture: any
-  } | null
+  created_by_auth_id: any
   created_at: any
   updated_at: any
 }
@@ -101,8 +88,7 @@ export default function EditNewsPage({ params }: { params: { id: string } }) {
             tags,
             club_id,
             club:clubs(id, name),
-            created_by_user_id,
-            created_by_user:users(id, name, surname, email, profile_picture),
+            created_by_auth_id,
             created_at,
             updated_at
           `)
@@ -158,14 +144,7 @@ export default function EditNewsPage({ params }: { params: { id: string } }) {
             id: Number(typedData.club.id),
             name: String(typedData.club.name)
           } : null,
-          created_by_user_id: typedData.created_by_user_id ? Number(typedData.created_by_user_id) : null,
-          created_by_user: typedData.created_by_user ? {
-            id: Number(typedData.created_by_user.id),
-            name: String(typedData.created_by_user.name),
-            surname: String(typedData.created_by_user.surname),
-            email: String(typedData.created_by_user.email),
-            profile_picture: typedData.created_by_user.profile_picture as string | null
-          } : null,
+          created_by_auth_id: typedData.created_by_auth_id ? String(typedData.created_by_auth_id) : null,
           created_at: String(typedData.created_at),
           updated_at: String(typedData.updated_at)
         })
@@ -350,18 +329,13 @@ export default function EditNewsPage({ params }: { params: { id: string } }) {
         </Button>
       </div>
 
-      {/* Debug info panel - only visible during development */}
-      {process.env.NODE_ENV === 'development' && debugInfo && (
-        <div className="bg-slate-100 p-4 rounded text-xs font-mono overflow-auto max-h-60">
-          <h3 className="font-bold mb-2">Debug Info:</h3>
-          <pre>{debugInfo}</pre>
-        </div>
-      )}
+      
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          <strong>Error:</strong> {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -451,7 +425,7 @@ export default function EditNewsPage({ params }: { params: { id: string } }) {
                         value={block.pgn}
                         onChange={(e) => updateContentBlock(index, { ...block, pgn: e.target.value })}
                       />
-                      <div className="mt-2 p-2 border rounded-md bg-gray-50">
+                      <div className="mt-2 p-2 border rounded-md bg-muted">
                         <p className="text-sm text-muted-foreground">Vista previa del tablero no disponible en el editor</p>
                       </div>
                     </div>
