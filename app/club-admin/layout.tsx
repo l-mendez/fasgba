@@ -8,11 +8,13 @@ import {
   Calendar,
   FileText,
   Home,
+  Menu,
   MessageSquare,
   Plus,
   Trophy,
+  X,
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -26,16 +28,53 @@ interface ClubAdminLayoutProps {
 
 export default function ClubAdminLayout({ children }: ClubAdminLayoutProps) {
   const pathname = usePathname()
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024) // lg breakpoint
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false)
+  }, [pathname])
 
   return (
     <ClubContextProvider>
       <div className="flex min-h-screen">
+        {/* Mobile menu button */}
+        <div className="fixed top-4 left-4 z-50 lg:hidden">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="bg-background"
+          >
+            {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </Button>
+        </div>
+
+        {/* Overlay for mobile */}
+        {isMobile && isMobileMenuOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
         <div
           className={cn(
-            "fixed left-0 top-0 z-40 h-screen w-64 border-r border-amber/20 bg-background transition-transform",
-            isCollapsed && "-translate-x-full"
+            "fixed left-0 top-0 z-40 h-screen w-64 border-r border-amber/20 bg-background transition-transform lg:translate-x-0",
+            isMobile && !isMobileMenuOpen && "-translate-x-full"
           )}
         >
           <div className="flex h-14 items-center border-b border-amber/20 px-4">
@@ -89,8 +128,8 @@ export default function ClubAdminLayout({ children }: ClubAdminLayoutProps) {
         </div>
 
         {/* Main content */}
-        <div className={cn("flex-1 transition-all", isCollapsed ? "ml-0" : "ml-64")}>
-          <main className="container py-6">{children}</main>
+        <div className="flex-1 lg:ml-64">
+          <main className="container py-6 px-4 lg:px-6 pt-16 lg:pt-6">{children}</main>
         </div>
       </div>
     </ClubContextProvider>

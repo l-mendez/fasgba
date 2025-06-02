@@ -245,15 +245,15 @@ export default function ClubAdminDashboard() {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
+      <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard del Club</h2>
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard del Club</h2>
           {adminClub && (
             <p className="text-muted-foreground">{adminClub.name}</p>
           )}
         </div>
         <div className="flex items-center space-x-2">
-          <Button asChild>
+          <Button asChild className="w-full sm:w-auto">
             <Link href="/club-admin/noticias/nueva">
               <Plus className="mr-2 h-4 w-4" />
               Nueva noticia
@@ -261,14 +261,14 @@ export default function ClubAdminDashboard() {
           </Button>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Noticias publicadas</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.noticias}</div>
+          <CardContent className="pb-3">
+            <div className="text-xl md:text-2xl font-bold">{loading ? '...' : stats.noticias}</div>
           </CardContent>
         </Card>
         <Card>
@@ -276,8 +276,8 @@ export default function ClubAdminDashboard() {
             <CardTitle className="text-sm font-medium">Torneos creados</CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.torneos}</div>
+          <CardContent className="pb-3">
+            <div className="text-xl md:text-2xl font-bold">{loading ? '...' : stats.torneos}</div>
           </CardContent>
         </Card>
         <Card>
@@ -285,13 +285,13 @@ export default function ClubAdminDashboard() {
             <CardTitle className="text-sm font-medium">Seguidores</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.seguidores}</div>
+          <CardContent className="pb-3">
+            <div className="text-xl md:text-2xl font-bold">{loading ? '...' : stats.seguidores}</div>
           </CardContent>
         </Card>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+        <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle>Actividad reciente</CardTitle>
             <CardDescription>
@@ -316,11 +316,11 @@ export default function ClubAdminDashboard() {
                       {getActivityIcon(activity.type)}
                     </div>
                     <div className="space-y-1 flex-grow">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <p className="text-sm font-medium leading-none">
                           {activity.title}
                         </p>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs w-fit">
                           {getActivityTypeLabel(activity.type)}
                         </Badge>
                       </div>
@@ -354,12 +354,12 @@ export default function ClubAdminDashboard() {
             )}
           </CardContent>
         </Card>
-        <Card className="col-span-3">
+        <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Acciones rápidas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4">
+            <div className="grid gap-3 md:gap-4">
               <Button asChild variant="outline" className="w-full justify-start">
                 <Link href="/club-admin/noticias/nueva">
                   <FileText className="mr-2 h-4 w-4" />
