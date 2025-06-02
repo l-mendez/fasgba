@@ -55,13 +55,7 @@ export const newsQuerySchema = z.object({
     }
     return num
   }).optional(),
-  authorId: z.string().transform((val) => {
-    const num = parseInt(val, 10)
-    if (isNaN(num) || num <= 0) {
-      throw new Error('Author ID must be a positive integer')
-    }
-    return num
-  }).optional(),
+  authorId: z.string().uuid('Author ID must be a valid UUID').optional(),
   tags: z.string().transform((val) => {
     try {
       const parsed = JSON.parse(val)

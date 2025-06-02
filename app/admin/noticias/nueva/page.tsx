@@ -30,7 +30,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import {
   Dialog,
@@ -770,10 +769,6 @@ export default function NewNewsPage() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleCheckboxChange = (name: string, checked: boolean) => {
-    setFormData((prev) => ({ ...prev, [name]: checked }))
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -1282,16 +1277,7 @@ export default function NewNewsPage() {
               />
             </div>
 
-            <div className="flex items-center space-x-2 pt-4 border-t">
-              <Checkbox
-                id="publicarAhora"
-                checked={formData.publicarAhora}
-                onCheckedChange={(checked) => handleCheckboxChange("publicarAhora", checked as boolean)}
-              />
-              <Label htmlFor="publicarAhora" className="text-sm font-normal">
-                Publicar inmediatamente (si no se marca, se guardará como borrador)
-              </Label>
-            </div>
+            
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button variant="outline" type="button" asChild>

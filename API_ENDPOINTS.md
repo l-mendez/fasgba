@@ -490,6 +490,12 @@ This document outlines the RESTful API endpoints designed based on the simplifie
 ```
 - **Error:** 400 Bad Request, 500 Internal Server Error
 
+**Notes:**
+- When `include=author` is specified, each news item includes `author_email` and `author_name` fields fetched from Supabase Auth
+- `author_email` contains the user's email from auth.users
+- `author_name` contains the user's full name from user_metadata if available
+- If author information cannot be retrieved, these fields will be undefined
+
 #### GET /api/news/{id}
 **Description:** Retrieve a specific news item by ID
 **Path Parameters:**
@@ -502,6 +508,12 @@ This document outlines the RESTful API endpoints designed based on the simplifie
 - **Success:** 200 OK
 - **Body:** `NewsDisplay`
 - **Error:** 404 Not Found, 500 Internal Server Error
+
+**Notes:**
+- When `include=author` is specified, the news item includes `author_email` and `author_name` fields fetched from Supabase Auth
+- `author_email` contains the user's email from auth.users
+- `author_name` contains the user's full name from user_metadata if available
+- If author information cannot be retrieved, these fields will be undefined
 
 #### POST /api/news
 **Description:** Create a new news item (authenticated users)

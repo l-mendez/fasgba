@@ -19,10 +19,8 @@ export async function GET(request: NextRequest) {
     
     const authorIdParam = searchParams.get('authorId')
     if (authorIdParam) {
-      const authorId = parseInt(authorIdParam, 10)
-      if (!isNaN(authorId) && authorId > 0) {
-        filters.authorId = authorId
-      }
+      // authorId is now a UUID string, not an integer
+      filters.authorId = authorIdParam
     }
     
     const tagsParam = searchParams.get('tags')

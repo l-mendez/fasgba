@@ -39,14 +39,9 @@ interface News {
     id: number
     name: string
   } | null
-  created_by_user_id: number | null
-  created_by_user: {
-    id: number
-    name: string
-    surname: string
-    email: string
-    profile_picture: string | null
-  } | null
+  created_by_auth_id: string | null
+  author_email?: string
+  author_name?: string
   created_at: string
   updated_at: string
 }
@@ -91,8 +86,9 @@ export default function AdminNoticiasPage() {
           tags: item.tags || [],
           club_id: item.club_id,
           club: item.club,
-          created_by_user_id: item.created_by_auth_id,
-          created_by_user: item.created_by_user,
+          created_by_auth_id: item.created_by_auth_id,
+          author_email: item.author_email,
+          author_name: item.author_name,
           created_at: item.created_at,
           updated_at: item.updated_at,
         }))
@@ -140,8 +136,7 @@ export default function AdminNoticiasPage() {
     news.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     news.extract.toLowerCase().includes(searchTerm.toLowerCase()) ||
     news.club?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    news.created_by_user?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    news.created_by_user?.surname.toLowerCase().includes(searchTerm.toLowerCase())
+    news.author_name?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
@@ -204,18 +199,37 @@ export default function AdminNoticiasPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={item.created_by_user?.profile_picture || ""} />
+                          <AvatarImage src="" />
                           <AvatarFallback>
-                            {item.created_by_user
-                              ? `${item.created_by_user.name.charAt(0)}${item.created_by_user.surname.charAt(0)}`
-                              : "??"}
+                            {item.author_name ? (
+                              item.author_name.charAt(0).toUpperCase()
+                            ) : (
+                              <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="text-gray-600"
+                              >
+                                <path
+                                  d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                                  fill="currentColor"
+                                />
+                              </svg>
+                            )}
                           </AvatarFallback>
                         </Avatar>
-                        <span>
-                          {item.created_by_user
-                            ? `${item.created_by_user.name} ${item.created_by_user.surname}`
-                            : "Desconocido"}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">
+                            {item.author_name || item.author_email || "Desconocido"}
+                          </span>
+                          {item.author_name && item.author_email && (
+                            <span className="text-xs text-muted-foreground">
+                              {item.author_email}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>

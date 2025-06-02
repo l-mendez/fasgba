@@ -142,15 +142,48 @@ export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data
     throw new Error('Failed to fetch news')
   }
 
-  // Process the data - we'll get author info from Supabase Auth if needed
-  const processedData = (data || []).map(item => ({
+  // Process the data and fetch author information if needed
+  let processedData = (data || []).map(item => ({
     ...item,
-    // For now, we'll leave author_name and author_email empty
-    // They can be fetched separately if needed
-    author_name: undefined,
-    author_email: undefined,
     tags: item.tags || []
   }))
+
+  // Fetch author information if included
+  if (include.includes('author')) {
+    processedData = await Promise.all(
+      processedData.map(async (item) => {
+        let author_email = undefined
+        let author_name = undefined
+
+        if (item.created_by_auth_id) {
+          try {
+            const { data: userData, error: userError } = await supabase.auth.admin.getUserById(item.created_by_auth_id)
+            
+            if (!userError && userData.user) {
+              author_email = userData.user.email || undefined
+              // You can also get the name from user_metadata if it exists
+              author_name = userData.user.user_metadata?.full_name || userData.user.user_metadata?.name || undefined
+            }
+          } catch (error) {
+            console.warn(`Could not fetch author info for news ${item.id}:`, error)
+          }
+        }
+
+        return {
+          ...item,
+          author_email,
+          author_name
+        }
+      })
+    )
+  } else {
+    // Add undefined author fields if not including author info
+    processedData = processedData.map(item => ({
+      ...item,
+      author_email: undefined,
+      author_name: undefined
+    }))
+  }
 
   return {
     data: processedData,
@@ -200,12 +233,45 @@ export async function getNewsById(id: number, include: Array<'author' | 'club'> 
     throw new Error('Failed to fetch news')
   }
 
-  return {
+  let processedData = {
     ...data,
-    author_name: undefined, // Can be fetched separately if needed
-    author_email: undefined,
     tags: data.tags || []
   }
+
+  // Fetch author information if included
+  if (include.includes('author')) {
+    let author_email = undefined
+    let author_name = undefined
+
+    if (data.created_by_auth_id) {
+      try {
+        const { data: userData, error: userError } = await supabase.auth.admin.getUserById(data.created_by_auth_id)
+        
+        if (!userError && userData.user) {
+          author_email = userData.user.email || undefined
+          // You can also get the name from user_metadata if it exists
+          author_name = userData.user.user_metadata?.full_name || userData.user.user_metadata?.name || undefined
+        }
+      } catch (error) {
+        console.warn(`Could not fetch author info for news ${data.id}:`, error)
+      }
+    }
+
+    processedData = {
+      ...processedData,
+      author_email,
+      author_name
+    }
+  } else {
+    // Add undefined author fields if not including author info
+    processedData = {
+      ...processedData,
+      author_email: undefined,
+      author_name: undefined
+    }
+  }
+
+  return processedData
 }
 
 /**

@@ -1253,16 +1253,6 @@ export default function NuevaNoticiaPage() {
               />
             </div>
 
-            <div className="flex items-center space-x-2 pt-4 border-t">
-              <Checkbox
-                id="publicarAhora"
-                checked={formData.publicarAhora}
-                onCheckedChange={(checked) => handleCheckboxChange("publicarAhora", checked)}
-              />
-              <Label htmlFor="publicarAhora" className="text-sm font-normal">
-                Publicar inmediatamente (si no se marca, se guardará como borrador)
-              </Label>
-            </div>
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button variant="outline" type="button" asChild>

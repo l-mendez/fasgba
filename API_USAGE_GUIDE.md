@@ -388,9 +388,10 @@ curl -X GET "https://api.example.com/api/clubs/1/news?limit=5"
 ```
 
 **Notes:**
-- Author information is automatically fetched from Supabase Auth
-- `author_email` and `author_name` fields provide information about who created the news
-- If author data cannot be retrieved, these fields will be undefined
+- The API automatically includes author information when `include=author` is used (which is the default)
+- `author_email` and `author_name` are fetched from Supabase Auth using the `created_by_auth_id`
+- If author information cannot be retrieved, these fields will be undefined
+- This provides consistent author information across all news endpoints
 
 ### Get Club News Count
 
@@ -975,6 +976,8 @@ curl -X GET "https://api.example.com/api/news?authorId=123e4567-e89b-12d3-a456-4
       "created_by_auth_id": "123e4567-e89b-12d3-a456-426614174000",
       "created_at": "2024-03-01T10:00:00Z",
       "updated_at": "2024-03-01T10:00:00Z",
+      "author_email": "admin@clubmagnus.com",
+      "author_name": "Carlos Rodriguez",
       "club": {
         "id": 1,
         "name": "Club Magnus Carlsen",
@@ -1217,6 +1220,20 @@ async function examples() {
     // Get followed clubs
     const followedClubs = await apiCall('/api/users/me/following');
     console.log('Followed clubs:', followedClubs);
+    
+    // Get all news with author information
+    const allNews = await apiCall('/api/news?limit=5&include=author,club');
+    console.log('News with author info:', allNews);
+    
+    // Display news with author information
+    allNews.news.forEach((news, index) => {
+      console.log(`${index + 1}. ${news.title}`);
+      console.log(`   Author: ${news.author_name || 'Unknown'} (${news.author_email || 'No email'})`);
+      console.log(`   Club: ${news.club?.name || 'No club'}`);
+      console.log(`   Date: ${new Date(news.date).toLocaleDateString()}`);
+      console.log(`   Extract: ${news.extract || 'No preview available'}`);
+      console.log('---');
+    });
     
     // Get tournaments with display format
     const tournaments = await apiCall('/api/tournaments?format=display&status=upcoming&limit=5');

@@ -38,9 +38,10 @@ function formatDate(dateString: string) {
 }
 
 export default async function NoticiasPage() {
-  // Initialize Supabase client
+  // Initialize Supabase client with correct cookies pattern
+  const cookieStore = await cookies()
   const supabase = createServerComponentClient({ 
-    cookies
+    cookies: () => cookieStore
   })
   
   // Fetch news from the database
@@ -113,7 +114,7 @@ export default async function NoticiasPage() {
                 <Badge variant="outline" className="border-amber text-amber-dark hover:bg-amber/10 cursor-pointer">
                   Todas
                 </Badge>
-                {allTags.slice(0, 4).map(tag => (
+                {allTags.slice(0, 4).map((tag: string) => (
                   <Badge
                     key={tag}
                     variant="outline"
@@ -147,7 +148,7 @@ export default async function NoticiasPage() {
                       </div>
                       <div className="p-6">
                         <div className="mb-3 flex flex-wrap gap-2">
-                          {noticia.tags.slice(0, 3).map((tag) => (
+                          {noticia.tags.slice(0, 3).map((tag: string) => (
                             <Badge key={tag} variant="outline" className="border-amber/20 text-muted-foreground">
                               {tag}
                             </Badge>
