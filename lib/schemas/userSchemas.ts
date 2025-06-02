@@ -24,9 +24,12 @@ export const permissionParamSchema = z.object({
   permission: z.enum(API_CONSTANTS.USER_PERMISSIONS),
 })
 
-// Schema for file upload validation
+// Schema for file upload validation - using any instead of File for server compatibility
 export const fileUploadSchema = z.object({
-  file: z.instanceof(File).refine((file) => {
+  file: z.any().refine((file) => {
+    // Check if it's a File-like object with required properties
+    return file && typeof file === 'object' && 'size' in file && 'type' in file && 'name' in file
+  }, 'Invalid file object').refine((file) => {
     return file.size <= API_CONSTANTS.MAX_AVATAR_SIZE
   }, `File size must be less than ${API_CONSTANTS.MAX_AVATAR_SIZE / (1024 * 1024)}MB`).refine((file) => {
     return API_CONSTANTS.ALLOWED_AVATAR_TYPES.includes(file.type)
@@ -73,7 +76,7 @@ export function validatePermissionParam(permission: string) {
   }
 }
 
-export function validateFileUpload(file: File) {
+export function validateFileUpload(file: any) {
   try {
     return fileUploadSchema.parse({ file }).file
   } catch (error) {
@@ -87,8 +90,8 @@ export function validateFileUpload(file: File) {
 }
 
 // Helper function to validate file from FormData
-export function validateFileFromFormData(formData: FormData): File {
-  const file = formData.get('file') as File
+export function validateFileFromFormData(formData: FormData): any {
+  const file = formData.get('file')
   
   if (!file) {
     const validationError = new Error('No file provided')
@@ -96,7 +99,8 @@ export function validateFileFromFormData(formData: FormData): File {
     throw validationError
   }
   
-  if (!(file instanceof File)) {
+  // Check if it's a File-like object instead of using instanceof File
+  if (!file || typeof file !== 'object' || !('size' in file) || !('type' in file) || !('name' in file)) {
     const validationError = new Error('Invalid file format')
     validationError.name = 'ValidationError'
     throw validationError

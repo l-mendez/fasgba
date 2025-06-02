@@ -10,43 +10,6 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { PlayerList } from "@/app/ranking/components/PlayerList"
 
-// Function to get player category based on age and gender
-function getPlayerCategory(age: number, gender: string): string {
-  if (age < 16) return "Sub-16";
-  if (age < 18) return "Sub-18";
-  if (gender === "Female") return "Femenino";
-  return "Absoluto";
-}
-
-// Function to calculate age based on birth date
-function calculateAge(birthDateString: string): number {
-  const birthDate = new Date(birthDateString);
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  
-  return age;
-}
-
-// Function to get player title based on ELO
-function getPlayerTitle(elo: number, gender: string): string {
-  if (gender === "Female") {
-    if (elo >= 2300) return "WGM";
-    if (elo >= 2200) return "WIM";
-    if (elo >= 2100) return "WFM";
-    return "";
-  } else {
-    if (elo >= 2500) return "GM";
-    if (elo >= 2400) return "IM";
-    if (elo >= 2300) return "FM";
-    return "";
-  }
-}
-
 // Define interfaces for the data we're working with
 export interface Player {
   id: number;

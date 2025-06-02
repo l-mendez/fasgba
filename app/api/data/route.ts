@@ -1,20 +1,8 @@
-import * as XLSX from 'xlsx-js-style';
-import fs from 'fs';
-import path from 'path';
 import { NextResponse } from 'next/server';
+import { getPlayers, type PaginatedPlayersResponse } from '@/lib/rankingUtils';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
-interface ExcelPlayer {
-  __EMPTY: number;
-  ID: string;
-  TIT: string;
-  Nombre: string;
-  'Ranking Nuevo': number;
-  Club?: string;
-  Categoría?: string;
-}
 
 export async function GET(request: Request) {
   try {
@@ -23,56 +11,41 @@ export async function GET(request: Request) {
     const pageSize = parseInt(searchParams.get('pageSize') || '50');
     const search = searchParams.get('search') || '';
     
-    const filePath = path.join(process.cwd(), 'public/data/ranking.xlsx');
-    
-    if (!fs.existsSync(filePath)) {
+    // Validate pagination parameters
+    if (page < 1 || pageSize < 1 || pageSize > 100) {
       return NextResponse.json(
-        { error: 'Excel file not found' },
-        { status: 404 }
+        { error: 'Invalid pagination parameters' },
+        { status: 400 }
       );
     }
 
-    const fileBuffer = fs.readFileSync(filePath);
-    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    const rawData = XLSX.utils.sheet_to_json<ExcelPlayer>(sheet);
+    // Get players from Supabase Storage
+    const data: PaginatedPlayersResponse = await getPlayers(page, pageSize, search);
 
-    // Transform the data to match our Player interface
-    const transformedData = rawData.map(player => ({
-      id: player.__EMPTY,
-      nombre: player.Nombre,
-      club: player.Club || '',
-      elo: player['Ranking Nuevo'],
-      categoria: player.Categoría || 'Absoluto',
-      titulo: player.TIT || '',
-      edad: 0 // We'll need to calculate this if needed
-    }));
-
-    // Filter by search term if provided
-    const filteredData = search
-      ? transformedData.filter(player => 
-          player.nombre.toLowerCase().includes(search.toLowerCase()) ||
-          player.club.toLowerCase().includes(search.toLowerCase())
-        )
-      : transformedData;
-
-    // Calculate pagination
-    const startIndex = (page - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const paginatedData = filteredData.slice(startIndex, endIndex);
-
-    return NextResponse.json({
-      players: paginatedData,
-      total: filteredData.length,
-      page,
-      pageSize,
-      totalPages: Math.ceil(filteredData.length / pageSize)
-    });
+    return NextResponse.json(data);
+    
   } catch (error) {
-    console.error('Error reading Excel file:', error);
+    console.error('Error in /api/data route:', error);
+    
+    // Return more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('Unable to get public URL')) {
+        return NextResponse.json(
+          { error: 'Ranking data not found in storage' },
+          { status: 404 }
+        );
+      }
+      
+      if (error.message.includes('Failed to fetch ranking data')) {
+        return NextResponse.json(
+          { error: 'Unable to fetch ranking data' },
+          { status: 503 }
+        );
+      }
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to read data' },
+      { error: 'Failed to load ranking data' },
       { status: 500 }
     );
   }
