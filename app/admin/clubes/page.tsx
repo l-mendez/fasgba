@@ -35,7 +35,6 @@ interface Club {
   mail: string | null
   schedule: string | null
   // Extended properties for display
-  delegado?: string
   adminCount?: number
 }
 
@@ -110,25 +109,11 @@ async function deleteClub(clubId: number): Promise<void> {
   })
 }
 
-async function getClubAdmins(clubId: number): Promise<ClubAdmin[]> {
-  return apiCall(`/api/clubs/${clubId}/admins`)
-}
-
-async function addClubAdmin(clubId: number, email: string): Promise<void> {
-  // For now, we'll just show an error message since we need a proper API endpoint
-  // In a real implementation, this would call a dedicated API endpoint
-  // that handles finding users by email and adding them as admins
-  throw new Error('La funcionalidad de cambiar delegado requiere una API endpoint específica. Por favor contacta al administrador del sistema.')
-}
-
 export default function AdminClubesPage() {
   const [clubes, setClubes] = useState<Club[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [clubToDelete, setClubToDelete] = useState<number | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [showChangeDelegadoDialog, setShowChangeDelegadoDialog] = useState(false)
-  const [selectedClub, setSelectedClub] = useState<Club | null>(null)
-  const [newDelegadoEmail, setNewDelegadoEmail] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -153,8 +138,7 @@ export default function AdminClubesPage() {
   // Filter clubs by search term
   const filteredClubes = clubes.filter(
     (club) =>
-      club.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (club.delegado?.toLowerCase() || "").includes(searchTerm.toLowerCase())
+      club.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   // Function to delete a club
@@ -172,14 +156,6 @@ export default function AdminClubesPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al eliminar el club")
     }
-  }
-
-  // Function to show delegado functionality message
-  const handleChangeDelegado = async () => {
-    setError('La funcionalidad de cambiar delegado requiere configuración adicional en el backend.')
-    setShowChangeDelegadoDialog(false)
-    setSelectedClub(null)
-    setNewDelegadoEmail("")
   }
 
   if (isLoading) {
@@ -254,10 +230,9 @@ export default function AdminClubesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
-              <TableHead>Delegado</TableHead>
               <TableHead>Contacto</TableHead>
               <TableHead>Horarios</TableHead>
-              <TableHead>Admins</TableHead>
+              <TableHead>Delegados</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -273,13 +248,6 @@ export default function AdminClubesPage() {
                 <TableRow key={club.id}>
                   <TableCell className="font-medium">{club.name}</TableCell>
                   <TableCell>
-                    {club.delegado ? (
-                      <span className="text-sm">{club.delegado}</span>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">Sin delegado</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
                     <div className="flex flex-col">
                       <span className="text-xs">{club.mail || "Sin email"}</span>
                       <span className="text-xs text-muted-foreground">{club.telephone || "Sin teléfono"}</span>
@@ -287,10 +255,9 @@ export default function AdminClubesPage() {
                   </TableCell>
                   <TableCell>{club.schedule || "Sin horarios"}</TableCell>
                   <TableCell>
-                    {/* @ts-ignore */}
-                    <Badge variant="outline">
-                      {club.adminCount || 0} admin{(club.adminCount || 0) !== 1 ? 's' : ''}
-                    </Badge>
+                    <span className="text-sm font-medium">
+                      {club.adminCount || 0}
+                    </span>
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -315,16 +282,6 @@ export default function AdminClubesPage() {
                             <Edit className="mr-2 h-4 w-4" />
                             Editar
                           </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setSelectedClub(club)
-                            setNewDelegadoEmail(club.delegado || "")
-                            setShowChangeDelegadoDialog(true)
-                          }}
-                        >
-                          <User className="mr-2 h-4 w-4" />
-                          Cambiar delegado
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -370,41 +327,6 @@ export default function AdminClubesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Dialog for changing a club's delegate */}
-      <Dialog open={showChangeDelegadoDialog} onOpenChange={setShowChangeDelegadoDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cambiar delegado</DialogTitle>
-            <DialogDescription>
-              Esta funcionalidad está en desarrollo. Por favor contacta al administrador del sistema.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Input
-              type="email"
-              placeholder="Email del nuevo delegado"
-              value={newDelegadoEmail}
-              onChange={(e) => setNewDelegadoEmail(e.target.value)}
-              disabled
-            />
-          </div>
-          <DialogFooter>
-            {/* @ts-ignore */}
-            <Button variant="outline" onClick={() => setShowChangeDelegadoDialog(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleChangeDelegado}
-              disabled={!newDelegadoEmail.trim()}
-              className="bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400"
-            >
-              Guardar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
-
