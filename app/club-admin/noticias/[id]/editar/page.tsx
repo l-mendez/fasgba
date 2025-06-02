@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import { ArrowLeft, Save } from "lucide-react"
+import { notFound } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -66,7 +67,7 @@ async function apiCall(endpoint: string, options: RequestInit = {}) {
 
 export default function EditClubNewsPage({ params }: { params: { id: string } }) {
   const router = useRouter()
-  const { selectedClub } = useClubContext()
+  const { setSelectedClub } = useClubContext()
   const [news, setNews] = useState<News | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -83,8 +84,34 @@ export default function EditClubNewsPage({ params }: { params: { id: string } })
   useEffect(() => {
     async function fetchNews() {
       try {
-        // Use the API to fetch news instead of direct Supabase call
+        // First, fetch the news to get the club_id
         const data = await apiCall(`/news/${newsId}?include=club`)
+        
+        // Check if the news has a club_id
+        if (!data.club_id) {
+          // If no club_id, redirect to 404
+          notFound()
+          return
+        }
+
+        // Get current user to check permissions
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user?.id) {
+          throw new Error('No hay sesión activa')
+        }
+
+        // Check if the current user is an admin of the club that created this news
+        const adminCheck = await apiCall(`/clubs/${data.club_id}/admins/${session.user.id}`)
+        
+        if (!adminCheck.isAdmin) {
+          // User is not admin of this club, redirect to 404
+          notFound()
+          return
+        }
+
+        // User is admin, fetch the club details and set it as selected
+        const clubData = await apiCall(`/clubs/${data.club_id}`)
+        setSelectedClub(clubData)
         
         // Try to parse the text content as JSON to get the structured blocks
         try {
@@ -165,30 +192,23 @@ export default function EditClubNewsPage({ params }: { params: { id: string } })
           setCategory(firstTag)
         }
 
-        // Check if the news belongs to the selected club
-        if (selectedClub && data.club_id && data.club_id !== selectedClub.id) {
-          throw new Error('Esta noticia no pertenece al club seleccionado');
-        }
-
       } catch (err) {
+        if (err instanceof Error && err.message.includes('404')) {
+          notFound()
+          return
+        }
         setError(err instanceof Error ? err.message : "Error al cargar la noticia")
       } finally {
         setIsLoading(false)
       }
     }
 
-    if (!selectedClub) {
-      setError("No hay un club seleccionado")
-      setIsLoading(false)
-      return
-    }
-
     fetchNews()
-  }, [newsId, selectedClub])
+  }, [newsId, setSelectedClub])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!news || !selectedClub) return
+    if (!news) return
 
     try {
       setIsSaving(true)
@@ -209,7 +229,7 @@ export default function EditClubNewsPage({ params }: { params: { id: string } })
         extract: news.extract,
         text: contentJson, // Save the structured content
         tags: allTags,
-        club_id: selectedClub.id // Ensure it stays with the selected club
+        club_id: news.club_id // Keep the original club_id
       };
       
       // Use the API to update news
@@ -296,19 +316,6 @@ export default function EditClubNewsPage({ params }: { params: { id: string } })
     }
   }
 
-  if (!selectedClub) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-red-500">No hay un club seleccionado</p>
-          <Button onClick={() => router.push('/club-admin')} className="mt-4">
-            Volver al Dashboard
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -356,7 +363,7 @@ export default function EditClubNewsPage({ params }: { params: { id: string } })
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-terracotta">Editar Noticia</h1>
             <p className="text-muted-foreground">
-              Modifica los detalles de la noticia para {selectedClub.name}.
+              Modifica los detalles de la noticia para {news.club?.name}.
             </p>
           </div>
         </div>
@@ -524,7 +531,7 @@ export default function EditClubNewsPage({ params }: { params: { id: string } })
           <div className="grid gap-2">
             <Label>Club Asociado</Label>
             <div className="p-3 bg-muted rounded-md">
-              <p className="text-sm font-medium">{selectedClub.name}</p>
+              <p className="text-sm font-medium">{news.club?.name}</p>
               <p className="text-xs text-muted-foreground">La noticia estará asociada a este club</p>
             </div>
           </div>
