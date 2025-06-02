@@ -24,6 +24,7 @@ interface ActivityItem {
   title: string
   date: string
   description?: string
+  author?: string
 }
 
 export default function ClubAdminDashboard() {
@@ -152,7 +153,8 @@ export default function ClubAdminDashboard() {
               type: 'news',
               title: news.title,
               date: news.date || news.created_at,
-              description: news.extract
+              description: news.extract,
+              author: news.author_email || 'Autor desconocido'
             })
           })
         }
@@ -325,6 +327,11 @@ export default function ClubAdminDashboard() {
                       {activity.description && (
                         <p className="text-xs text-muted-foreground line-clamp-2">
                           {activity.description}
+                        </p>
+                      )}
+                      {activity.author && (
+                        <p className="text-xs text-muted-foreground italic">
+                          Por: {activity.author}
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground">

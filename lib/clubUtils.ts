@@ -66,50 +66,63 @@ export async function getAllClubs(options: {
   hasContact?: boolean
   includeStats?: boolean
 } = {}): Promise<Club[] | ClubWithStats[]> {
-  let query = supabase.from('clubs').select('*')
-
-  // Apply search filter
-  if (options.search) {
-    query = query.ilike('name', `%${options.search}%`)
-  }
-
-  // Apply contact filter
-  if (options.hasContact) {
-    query = query.not('mail', 'is', null).not('telephone', 'is', null)
-  }
-
-  const { data: clubs, error } = await query
-
-  if (error) {
-    console.error('Error fetching clubs:', error)
-    throw new Error('Failed to fetch clubs')
-  }
-
-  if (!options.includeStats) {
-    return clubs || []
-  }
-
-  // Get additional statistics for each club
-  const clubsWithStats = await Promise.all(
-    (clubs || []).map(async (club): Promise<ClubWithStats> => {
-      const [memberCount, adminCount, followersCount, newsCount] = await Promise.all([
+  try {
+    let query = supabase.from('clubs').select('*')
+    
+    if (options.search) {
+      query = query.ilike('name', `%${options.search}%`)
+    }
+    
+    if (options.hasContact) {
+      query = query.not('mail', 'is', null)
+    }
+    
+    const { data, error } = await query.order('name', { ascending: true })
+    
+    if (error) {
+      console.error('Error fetching clubs:', error)
+      throw new Error('Failed to fetch clubs')
+    }
+    
+    if (!options.includeStats) {
+      return data || []
+    }
+    
+    // Add stats if requested
+    const clubsWithStats = await Promise.all((data || []).map(async (club) => {
+      const [memberCount, adminCount, newsCount] = await Promise.all([
         getClubMemberCount(club.id),
         getClubAdminCount(club.id),
-        getClubFollowersCount(club.id),
         getClubNewsCount(club.id)
       ])
-
+      
       return {
         ...club,
         memberCount,
         adminCount,
-        followersCount,
         newsCount
       }
-    })
-  )
+    }))
+    
+    return clubsWithStats
+  } catch (error) {
+    console.error('Error in getAllClubs:', error)
+    throw error
+  }
+}
 
-  return clubsWithStats
+/**
+ * Search clubs by name
+ * @param searchTerm - The search term to match against club names
+ * @returns Promise<Club[]> - Array of clubs matching the search term
+ */
+export async function searchClubsByName(searchTerm: string): Promise<Club[]> {
+  try {
+    return await getAllClubs({ search: searchTerm }) as Club[]
+  } catch (error) {
+    console.error('Error searching clubs by name:', error)
+    throw error
+  }
 }
 
 /**
@@ -465,12 +478,36 @@ export async function getClubNews(clubId: number, limit?: number): Promise<ClubN
     throw new Error('Failed to fetch club news')
   }
 
-  return (data || []).map(item => ({
-    ...item,
-    tags: item.tags || [],
-    author_name: undefined, // Can be fetched separately if needed
-    author_email: undefined
-  }))
+  // Fetch author information for each news item
+  const newsWithAuthors = await Promise.all(
+    (data || []).map(async (item) => {
+      let author_email = undefined
+      let author_name = undefined
+
+      if (item.created_by_auth_id) {
+        try {
+          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(item.created_by_auth_id)
+          
+          if (!userError && userData.user) {
+            author_email = userData.user.email || undefined
+            // You can also get the name from user_metadata if it exists
+            author_name = userData.user.user_metadata?.full_name || userData.user.user_metadata?.name || undefined
+          }
+        } catch (error) {
+          console.warn(`Could not fetch author info for news ${item.id}:`, error)
+        }
+      }
+
+      return {
+        ...item,
+        tags: item.tags || [],
+        author_email,
+        author_name
+      }
+    })
+  )
+
+  return newsWithAuthors
 }
 
 /**

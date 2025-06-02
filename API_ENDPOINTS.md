@@ -205,7 +205,7 @@ This document outlines the RESTful API endpoints designed based on the simplifie
 ### 1.5 Club News
 
 #### GET /api/clubs/{clubId}/news
-**Description:** Get news from a specific club
+**Description:** Get news from a specific club with author information
 **Path Parameters:**
 - `clubId: number` - Club identifier
 
@@ -214,8 +214,32 @@ This document outlines the RESTful API endpoints designed based on the simplifie
 
 **Response:**
 - **Success:** 200 OK
-- **Body:** `ClubNews[]`
+- **Body:** `ClubNews[]` (with author information populated)
+```json
+[
+  {
+    "id": "number",
+    "title": "string",
+    "date": "string (ISO date)",
+    "image": "string | null",
+    "extract": "string | null",
+    "text": "string",
+    "tags": "string[]",
+    "created_by_auth_id": "string | null (UUID)",
+    "created_at": "string (ISO date)",
+    "updated_at": "string (ISO date)",
+    "author_email": "string | undefined (fetched from Supabase Auth)",
+    "author_name": "string | undefined (fetched from user_metadata)"
+  }
+]
+```
 - **Error:** 404 Not Found, 500 Internal Server Error
+
+**Notes:**
+- Author information is automatically fetched from Supabase Auth using the `created_by_auth_id`
+- `author_email` contains the user's email from auth.users
+- `author_name` contains the user's full name from user_metadata if available
+- If author information cannot be retrieved, these fields will be undefined
 
 #### GET /api/clubs/{clubId}/news/count
 **Description:** Get news count for a club with optional date filtering

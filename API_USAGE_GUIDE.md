@@ -343,7 +343,7 @@ curl -X GET "https://api.example.com/api/clubs/1/followers/count"
 
 **Endpoint:** `GET /api/clubs/{clubId}/news`
 
-**Description:** Get news from a specific club.
+**Description:** Get news from a specific club with author information.
 
 **Parameters:**
 - `limit` (optional): Maximum number of news items
@@ -366,10 +366,31 @@ curl -X GET "https://api.example.com/api/clubs/1/news?limit=5"
     "tags": ["torneo", "primavera", "2024"],
     "created_by_auth_id": "123e4567-e89b-12d3-a456-426614174000",
     "created_at": "2024-03-01T10:00:00Z",
-    "updated_at": "2024-03-01T10:00:00Z"
+    "updated_at": "2024-03-01T10:00:00Z",
+    "author_email": "admin@clubmagnus.com",
+    "author_name": "Carlos Rodriguez"
+  },
+  {
+    "id": 202,
+    "title": "Nuevos Horarios de Clases",
+    "date": "2024-03-10",
+    "image": null,
+    "extract": "Anunciamos los nuevos horarios para las clases de ajedrez",
+    "text": "A partir del próximo mes, implementaremos nuevos horarios...",
+    "tags": ["clases", "horarios"],
+    "created_by_auth_id": "987fcdeb-51a2-43b1-9876-543210fedcba",
+    "created_at": "2024-03-05T14:30:00Z",
+    "updated_at": "2024-03-05T14:30:00Z",
+    "author_email": "profesor@clubmagnus.com",
+    "author_name": "Ana Martinez"
   }
 ]
 ```
+
+**Notes:**
+- Author information is automatically fetched from Supabase Auth
+- `author_email` and `author_name` fields provide information about who created the news
+- If author data cannot be retrieved, these fields will be undefined
 
 ### Get Club News Count
 
@@ -1252,6 +1273,19 @@ async function examples() {
     // Total news count for a club
     const totalNewsCount = await apiCall('/api/clubs/1/news/count');
     console.log('Total news count for club 1:', totalNewsCount);
+    
+    // Get club news with author information
+    const clubNews = await apiCall('/api/clubs/1/news?limit=3');
+    console.log('Club news with authors:', clubNews);
+    
+    // Display news with author information
+    clubNews.forEach((news, index) => {
+      console.log(`${index + 1}. ${news.title}`);
+      console.log(`   Author: ${news.author_name || 'Unknown'} (${news.author_email || 'No email'})`);
+      console.log(`   Date: ${new Date(news.date).toLocaleDateString()}`);
+      console.log(`   Extract: ${news.extract || 'No preview available'}`);
+      console.log('---');
+    });
     
     // News count for a specific date range
     const dateRangeCount = await apiCall('/api/clubs/1/news/count?startDate=2024-01-01&endDate=2024-03-31');

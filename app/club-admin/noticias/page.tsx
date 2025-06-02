@@ -41,6 +41,8 @@ interface NewsDisplay {
   created_by_auth_id: string
   created_at: string
   updated_at: string
+  author_email?: string
+  author_name?: string
   // Relaciones incluidas por la API
   club?: {
     id: number
@@ -112,17 +114,14 @@ export default function ClubAdminNoticiasPage() {
         
         console.log('Fetching news for club:', selectedClub.id)
         
-        // Usar la nueva API para obtener noticias del club
-        const response = await apiCall(`/news?clubId=${selectedClub.id}&include=author,club&limit=100&orderBy=created_at&order=desc`)
+        // Usar la API específica del club para obtener noticias
+        const newsData = await apiCall(`/clubs/${selectedClub.id}/news`)
         
-        console.log('API response:', response)
-        
-        const newsData = response.news || []
-        
-        console.log('Found news:', newsData.length)
+        console.log('API response:', newsData)
+        console.log('Found news:', newsData?.length || 0)
         
         // Procesar los datos para el formato que necesitamos
-        const processedNoticias: NewsDisplay[] = newsData.map((noticia: any) => {
+        const processedNoticias: NewsDisplay[] = (newsData || []).map((noticia: any) => {
           // Determinar la categoría basada en tags, o 'General' si no hay tags
           const categoria = noticia.tags && noticia.tags.length > 0 
             ? noticia.tags[0] 
@@ -132,12 +131,10 @@ export default function ClubAdminNoticiasPage() {
           const fecha = new Date(noticia.date || noticia.created_at)
           const fecha_formateada = fecha.toLocaleDateString('es-ES')
           
-          // Nombre del autor (ahora viene del auth, podríamos necesitar obtenerlo de otra manera)
-          // Por ahora usamos el auth_id o un placeholder
-          // TODO: Mejorar mostrando el nombre real del usuario desde el metadata de auth
-          const autor = noticia.created_by_auth_id ? 
-            `Usuario ${noticia.created_by_auth_id.substring(0, 8)}...` : 
-            'Autor desconocido'
+          // Usar información real del autor desde la API
+          const autor = noticia.author_name 
+            ? `${noticia.author_name} (${noticia.author_email || 'Sin email'})` 
+            : noticia.author_email || 'Autor desconocido'
           
           // Estado de la noticia (por ahora todas publicadas)
           const estado = 'publicada'
