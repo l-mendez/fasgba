@@ -23,7 +23,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return notFoundError(ERROR_MESSAGES.CLUB_NOT_FOUND, `No club found with ID ${clubId}`)
     }
     
-    const isFollowing = await isUserFollowingClub(userId, clubId)
+    const isFollowing = await isUserFollowingClub(clubId, userId)
     return apiSuccess({ isFollowing })
   } catch (error) {
     return handleError(error)

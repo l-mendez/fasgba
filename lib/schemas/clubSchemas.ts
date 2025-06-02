@@ -36,13 +36,7 @@ export const clubIdSchema = z.object({
 
 // Schema for user ID parameter
 export const userIdSchema = z.object({
-  userId: z.string().transform((val) => {
-    const num = parseInt(val, 10)
-    if (isNaN(num) || num <= 0) {
-      throw new Error('Invalid user ID')
-    }
-    return num
-  }),
+  userId: z.string().uuid('Invalid user ID format - must be a valid UUID'),
 })
 
 // Schema for club news query parameters
@@ -119,7 +113,7 @@ export function validateUserId(userId: string) {
     return userIdSchema.parse({ userId }).userId
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error('Invalid user ID parameter')
+      const validationError = new Error('Invalid user ID - must be a valid UUID format')
       validationError.name = 'ValidationError'
       throw validationError
     }
