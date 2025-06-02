@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { PlayerList } from "@/app/ranking/components/PlayerList"
+import { getPlayers, type PaginatedPlayersResponse } from "@/lib/rankingUtils"
 
 // Define interfaces for the data we're working with
 export interface Player {
@@ -29,28 +30,15 @@ interface ApiResponse {
   totalPages: number;
 }
 
-// Get players from API
-async function getPlayers(page: number = 1, pageSize: number = 50, search: string = ''): Promise<ApiResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const searchParams = new URLSearchParams({
-    page: page.toString(),
-    pageSize: pageSize.toString(),
-    ...(search && { search })
-  });
-
-  const response = await fetch(
-    `${baseUrl}/api/data?${searchParams.toString()}`,
-    { 
-      cache: 'no-store',
-      next: { revalidate: 0 }
-    }
-  );
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch data: ${response.statusText}`);
+// Get players directly from rankingUtils instead of making HTTP call
+async function getPlayersData(page: number = 1, pageSize: number = 50, search: string = ''): Promise<ApiResponse> {
+  try {
+    const data: PaginatedPlayersResponse = await getPlayers(page, pageSize, search);
+    return data;
+  } catch (error) {
+    console.error('Error fetching players:', error);
+    throw new Error(`Failed to fetch data: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-  
-  return response.json();
 }
 
 function LoadingState() {
@@ -119,7 +107,7 @@ async function RankingContent({
   const search = params.search || '';
 
   try {
-    const data = await getPlayers(page, pageSize, search);
+    const data = await getPlayersData(page, pageSize, search);
     return <PlayerList 
       players={data.players} 
       currentPage={data.page}
