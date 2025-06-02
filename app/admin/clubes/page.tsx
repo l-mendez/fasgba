@@ -116,6 +116,9 @@ export default function AdminClubesPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<string | null>(null)
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
+  const [originalOrder, setOriginalOrder] = useState<Club[]>([])
 
   // Fetch clubs from API
   useEffect(() => {
@@ -125,6 +128,7 @@ export default function AdminClubesPage() {
         setError(null)
         const clubsData = await fetchClubs()
         setClubes(clubsData)
+        setOriginalOrder(clubsData)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error al cargar los clubes")
       } finally {
@@ -135,11 +139,88 @@ export default function AdminClubesPage() {
     loadClubs()
   }, [])
 
+  // Sorting functions
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      // Cycle through: asc -> desc -> original
+      if (sortOrder === 'asc') {
+        setSortOrder('desc')
+      } else if (sortOrder === 'desc') {
+        setSortOrder('original')
+        setSortBy(null)
+      }
+    } else {
+      setSortBy(field)
+      setSortOrder('asc')
+    }
+  }
+
+  const getSortedClubes = (clubesToSort: Club[]) => {
+    if (!sortBy || sortOrder === 'original') {
+      return originalOrder.filter(club => 
+        clubesToSort.some(filtered => filtered.id === club.id)
+      )
+    }
+
+    const sorted = [...clubesToSort].sort((a, b) => {
+      let aValue: any
+      let bValue: any
+
+      switch (sortBy) {
+        case 'name':
+          aValue = a.name.toLowerCase()
+          bValue = b.name.toLowerCase()
+          break
+        case 'contact':
+          aValue = (a.mail || a.telephone || '').toLowerCase()
+          bValue = (b.mail || b.telephone || '').toLowerCase()
+          break
+        case 'schedule':
+          aValue = (a.schedule || '').toLowerCase()
+          bValue = (b.schedule || '').toLowerCase()
+          break
+        case 'admins':
+          aValue = a.adminCount || 0
+          bValue = b.adminCount || 0
+          break
+        default:
+          return 0
+      }
+
+      if (aValue < bValue) {
+        return sortOrder === 'asc' ? -1 : 1
+      }
+      if (aValue > bValue) {
+        return sortOrder === 'asc' ? 1 : -1
+      }
+      return 0
+    })
+
+    return sorted
+  }
+
+  const getSortIcon = (field: string) => {
+    if (sortBy !== field) {
+      return null
+    }
+    
+    if (sortOrder === 'asc') {
+      return '↑'
+    } else if (sortOrder === 'desc') {
+      return '↓'
+    }
+    
+    return null
+  }
+
   // Filter clubs by search term
   const filteredClubes = clubes.filter(
     (club) =>
       club.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  // Apply sorting to filtered clubs
+  const sortedAndFilteredClubes = getSortedClubes(filteredClubes)
 
   // Function to delete a club
   const handleDeleteClub = async () => {
@@ -183,7 +264,7 @@ export default function AdminClubesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="flex flex-col gap-8 p-8 pb-16 md:pb-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-terracotta">Clubes</h1>
@@ -197,7 +278,7 @@ export default function AdminClubesPage() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -208,21 +289,54 @@ export default function AdminClubesPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            {/* @ts-ignore */}
-            <Button variant="outline">
-              Filtrar
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-[200px]">
-            <DropdownMenuLabel>Filtrar por</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setSearchTerm("")}>Todos</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSearchTerm("@")}>Con delegado</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              {/* @ts-ignore */}
+              <Button variant="outline">
+                Filtrar
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel>Filtrar por</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setSearchTerm("")}>Todos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchTerm("@")}>Con delegado</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                Ordenar
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleSort('name')}>
+                Nombre {getSortIcon('name')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('contact')}>
+                Contacto {getSortIcon('contact')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('schedule')}>
+                Horarios {getSortIcon('schedule')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('admins')}>
+                Delegados {getSortIcon('admins')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => {
+                setSortBy(null)
+                setSortOrder('original')
+              }}>
+                Orden original
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <>
@@ -231,22 +345,54 @@ export default function AdminClubesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Contacto</TableHead>
-                <TableHead>Horarios</TableHead>
-                <TableHead>Delegados</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('name')}
+                >
+                  <div className="flex items-center gap-1">
+                    Nombre
+                    {getSortIcon('name') && <span className="text-xs">{getSortIcon('name')}</span>}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('contact')}
+                >
+                  <div className="flex items-center gap-1">
+                    Contacto
+                    {getSortIcon('contact') && <span className="text-xs">{getSortIcon('contact')}</span>}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('schedule')}
+                >
+                  <div className="flex items-center gap-1">
+                    Horarios
+                    {getSortIcon('schedule') && <span className="text-xs">{getSortIcon('schedule')}</span>}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('admins')}
+                >
+                  <div className="flex items-center gap-1">
+                    Delegados
+                    {getSortIcon('admins') && <span className="text-xs">{getSortIcon('admins')}</span>}
+                  </div>
+                </TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredClubes.length === 0 ? (
+              {sortedAndFilteredClubes.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-6">
                     No se encontraron clubes
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredClubes.map((club) => (
+                sortedAndFilteredClubes.map((club) => (
                   <TableRow key={club.id}>
                     <TableCell className="font-medium">{club.name}</TableCell>
                     <TableCell>
@@ -308,13 +454,13 @@ export default function AdminClubesPage() {
 
         {/* Mobile Card View - Hidden on desktop */}
         <div className="md:hidden pb-8">
-          {filteredClubes.length === 0 ? (
+          {sortedAndFilteredClubes.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               No se encontraron clubes
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredClubes.map((club) => (
+              {sortedAndFilteredClubes.map((club) => (
                 <div key={club.id} className="bg-card rounded-lg border p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">

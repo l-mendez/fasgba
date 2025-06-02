@@ -95,6 +95,9 @@ export default function AdminTorneosPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [sortBy, setSortBy] = useState<string | null>(null)
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
+  const [originalOrder, setOriginalOrder] = useState<Tournament[]>([])
   const { isAuthenticated, isLoading: authLoading } = useAuth()
 
   // Fetch tournaments from API
@@ -158,6 +161,7 @@ export default function AdminTorneosPage() {
       })
       
       setTorneos(transformedTournaments)
+      setOriginalOrder(transformedTournaments)
     } catch (err) {
       console.error('Error fetching tournaments:', err)
       setError(err instanceof Error ? err.message : 'Error al cargar los torneos')
@@ -173,6 +177,80 @@ export default function AdminTorneosPage() {
     }
   }, [isAuthenticated, authLoading])
 
+  // Sorting functions
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      // Cycle through: asc -> desc -> original
+      if (sortOrder === 'asc') {
+        setSortOrder('desc')
+      } else if (sortOrder === 'desc') {
+        setSortOrder('original')
+        setSortBy(null)
+      }
+    } else {
+      setSortBy(field)
+      setSortOrder('asc')
+    }
+  }
+
+  const getSortedTorneos = (torneosToSort: Tournament[]) => {
+    if (!sortBy || sortOrder === 'original') {
+      return originalOrder.filter(torneo => 
+        torneosToSort.some(filtered => filtered.id === torneo.id)
+      )
+    }
+
+    const sorted = [...torneosToSort].sort((a, b) => {
+      let aValue: any
+      let bValue: any
+
+      switch (sortBy) {
+        case 'name':
+          aValue = a.title.toLowerCase()
+          bValue = b.title.toLowerCase()
+          break
+        case 'date':
+          aValue = new Date(a.start_date).getTime()
+          bValue = new Date(b.start_date).getTime()
+          break
+        case 'location':
+          aValue = (a.location || '').toLowerCase()
+          bValue = (b.location || '').toLowerCase()
+          break
+        case 'participants':
+          aValue = a.participants || 0
+          bValue = b.participants || 0
+          break
+        default:
+          return 0
+      }
+
+      if (aValue < bValue) {
+        return sortOrder === 'asc' ? -1 : 1
+      }
+      if (aValue > bValue) {
+        return sortOrder === 'asc' ? 1 : -1
+      }
+      return 0
+    })
+
+    return sorted
+  }
+
+  const getSortIcon = (field: string) => {
+    if (sortBy !== field) {
+      return null
+    }
+    
+    if (sortOrder === 'asc') {
+      return '↑'
+    } else if (sortOrder === 'desc') {
+      return '↓'
+    }
+    
+    return null
+  }
+
   // Filtrar torneos según término de búsqueda
   const filteredTorneos = torneos.filter(
     (torneo) =>
@@ -181,6 +259,9 @@ export default function AdminTorneosPage() {
       (torneo.description && torneo.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
       torneo.status.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+
+  // Apply sorting to filtered tournaments
+  const sortedAndFilteredTorneos = getSortedTorneos(filteredTorneos)
 
   // Función para eliminar un torneo
   const handleDeleteTorneo = async () => {
@@ -313,7 +394,7 @@ export default function AdminTorneosPage() {
         </Alert>
       )}
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -324,32 +405,55 @@ export default function AdminTorneosPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline">
-              Filtrar
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-[200px]">
-            <DropdownMenuLabel>Filtrar por estado</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setSearchTerm("")}>Todos</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSearchTerm("upcoming")}>Próximos</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSearchTerm("ongoing")}>En curso</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSearchTerm("past")}>Finalizados</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button 
-          variant="outline" 
-          onClick={fetchTournaments}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : null}
-          Actualizar
-        </Button>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                Filtrar
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel>Filtrar por estado</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setSearchTerm("")}>Todos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchTerm("upcoming")}>Próximos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchTerm("ongoing")}>En curso</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchTerm("past")}>Finalizados</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                Ordenar
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleSort('name')}>
+                Nombre {getSortIcon('name')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('date')}>
+                Fecha {getSortIcon('date')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('location')}>
+                Lugar {getSortIcon('location')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('participants')}>
+                Participantes {getSortIcon('participants')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => {
+                setSortBy(null)
+                setSortOrder('original')
+              }}>
+                Orden original
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <>
@@ -358,11 +462,43 @@ export default function AdminTorneosPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Lugar</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('name')}
+                >
+                  <div className="flex items-center gap-1">
+                    Nombre
+                    {getSortIcon('name') && <span className="text-xs">{getSortIcon('name')}</span>}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('date')}
+                >
+                  <div className="flex items-center gap-1">
+                    Fecha
+                    {getSortIcon('date') && <span className="text-xs">{getSortIcon('date')}</span>}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('location')}
+                >
+                  <div className="flex items-center gap-1">
+                    Lugar
+                    {getSortIcon('location') && <span className="text-xs">{getSortIcon('location')}</span>}
+                  </div>
+                </TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Participantes</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('participants')}
+                >
+                  <div className="flex items-center gap-1">
+                    Participantes
+                    {getSortIcon('participants') && <span className="text-xs">{getSortIcon('participants')}</span>}
+                  </div>
+                </TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -374,7 +510,7 @@ export default function AdminTorneosPage() {
                     <p className="mt-2 text-muted-foreground">Cargando torneos...</p>
                   </TableCell>
                 </TableRow>
-              ) : filteredTorneos.length === 0 ? (
+              ) : sortedAndFilteredTorneos.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8">
                     <p className="text-muted-foreground">
@@ -383,7 +519,7 @@ export default function AdminTorneosPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredTorneos.map((torneo) => (
+                sortedAndFilteredTorneos.map((torneo) => (
                   <TableRow key={torneo.id}>
                     <TableCell className="font-medium">{torneo.title}</TableCell>
                     <TableCell>
@@ -456,7 +592,7 @@ export default function AdminTorneosPage() {
               <Loader2 className="h-8 w-8 animate-spin mb-4" />
               <p className="text-muted-foreground">Cargando torneos...</p>
             </div>
-          ) : filteredTorneos.length === 0 ? (
+          ) : sortedAndFilteredTorneos.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">
                 {searchTerm ? 'No se encontraron torneos que coincidan con la búsqueda.' : 'No hay torneos disponibles.'}
@@ -464,7 +600,7 @@ export default function AdminTorneosPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredTorneos.map((torneo) => (
+              {sortedAndFilteredTorneos.map((torneo) => (
                 <div key={torneo.id} className="bg-card rounded-lg border p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">

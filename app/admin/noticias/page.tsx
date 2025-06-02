@@ -54,6 +54,9 @@ export default function AdminNoticiasPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<string | null>(null)
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
+  const [originalOrder, setOriginalOrder] = useState<News[]>([])
 
   const fetchNews = async () => {
     try {
@@ -94,8 +97,10 @@ export default function AdminNoticiasPage() {
         }))
         
         setNews(mappedNews)
+        setOriginalOrder(mappedNews)
       } else {
         setNews([])
+        setOriginalOrder([])
       }
     } catch (err) {
       console.error('Error fetching news:', err)
@@ -109,6 +114,80 @@ export default function AdminNoticiasPage() {
   useEffect(() => {
     fetchNews()
   }, [])
+
+  // Sorting functions
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      // Cycle through: asc -> desc -> original
+      if (sortOrder === 'asc') {
+        setSortOrder('desc')
+      } else if (sortOrder === 'desc') {
+        setSortOrder('original')
+        setSortBy(null)
+      }
+    } else {
+      setSortBy(field)
+      setSortOrder('asc')
+    }
+  }
+
+  const getSortedNews = (newsToSort: News[]) => {
+    if (!sortBy || sortOrder === 'original') {
+      return originalOrder.filter(newsItem => 
+        newsToSort.some(filtered => filtered.id === newsItem.id)
+      )
+    }
+
+    const sorted = [...newsToSort].sort((a, b) => {
+      let aValue: any
+      let bValue: any
+
+      switch (sortBy) {
+        case 'title':
+          aValue = a.title.toLowerCase()
+          bValue = b.title.toLowerCase()
+          break
+        case 'club':
+          aValue = (a.club?.name || 'FASGBA').toLowerCase()
+          bValue = (b.club?.name || 'FASGBA').toLowerCase()
+          break
+        case 'date':
+          aValue = new Date(a.date).getTime()
+          bValue = new Date(b.date).getTime()
+          break
+        case 'author':
+          aValue = (a.author_name || a.author_email || 'Desconocido').toLowerCase()
+          bValue = (b.author_name || b.author_email || 'Desconocido').toLowerCase()
+          break
+        default:
+          return 0
+      }
+
+      if (aValue < bValue) {
+        return sortOrder === 'asc' ? -1 : 1
+      }
+      if (aValue > bValue) {
+        return sortOrder === 'asc' ? 1 : -1
+      }
+      return 0
+    })
+
+    return sorted
+  }
+
+  const getSortIcon = (field: string) => {
+    if (sortBy !== field) {
+      return null
+    }
+    
+    if (sortOrder === 'asc') {
+      return '↑'
+    } else if (sortOrder === 'desc') {
+      return '↓'
+    }
+    
+    return null
+  }
 
   const handleDelete = async () => {
     if (!newsToDelete) return
@@ -139,6 +218,9 @@ export default function AdminNoticiasPage() {
     news.author_name?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  // Apply sorting to filtered news
+  const sortedAndFilteredNews = getSortedNews(filteredNews)
+
   return (
     <div className="container py-6">
       <div className="flex items-center justify-between mb-6">
@@ -151,7 +233,7 @@ export default function AdminNoticiasPage() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex flex-col gap-4 mb-6 md:flex-row md:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -160,6 +242,66 @@ export default function AdminNoticiasPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9"
           />
+        </div>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                Filtrar
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel>Filtrar por</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setSearchTerm("")}>Todas</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchTerm("FASGBA")}>FASGBA</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => {
+                const today = new Date()
+                const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+                const lastWeekStr = lastWeek.toISOString().split('T')[0]
+                setSearchTerm(lastWeekStr)
+              }}>Última semana</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                const today = new Date()
+                const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+                const lastMonthStr = lastMonth.toISOString().split('T')[0]
+                setSearchTerm(lastMonthStr)
+              }}>Último mes</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                Ordenar
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleSort('title')}>
+                Título {getSortIcon('title')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('club')}>
+                Club {getSortIcon('club')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('date')}>
+                Fecha {getSortIcon('date')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('author')}>
+                Creado por {getSortIcon('author')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => {
+                setSortBy(null)
+                setSortOrder('original')
+              }}>
+                Orden original
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -178,22 +320,54 @@ export default function AdminNoticiasPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Club</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Creado por</TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('title')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Título
+                      {getSortIcon('title') && <span className="text-xs">{getSortIcon('title')}</span>}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('club')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Club
+                      {getSortIcon('club') && <span className="text-xs">{getSortIcon('club')}</span>}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('date')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Fecha
+                      {getSortIcon('date') && <span className="text-xs">{getSortIcon('date')}</span>}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('author')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Creado por
+                      {getSortIcon('author') && <span className="text-xs">{getSortIcon('author')}</span>}
+                    </div>
+                  </TableHead>
                   <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredNews.length === 0 ? (
+                {sortedAndFilteredNews.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-6">
                       No se encontraron noticias
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredNews.map((item) => (
+                  sortedAndFilteredNews.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.title}</TableCell>
                       <TableCell>{item.club?.name || "FASGBA"}</TableCell>
@@ -279,12 +453,12 @@ export default function AdminNoticiasPage() {
 
           {/* Mobile Card View - Hidden on desktop */}
           <div className="md:hidden space-y-4">
-            {filteredNews.length === 0 ? (
+            {sortedAndFilteredNews.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 No se encontraron noticias
               </div>
             ) : (
-              filteredNews.map((item) => (
+              sortedAndFilteredNews.map((item) => (
                 <div key={item.id} className="bg-card rounded-lg border p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">

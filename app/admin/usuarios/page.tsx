@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { ChevronDown, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -99,6 +100,9 @@ export default function UsersPage() {
   const [users, setUsers] = useState<UserWithPermissions[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<string | null>(null)
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
+  const [originalOrder, setOriginalOrder] = useState<UserWithPermissions[]>([])
 
   // Load users on component mount
   useEffect(() => {
@@ -108,6 +112,7 @@ export default function UsersPage() {
         setError(null)
         const usersData = await fetchAllUsers()
         setUsers(usersData)
+        setOriginalOrder(usersData)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Error al cargar los usuarios")
       } finally {
@@ -118,12 +123,90 @@ export default function UsersPage() {
     loadUsers()
   }, [])
 
+  // Sorting functions
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      // Cycle through: asc -> desc -> original
+      if (sortOrder === 'asc') {
+        setSortOrder('desc')
+      } else if (sortOrder === 'desc') {
+        setSortOrder('original')
+        setSortBy(null)
+      }
+    } else {
+      setSortBy(field)
+      setSortOrder('asc')
+    }
+  }
+
+  const getSortedUsers = (usersToSort: UserWithPermissions[]) => {
+    if (!sortBy || sortOrder === 'original') {
+      return originalOrder.filter(user => 
+        usersToSort.some(filtered => filtered.id === user.id)
+      )
+    }
+
+    const sorted = [...usersToSort].sort((a, b) => {
+      let aValue: any
+      let bValue: any
+
+      switch (sortBy) {
+        case 'email':
+          aValue = a.email.toLowerCase()
+          bValue = b.email.toLowerCase()
+          break
+        case 'role':
+          // Sort by role hierarchy: Admin > Club Admin > User
+          aValue = a.isAdmin ? 2 : (a.isClubAdmin ? 1 : 0)
+          bValue = b.isAdmin ? 2 : (b.isClubAdmin ? 1 : 0)
+          break
+        case 'clubs':
+          aValue = a.adminClubs.length
+          bValue = b.adminClubs.length
+          break
+        case 'verified':
+          aValue = a.emailVerified ? 1 : 0
+          bValue = b.emailVerified ? 1 : 0
+          break
+        default:
+          return 0
+      }
+
+      if (aValue < bValue) {
+        return sortOrder === 'asc' ? -1 : 1
+      }
+      if (aValue > bValue) {
+        return sortOrder === 'asc' ? 1 : -1
+      }
+      return 0
+    })
+
+    return sorted
+  }
+
+  const getSortIcon = (field: string) => {
+    if (sortBy !== field) {
+      return null
+    }
+    
+    if (sortOrder === 'asc') {
+      return '↑'
+    } else if (sortOrder === 'desc') {
+      return '↓'
+    }
+    
+    return null
+  }
+
   const filteredUsers = users.filter(user => 
     user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (user.nombre || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (user.apellido || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.adminClubs.some(club => club.toLowerCase().includes(searchQuery.toLowerCase()))
   )
+
+  // Apply sorting to filtered users
+  const sortedAndFilteredUsers = getSortedUsers(filteredUsers)
 
   if (isLoading) {
     return (
@@ -156,13 +239,66 @@ export default function UsersPage() {
         </div>
       </div>
       
-      <div className="flex items-center space-x-2">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center">
         <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar usuarios"
+            placeholder="Buscar usuarios..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
           />
+        </div>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                Filtrar
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel>Filtrar por</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setSearchQuery("")}>Todos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery("Admin")}>Administradores</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery("Delegado")}>Delegados</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery("Usuario")}>Usuarios básicos</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setSearchQuery("Verificado")}>Email verificado</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                Ordenar
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleSort('email')}>
+                Email {getSortIcon('email')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('role')}>
+                Rol {getSortIcon('role')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('clubs')}>
+                Clubes {getSortIcon('clubs')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('verified')}>
+                Verificación {getSortIcon('verified')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => {
+                setSortBy(null)
+                setSortOrder('original')
+              }}>
+                Orden original
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       
@@ -171,14 +307,38 @@ export default function UsersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-0 w-full md:w-auto">Email</TableHead>
-                <TableHead className="whitespace-nowrap">Roles</TableHead>
-                <TableHead className="hidden md:table-cell">Clubes Administrados</TableHead>
+                <TableHead 
+                  className="min-w-0 w-full md:w-auto cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('email')}
+                >
+                  <div className="flex items-center gap-1">
+                    Email
+                    {getSortIcon('email') && <span className="text-xs">{getSortIcon('email')}</span>}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="whitespace-nowrap cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('role')}
+                >
+                  <div className="flex items-center gap-1">
+                    Roles
+                    {getSortIcon('role') && <span className="text-xs">{getSortIcon('role')}</span>}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="hidden md:table-cell cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('clubs')}
+                >
+                  <div className="flex items-center gap-1">
+                    Clubes Administrados
+                    {getSortIcon('clubs') && <span className="text-xs">{getSortIcon('clubs')}</span>}
+                  </div>
+                </TableHead>
                 <TableHead className="w-[50px] md:w-[70px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.length === 0 ? (
+              {sortedAndFilteredUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-muted-foreground md:table-cell">
                     {searchQuery ? 'No se encontraron usuarios que coincidan con la búsqueda' : 'No hay usuarios registrados'}
@@ -188,7 +348,7 @@ export default function UsersPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((user) => (
+                sortedAndFilteredUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="min-w-0 max-w-0 md:min-w-auto md:max-w-none">
                       <div className="truncate pr-2 md:pr-0">{user.email}</div>
@@ -274,7 +434,7 @@ export default function UsersPage() {
       </div>
       
       <div className="text-sm text-muted-foreground">
-        Mostrando {filteredUsers.length} de {users.length} usuarios registrados
+        Mostrando {sortedAndFilteredUsers.length} de {users.length} usuarios registrados
       </div>
     </div>
   )
