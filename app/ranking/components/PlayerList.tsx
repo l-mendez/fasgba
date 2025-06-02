@@ -75,13 +75,14 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers }: P
         ))}
       </Tabs>
 
-      <div className="mt-6 flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
+      <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+        <div className="text-sm text-muted-foreground text-center sm:text-left">
           Mostrando {players.length} de {totalPlayers} jugadores
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center justify-center sm:justify-end space-x-2">
           <Button
             variant="outline"
+            size="sm"
             disabled={currentPage === 1}
             onClick={() => {
               const params = new URLSearchParams(searchParams.toString());
@@ -91,11 +92,12 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers }: P
           >
             Anterior
           </Button>
-          <span className="text-sm">
-            Página {currentPage} de {totalPages}
+          <span className="text-sm px-2">
+            <span className="hidden sm:inline">Página </span>{currentPage} de {totalPages}
           </span>
           <Button
             variant="outline"
+            size="sm"
             disabled={currentPage === totalPages}
             onClick={() => {
               const params = new URLSearchParams(searchParams.toString());

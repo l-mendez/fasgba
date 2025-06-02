@@ -351,7 +351,7 @@ export default function EditarUsuarioPage() {
         </Alert>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* User Information Display */}
         <div className="md:col-span-2 space-y-6">
           
@@ -474,52 +474,6 @@ export default function EditarUsuarioPage() {
                   Timeout 24h (Próximamente)
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* User Profile Preview */}
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Resumen</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center text-center space-y-4">
-              <Avatar className="h-16 w-16">
-                <AvatarFallback className="bg-amber/10 text-amber-dark text-lg">
-                  {user.email.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              
-              <div>
-                <h3 className="font-medium">{user.nombre && user.apellido ? `${user.nombre} ${user.apellido}` : 'Usuario'}</h3>
-                <p className="text-sm text-muted-foreground">{user.email}</p>
-              </div>
-              
-              <div className="flex flex-wrap gap-2 justify-center">
-                {user.isAdmin && (
-                  <Badge className="bg-red-100 text-red-800">Admin Global</Badge>
-                )}
-                {user.isClubAdmin && (
-                  <Badge className="bg-blue-100 text-blue-800">Admin Club</Badge>
-                )}
-                {!user.isAdmin && !user.isClubAdmin && (
-                  <Badge className="bg-gray-100 text-gray-800">Usuario</Badge>
-                )}
-              </div>
-              
-              {clubsAdmin.length > 0 && (
-                <div className="text-sm text-left border-t pt-4 w-full">
-                  <p className="font-medium mb-2">Administrador de:</p>
-                  <ul className="space-y-1">
-                    {clubsAdmin.map(admin => (
-                      <li key={admin.club_id} className="text-muted-foreground text-xs">
-                        • {admin.club.name}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>

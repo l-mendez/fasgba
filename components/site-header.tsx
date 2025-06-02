@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -40,7 +40,7 @@ export function SiteHeader() {
               FASGBA
             </span>
           </Link>
-          <nav className="flex items-center space-x-6 text-sm font-medium">
+          <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
             <Link
               href="/"
               className={cn(
@@ -169,6 +169,7 @@ export function SiteHeader() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-[300px] sm:w-[400px] border-amber/20">
+            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
             <div className="flex items-center justify-between">
               <Link href="/" className="flex items-center space-x-2" onClick={() => setIsOpen(false)}>
                 <ChessKnight className="h-6 w-6 text-terracotta" />

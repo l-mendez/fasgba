@@ -172,108 +172,205 @@ export default function AdminNoticiasPage() {
           <p>{error}</p>
         </div>
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Título</TableHead>
-                <TableHead>Club</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Creado por</TableHead>
-                <TableHead>Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredNews.length === 0 ? (
+        <>
+          {/* Desktop Table View - Hidden on mobile */}
+          <div className="rounded-md border hidden md:block">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-6">
-                    No se encontraron noticias
-                  </TableCell>
+                  <TableHead>Título</TableHead>
+                  <TableHead>Club</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Creado por</TableHead>
+                  <TableHead>Acciones</TableHead>
                 </TableRow>
-              ) : (
-                filteredNews.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.title}</TableCell>
-                    <TableCell>{item.club?.name || "Sin club"}</TableCell>
-                    <TableCell>{new Date(item.date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src="" />
-                          <AvatarFallback>
-                            {item.author_name ? (
-                              item.author_name.charAt(0).toUpperCase()
-                            ) : (
-                              <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="text-gray-600"
-                              >
-                                <path
-                                  d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-                                  fill="currentColor"
-                                />
-                              </svg>
-                            )}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">
-                            {item.author_name || item.author_email || "Desconocido"}
-                          </span>
-                          {item.author_name && item.author_email && (
-                            <span className="text-xs text-muted-foreground">
-                              {item.author_email}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Abrir menú</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/noticias/${item.id}`} className="flex items-center">
-                              <Eye className="mr-2 h-4 w-4" />
-                              Ver
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/noticias/${item.id}/editar`} className="flex items-center">
-                              <Edit className="mr-2 h-4 w-4" />
-                              Editar
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600 focus:text-red-600"
-                            onClick={() => {
-                              setNewsToDelete(item.id)
-                              setShowDeleteDialog(true)
-                            }}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+              </TableHeader>
+              <TableBody>
+                {filteredNews.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-6">
+                      No se encontraron noticias
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                ) : (
+                  filteredNews.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.title}</TableCell>
+                      <TableCell>{item.club?.name || "FASGBA"}</TableCell>
+                      <TableCell>{new Date(item.date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src="" />
+                            <AvatarFallback>
+                              {item.author_name ? (
+                                item.author_name.charAt(0).toUpperCase()
+                              ) : (
+                                <svg
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="text-gray-600"
+                                >
+                                  <path
+                                    d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                                    fill="currentColor"
+                                  />
+                                </svg>
+                              )}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">
+                              {item.author_name || item.author_email || "Desconocido"}
+                            </span>
+                            {item.author_name && item.author_email && (
+                              <span className="text-xs text-muted-foreground">
+                                {item.author_email}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Abrir menú</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/noticias/${item.id}`} className="flex items-center">
+                                <Eye className="mr-2 h-4 w-4" />
+                                Ver
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/noticias/${item.id}/editar`} className="flex items-center">
+                                <Edit className="mr-2 h-4 w-4" />
+                                Editar
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => {
+                                setNewsToDelete(item.id)
+                                setShowDeleteDialog(true)
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile Card View - Hidden on desktop */}
+          <div className="md:hidden space-y-4">
+            {filteredNews.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                No se encontraron noticias
+              </div>
+            ) : (
+              filteredNews.map((item) => (
+                <div key={item.id} className="bg-card rounded-lg border p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-sm leading-5 text-card-foreground mb-2 line-clamp-2">
+                        {item.title}
+                      </h3>
+                      
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="font-medium text-terracotta">
+                            {item.club?.name || "FASGBA"}
+                          </span>
+                          <span>•</span>
+                          <span>{new Date(item.date).toLocaleDateString()}</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src="" />
+                            <AvatarFallback className="text-xs">
+                              {item.author_name ? (
+                                item.author_name.charAt(0).toUpperCase()
+                              ) : (
+                                <svg
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="text-gray-600"
+                                >
+                                  <path
+                                    d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                                    fill="currentColor"
+                                  />
+                                </svg>
+                              )}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-xs text-muted-foreground truncate">
+                            {item.author_name || item.author_email || "Desconocido"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
+                          <span className="sr-only">Abrir menú</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/noticias/${item.id}`} className="flex items-center">
+                            <Eye className="mr-2 h-4 w-4" />
+                            Ver
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/noticias/${item.id}/editar`} className="flex items-center">
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600"
+                          onClick={() => {
+                            setNewsToDelete(item.id)
+                            setShowDeleteDialog(true)
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Eliminar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
       )}
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

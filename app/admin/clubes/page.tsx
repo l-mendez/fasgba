@@ -225,47 +225,128 @@ export default function AdminClubesPage() {
         </DropdownMenu>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Contacto</TableHead>
-              <TableHead>Horarios</TableHead>
-              <TableHead>Delegados</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredClubes.length === 0 ? (
+      <>
+        {/* Desktop Table View - Hidden on mobile */}
+        <div className="rounded-md border hidden md:block">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-6">
-                  No se encontraron clubes
-                </TableCell>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Contacto</TableHead>
+                <TableHead>Horarios</TableHead>
+                <TableHead>Delegados</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
-            ) : (
-              filteredClubes.map((club) => (
-                <TableRow key={club.id}>
-                  <TableCell className="font-medium">{club.name}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="text-xs">{club.mail || "Sin email"}</span>
-                      <span className="text-xs text-muted-foreground">{club.telephone || "Sin teléfono"}</span>
+            </TableHeader>
+            <TableBody>
+              {filteredClubes.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-6">
+                    No se encontraron clubes
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredClubes.map((club) => (
+                  <TableRow key={club.id}>
+                    <TableCell className="font-medium">{club.name}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="text-xs">{club.mail || "Sin email"}</span>
+                        <span className="text-xs text-muted-foreground">{club.telephone || "Sin teléfono"}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{club.schedule || "Sin horarios"}</TableCell>
+                    <TableCell>
+                      <span className="text-sm font-medium">
+                        {club.adminCount || 0}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          {/* @ts-ignore */}
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Abrir menú</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/clubes/${club.id}`}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Ver detalles
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/clubes/${club.id}/editar`}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-600 focus:text-red-600"
+                            onClick={() => {
+                              setClubToDelete(club.id)
+                              setShowDeleteDialog(true)
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Mobile Card View - Hidden on desktop */}
+        <div className="md:hidden pb-8">
+          {filteredClubes.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              No se encontraron clubes
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredClubes.map((club) => (
+                <div key={club.id} className="bg-card rounded-lg border p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-sm leading-5 text-card-foreground mb-2 line-clamp-2">
+                        {club.name}
+                      </h3>
+                      
+                      <div className="space-y-2">
+                        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                          <span className="font-medium text-terracotta">
+                            {club.mail || "Sin email"}
+                          </span>
+                          <span>{club.telephone || "Sin teléfono"}</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-muted-foreground truncate">
+                            {club.schedule || "Sin horarios"}
+                          </span>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <User className="h-3 w-3" />
+                            <span>{club.adminCount || 0}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </TableCell>
-                  <TableCell>{club.schedule || "Sin horarios"}</TableCell>
-                  <TableCell>
-                    <span className="text-sm font-medium">
-                      {club.adminCount || 0}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
+                    
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        {/* @ts-ignore */}
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
+                        <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
                           <span className="sr-only">Abrir menú</span>
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -296,13 +377,13 @@ export default function AdminClubesPage() {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </>
 
       {/* Dialog for deleting a club */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

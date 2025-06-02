@@ -93,9 +93,9 @@ export default function AdminDashboard() {
   }, [])
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+    <div className="flex-1 space-y-4">
+      <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h2>
         <div className="flex items-center space-x-2">
           
         </div>
@@ -114,14 +114,14 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Usuarios totales</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="pb-3">
+            <div className="text-xl md:text-2xl font-bold">
               {stats.loading ? "..." : stats.usuarios.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -134,8 +134,8 @@ export default function AdminDashboard() {
             <CardTitle className="text-sm font-medium">Noticias publicadas</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="pb-3">
+            <div className="text-xl md:text-2xl font-bold">
               {stats.loading ? "..." : stats.noticias.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -148,8 +148,8 @@ export default function AdminDashboard() {
             <CardTitle className="text-sm font-medium">Torneos activos</CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="pb-3">
+            <div className="text-xl md:text-2xl font-bold">
               {stats.loading ? "..." : stats.torneosActivos}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -162,8 +162,8 @@ export default function AdminDashboard() {
             <CardTitle className="text-sm font-medium">Clubes registrados</CardTitle>
             <Home className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="pb-3">
+            <div className="text-xl md:text-2xl font-bold">
               {stats.loading ? "..." : stats.clubes}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -172,8 +172,8 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+        <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle>Actividad reciente</CardTitle>
             <CardDescription>
@@ -235,7 +235,7 @@ export default function AdminDashboard() {
             </div>
           </CardContent>
         </Card>
-        <Card className="col-span-3">
+        <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Acciones rápidas</CardTitle>
             <CardDescription>
@@ -243,7 +243,7 @@ export default function AdminDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4">
+            <div className="grid gap-3 md:gap-4">
               <Button asChild className="w-full justify-start" variant="outline">
                 <Link href="/admin/usuarios/nuevo">
                   <Users className="mr-2 h-4 w-4" />

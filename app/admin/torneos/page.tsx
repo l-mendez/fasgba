@@ -352,57 +352,155 @@ export default function AdminTorneosPage() {
         </Button>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Fechas</TableHead>
-              <TableHead>Lugar</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Participantes</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
+      <>
+        {/* Desktop Table View - Hidden on mobile */}
+        <div className="rounded-md border hidden md:block">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                  <p className="mt-2 text-muted-foreground">Cargando torneos...</p>
-                </TableCell>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Lugar</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Participantes</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
-            ) : filteredTorneos.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    {searchTerm ? 'No se encontraron torneos que coincidan con la búsqueda.' : 'No hay torneos disponibles.'}
-                  </p>
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredTorneos.map((torneo) => (
-                <TableRow key={torneo.id}>
-                  <TableCell className="font-medium">{torneo.title}</TableCell>
-                  <TableCell>
-                    {getDateRange(torneo.start_date, torneo.end_date)}
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    <p className="mt-2 text-muted-foreground">Cargando torneos...</p>
                   </TableCell>
-                  <TableCell>{torneo.location}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={getStatusBadgeVariant(torneo.status)}
-                      className={getStatusBadgeClass(torneo.status)}
-                    >
-                      {getStatusText(torneo.status)}
-                    </Badge>
+                </TableRow>
+              ) : filteredTorneos.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      {searchTerm ? 'No se encontraron torneos que coincidan con la búsqueda.' : 'No hay torneos disponibles.'}
+                    </p>
                   </TableCell>
-                  <TableCell>{torneo.participants || 0}</TableCell>
-                  <TableCell className="text-right">
+                </TableRow>
+              ) : (
+                filteredTorneos.map((torneo) => (
+                  <TableRow key={torneo.id}>
+                    <TableCell className="font-medium">{torneo.title}</TableCell>
+                    <TableCell>
+                      {getDateRange(torneo.start_date, torneo.end_date)}
+                    </TableCell>
+                    <TableCell>{torneo.location}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={getStatusBadgeVariant(torneo.status)}
+                        className={getStatusBadgeClass(torneo.status)}
+                      >
+                        {getStatusText(torneo.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{torneo.participants || 0}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Abrir menú</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild>
+                            <Link href={`/torneos/${torneo.id}`} target="_blank">
+                              <Eye className="mr-2 h-4 w-4" />
+                              Ver en sitio
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/torneos/${torneo.id}/editar`}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/torneos/${torneo.id}/inscripciones`}>
+                              <Users className="mr-2 h-4 w-4" />
+                              Ver inscripciones
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setTorneoToDelete(torneo.id)
+                              setShowDeleteDialog(true)
+                            }}
+                            className="text-red-500 focus:text-red-500"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Mobile Card View - Hidden on desktop */}
+        <div className="md:hidden pb-8">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin mb-4" />
+              <p className="text-muted-foreground">Cargando torneos...</p>
+            </div>
+          ) : filteredTorneos.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                {searchTerm ? 'No se encontraron torneos que coincidan con la búsqueda.' : 'No hay torneos disponibles.'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredTorneos.map((torneo) => (
+                <div key={torneo.id} className="bg-card rounded-lg border p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-sm leading-5 text-card-foreground mb-2 line-clamp-2">
+                        {torneo.title}
+                      </h3>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="font-medium text-terracotta">
+                            {getDateRange(torneo.start_date, torneo.end_date)}
+                          </span>
+                          <span>•</span>
+                          <span className="truncate">{torneo.location}</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between gap-2">
+                          <Badge
+                            variant={getStatusBadgeVariant(torneo.status)}
+                            className={`text-xs ${getStatusBadgeClass(torneo.status)}`}
+                          >
+                            {getStatusText(torneo.status)}
+                          </Badge>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Users className="h-3 w-3" />
+                            <span>{torneo.participants || 0}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
+                        <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
                           <span className="sr-only">Abrir menú</span>
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -439,13 +537,13 @@ export default function AdminTorneosPage() {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </>
 
       {/* Diálogo de confirmación para eliminar torneo */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

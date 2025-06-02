@@ -450,16 +450,17 @@ export default function EditarTorneoPage({ params }: PageProps) {
             <CardDescription>Modifica las fechas en que se realizará el torneo</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <div className="flex-1">
+            <div className="flex flex-col sm:flex-row gap-2 items-center justify-center sm:justify-start">
+              <div className="w-full sm:w-auto">
                 <Input
                   type="date"
                   value={newDate}
                   onChange={(e) => setNewDate(e.target.value)}
                   placeholder="Seleccionar fecha"
+                  className="text-center"
                 />
               </div>
-              <Button type="button" onClick={addDate} variant="outline">
+              <Button type="button" onClick={addDate} variant="outline" className="sm:w-auto w-full">
                 <Plus className="h-4 w-4 mr-2" />
                 Agregar
               </Button>

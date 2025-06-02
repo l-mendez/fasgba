@@ -381,13 +381,16 @@ export default function TorneosPage() {
             <Tabs defaultValue="proximos" className="w-full">
               <TabsList className="grid w-full grid-cols-3 bg-muted border border-amber/20 mb-8">
                 <TabsTrigger value="proximos" className="data-[state=active]:bg-amber data-[state=active]:text-white">
-                  Próximos Torneos ({upcomingTournaments.length})
+                  <span className="hidden sm:inline">Próximos Torneos ({upcomingTournaments.length})</span>
+                  <span className="sm:hidden">Próximos ({upcomingTournaments.length})</span>
                 </TabsTrigger>
                 <TabsTrigger value="en-curso" className="data-[state=active]:bg-amber data-[state=active]:text-white">
-                  Torneos en Curso ({ongoingTournaments.length})
+                  <span className="hidden sm:inline">Torneos en Curso ({ongoingTournaments.length})</span>
+                  <span className="sm:hidden">En Curso ({ongoingTournaments.length})</span>
                 </TabsTrigger>
                 <TabsTrigger value="pasados" className="data-[state=active]:bg-amber data-[state=active]:text-white">
-                  Torneos Pasados ({pastTournaments.length})
+                  <span className="hidden sm:inline">Torneos Pasados ({pastTournaments.length})</span>
+                  <span className="sm:hidden">Pasados ({pastTournaments.length})</span>
                 </TabsTrigger>
               </TabsList>
 
