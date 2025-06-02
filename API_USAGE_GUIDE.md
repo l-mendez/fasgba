@@ -246,6 +246,21 @@ curl -X POST "https://api.example.com/api/clubs/1/followers" \
 }
 ```
 
+**Error Response Examples:**
+```json
+{
+  "error": "Club not found",
+  "code": "NOT_FOUND"
+}
+```
+
+```json
+{
+  "error": "Already following this club",
+  "code": "CONFLICT"
+}
+```
+
 ### Unfollow a Club
 
 **Endpoint:** `DELETE /api/clubs/{clubId}/followers`
@@ -261,6 +276,69 @@ curl -X DELETE "https://api.example.com/api/clubs/1/followers" \
 **Example Response:**
 ```
 Status: 204 No Content
+```
+
+### Check if Current User is Following a Club
+
+**Endpoint:** `GET /api/clubs/{clubId}/followers/me`
+
+**Description:** Check if the current authenticated user is following a specific club.
+
+**Example Request:**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/followers/me" \
+  -H "Authorization: Bearer your_jwt_token"
+```
+
+**Example Response - Following:**
+```json
+{
+  "isFollowing": true,
+  "clubId": 1,
+  "userId": "123e4567-e89b-12d3-a456-426614174000"
+}
+```
+
+**Example Response - Not Following:**
+```json
+{
+  "isFollowing": false,
+  "clubId": 1,
+  "userId": "123e4567-e89b-12d3-a456-426614174000"
+}
+```
+
+**Error Response Examples:**
+```json
+{
+  "error": "Club not found",
+  "code": "NOT_FOUND"
+}
+```
+
+```json
+{
+  "error": "Unauthorized",
+  "code": "UNAUTHORIZED"
+}
+```
+
+### Get Club Followers Count
+
+**Endpoint:** `GET /api/clubs/{clubId}/followers/count`
+
+**Description:** Get the total number of followers for a specific club.
+
+**Example Request:**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/followers/count"
+```
+
+**Example Response:**
+```json
+{
+  "count": 128
+}
 ```
 
 ### Get Club News
@@ -1185,9 +1263,53 @@ async function examples() {
     const tournamentsUntilDec = await apiCall('/api/clubs/1/tournaments?endDate=2024-12-31');
     console.log('Tournaments until end of 2024:', tournamentsUntilDec);
     
-    // Follow a club
-    await apiCall(`/api/clubs/1/followers`, { method: 'POST' });
-    console.log('Successfully followed club');
+    // Club Following Examples
+    
+    // Check if current user is following a club
+    const followStatus = await apiCall('/api/clubs/1/followers/me');
+    console.log('Following status for club 1:', followStatus);
+    
+    // Follow a club (if not already following)
+    if (!followStatus.isFollowing) {
+      await apiCall('/api/clubs/1/followers', { method: 'POST' });
+      console.log('Successfully followed club 1');
+    } else {
+      console.log('Already following club 1');
+    }
+    
+    // Get club followers count
+    const followersCount = await apiCall('/api/clubs/1/followers/count');
+    console.log('Club 1 followers count:', followersCount);
+    
+    // Unfollow a club
+    await apiCall('/api/clubs/1/followers', { method: 'DELETE' });
+    console.log('Successfully unfollowed club 1');
+    
+    // Verify unfollowing worked
+    const updatedFollowStatus = await apiCall('/api/clubs/1/followers/me');
+    console.log('Updated following status for club 1:', updatedFollowStatus);
+    
+    // Get updated followers count
+    const updatedFollowersCount = await apiCall('/api/clubs/1/followers/count');
+    console.log('Updated club 1 followers count:', updatedFollowersCount);
+    
+    // Follow multiple clubs example
+    const clubsToFollow = [1, 2, 3];
+    
+    for (const clubId of clubsToFollow) {
+      try {
+        const status = await apiCall(`/api/clubs/${clubId}/followers/me`);
+        
+        if (!status.isFollowing) {
+          await apiCall(`/api/clubs/${clubId}/followers`, { method: 'POST' });
+          console.log(`Successfully followed club ${clubId}`);
+        } else {
+          console.log(`Already following club ${clubId}`);
+        }
+      } catch (error) {
+        console.error(`Error with club ${clubId}:`, error.message);
+      }
+    }
     
     // Update profile
     await apiCall('/api/users/me/profile', {
@@ -1207,6 +1329,40 @@ async function examples() {
     
   } catch (error) {
     console.error('API Error:', error.message);
+  }
+}
+
+// Specific helper function for club following operations
+async function clubFollowingManager() {
+  const clubId = 1;
+  
+  try {
+    // Check current following status
+    const status = await apiCall(`/api/clubs/${clubId}/followers/me`);
+    console.log(`Currently following club ${clubId}:`, status.isFollowing);
+    
+    if (status.isFollowing) {
+      // Unfollow
+      await apiCall(`/api/clubs/${clubId}/followers`, { method: 'DELETE' });
+      console.log(`Unfollowed club ${clubId}`);
+    } else {
+      // Follow
+      await apiCall(`/api/clubs/${clubId}/followers`, { method: 'POST' });
+      console.log(`Followed club ${clubId}`);
+    }
+    
+    // Get updated count
+    const count = await apiCall(`/api/clubs/${clubId}/followers/count`);
+    console.log(`Club ${clubId} now has ${count.count} followers`);
+    
+  } catch (error) {
+    if (error.message.includes('Already following')) {
+      console.log('Already following this club');
+    } else if (error.message.includes('Club not found')) {
+      console.log('Club does not exist');
+    } else {
+      console.error('Error managing club following:', error.message);
+    }
   }
 }
 ```

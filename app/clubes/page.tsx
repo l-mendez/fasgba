@@ -60,7 +60,7 @@ export default function ClubesPage() {
         clubsData.map(async (club) => {
           const [memberCount, isFollowing] = await Promise.all([
             getClubMemberCount(club.id),
-            currentUserId ? isUserFollowingClub(currentUserId, club.id) : false
+            currentUserId ? isUserFollowingClub(club.id, currentUserId) : false
           ])
           
           return {
@@ -94,7 +94,7 @@ export default function ClubesPage() {
         searchResults.map(async (club) => {
           const [memberCount, isFollowing] = await Promise.all([
             getClubMemberCount(club.id),
-            currentUserId ? isUserFollowingClub(currentUserId, club.id) : false
+            currentUserId ? isUserFollowingClub(club.id, currentUserId) : false
           ])
           
           return {
@@ -121,9 +121,9 @@ export default function ClubesPage() {
 
     try {
       if (club.isFollowing) {
-        await unfollowClub(currentUserId, clubId)
+        await unfollowClub(clubId, currentUserId)
       } else {
-        await followClub(currentUserId, clubId)
+        await followClub(clubId, currentUserId)
       }
 
       // Update local state

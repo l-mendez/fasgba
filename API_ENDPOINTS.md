@@ -147,16 +147,15 @@ This document outlines the RESTful API endpoints designed based on the simplifie
 - **Body:** `{ "count": number }`
 - **Error:** 404 Not Found, 500 Internal Server Error
 
-#### GET /api/clubs/{clubId}/followers/{authId}
-**Description:** Check if a user is following a club
+#### GET /api/clubs/{clubId}/followers/me
+**Description:** Check if the current authenticated user is following a club
 **Path Parameters:**
 - `clubId: number` - Club identifier
-- `authId: string` - User's Supabase Auth UUID
 
 **Response:**
 - **Success:** 200 OK
-- **Body:** `{ "isFollowing": boolean }`
-- **Error:** 404 Not Found, 500 Internal Server Error
+- **Body:** `{ "isFollowing": boolean, "clubId": number, "userId": string }`
+- **Error:** 401 Unauthorized, 404 Not Found, 500 Internal Server Error
 
 #### POST /api/clubs/{clubId}/followers
 **Description:** Follow a club (authenticated user)
@@ -166,7 +165,7 @@ This document outlines the RESTful API endpoints designed based on the simplifie
 **Response:**
 - **Success:** 201 Created
 - **Body:** `{ "success": true }`
-- **Error:** 400 Bad Request, 401 Unauthorized, 409 Conflict
+- **Error:** 400 Bad Request, 401 Unauthorized, 404 Not Found, 409 Conflict (already following)
 
 #### DELETE /api/clubs/{clubId}/followers
 **Description:** Unfollow a club (authenticated user)

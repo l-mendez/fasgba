@@ -341,58 +341,107 @@ export async function getClubFollowersCount(clubId: number): Promise<number> {
 }
 
 /**
- * Checks if a user is following a club
+ * Checks if a user is following a club using API endpoint
  */
 export async function isUserFollowingClub(clubId: number, authId: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('user_follows_club')
-    .select('auth_id')
-    .eq('club_id', clubId)
-    .eq('auth_id', authId)
-    .single()
+  try {
+    // Get authentication token
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    
+    if (!token) {
+      console.warn('No authentication token available for checking follow status')
+      return false
+    }
 
-  if (error || !data) {
-    return false
-  }
-
-  return true
-}
-
-/**
- * Follows a club
- */
-export async function followClub(clubId: number, authId: string): Promise<boolean> {
-  const { error } = await supabase
-    .from('user_follows_club')
-    .insert({
-      club_id: clubId,
-      auth_id: authId
+    const response = await fetch(`/api/clubs/${clubId}/followers/me`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
     })
 
-  if (error) {
-    console.error('Error following club:', error)
-    throw new Error('Failed to follow club')
-  }
+    if (!response.ok) {
+      if (response.status === 401) {
+        console.warn('User not authenticated for follow status check')
+        return false
+      }
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
 
-  return true
+    const data = await response.json()
+    return data.isFollowing || false
+  } catch (error) {
+    console.error('Error checking if user is following club:', error)
+    return false
+  }
 }
 
 /**
- * Unfollows a club
+ * Follows a club using API endpoint
+ */
+export async function followClub(clubId: number, authId: string): Promise<boolean> {
+  try {
+    // Get authentication token
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    
+    if (!token) {
+      throw new Error('No authentication token available')
+    }
+
+    const response = await fetch(`/api/clubs/${clubId}/followers`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    return true
+  } catch (error) {
+    console.error('Error following club:', error)
+    throw error
+  }
+}
+
+/**
+ * Unfollows a club using API endpoint
  */
 export async function unfollowClub(clubId: number, authId: string): Promise<boolean> {
-  const { error } = await supabase
-    .from('user_follows_club')
-    .delete()
-    .eq('club_id', clubId)
-    .eq('auth_id', authId)
+  try {
+    // Get authentication token
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    
+    if (!token) {
+      throw new Error('No authentication token available')
+    }
 
-  if (error) {
+    const response = await fetch(`/api/clubs/${clubId}/followers`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    return true
+  } catch (error) {
     console.error('Error unfollowing club:', error)
-    throw new Error('Failed to unfollow club')
+    throw error
   }
-
-  return true
 }
 
 /**
