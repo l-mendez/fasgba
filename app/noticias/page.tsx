@@ -94,9 +94,9 @@ export default async function NoticiasPage() {
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-terracotta">Noticias FASGBA</h1>
+                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-black">Noticias</h1>
                 <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Mantente al día con las últimas novedades del ajedrez en la región sur de Buenos Aires
+                  Mantenete al día con las últimas novedades del ajedrez en la región sur de Buenos Aires
                 </p>
               </div>
             </div>

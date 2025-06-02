@@ -253,7 +253,6 @@ curl -X POST "https://api.example.com/api/clubs/1/followers" \
   "code": "NOT_FOUND"
 }
 ```
-
 ```json
 {
   "error": "Already following this club",
@@ -315,7 +314,6 @@ curl -X GET "https://api.example.com/api/clubs/1/followers/me" \
   "code": "NOT_FOUND"
 }
 ```
-
 ```json
 {
   "error": "Unauthorized",
@@ -418,7 +416,6 @@ curl -X GET "https://api.example.com/api/clubs/1/news/count?endDate=2024-12-31"
   "details": "INVALID_DATE_FORMAT"
 }
 ```
-
 ```json
 {
   "error": "startDate must be before or equal to endDate.",
@@ -472,7 +469,6 @@ curl -X GET "https://api.example.com/api/clubs/1/tournaments/count?endDate=2024-
   "details": "INVALID_DATE_FORMAT"
 }
 ```
-
 ```json
 {
   "error": "startDate must be before or equal to endDate.",
@@ -587,7 +583,6 @@ curl -X GET "https://api.example.com/api/clubs/1/tournaments?endDate=2024-12-31"
   "code": "VALIDATION_ERROR"
 }
 ```
-
 ```json
 {
   "error": "Invalid startDate format. Use YYYY-MM-DD format.",
@@ -601,6 +596,53 @@ curl -X GET "https://api.example.com/api/clubs/1/tournaments?endDate=2024-12-31"
 - Date filtering considers the full date range of tournaments (from earliest to latest tournament date)
 - A tournament is included if any part of its date range overlaps with the specified filter range
 - The `created_by_club_id` field indicates which club created the tournament
+
+### Get All Club Followers
+
+**Endpoint:** `GET /api/clubs/{clubId}/followers`
+
+**Description:** Get all followers of a specific club with their details.
+
+**Example Request:**
+```bash
+curl -X GET "https://api.example.com/api/clubs/1/followers"
+```
+
+**Example Response:**
+```json
+{
+  "club": {
+    "id": 1,
+    "name": "Club Magnus Carlsen"
+  },
+  "followers": [
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "email": "user1@example.com",
+      "created_at": "2024-03-15T10:30:00Z"
+    },
+    {
+      "id": "987fcdeb-51a2-43b1-9876-543210fedcba",
+      "email": "user2@example.com", 
+      "created_at": "2024-03-10T14:22:00Z"
+    },
+    {
+      "id": "456789ab-cdef-1234-5678-90abcdef1234",
+      "email": "user3@example.com",
+      "created_at": "2024-03-05T08:15:00Z"
+    }
+  ],
+  "count": 3
+}
+```
+
+**Error Response Examples:**
+```json
+{
+  "error": "Club not found",
+  "code": "NOT_FOUND"
+}
+```
 
 ---
 
@@ -1277,21 +1319,19 @@ async function examples() {
       console.log('Already following club 1');
     }
     
-    // Get club followers count
-    const followersCount = await apiCall('/api/clubs/1/followers/count');
-    console.log('Club 1 followers count:', followersCount);
-    
-    // Unfollow a club
-    await apiCall('/api/clubs/1/followers', { method: 'DELETE' });
-    console.log('Successfully unfollowed club 1');
-    
-    // Verify unfollowing worked
-    const updatedFollowStatus = await apiCall('/api/clubs/1/followers/me');
-    console.log('Updated following status for club 1:', updatedFollowStatus);
-    
     // Get updated followers count
     const updatedFollowersCount = await apiCall('/api/clubs/1/followers/count');
     console.log('Updated club 1 followers count:', updatedFollowersCount);
+    
+    // Get all followers of a club
+    const allFollowers = await apiCall('/api/clubs/1/followers');
+    console.log('All followers of club 1:', allFollowers);
+    
+    // Display follower information
+    console.log(`Club "${allFollowers.club.name}" has ${allFollowers.count} followers:`);
+    allFollowers.followers.forEach((follower, index) => {
+      console.log(`${index + 1}. ${follower.email} (followed on ${new Date(follower.created_at).toLocaleDateString()})`);
+    });
     
     // Follow multiple clubs example
     const clubsToFollow = [1, 2, 3];
@@ -1326,6 +1366,34 @@ async function examples() {
       method: 'DELETE'
     });
     console.log('Test tournament deleted');
+    
+    // Get club followers count
+    const followersCount = await apiCall('/api/clubs/1/followers/count');
+    console.log('Club 1 followers count:', followersCount);
+    
+    // Unfollow a club
+    await apiCall('/api/clubs/1/followers', { method: 'DELETE' });
+    console.log('Successfully unfollowed club 1');
+    
+    // Verify unfollowing worked
+    const updatedFollowStatus = await apiCall('/api/clubs/1/followers/me');
+    console.log('Updated following status for club 1:', updatedFollowStatus);
+    
+    // Get updated followers count
+    const updatedFollowersCount = await apiCall('/api/clubs/1/followers/count');
+    console.log('Updated club 1 followers count:', updatedFollowersCount);
+    
+    // Get all followers of a club
+    const allFollowers = await apiCall('/api/clubs/1/followers');
+    console.log('All followers of club 1:', allFollowers);
+    
+    // Display follower information
+    console.log(`Club "${allFollowers.club.name}" has ${allFollowers.count} followers:`);
+    allFollowers.followers.forEach((follower, index) => {
+      console.log(`${index + 1}. ${follower.email} (followed on ${new Date(follower.created_at).toLocaleDateString()})`);
+    });
+    
+    // Follow multiple clubs example
     
   } catch (error) {
     console.error('API Error:', error.message);

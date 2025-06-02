@@ -737,3 +737,46 @@ export async function getUserFollowedClubs(authId: string): Promise<Club[]> {
     throw error
   }
 }
+
+/**
+ * Gets all followers of a club using API endpoint
+ */
+export async function getClubFollowers(clubId: number): Promise<{
+  club: { id: number; name: string },
+  followers: Array<{ id: string; email: string; created_at: string }>,
+  count: number
+} | null> {
+  try {
+    // Get authentication token (optional for this endpoint since it's public data)
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+
+    // Add auth header if available (though not required for this endpoint)
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const response = await fetch(`/api/clubs/${clubId}/followers`, {
+      method: 'GET',
+      headers,
+    })
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.warn(`Club with ID ${clubId} not found`)
+        return null
+      }
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error fetching club followers:', error)
+    throw error
+  }
+}

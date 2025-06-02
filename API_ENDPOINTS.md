@@ -137,6 +137,32 @@ This document outlines the RESTful API endpoints designed based on the simplifie
 
 ### 1.4 Club Followers
 
+#### GET /api/clubs/{clubId}/followers
+**Description:** Get all followers of a club
+**Path Parameters:**
+- `clubId: number` - Club identifier
+
+**Response:**
+- **Success:** 200 OK
+- **Body:** 
+```json
+{
+  "club": {
+    "id": "number",
+    "name": "string"
+  },
+  "followers": [
+    {
+      "id": "string (auth UUID)",
+      "email": "string",
+      "created_at": "string (ISO date)"
+    }
+  ],
+  "count": "number"
+}
+```
+- **Error:** 404 Not Found, 500 Internal Server Error
+
 #### GET /api/clubs/{clubId}/followers/count
 **Description:** Get follower count for a club
 **Path Parameters:**
