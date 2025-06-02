@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { supabase } from '@/lib/supabaseClient'
 import { requireAuth } from '@/lib/middleware/auth'
-import { apiSuccess, handleError, badRequestError, notFoundError } from '@/lib/utils/apiResponse'
+import { apiSuccess, handleError, validationError, notFoundError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
 interface RouteParams {
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const clubId = parseInt(clubIdParam)
     
     if (isNaN(clubId)) {
-      return badRequestError('Invalid club ID')
+      return validationError('Invalid club ID')
     }
     
     // Check if club exists

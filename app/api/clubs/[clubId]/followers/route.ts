@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { supabase } from '@/lib/supabaseClient'
 import { requireAuth } from '@/lib/middleware/auth'
-import { apiSuccess, noContent, handleError, badRequestError, notFoundError, conflictError } from '@/lib/utils/apiResponse'
+import { apiSuccess, noContent, handleError, validationError, notFoundError, conflictError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
 interface RouteParams {
@@ -13,7 +13,7 @@ interface RouteParams {
 interface ClubFollower {
   id: string // auth UUID
   email: string
-  created_at: string
+  created_at: string // Note: placeholder date since table doesn't track follow date
 }
 
 // GET: Get all followers of a club
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const clubId = parseInt(clubIdParam)
     
     if (isNaN(clubId)) {
-      return badRequestError('Invalid club ID')
+      return validationError('Invalid club ID')
     }
     
     // Check if club exists
@@ -40,9 +40,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Get all followers
     const { data: followRelations, error: followError } = await supabase
       .from('user_follows_club')
-      .select('auth_id, created_at')
+      .select('auth_id')
       .eq('club_id', clubId)
-      .order('created_at', { ascending: false })
     
     if (followError) {
       console.error('Error fetching club followers:', followError)
@@ -53,7 +52,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const followers: ClubFollower[] = (followRelations || []).map(relation => ({
       id: relation.auth_id,
       email: `user-${relation.auth_id.slice(0, 8)}...`, // Show partial ID instead of email for privacy
-      created_at: relation.created_at
+      created_at: new Date().toISOString() // Use current date as placeholder since table doesn't have created_at
     }))
     
     return apiSuccess({
@@ -76,7 +75,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const clubId = parseInt(clubIdParam)
     
     if (isNaN(clubId)) {
-      return badRequestError('Invalid club ID')
+      return validationError('Invalid club ID')
     }
     
     // Check if club exists
@@ -127,7 +126,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const clubId = parseInt(clubIdParam)
     
     if (isNaN(clubId)) {
-      return badRequestError('Invalid club ID')
+      return validationError('Invalid club ID')
     }
     
     // Remove follow relationship

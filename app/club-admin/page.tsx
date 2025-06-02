@@ -19,9 +19,11 @@ interface ClubStats {
   crecimientoSeguidores: number
 }
 
-interface RecentFollower {
-  email: string
-  created_at: string
+interface ActivityItem {
+  type: 'news' | 'tournament' | 'follower'
+  title: string
+  date: string
+  description?: string
 }
 
 export default function ClubAdminDashboard() {
@@ -33,7 +35,7 @@ export default function ClubAdminDashboard() {
     crecimientoSeguidores: 0,
   })
   const [adminClub, setAdminClub] = useState<Club | null>(null)
-  const [recentFollowers, setRecentFollowers] = useState<RecentFollower[]>([])
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -92,8 +94,8 @@ export default function ClubAdminDashboard() {
         const club = adminClubs[0]
         setAdminClub(club)
 
-        // Fetch club statistics in parallel
-        const [newsCountData, tournamentCountData, followersData] = await Promise.all([
+        // Fetch club statistics and recent data in parallel
+        const [newsCountData, tournamentCountData, followersData, recentNewsData, recentTournamentsData] = await Promise.all([
           apiCall(`/api/clubs/${club.id}/news/count`).catch(() => ({ count: 0 })),
           apiCall(`/api/clubs/${club.id}/tournaments/count`).catch(() => ({ count: 0 })),
           getClubFollowers(club.id).catch(async () => {
@@ -108,7 +110,11 @@ export default function ClubAdminDashboard() {
             } catch {
               return { club: { id: club.id, name: club.name }, followers: [], count: 0 }
             }
-          })
+          }),
+          // Get recent news (limit 5)
+          apiCall(`/api/clubs/${club.id}/news?limit=5`).catch(() => []),
+          // Get recent tournaments (limit 5)
+          apiCall(`/api/clubs/${club.id}/tournaments?limit=5`).catch(() => ({ tournaments: [] }))
         ])
 
         // Calculate growth (followers who joined in the last 30 days)
@@ -116,17 +122,8 @@ export default function ClubAdminDashboard() {
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
         let recentFollowersCount = 0
-        let recentFollowersList: RecentFollower[] = []
 
         if (followersData) {
-          recentFollowersList = followersData.followers
-            .filter(follower => new Date(follower.created_at) >= thirtyDaysAgo)
-            .slice(0, 5) // Show only last 5 recent followers
-            .map(follower => ({
-              email: follower.email,
-              created_at: follower.created_at
-            }))
-          
           recentFollowersCount = followersData.followers
             .filter(follower => new Date(follower.created_at) >= thirtyDaysAgo).length
         }
@@ -145,7 +142,54 @@ export default function ClubAdminDashboard() {
           crecimientoSeguidores: growthPercentage,
         })
 
-        setRecentFollowers(recentFollowersList)
+        // Create unified activity feed
+        const activities: ActivityItem[] = []
+
+        // Add recent news
+        if (recentNewsData && Array.isArray(recentNewsData)) {
+          recentNewsData.slice(0, 3).forEach((news: any) => {
+            activities.push({
+              type: 'news',
+              title: news.title,
+              date: news.date || news.created_at,
+              description: news.extract
+            })
+          })
+        }
+
+        // Add recent tournaments
+        if (recentTournamentsData?.tournaments) {
+          recentTournamentsData.tournaments.slice(0, 3).forEach((tournament: any) => {
+            const tournamentDate = tournament.tournament_dates?.[0]?.event_date || new Date().toISOString()
+            activities.push({
+              type: 'tournament',
+              title: tournament.title,
+              date: tournamentDate,
+              description: tournament.description
+            })
+          })
+        }
+
+        // Add recent followers (note: user_follows_club table doesn't track created_at)
+        // We'll skip adding followers to recent activity since we can't determine when they followed
+        // if (followersData?.followers) {
+        //   followersData.followers
+        //     .filter(follower => new Date(follower.created_at) >= thirtyDaysAgo)
+        //     .slice(0, 3)
+        //     .forEach((follower: any) => {
+        //       activities.push({
+        //         type: 'follower',
+        //         title: `Nuevo seguidor: ${follower.email}`,
+        //         date: follower.created_at
+        //       })
+        //     })
+        // }
+
+        // Sort activities by date (most recent first)
+        activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+        // Keep only the 5 most recent activities
+        setRecentActivity(activities.slice(0, 5))
 
       } catch (error) {
         console.error('Error fetching stats:', error)
@@ -157,6 +201,32 @@ export default function ClubAdminDashboard() {
 
     fetchStats()
   }, [])
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'news':
+        return <FileText className="h-4 w-4 text-blue-500" />
+      case 'tournament':
+        return <Trophy className="h-4 w-4 text-yellow-500" />
+      case 'follower':
+        return <Users className="h-4 w-4 text-green-500" />
+      default:
+        return <MessageSquare className="h-4 w-4 text-gray-500" />
+    }
+  }
+
+  const getActivityTypeLabel = (type: string) => {
+    switch (type) {
+      case 'news':
+        return 'Noticia publicada'
+      case 'tournament':
+        return 'Torneo creado'
+      case 'follower':
+        return 'Nuevo seguidor'
+      default:
+        return 'Actividad'
+    }
+  }
 
   if (error) {
     return (
@@ -189,7 +259,7 @@ export default function ClubAdminDashboard() {
           </Button>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Noticias publicadas</CardTitle>
@@ -197,9 +267,6 @@ export default function ClubAdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{loading ? '...' : stats.noticias}</div>
-            <p className="text-xs text-muted-foreground">
-              Total de noticias del club
-            </p>
           </CardContent>
         </Card>
         <Card>
@@ -209,9 +276,6 @@ export default function ClubAdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{loading ? '...' : stats.torneos}</div>
-            <p className="text-xs text-muted-foreground">
-              Total de torneos organizados
-            </p>
           </CardContent>
         </Card>
         <Card>
@@ -221,23 +285,6 @@ export default function ClubAdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{loading ? '...' : stats.seguidores}</div>
-            <p className="text-xs text-muted-foreground">
-              +{recentFollowers.length} en los últimos 30 días
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Crecimiento</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {loading ? '...' : `+${stats.crecimientoSeguidores}%`}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Nuevos seguidores este mes
-            </p>
           </CardContent>
         </Card>
       </div>
@@ -246,30 +293,47 @@ export default function ClubAdminDashboard() {
           <CardHeader>
             <CardTitle>Actividad reciente</CardTitle>
             <CardDescription>
-              Últimos seguidores del club
+              Últimas acciones realizadas en el club
             </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
               <div className="space-y-4">
-                <div className="animate-pulse">
-                  <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
-                </div>
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-muted rounded w-1/2"></div>
+                  </div>
+                ))}
               </div>
-            ) : recentFollowers.length > 0 ? (
-              <div className="space-y-8">
-                {recentFollowers.map((follower, index) => (
-                  <div key={index} className="flex items-center">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        Nuevo seguidor: {follower.email}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(follower.created_at).toLocaleDateString('es-ES', {
+            ) : recentActivity.length > 0 ? (
+              <div className="space-y-6">
+                {recentActivity.map((activity, index) => (
+                  <div key={index} className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 mt-1">
+                      {getActivityIcon(activity.type)}
+                    </div>
+                    <div className="space-y-1 flex-grow">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium leading-none">
+                          {activity.title}
+                        </p>
+                        <Badge variant="outline" className="text-xs">
+                          {getActivityTypeLabel(activity.type)}
+                        </Badge>
+                      </div>
+                      {activity.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {activity.description}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(activity.date).toLocaleDateString('es-ES', {
                           year: 'numeric',
                           month: 'long',
-                          day: 'numeric'
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
                         })}
                       </p>
                     </div>
@@ -278,7 +342,7 @@ export default function ClubAdminDashboard() {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                No hay nuevos seguidores en los últimos 30 días
+                No hay actividad reciente en el club
               </p>
             )}
           </CardContent>
@@ -286,9 +350,6 @@ export default function ClubAdminDashboard() {
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Acciones rápidas</CardTitle>
-            <CardDescription>
-              Accede rápidamente a las funciones más utilizadas
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
