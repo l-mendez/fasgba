@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/lib/database.types"
 import { ReactNode } from "react"
 import type { Metadata } from 'next'
+import { getNews, getTournaments, getClubs, type NewsItem, type Tournament, type Club } from "@/lib/api"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
   description: 'Federación de Ajedrez del Sur de Buenos Aires - Promoviendo el ajedrez en la región sur de Buenos Aires desde 1985',
 }
 
+// Interface for processed news items (mapping API data to component props)
 interface Noticia {
   id: string
   titulo: string
@@ -28,57 +30,45 @@ interface NoticiaProps {
   noticia: Noticia
 }
 
-// Datos de ejemplo para las noticias
-const noticias: Noticia[] = [
-  {
-    id: "nueva-entidad-bahia-blanca",
-    titulo: "Bahía Blanca suma una nueva entidad al ajedrez federado regional",
-    fecha: "marzo 27, 2025",
-    imagen: "/placeholder.svg?height=600&width=800",
-    categorias: ["Entidades Afiliadas", "Noticias 2025", "Noticias Destacadas"],
-    extracto:
-      "El Club Social y Deportivo Villa Mitre se suma a la familia de FASGBA, ampliando la oferta de ajedrez en la región sur de Buenos Aires.",
-    destacada: true,
-  },
-  {
-    id: "torneo-memoria-verdad-justicia",
-    titulo: "Ajedrez por la memoria verdad y justicia",
-    fecha: "marzo 27, 2025",
-    imagen: "/placeholder.svg?height=400&width=600",
-    categorias: ["Noticias 2025", "Noticias Destacadas", "Presencia Institucional", "Torneos en Argentina"],
-    extracto:
-      "FASGBA organizó un torneo conmemorativo por el Día Nacional de la Memoria por la Verdad y la Justicia con gran participación de la comunidad.",
-  },
-  {
-    id: "club-patriotas-punta-alta",
-    titulo: "Nueva entidad se suma a FASGBA: Club Patriotas de Punta Alta",
-    fecha: "marzo 20, 2025",
-    imagen: "/placeholder.svg?height=400&width=600",
-    categorias: ["Noticias Destacadas", "Presencia Institucional", "Entidades Afiliadas"],
-    extracto:
-      "El tradicional club de la ciudad de Punta Alta se incorpora oficialmente a la Federación de Ajedrez del Sur de Buenos Aires.",
-  },
-  {
-    id: "san-luis-nueva-entidad",
-    titulo: "San Luis suma una nueva entidad al ajedrez federado argentino",
-    fecha: "marzo 14, 2025",
-    imagen: "/placeholder.svg?height=400&width=600",
-    categorias: ["Entidades Afiliadas", "Noticias 2025", "Noticias Destacadas"],
-    extracto:
-      "La Federación Argentina de Ajedrez celebra la incorporación de un nuevo club en la provincia de San Luis, fortaleciendo el ajedrez en el interior del país.",
-  },
-  {
-    id: "fasgba-afa-proyectos",
-    titulo: "FASGBA y AFA consolidan su trabajo conjunto con nuevos proyectos para 2025",
-    fecha: "marzo 14, 2025",
-    imagen: "/placeholder.svg?height=400&width=600",
-    categorias: ["Noticias 2025", "Noticias Destacadas", "Presencia Institucional"],
-    extracto:
-      "Las federaciones de ajedrez y fútbol firman un convenio para promover el ajedrez en los clubes deportivos de la región sur de Buenos Aires.",
-  },
-]
+// Helper function to convert API news to component format
+function mapNewsToNoticia(newsItem: NewsItem, isFeatured = false): Noticia {
+  const date = new Date(newsItem.date)
+  const formattedDate = date.toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
 
-// Componente para mostrar una noticia destacada
+  return {
+    id: newsItem.id.toString(),
+    titulo: newsItem.title,
+    fecha: formattedDate,
+    imagen: newsItem.image || "/placeholder.svg?height=600&width=800",
+    categorias: newsItem.tags,
+    extracto: newsItem.extract || newsItem.title,
+    destacada: isFeatured
+  }
+}
+
+// Helper function to format tournament date
+function formatTournamentDate(tournament: Tournament): string {
+  if (tournament.formatted_start_date) {
+    return tournament.formatted_start_date
+  }
+  
+  if (tournament.start_date) {
+    const date = new Date(tournament.start_date)
+    return date.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
+  
+  return 'Fecha por confirmar'
+}
+
+// Component for featured news
 function NoticiaDestacada({ noticia }: NoticiaProps): ReactNode {
   return (
     <div className="relative h-full overflow-hidden rounded-lg">
@@ -88,7 +78,7 @@ function NoticiaDestacada({ noticia }: NoticiaProps): ReactNode {
       </div>
       <div className="relative flex h-full flex-col justify-end p-6 text-white">
         <div className="mb-4 flex flex-wrap gap-2">
-          {noticia.categorias.map((categoria) => (
+          {noticia.categorias.slice(0, 3).map((categoria) => (
             <Badge key={categoria} variant="outline" className="border-amber bg-black/50 text-white hover:bg-amber/20">
               {categoria}
             </Badge>
@@ -104,7 +94,7 @@ function NoticiaDestacada({ noticia }: NoticiaProps): ReactNode {
   )
 }
 
-// Componente para mostrar una noticia normal
+// Component for regular news cards
 function NoticiaCard({ noticia }: NoticiaProps): ReactNode {
   return (
     <div className="group relative h-full overflow-hidden rounded-lg">
@@ -138,25 +128,101 @@ function NoticiaCard({ noticia }: NoticiaProps): ReactNode {
   )
 }
 
+// Component for tournament cards
+function TournamentCard({ tournament }: { tournament: Tournament }): ReactNode {
+  const clubName = tournament.place || 'Sede por confirmar'
+  
+  return (
+    <div className="group relative overflow-hidden rounded-lg border border-amber/20 bg-background shadow-md transition-colors hover:border-amber">
+      <div className="p-6">
+        <h3 className="text-xl font-bold text-terracotta line-clamp-2">{tournament.title}</h3>
+        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+          <Calendar className="h-4 w-4 text-amber flex-shrink-0" />
+          <span className="line-clamp-1">
+            {formatTournamentDate(tournament)}
+            {tournament.time && ` - ${tournament.time}`}
+          </span>
+        </div>
+        <div className="mt-1 flex items-center gap-2 text-sm">
+          <MapPin className="h-4 w-4 text-amber flex-shrink-0" />
+          <span className="text-amber-dark line-clamp-1">{clubName}</span>
+        </div>
+        {tournament.description && (
+          <p className="mt-3 text-sm line-clamp-3">{tournament.description}</p>
+        )}
+        <div className="mt-4">
+          <Button asChild size="sm" className="bg-terracotta hover:bg-terracotta/90 text-white">
+            <Link href={`/torneos/${tournament.id}`}>Ver detalles</Link>
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Component for club logos
+function ClubCard({ club }: { club: Club }): ReactNode {
+  return (
+    <Link
+      href={`/clubes/${club.id}`}
+      className="flex h-24 items-center justify-center rounded-lg border border-amber/20 bg-background p-4 transition-colors hover:border-amber group"
+      title={club.name}
+    >
+      <div className="text-center">
+        <div className="text-xs font-medium text-muted-foreground group-hover:text-amber-dark line-clamp-2">
+          {club.name}
+        </div>
+      </div>
+    </Link>
+  )
+}
+
 export default async function Home() {
   const supabase = await createClient()
 
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    // Separar la noticia destacada de las demás
-    const noticiaDestacada = noticias.find((noticia) => noticia.destacada)
-    const noticiasSecundarias = noticias.filter((noticia) => !noticia.destacada)
+    // Fetch data from APIs in parallel
+    const [newsResponse, tournaments, clubs] = await Promise.all([
+      getNews({ 
+        limit: 5, 
+        orderBy: 'date', 
+        order: 'desc',
+        include: 'author,club'
+      }).catch(err => {
+        console.error('Failed to fetch news:', err)
+        return { news: [], pagination: { page: 1, limit: 5, total: 0, totalPages: 0 } }
+      }),
+      getTournaments({ 
+        limit: 3, 
+        status: 'upcoming',
+        format: 'display',
+        orderBy: 'start_date',
+        order: 'asc'
+      }).catch(err => {
+        console.error('Failed to fetch tournaments:', err)
+        return []
+      }),
+      getClubs({ 
+        hasContact: true
+      }).catch(err => {
+        console.error('Failed to fetch clubs:', err)
+        return []
+      })
+    ])
 
-    if (!noticiaDestacada) {
-      throw new Error('No se encontró una noticia destacada')
-    }
+    // Process news data
+    const noticias = newsResponse.news.map((item, index) => 
+      mapNewsToNoticia(item, index === 0) // First news item is featured
+    )
+    
+    const noticiaDestacada = noticias.find(noticia => noticia.destacada)
+    const noticiasSecundarias = noticias.filter(noticia => !noticia.destacada)
 
     return (
       <div className="flex min-h-screen flex-col">
         <SiteHeader />
         <main className="flex-1">
-          {/* Hero section con mensaje de bienvenida */}
+          {/* Hero section */}
           <section className="w-full py-12 md:py-24 lg:py-32 bg-[url('/placeholder.svg?height=800&width=1600')] bg-cover bg-center relative">
             <div className="absolute inset-0 bg-gradient-to-r from-terracotta/80 to-amber/60"></div>
             <div className="container px-4 md:px-6 flex flex-col items-center space-y-4 text-center relative z-10">
@@ -184,7 +250,7 @@ export default async function Home() {
             </div>
           </section>
 
-          {/* Sección de noticias */}
+          {/* News section */}
           <section className="w-full py-12 md:py-16 bg-gradient-to-b from-terracotta/5 to-amber/5">
             <div className="container px-4 md:px-6">
               <div className="mb-8 flex items-center justify-between">
@@ -201,23 +267,31 @@ export default async function Home() {
                 </div>
               </div>
 
-              <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
-                {/* Noticia destacada */}
-                <div className="lg:col-span-1 h-[400px] md:h-[500px] lg:h-full">
-                  <Link href={`/noticias/${noticiaDestacada.id}`} className="block h-full">
-                    <NoticiaDestacada noticia={noticiaDestacada} />
-                  </Link>
-                </div>
+              {noticias.length > 0 ? (
+                <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
+                  {/* Featured news */}
+                  {noticiaDestacada && (
+                    <div className="lg:col-span-1 h-[400px] md:h-[500px] lg:h-full">
+                      <Link href={`/noticias/${noticiaDestacada.id}`} className="block h-full">
+                        <NoticiaDestacada noticia={noticiaDestacada} />
+                      </Link>
+                    </div>
+                  )}
 
-                {/* Grid de noticias secundarias */}
-                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {noticiasSecundarias.slice(0, 4).map((noticia) => (
-                    <Link key={noticia.id} href={`/noticias/${noticia.id}`} className="block h-[250px]">
-                      <NoticiaCard noticia={noticia} />
-                    </Link>
-                  ))}
+                  {/* Secondary news grid */}
+                  <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {noticiasSecundarias.slice(0, 4).map((noticia) => (
+                      <Link key={noticia.id} href={`/noticias/${noticia.id}`} className="block h-[250px]">
+                        <NoticiaCard noticia={noticia} />
+                      </Link>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No hay noticias disponibles en este momento.</p>
+                </div>
+              )}
 
               <div className="mt-8 text-center">
                 <Button asChild variant="outline" className="border-amber text-amber-dark hover:bg-amber/10">
@@ -227,7 +301,7 @@ export default async function Home() {
             </div>
           </section>
 
-          {/* Sección de próximos torneos */}
+          {/* Tournaments section */}
           <section className="w-full py-12 md:py-16 bg-muted">
             <div className="container px-4 md:px-6">
               <div className="mb-8">
@@ -235,76 +309,20 @@ export default async function Home() {
                 <p className="mt-2 text-muted-foreground">Calendario de torneos organizados por FASGBA</p>
               </div>
 
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {/* Tarjetas de torneos próximos */}
-                <div className="group relative overflow-hidden rounded-lg border border-amber/20 bg-background shadow-md transition-colors hover:border-amber">
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold text-terracotta">Gran Prix FASGBA 2025</h3>
-                    <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4 text-amber" />
-                      <span>15 de Abril, 2025 - 10:00hs</span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-amber" />
-                      <Link href="/clubes/club-de-ajedrez-bahia-blanca" className="text-amber-dark hover:underline">
-                        Club de Ajedrez Bahía Blanca
-                      </Link>
-                    </div>
-                    <p className="mt-3 text-sm">
-                      Torneo válido para el ranking FIDE con importantes premios en efectivo y trofeos.
-                    </p>
-                    <div className="mt-4">
-                      <Button asChild size="sm" className="bg-terracotta hover:bg-terracotta/90 text-white">
-                        <Link href="/torneos">Inscripción</Link>
-                      </Button>
-                    </div>
-                  </div>
+              {tournaments.length > 0 ? (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {tournaments.map((tournament) => (
+                    <TournamentCard key={tournament.id} tournament={tournament} />
+                  ))}
                 </div>
-
-                <div className="group relative overflow-hidden rounded-lg border border-amber/20 bg-background shadow-md transition-colors hover:border-amber">
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold text-terracotta">Torneo Rápido de Mayo</h3>
-                    <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4 text-amber" />
-                      <span>25 de Mayo, 2025 - 14:00hs</span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-amber" />
-                      <Link href="/clubes/club-de-ajedrez-bahia-blanca" className="text-amber-dark hover:underline">
-                        Club de Ajedrez Bahía Blanca
-                      </Link>
-                    </div>
-                    <p className="mt-3 text-sm">Torneo rápido conmemorativo del 25 de Mayo con premios especiales.</p>
-                    <div className="mt-4">
-                      <Button asChild size="sm" className="bg-terracotta hover:bg-terracotta/90 text-white">
-                        <Link href="/torneos">Inscripción</Link>
-                      </Button>
-                    </div>
-                  </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No hay torneos próximos programados.</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Mantente atento a nuestras redes sociales para futuras actualizaciones.
+                  </p>
                 </div>
-
-                <div className="group relative overflow-hidden rounded-lg border border-amber/20 bg-background shadow-md transition-colors hover:border-amber">
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold text-terracotta">Campeonato Regional Individual</h3>
-                    <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4 text-amber" />
-                      <span>10 al 12 de Junio, 2025 - 10:00hs</span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-amber" />
-                      <Link href="/clubes/club-de-ajedrez-bahia-blanca" className="text-amber-dark hover:underline">
-                        Club de Ajedrez Bahía Blanca
-                      </Link>
-                    </div>
-                    <p className="mt-3 text-sm">Campeonato oficial de FASGBA válido para el ranking nacional y FIDE.</p>
-                    <div className="mt-4">
-                      <Button asChild size="sm" className="bg-terracotta hover:bg-terracotta/90 text-white">
-                        <Link href="/torneos">Inscripción</Link>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
 
               <div className="mt-8 text-center">
                 <Button asChild className="bg-terracotta hover:bg-terracotta/90 text-white">
@@ -314,7 +332,7 @@ export default async function Home() {
             </div>
           </section>
 
-          {/* Sección de clubes afiliados */}
+          {/* Clubs section */}
           <section className="w-full py-12 md:py-16">
             <div className="container px-4 md:px-6">
               <div className="mb-8">
@@ -322,22 +340,17 @@ export default async function Home() {
                 <p className="mt-2 text-muted-foreground">Conoce los clubes que forman parte de FASGBA</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                {/* Logos de clubes */}
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Link
-                    key={i}
-                    href="/clubes"
-                    className="flex h-24 items-center justify-center rounded-lg border border-amber/20 bg-background p-4 transition-colors hover:border-amber"
-                  >
-                    <img
-                      src={`/placeholder.svg?height=80&width=80&text=Club ${i + 1}`}
-                      alt={`Logo Club ${i + 1}`}
-                      className="max-h-full max-w-full object-contain"
-                    />
-                  </Link>
-                ))}
-              </div>
+              {clubs.length > 0 ? (
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                  {clubs.slice(0, 6).map((club) => (
+                    <ClubCard key={club.id} club={club} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No hay clubes afiliados disponibles.</p>
+                </div>
+              )}
 
               <div className="mt-8 text-center">
                 <Button asChild variant="outline" className="border-amber text-amber-dark hover:bg-amber/10">
@@ -352,11 +365,43 @@ export default async function Home() {
     )
   } catch (error) {
     console.error('Error in Home page:', error)
+    
+    // Fallback UI in case of error
     return (
       <div className="flex min-h-screen flex-col">
         <SiteHeader />
         <main className="flex-1">
-          {/* ... rest of the JSX ... */}
+          <section className="w-full py-12 md:py-24 lg:py-32 bg-[url('/placeholder.svg?height=800&width=1600')] bg-cover bg-center relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-terracotta/80 to-amber/60"></div>
+            <div className="container px-4 md:px-6 flex flex-col items-center space-y-4 text-center relative z-10">
+              <div className="space-y-2 bg-background/90 p-6 rounded-lg backdrop-blur-sm border border-amber/20 shadow-lg">
+                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-terracotta">
+                  Federación de Ajedrez del Sur de Buenos Aires
+                </h1>
+                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
+                  Promoviendo el ajedrez en la región sur de Buenos Aires desde 1985
+                </p>
+                <div className="text-center mt-4">
+                  <p className="text-sm text-red-600">
+                    Hubo un problema cargando el contenido. Por favor, intenta más tarde.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 min-[400px]:flex-row justify-center pt-4">
+                  <Button asChild size="lg" className="bg-terracotta hover:bg-terracotta/90 text-white">
+                    <Link href="/torneos">Próximos Torneos</Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="lg"
+                    className="border-amber text-amber-dark hover:bg-amber/10 hover:text-amber-dark"
+                  >
+                    <Link href="/clubes">Clubes Afiliados</Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </section>
         </main>
         <SiteFooter />
       </div>

@@ -32,8 +32,6 @@ import {
   getPaceDisplay,
   getTournamentStatusText,
   formatDateRange,
-  checkTournamentsTable,
-  checkTournamentsTableStructure,
 } from "@/lib/tournamentUtils"
 
 // Componente para mostrar un torneo con expansión
@@ -279,27 +277,6 @@ export default function TorneosPage() {
         setLoading(true)
         setError(null)
         
-        // First check if the table exists and has data
-        console.log('Checking tournaments table status...')
-        const tableStatus = await checkTournamentsTable(supabase)
-        console.log('Table status:', tableStatus)
-        
-        // Check what columns actually exist
-        console.log('Checking table structure...')
-        const tableStructure = await checkTournamentsTableStructure(supabase)
-        console.log('Table structure:', tableStructure)
-        
-        if (!tableStatus.tableExists) {
-          throw new Error(`La tabla de torneos no existe: ${tableStatus.error}`)
-        }
-        
-        if (tableStatus.rowCount === 0) {
-          console.log('No tournaments found in database')
-          setTournaments([])
-          return
-        }
-        
-        console.log(`Found ${tableStatus.rowCount} tournaments, fetching all...`)
         const tournamentsData = await getAllTournamentsForDisplay(supabase)
         const sortedTournaments = sortTournamentsByDate(tournamentsData, 'asc')
         setTournaments(sortedTournaments)

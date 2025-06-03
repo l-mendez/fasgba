@@ -330,8 +330,6 @@ export function getTournamentDataStatus(tournament: Tournament): {
  */
 export async function getAllTournamentsWithDates(supabase: any): Promise<TournamentWithDates[]> {
   try {
-    console.log('Starting getAllTournamentsWithDates query...');
-    
     // Query tournaments with their associated dates
     const { data, error } = await supabase
       .from('tournaments')
@@ -345,9 +343,6 @@ export async function getAllTournamentsWithDates(supabase: any): Promise<Tournam
       `)
       .order('id', { ascending: true });
 
-    console.log('Query completed. Error:', error);
-    console.log('Data received:', data);
-
     if (error) {
       console.error('Supabase error fetching tournaments with dates:', error);
       console.error('Error details:', {
@@ -359,7 +354,6 @@ export async function getAllTournamentsWithDates(supabase: any): Promise<Tournam
       throw new Error(`Database error: ${error.message || 'Unknown error'}`);
     }
 
-    console.log('Tournaments with dates fetched successfully:', data?.length || 0, 'tournaments found');
     return data || [];
   } catch (error) {
     console.error('Database error in getAllTournamentsWithDates:', error);
@@ -375,15 +369,10 @@ export async function getAllTournamentsWithDates(supabase: any): Promise<Tournam
  */
 export async function getAllTournaments(supabase: any): Promise<Tournament[]> {
   try {
-    console.log('Starting getAllTournaments query...');
-    
     const { data, error } = await supabase
       .from('tournaments')
       .select('*')
       .order('id', { ascending: true });
-
-    console.log('Query completed. Error:', error);
-    console.log('Data received:', data);
 
     if (error) {
       console.error('Supabase error fetching tournaments:', error);
@@ -396,7 +385,6 @@ export async function getAllTournaments(supabase: any): Promise<Tournament[]> {
       throw new Error(`Database error: ${error.message || 'Unknown error'}`);
     }
 
-    console.log('Tournaments fetched successfully:', data?.length || 0, 'tournaments found');
     return data || [];
   } catch (error) {
     console.error('Database error in getAllTournaments:', error);
@@ -666,46 +654,27 @@ export async function checkTournamentsTable(supabase: any): Promise<{
   error?: string;
 }> {
   try {
-    console.log('Checking tournaments table...');
-    
-    // Try to get just the count first
-    const { count, error: countError } = await supabase
+    // Check if table exists and get basic info
+    const { data, error, count } = await supabase
       .from('tournaments')
-      .select('*', { count: 'exact', head: true });
-    
-    if (countError) {
-      console.error('Count query failed:', countError);
+      .select('*', { count: 'exact' })
+      .limit(3);
+
+    if (error) {
       return {
         tableExists: false,
         rowCount: 0,
         sampleData: [],
-        error: countError.message
+        error: error.message
       };
     }
-    
-    // Try to get a few sample records
-    const { data: sampleData, error: sampleError } = await supabase
-      .from('tournaments')
-      .select('id, title')
-      .limit(3);
-    
-    if (sampleError) {
-      console.error('Sample query failed:', sampleError);
-      return {
-        tableExists: true,
-        rowCount: count || 0,
-        sampleData: [],
-        error: sampleError.message
-      };
-    }
-    
+
     return {
       tableExists: true,
       rowCount: count || 0,
-      sampleData: sampleData || [],
+      sampleData: data || []
     };
   } catch (error) {
-    console.error('Table check failed:', error);
     return {
       tableExists: false,
       rowCount: 0,
@@ -720,27 +689,36 @@ export async function checkTournamentsTable(supabase: any): Promise<{
  */
 export async function checkTournamentsTableStructure(supabase: any): Promise<any> {
   try {
-    console.log('Checking tournaments table structure...');
-    
-    // Try to select all columns to see what's available
-    const { data, error } = await supabase
-      .from('tournaments')
-      .select('*')
-      .limit(1);
-    
+    // Query the information_schema to get table structure
+    const { data, error } = await supabase.rpc('get_table_structure', {
+      table_name: 'tournaments'
+    });
+
     if (error) {
       console.error('Error checking table structure:', error);
       return { error: error.message };
     }
-    
-    // Get the first row to see what columns exist
-    const sampleRow = data?.[0] || {};
-    const columns = Object.keys(sampleRow);
-    console.log('Available columns:', columns);
-    
-    return { columns, sampleRow };
+
+    // If the RPC doesn't exist, try alternative method
+    if (!data) {
+      // Alternative: query a single row to see the structure
+      const { data: sampleData, error: sampleError } = await supabase
+        .from('tournaments')
+        .select('*')
+        .limit(1)
+        .single();
+
+      if (sampleError && sampleError.code !== 'PGRST116') {
+        return { error: sampleError.message };
+      }
+
+      const columns = sampleData ? Object.keys(sampleData) : [];
+      return { columns, sampleData };
+    }
+
+    return data;
   } catch (error) {
-    console.error('Table structure check failed:', error);
+    console.error('Error in checkTournamentsTableStructure:', error);
     return { error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -763,24 +741,13 @@ export async function createTournament(supabase: any, tournamentData: {
   dates: string[];
 }): Promise<Tournament> {
   try {
-    console.log('Creating tournament:', tournamentData);
+    // Extract dates from tournament data
+    const { dates, ...tournamentFields } = tournamentData;
 
-    // Start a database transaction
+    // Create the tournament record
     const { data: tournament, error: tournamentError } = await supabase
       .from('tournaments')
-      .insert([{
-        title: tournamentData.title,
-        description: tournamentData.description || null,
-        time: tournamentData.time || null,
-        place: tournamentData.place || null,
-        location: tournamentData.location || null,
-        rounds: tournamentData.rounds || null,
-        pace: tournamentData.pace || null,
-        inscription_details: tournamentData.inscription_details || null,
-        cost: tournamentData.cost || null,
-        prizes: tournamentData.prizes || null,
-        image: tournamentData.image || null,
-      }])
+      .insert([tournamentFields])
       .select()
       .single();
 
@@ -789,34 +756,28 @@ export async function createTournament(supabase: any, tournamentData: {
       throw new Error(`Failed to create tournament: ${tournamentError.message}`);
     }
 
-    console.log('Tournament created successfully:', tournament);
+    // Create tournament dates if provided
+    if (dates && dates.length > 0) {
+      const tournamentDatesData = dates.map(date => ({
+        tournament_id: tournament.id,
+        event_date: date
+      }));
 
-    // Insert tournament dates
-    const tournamentDates = tournamentData.dates.map(date => ({
-      tournament_id: tournament.id,
-      event_date: date
-    }));
+      const { error: datesError } = await supabase
+        .from('tournamentdates')
+        .insert(tournamentDatesData);
 
-    const { error: datesError } = await supabase
-      .from('tournamentdates')
-      .insert(tournamentDates);
-
-    if (datesError) {
-      console.error('Error creating tournament dates:', datesError);
-      // Try to cleanup the tournament if dates creation failed
-      await supabase.from('tournaments').delete().eq('id', tournament.id);
-      throw new Error(`Failed to create tournament dates: ${datesError.message}`);
+      if (datesError) {
+        console.error('Error creating tournament dates:', datesError);
+        // Optionally, you might want to delete the tournament if dates fail
+        // For now, we'll just log the error and continue
+      }
     }
-
-    console.log('Tournament dates created successfully for tournament:', tournament.id);
 
     return tournament;
   } catch (error) {
     console.error('Error in createTournament:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to create tournament: Unknown error occurred');
+    throw error;
   }
 }
 
@@ -838,74 +799,55 @@ export async function updateTournament(supabase: any, tournamentId: number, tour
   dates?: string[];
 }): Promise<boolean> {
   try {
-    console.log('Updating tournament:', tournamentId, tournamentData);
+    // Extract dates from tournament data
+    const { dates, ...tournamentFields } = tournamentData;
 
-    // Update tournament data
-    const updateData = Object.fromEntries(
-      Object.entries({
-        title: tournamentData.title,
-        description: tournamentData.description,
-        time: tournamentData.time,
-        place: tournamentData.place,
-        location: tournamentData.location,
-        rounds: tournamentData.rounds,
-        pace: tournamentData.pace,
-        inscription_details: tournamentData.inscription_details,
-        cost: tournamentData.cost,
-        prizes: tournamentData.prizes,
-        image: tournamentData.image,
-      }).filter(([_, value]) => value !== undefined)
-    );
+    // Update the tournament record
+    const { error: tournamentError } = await supabase
+      .from('tournaments')
+      .update(tournamentFields)
+      .eq('id', tournamentId);
 
-    if (Object.keys(updateData).length > 0) {
-      const { error: tournamentError } = await supabase
-        .from('tournaments')
-        .update(updateData)
-        .eq('id', tournamentId);
-
-      if (tournamentError) {
-        console.error('Error updating tournament:', tournamentError);
-        throw new Error(`Failed to update tournament: ${tournamentError.message}`);
-      }
+    if (tournamentError) {
+      console.error('Error updating tournament:', tournamentError);
+      throw new Error(`Failed to update tournament: ${tournamentError.message}`);
     }
 
-    // Update dates if provided
-    if (tournamentData.dates) {
-      // Delete existing dates
+    // Update tournament dates if provided
+    if (dates) {
+      // First, delete existing dates
       const { error: deleteError } = await supabase
         .from('tournamentdates')
         .delete()
         .eq('tournament_id', tournamentId);
 
       if (deleteError) {
-        console.error('Error deleting old tournament dates:', deleteError);
-        throw new Error(`Failed to update tournament dates: ${deleteError.message}`);
+        console.error('Error deleting existing tournament dates:', deleteError);
+        throw new Error(`Failed to delete existing tournament dates: ${deleteError.message}`);
       }
 
-      // Insert new dates
-      const tournamentDates = tournamentData.dates.map(date => ({
-        tournament_id: tournamentId,
-        event_date: date
-      }));
+      // Then, insert new dates if any
+      if (dates.length > 0) {
+        const tournamentDatesData = dates.map(date => ({
+          tournament_id: tournamentId,
+          event_date: date
+        }));
 
-      const { error: insertError } = await supabase
-        .from('tournamentdates')
-        .insert(tournamentDates);
+        const { error: insertError } = await supabase
+          .from('tournamentdates')
+          .insert(tournamentDatesData);
 
-      if (insertError) {
-        console.error('Error inserting new tournament dates:', insertError);
-        throw new Error(`Failed to update tournament dates: ${insertError.message}`);
+        if (insertError) {
+          console.error('Error inserting new tournament dates:', insertError);
+          throw new Error(`Failed to insert new tournament dates: ${insertError.message}`);
+        }
       }
     }
 
-    console.log('Tournament updated successfully:', tournamentId);
     return true;
   } catch (error) {
     console.error('Error in updateTournament:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to update tournament: Unknown error occurred');
+    throw error;
   }
 }
 
@@ -914,9 +856,7 @@ export async function updateTournament(supabase: any, tournamentId: number, tour
  */
 export async function deleteTournament(supabase: any, tournamentId: number): Promise<boolean> {
   try {
-    console.log('Deleting tournament:', tournamentId);
-
-    // Delete tournament dates first (due to foreign key constraint)
+    // First delete tournament dates
     const { error: datesError } = await supabase
       .from('tournamentdates')
       .delete()
@@ -927,7 +867,7 @@ export async function deleteTournament(supabase: any, tournamentId: number): Pro
       throw new Error(`Failed to delete tournament dates: ${datesError.message}`);
     }
 
-    // Delete tournament
+    // Then delete the tournament
     const { error: tournamentError } = await supabase
       .from('tournaments')
       .delete()
@@ -938,13 +878,9 @@ export async function deleteTournament(supabase: any, tournamentId: number): Pro
       throw new Error(`Failed to delete tournament: ${tournamentError.message}`);
     }
 
-    console.log('Tournament deleted successfully:', tournamentId);
     return true;
   } catch (error) {
     console.error('Error in deleteTournament:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to delete tournament: Unknown error occurred');
+    throw error;
   }
 }

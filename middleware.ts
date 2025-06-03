@@ -2,9 +2,6 @@ import { type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
-  // TEMPORARY: Disable middleware for debugging
-  // Remove this bypass after testing
-  console.log('🚧 MIDDLEWARE BYPASSED FOR DEBUGGING')
   return await updateSession(request)
 }
 
