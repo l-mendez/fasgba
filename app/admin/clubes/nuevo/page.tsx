@@ -18,6 +18,39 @@ interface FormData {
   schedule: string
 }
 
+// Helper function to make authenticated API calls
+async function apiCall(endpoint: string, options: RequestInit = {}) {
+  const supabase = createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  if (!session) {
+    throw new Error('No hay sesión activa')
+  }
+
+  const url = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`
+  const config: RequestInit = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      ...options.headers
+    },
+    ...options
+  }
+
+  const response = await fetch(url, config)
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
+    throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
+  }
+  
+  if (response.status === 204) {
+    return null // No content
+  }
+  
+  return response.json()
+}
+
 export default function NuevoClubPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -54,19 +87,18 @@ export default function NuevoClubPage() {
     setIsLoading(true)
 
     try {
-      const { error } = await createClient()
-        .from('clubs')
-        .insert([
-          {
-            name: formData.name.trim(),
-            address: formData.address.trim() || null,
-            telephone: formData.telephone.trim() || null,
-            mail: formData.mail.trim() || null,
-            schedule: formData.schedule.trim() || null,
-          },
-        ])
+      const clubData = {
+        name: formData.name.trim(),
+        address: formData.address.trim() || null,
+        telephone: formData.telephone.trim() || null,
+        mail: formData.mail.trim() || null,
+        schedule: formData.schedule.trim() || null,
+      }
 
-      if (error) throw error
+      await apiCall('/clubs', {
+        method: 'POST',
+        body: JSON.stringify(clubData)
+      })
 
       // Redirect back to clubs list
       router.push("/admin/clubes")
