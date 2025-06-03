@@ -7,7 +7,6 @@ import {
   BarChart3,
   BookOpen,
   Calendar,
-  ChessKnight,
   FileText,
   GraduationCap,
   History,
@@ -141,10 +140,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
         <div className="flex flex-col flex-grow border-r border-amber/20 bg-background">
           <div className="flex h-14 items-center border-b border-amber/20 px-4">
-            <Link href="/admin" className="flex items-center space-x-2">
-              <Shield className="h-6 w-6 text-terracotta" />
-              <span className="font-bold text-terracotta">Admin</span>
-            </Link>
+          <Link href="/" className="mr-6 flex items-center space-x-2">
+            <span className="hidden font-bold text-terracotta sm:inline-block">
+              FASGBA
+            </span>
+          </Link>
           </div>
           <ScrollArea className="h-[calc(100vh-3.5rem)]">
             <SidebarContent />
@@ -167,7 +167,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <SheetTitle className="sr-only">Admin Navigation</SheetTitle>
               <div className="flex h-14 items-center border-b border-amber/20 px-4 -mx-6 -mt-6 mb-4">
                 <Link href="/admin" className="flex items-center space-x-2" onClick={() => setIsMobileOpen(false)}>
-                  <Shield className="h-6 w-6 text-terracotta" />
                   <span className="font-bold text-terracotta">Admin</span>
                 </Link>
               </div>
@@ -176,10 +175,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </ScrollArea>
             </SheetContent>
           </Sheet>
-          <div className="flex items-center space-x-2">
-            <Shield className="h-5 w-5 text-terracotta" />
-            <span className="font-semibold text-terracotta">Panel Admin</span>
+          <div className="flex-1 flex justify-center items-center">
+            <Link href="/" className="flex items-center space-x-2">
+              <span className="font-semibold text-terracotta">FASGBA</span>
+            </Link>
           </div>
+          {/* Spacer to balance the hamburger menu and center the title */}
+          <div className="w-10 h-10"></div>
         </div>
 
         {/* Main content */}

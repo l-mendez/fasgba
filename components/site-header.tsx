@@ -36,8 +36,7 @@ export function SiteHeader() {
       <div className="container flex h-14 items-center justify-between">
         <div className="mr-4 flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <ChessKnight className="h-6 w-6 text-terracotta" />
-            <span className="hidden font-bold text-terracotta sm:inline-block">
+            <span className="font-bold text-terracotta sm:inline-block">
               FASGBA
             </span>
           </Link>
