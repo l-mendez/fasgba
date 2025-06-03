@@ -36,6 +36,7 @@ interface Club {
   schedule: string | null
   // Extended properties for display
   adminCount?: number
+  delegado?: string
 }
 
 interface ClubAdmin {
@@ -113,6 +114,7 @@ async function deleteClub(clubId: number): Promise<void> {
 export default function AdminClubesPage() {
   const [clubes, setClubes] = useState<Club[]>([])
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedDelegadoFilter, setSelectedDelegadoFilter] = useState<string>('all')
   const [clubToDelete, setClubToDelete] = useState<number | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -214,11 +216,27 @@ export default function AdminClubesPage() {
     return null
   }
 
-  // Filter clubs by search term
-  const filteredClubes = clubes.filter(
-    (club) =>
-      club.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Filter clubs by search term and delegado filter
+  const filteredClubes = clubes.filter((club) => {
+    const search = searchTerm.toLowerCase().trim()
+    
+    // Apply delegado filter
+    if (selectedDelegadoFilter === 'con_delegado') {
+      if (!club.delegado && (club.adminCount || 0) === 0) return false
+    } else if (selectedDelegadoFilter === 'sin_delegado') {
+      if (club.delegado || (club.adminCount || 0) > 0) return false
+    }
+    
+    // Apply text search (only if there's a search term)
+    if (search) {
+      return club.name.toLowerCase().includes(search) ||
+             (club.mail && club.mail.toLowerCase().includes(search)) ||
+             (club.telephone && club.telephone.toLowerCase().includes(search)) ||
+             (club.delegado && club.delegado.toLowerCase().includes(search))
+    }
+    
+    return true
+  })
 
   // Apply sorting to filtered clubs
   const sortedAndFilteredClubes = getSortedClubes(filteredClubes)
@@ -284,7 +302,7 @@ export default function AdminClubesPage() {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Buscar por nombre o delegado..."
+            placeholder="Buscar por nombre, email, teléfono o delegado..."
             className="pl-8 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -295,15 +313,18 @@ export default function AdminClubesPage() {
             <DropdownMenuTrigger asChild>
               {/* @ts-ignore */}
               <Button variant="outline">
-                Filtrar
+                {selectedDelegadoFilter === 'all' ? 'Todos los clubes' :
+                 selectedDelegadoFilter === 'con_delegado' ? 'Con delegado' :
+                 selectedDelegadoFilter === 'sin_delegado' ? 'Sin delegado' : 'Filtrar'}
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[200px]">
-              <DropdownMenuLabel>Filtrar por</DropdownMenuLabel>
+              <DropdownMenuLabel>Filtrar por delegados</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSearchTerm("")}>Todos</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchTerm("@")}>Con delegado</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedDelegadoFilter('all')}>Todos los clubes</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedDelegadoFilter('con_delegado')}>Con delegado</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedDelegadoFilter('sin_delegado')}>Sin delegado</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <DropdownMenu>
