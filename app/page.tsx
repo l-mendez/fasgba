@@ -1,14 +1,44 @@
-'use client'
-
 import Link from "next/link"
 import { Calendar, ChevronLeft, ChevronRight, MapPin } from "lucide-react"
-import { ReactNode, useEffect, useState } from "react"
-import { getNews, getTournaments, getClubs, type NewsItem, type Tournament, type Club } from "@/lib/api"
+import { ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+
+// Types for the data structures
+interface NewsItem {
+  id: number
+  title: string
+  date: string
+  image: string | null
+  extract: string
+  tags: string[]
+  club_id: number | null
+  club: {
+    id: number
+    name: string
+  } | null
+}
+
+interface Tournament {
+  id: number
+  title: string
+  start_date: string
+  time: string | null
+  place: string | null
+  description: string | null
+  formatted_start_date?: string
+}
+
+interface Club {
+  id: number
+  name: string
+  address: string | null
+  telephone: string | null
+  mail: string | null
+}
 
 // Interface for processed news items (mapping API data to component props)
 interface Noticia {
@@ -23,6 +53,61 @@ interface Noticia {
 
 interface NoticiaProps {
   noticia: Noticia
+}
+
+// Server-side data fetching functions
+async function fetchNews(): Promise<NewsItem[]> {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/news?limit=5&orderBy=date&order=desc&include=club`, {
+      cache: 'no-store'
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch news')
+    }
+    
+    const data = await response.json()
+    return data.news || []
+  } catch (error) {
+    console.error('Error fetching news:', error)
+    return []
+  }
+}
+
+async function fetchTournaments(): Promise<Tournament[]> {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/tournaments?limit=3&status=upcoming`, {
+      cache: 'no-store'
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch tournaments')
+    }
+    
+    const data = await response.json()
+    return data || []
+  } catch (error) {
+    console.error('Error fetching tournaments:', error)
+    return []
+  }
+}
+
+async function fetchClubs(): Promise<Club[]> {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/clubs?limit=6`, {
+      cache: 'no-store'
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch clubs')
+    }
+    
+    const data = await response.json()
+    return data || []
+  } catch (error) {
+    console.error('Error fetching clubs:', error)
+    return []
+  }
 }
 
 // Helper function to convert API news to component format
@@ -172,59 +257,13 @@ function ClubCard({ club }: { club: Club }): ReactNode {
   )
 }
 
-export default function Home() {
-  const [news, setNews] = useState<NewsItem[]>([])
-  const [tournaments, setTournaments] = useState<Tournament[]>([])
-  const [clubs, setClubs] = useState<Club[]>([])
-
-  useEffect(() => {
-    const fetchNews = async () => {
-      try {
-        const response = await getNews({ 
-          limit: 5, 
-          orderBy: 'date', 
-          order: 'desc',
-          include: 'author,club'
-        })
-        setNews(response.news)
-      } catch (error) {
-        console.error('Failed to fetch news:', error)
-        setNews([])
-      }
-    }
-
-    const fetchTournaments = async () => {
-      try {
-        const response = await getTournaments({ 
-          limit: 3, 
-          status: 'upcoming',
-          format: 'display',
-          orderBy: 'start_date',
-          order: 'asc'
-        })
-        setTournaments(response)
-      } catch (error) {
-        console.error('Failed to fetch tournaments:', error)
-        setTournaments([])
-      }
-    }
-
-    const fetchClubs = async () => {
-      try {
-        const response = await getClubs({ 
-          hasContact: true
-        })
-        setClubs(response)
-      } catch (error) {
-        console.error('Failed to fetch clubs:', error)
-        setClubs([])
-      }
-    }
-
-    fetchNews()
-    fetchTournaments()
+export default async function Home() {
+  // Fetch all data in parallel on the server
+  const [news, tournaments, clubs] = await Promise.all([
+    fetchNews(),
+    fetchTournaments(),
     fetchClubs()
-  }, [])
+  ])
 
   // Process news data
   const noticias = news.map((item, index) => 
