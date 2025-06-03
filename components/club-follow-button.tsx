@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { followClub, unfollowClub } from "@/lib/clubUtils"
@@ -9,17 +9,26 @@ import { useAuth } from "@/hooks/useAuth"
 interface ClubFollowButtonProps {
   clubId: number
   initialIsFollowing: boolean
+  isUserAuthenticated: boolean
 }
 
-export function ClubFollowButton({ clubId, initialIsFollowing }: ClubFollowButtonProps) {
+export function ClubFollowButton({ clubId, initialIsFollowing, isUserAuthenticated }: ClubFollowButtonProps) {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
+  const [mounted, setMounted] = useState(false)
   const { user } = useAuth()
 
-  if (!user) {
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Don't render anything if user is not authenticated
+  if (!isUserAuthenticated) {
     return null
   }
 
   const handleToggleFollow = async () => {
+    if (!user) return
+    
     const newFollowState = !isFollowing
     
     // Optimistic UI update
@@ -46,6 +55,7 @@ export function ClubFollowButton({ clubId, initialIsFollowing }: ClubFollowButto
         isFollowing ? 'bg-amber/10' : ''
       }`}
       onClick={handleToggleFollow}
+      disabled={!mounted || !user}
     >
       <Heart className={`h-4 w-4 ${isFollowing ? 'fill-current' : ''}`} />
       <span className="sr-only">

@@ -85,7 +85,11 @@ async function ClubsList({ searchTerm }: { searchTerm?: string }) {
             <Button asChild className="w-full">
               <Link href={`/clubes/${club.id}`}>Ver Detalle</Link>
             </Button>
-            <ClubFollowButton clubId={club.id} initialIsFollowing={club.isFollowing} />
+            <ClubFollowButton 
+              clubId={club.id} 
+              initialIsFollowing={club.isFollowing} 
+              isUserAuthenticated={!!user}
+            />
           </CardFooter>
         </Card>
       ))}
@@ -129,14 +133,7 @@ export default async function ClubesPage({ searchParams }: PageProps) {
               </div>
             </div>
 
-            <Suspense fallback={
-              <div className="flex justify-center items-center py-12 min-h-[400px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-terracotta"></div>
-                <span className="ml-2 text-muted-foreground">Cargando clubes...</span>
-              </div>
-            }>
-              <ClubsList searchTerm={searchTerm} />
-            </Suspense>
+            <ClubsList searchTerm={searchTerm} />
           </div>
         </section>
       </main>
