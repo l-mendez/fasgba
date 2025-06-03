@@ -253,14 +253,6 @@ export default function ClubAdminDashboard() {
             <p className="text-muted-foreground">{adminClub.name}</p>
           )}
         </div>
-        <div className="flex items-center space-x-2">
-          <Button asChild className="w-full sm:w-auto">
-            <Link href="/club-admin/noticias/nueva">
-              <Plus className="mr-2 h-4 w-4" />
-              Nueva noticia
-            </Link>
-          </Button>
-        </div>
       </div>
       <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
