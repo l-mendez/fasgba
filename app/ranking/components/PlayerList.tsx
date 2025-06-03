@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +14,106 @@ interface PlayerListProps {
   currentPage: number;
   totalPages: number;
   totalPlayers: number;
+}
+
+interface PaginationControlsProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}
+
+function PaginationControls({ currentPage, totalPages, onPageChange }: PaginationControlsProps) {
+  const [pageInput, setPageInput] = useState(currentPage.toString());
+
+  // Update input when current page changes
+  useEffect(() => {
+    setPageInput(currentPage.toString());
+  }, [currentPage]);
+
+  const handlePageInputSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const page = parseInt(pageInput);
+    if (page >= 1 && page <= totalPages) {
+      onPageChange(page);
+    } else {
+      setPageInput(currentPage.toString()); // Reset to current page if invalid
+    }
+  };
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow empty string or numbers only
+    if (value === '' || /^\d+$/.test(value)) {
+      setPageInput(value);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center space-y-4">
+      <div className="text-sm text-muted-foreground">
+        Página {currentPage} de {totalPages}
+      </div>
+      
+      <div className="flex items-center space-x-2">
+        {/* Navigation buttons */}
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={currentPage === 1}
+          onClick={() => onPageChange(1)}
+          title="Primera página"
+          className="px-2"
+        >
+          <ChevronsLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={currentPage === 1}
+          onClick={() => onPageChange(currentPage - 1)}
+          title="Página anterior"
+          className="px-2"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        
+        {/* Page input */}
+        <form onSubmit={handlePageInputSubmit} className="flex items-center space-x-1">
+          <Input
+            type="text"
+            value={pageInput}
+            onChange={handlePageInputChange}
+            className="w-16 h-8 text-center text-sm"
+            placeholder="1"
+          />
+          <Button type="submit" size="sm" variant="outline" className="h-8 px-2" title="Ir a página">
+            <Search className="h-4 w-4" />
+          </Button>
+        </form>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={currentPage === totalPages}
+          onClick={() => onPageChange(currentPage + 1)}
+          title="Página siguiente"
+          className="px-2"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={currentPage === totalPages}
+          onClick={() => onPageChange(totalPages)}
+          title="Última página"
+          className="px-2"
+        >
+          <ChevronsRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export function PlayerList({ players, currentPage, totalPages, totalPlayers }: PlayerListProps) {
@@ -33,6 +133,12 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers }: P
     router.push(`?${params.toString()}`);
   }, [searchTerm, router, searchParams]);
 
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', page.toString());
+    router.push(`?${params.toString()}`);
+  };
+
   // Get unique categories
   const categories = [...new Set(players.map(player => player.categoria))];
 
@@ -49,6 +155,15 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers }: P
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+      </div>
+
+      {/* Top pagination */}
+      <div className="mb-6">
+        <PaginationControls 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
       </div>
 
       <Tabs defaultValue="all" className="w-full">
@@ -75,39 +190,16 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers }: P
         ))}
       </Tabs>
 
-      <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-        <div className="text-sm text-muted-foreground text-center sm:text-left">
+      {/* Bottom pagination */}
+      <div className="mt-6">
+        <div className="mb-2 text-sm text-muted-foreground text-center">
           Mostrando {players.length} de {totalPlayers} jugadores
         </div>
-        <div className="flex items-center justify-center sm:justify-end space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage === 1}
-            onClick={() => {
-              const params = new URLSearchParams(searchParams.toString());
-              params.set('page', (currentPage - 1).toString());
-              router.push(`?${params.toString()}`);
-            }}
-          >
-            Anterior
-          </Button>
-          <span className="text-sm px-2">
-            <span className="hidden sm:inline">Página </span>{currentPage} de {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage === totalPages}
-            onClick={() => {
-              const params = new URLSearchParams(searchParams.toString());
-              params.set('page', (currentPage + 1).toString());
-              router.push(`?${params.toString()}`);
-            }}
-          >
-            Siguiente
-          </Button>
-        </div>
+        <PaginationControls 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
       </div>
     </div>
   );
