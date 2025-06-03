@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
 export interface AuthButtonProps {
   email: string
@@ -13,6 +13,7 @@ export interface AuthButtonProps {
   children?: React.ReactNode
   mode: "signin" | "signup"
   onSuccess?: () => boolean
+  redirectTo?: string
 }
 
 export function AuthButton({ 
@@ -21,12 +22,39 @@ export function AuthButton({
   email,
   password,
   mode,
-  onSuccess
+  onSuccess,
+  redirectTo
 }: AuthButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // Get redirect destination
+  const getRedirectDestination = () => {
+    // Priority: explicit redirectTo prop > URL param > referrer > default
+    if (redirectTo) return redirectTo
+    
+    const redirectParam = searchParams?.get('redirect') || searchParams?.get('redirectTo')
+    if (redirectParam) return decodeURIComponent(redirectParam)
+    
+    // Check if we have a referrer that's not a login/signup page
+    if (typeof window !== 'undefined') {
+      const referrer = document.referrer
+      const currentOrigin = window.location.origin
+      if (referrer && referrer.startsWith(currentOrigin)) {
+        const referrerPath = new URL(referrer).pathname
+        // Don't redirect back to auth pages
+        if (!referrerPath.includes('/login') && !referrerPath.includes('/signup') && !referrerPath.includes('/confirmar-email')) {
+          return referrerPath
+        }
+      }
+    }
+    
+    // Default fallback
+    return '/admin'
+  }
 
   const handleClick = async () => {
     if (!email || !password) {
@@ -51,19 +79,7 @@ export function AuthButton({
           password,
         })
       } else {
-        // First check if the user already exists
-        const { data: existingUser } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-        
-        if (existingUser?.user) {
-          setError("Este email ya está registrado")
-          setIsLoading(false)
-          return
-        }
-
-        // If no existing user, proceed with signup
+        // Proceed with signup - let Supabase handle duplicate detection
         response = await supabase.auth.signUp({
           email,
           password,
@@ -73,28 +89,60 @@ export function AuthButton({
       const { data, error: authError } = response
 
       if (authError) {
-        if (authError.message === "Invalid login credentials") {
-          setError("Credenciales inválidas")
-        } else if (authError.message.includes("Email not confirmed")) {
-          setError("Confirma tu email antes de iniciar sesión")
-        } else if (authError.message.includes("already registered")) {
-          setError("Este email ya está registrado")
-        } else if (authError.message.includes("password")) {
-          setError("La contraseña debe tener al menos 6 caracteres")
-        } else if (authError.message.includes("email")) {
-          setError("Ingresa un email válido")
+        // Provide generic error messages to prevent user enumeration
+        if (mode === "signin") {
+          setError("Email o contraseña incorrectos")
         } else {
-          setError(`Error: ${authError.message}`)
+          // For signup, be more specific about common issues but still secure
+          if (authError.message.includes("password")) {
+            setError("La contraseña debe tener al menos 6 caracteres")
+          } else if (authError.message.includes("email") || authError.message.includes("invalid")) {
+            setError("Por favor verifica el formato de tu email")
+          } else {
+            setError("No se pudo crear la cuenta. Intenta nuevamente")
+          }
         }
         return
       }
 
       if (data?.user) {
+        const destination = getRedirectDestination()
+        
         if (mode === "signup") {
+          // Store credentials temporarily for auto sign-in attempt on confirmation page
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('signupCredentials', JSON.stringify({ email, password }))
+            sessionStorage.setItem('intendedDestination', destination)
+          }
+          
+          // For signup, try to sign in the user automatically (silently)
+          try {
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            })
+            
+            // If auto sign-in successful and user is confirmed, redirect to destination
+            if (!signInError && signInData?.user && signInData?.session) {
+              // Clear stored credentials since sign-in was successful
+              if (typeof window !== 'undefined') {
+                sessionStorage.removeItem('signupCredentials')
+                sessionStorage.removeItem('intendedDestination')
+              }
+              router.push(destination)
+              router.refresh()
+              return
+            }
+          } catch (autoSignInError) {
+            // Silently handle auto sign-in errors
+            console.log('Auto sign-in attempt failed, proceeding to email confirmation')
+          }
+          
+          // If auto sign-in failed or user needs confirmation, go to confirmation page
           router.push('/confirmar-email')
         } else {
-          // Force a page refresh to update the session
-          router.push('/admin')
+          // Successful sign-in - redirect to intended destination
+          router.push(destination)
           router.refresh() 
         }
       }
