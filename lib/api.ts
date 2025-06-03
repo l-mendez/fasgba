@@ -1,7 +1,23 @@
-// Use localhost for server-side requests, environment URL for client-side requests
-const API_BASE_URL = typeof window === 'undefined' 
-  ? 'http://localhost:3000' // Server-side: use localhost
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000') // Client-side: use full URL
+// Determine the base URL for API calls
+function getApiBaseUrl() {
+  // In production, try to use VERCEL_URL or NEXT_PUBLIC_API_URL for server-side calls
+  if (typeof window === 'undefined') {
+    // Server-side
+    if (process.env.VERCEL_URL) {
+      return `https://${process.env.VERCEL_URL}`
+    }
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL
+    }
+    // Fallback to localhost for development
+    return 'http://localhost:3000'
+  } else {
+    // Client-side
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+  }
+}
+
+const API_BASE_URL = getApiBaseUrl()
 
 // Types based on API documentation
 interface NewsItem {
