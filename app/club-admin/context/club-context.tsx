@@ -22,6 +22,7 @@ type ClubContextType = {
   handleClubChange: (clubId: string) => void
   isLoading: boolean
   error: string | null
+  hasNoClubs: boolean
 }
 
 // Crear el contexto con un valor por defecto
@@ -79,33 +80,13 @@ async function getAdminClubs(userId: string): Promise<Club[]> {
   }
 }
 
-function getMockClubs(): Club[] {
-  return [
-    { 
-      id: 1, 
-      name: "Club de Ajedrez Central", 
-      address: "Av. Corrientes 1234, CABA",
-      telephone: "+54-11-1234-5678",
-      mail: "admin@clubcentral.com",
-      schedule: "Lunes a Viernes 18:00-22:00"
-    },
-    { 
-      id: 2, 
-      name: "Club Gambito de Rey", 
-      address: "Calle San Martín 567, La Plata",
-      telephone: "+54-221-9876-5432",
-      mail: "contacto@gambitoderey.com",
-      schedule: "Martes y Jueves 19:00-23:00"
-    },
-  ]
-}
-
 // Proveedor del contexto
 export function ClubContextProvider({ children }: { children: ReactNode }) {
   const [selectedClub, setSelectedClub] = useState<Club | null>(null)
   const [clubesAdministrados, setClubesAdministrados] = useState<Club[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [hasNoClubs, setHasNoClubs] = useState(false)
   const { user } = useAuth()
 
   // Cargar clubes administrados al iniciar
@@ -116,6 +97,7 @@ export function ClubContextProvider({ children }: { children: ReactNode }) {
       try {
         setIsLoading(true)
         setError(null)
+        setHasNoClubs(false)
         
         // Get admin clubs for the current user
         const adminClubs = await getAdminClubs(user.id)
@@ -125,23 +107,19 @@ export function ClubContextProvider({ children }: { children: ReactNode }) {
           if (!selectedClub) {
             setSelectedClub(adminClubs[0])
           }
+          setHasNoClubs(false)
         } else {
-          // Fallback to mock data for testing
-          const mockClubs = getMockClubs()
-          setClubesAdministrados(mockClubs)
-          if (!selectedClub) {
-            setSelectedClub(mockClubs[0])
-          }
+          // User has no admin clubs - this is an unauthorized access scenario
+          setClubesAdministrados([])
+          setSelectedClub(null)
+          setHasNoClubs(true)
         }
       } catch (err) {
         console.error('Error loading admin clubs:', err)
         setError(err instanceof Error ? err.message : 'Error desconocido al cargar clubes')
-        // Fallback to mock data
-        const mockClubs = getMockClubs()
-        setClubesAdministrados(mockClubs)
-        if (!selectedClub) {
-          setSelectedClub(mockClubs[0])
-        }
+        setClubesAdministrados([])
+        setSelectedClub(null)
+        setHasNoClubs(true)
       } finally {
         setIsLoading(false)
       }
@@ -163,7 +141,8 @@ export function ClubContextProvider({ children }: { children: ReactNode }) {
     clubesAdministrados,
     handleClubChange,
     isLoading,
-    error
+    error,
+    hasNoClubs
   }
 
   return (

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { notFound } from "next/navigation"
 import { ArrowRight, CalendarDays, FileText, MessageSquare, Plus, Trophy, TrendingUp, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -27,7 +28,7 @@ interface ActivityItem {
 }
 
 export default function ClubAdminDashboard() {
-  const { selectedClub } = useClubContext()
+  const { selectedClub, isLoading: clubsLoading, hasNoClubs } = useClubContext()
   const [stats, setStats] = useState<ClubStats>({
     noticias: 0,
     torneos: 0,
@@ -38,6 +39,13 @@ export default function ClubAdminDashboard() {
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Check for unauthorized access once clubs are loaded
+  useEffect(() => {
+    if (!clubsLoading && hasNoClubs) {
+      notFound()
+    }
+  }, [clubsLoading, hasNoClubs])
 
   // Fetch real statistics from API
   useEffect(() => {
@@ -196,13 +204,14 @@ export default function ClubAdminDashboard() {
     )
   }
 
-  if (!selectedClub) {
+  // Show loading while clubs are being loaded or if no club is selected yet
+  if (clubsLoading || !selectedClub) {
     return (
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <h3 className="text-lg font-semibold mb-2">Selecciona un club</h3>
-            <p className="text-muted-foreground">Por favor selecciona un club del menú desplegable para ver las estadísticas.</p>
+            <h3 className="text-lg font-semibold mb-2">Cargando...</h3>
+            <p className="text-muted-foreground">Cargando información del club...</p>
           </div>
         </div>
       </div>

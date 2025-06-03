@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { notFound } from "next/navigation"
 import { Calendar, ChevronDown, Edit, Eye, MoreHorizontal, Plus, Search, Trash2, AlertCircle, Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
@@ -149,7 +150,7 @@ const getStatusText = (status: string) => {
 }
 
 export default function ClubAdminNoticiasPage() {
-  const { selectedClub } = useClubContext()
+  const { selectedClub, isLoading: clubsLoading, hasNoClubs } = useClubContext()
   const [noticias, setNoticias] = useState<ClubNews[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [noticiaToDelete, setNoticiaToDelete] = useState<number | null>(null)
@@ -160,6 +161,13 @@ export default function ClubAdminNoticiasPage() {
   const [sortBy, setSortBy] = useState<string | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
   const [originalOrder, setOriginalOrder] = useState<ClubNews[]>([])
+  
+  // Check for unauthorized access once clubs are loaded
+  useEffect(() => {
+    if (!clubsLoading && hasNoClubs) {
+      notFound()
+    }
+  }, [clubsLoading, hasNoClubs])
   
   // Cargar noticias del club seleccionado usando la API
   const loadNews = async () => {
@@ -309,16 +317,14 @@ export default function ClubAdminNoticiasPage() {
     }
   }
 
-  if (!selectedClub) {
+  // Show loading while clubs are being loaded or if no club is selected yet
+  if (clubsLoading || !selectedClub) {
     return (
       <div className="flex flex-col gap-8 p-8">
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Sin club seleccionado</AlertTitle>
-          <AlertDescription>
-            Selecciona un club en el menú lateral para gestionar sus noticias.
-          </AlertDescription>
-        </Alert>
+        <div className="text-center">
+          <h3 className="text-lg font-semibold mb-2">Cargando...</h3>
+          <p className="text-muted-foreground">Cargando información del club...</p>
+        </div>
       </div>
     )
   }
