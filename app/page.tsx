@@ -1,7 +1,6 @@
 import Link from "next/link"
 import { Calendar, ChevronLeft, ChevronRight, MapPin } from "lucide-react"
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
-import { cookies } from "next/headers"
+import { createClient } from "@/lib/supabase/server"
 import type { Database } from "@/lib/database.types"
 import { ReactNode } from "react"
 import type { Metadata } from 'next'
@@ -140,10 +139,7 @@ function NoticiaCard({ noticia }: NoticiaProps): ReactNode {
 }
 
 export default async function Home() {
-  const cookieStore = await cookies()
-  const supabase = createServerComponentClient<Database>({ 
-    cookies: () => cookieStore
-  })
+  const supabase = await createClient()
 
   try {
     const { data: { session } } = await supabase.auth.getSession()

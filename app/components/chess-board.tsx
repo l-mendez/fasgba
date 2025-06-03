@@ -16,8 +16,8 @@ if (typeof window !== 'undefined') {
 const ReactChessboard = dynamic(() => import('react-chessboard').then(mod => mod.Chessboard), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-[300px] bg-muted/50 animate-pulse flex items-center justify-center">
-      Cargando tablero...
+    <div className="w-full h-[250px] sm:h-[300px] bg-muted/50 animate-pulse flex items-center justify-center rounded-lg">
+      <span className="text-muted-foreground text-sm">Cargando tablero...</span>
     </div>
   )
 })
@@ -32,7 +32,7 @@ interface ChessBoardProps {
 export default function ChessBoard({ 
   fen, 
   pgn, 
-  width = 500,
+  width = 400,
   onPositionChange 
 }: ChessBoardProps) {
   const [currentPosition, setCurrentPosition] = useState(fen)
@@ -149,12 +149,22 @@ export default function ChessBoard({
   
   useEffect(() => {
     const updateWidth = () => {
-      // Make the board responsive
+      // Make the board responsive with better mobile sizing
       const containerWidth = window.innerWidth;
-      if (containerWidth < 600) {
-        setBoardWidth(Math.min(containerWidth - 40, width));
+      const availableWidth = containerWidth - 32; // Account for padding
+      
+      if (containerWidth < 480) {
+        // Extra small screens (phones in portrait)
+        setBoardWidth(Math.min(availableWidth, 300));
+      } else if (containerWidth < 640) {
+        // Small screens (phones in landscape)
+        setBoardWidth(Math.min(availableWidth, 350));
+      } else if (containerWidth < 768) {
+        // Medium screens (small tablets)
+        setBoardWidth(Math.min(availableWidth, 400));
       } else {
-        setBoardWidth(width);
+        // Large screens
+        setBoardWidth(Math.min(availableWidth, width));
       }
     };
     
@@ -170,58 +180,62 @@ export default function ChessBoard({
   
   if (!isReady) {
     return (
-      <div className="w-full h-[300px] bg-muted/50 animate-pulse flex items-center justify-center">
-        Cargando tablero...
+      <div className="w-full h-[250px] sm:h-[300px] bg-muted/50 animate-pulse flex items-center justify-center rounded-lg">
+        <span className="text-muted-foreground text-sm">Cargando tablero...</span>
       </div>
     );
   }
   
   return (
-    <div className="flex flex-col items-center">
-      <div style={{ maxWidth: '100%', width: boardWidth }}>
+    <div className="flex flex-col items-center w-full">
+      <div className="max-w-full overflow-hidden" style={{ width: boardWidth }}>
         {isReady && (
           <ReactChessboard 
             position={currentPosition} 
             boardWidth={boardWidth}
             areArrowsAllowed={true}
             customBoardStyle={{
-              borderRadius: '4px',
-              boxShadow: '0 5px 15px rgba(0, 0, 0, 0.1)'
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
             }}
           />
         )}
       </div>
       
       {pgn && moves.length > 0 && (
-        <div className="mt-4 flex justify-center space-x-2">
+        <div className="mt-3 sm:mt-4 flex flex-wrap justify-center gap-1 sm:gap-2 px-2">
           <button 
             onClick={goToStart}
-            className="px-2 py-1 bg-amber/20 hover:bg-amber/30 rounded text-amber-dark text-sm"
+            className="px-3 py-2 bg-amber/20 hover:bg-amber/30 rounded text-amber-dark text-sm font-medium min-w-[36px] disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={moveIndex === 0}
+            title="Ir al inicio"
           >
             «
           </button>
           <button 
             onClick={goToPrevMove}
-            className="px-2 py-1 bg-amber/20 hover:bg-amber/30 rounded text-amber-dark text-sm"
+            className="px-3 py-2 bg-amber/20 hover:bg-amber/30 rounded text-amber-dark text-sm font-medium min-w-[36px] disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={moveIndex === 0}
+            title="Movimiento anterior"
           >
             ‹
           </button>
-          <span className="px-2 py-1 bg-muted rounded text-sm">
+          <span className="px-3 py-2 bg-muted rounded text-sm font-medium min-w-[60px] text-center">
             {moveIndex} / {moves.length}
           </span>
           <button 
             onClick={goToNextMove}
-            className="px-2 py-1 bg-amber/20 hover:bg-amber/30 rounded text-amber-dark text-sm"
+            className="px-3 py-2 bg-amber/20 hover:bg-amber/30 rounded text-amber-dark text-sm font-medium min-w-[36px] disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={moveIndex === moves.length}
+            title="Siguiente movimiento"
           >
             ›
           </button>
           <button 
             onClick={goToEnd}
-            className="px-2 py-1 bg-amber/20 hover:bg-amber/30 rounded text-amber-dark text-sm"
+            className="px-3 py-2 bg-amber/20 hover:bg-amber/30 rounded text-amber-dark text-sm font-medium min-w-[36px] disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={moveIndex === moves.length}
+            title="Ir al final"
           >
             »
           </button>

@@ -3,12 +3,12 @@
 import Link from "next/link"
 import dynamic from "next/dynamic"
 import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 
 // Simple placeholder loader
 const ChessBoardLoader = () => (
-  <div className="w-full h-[300px] bg-muted/50 animate-pulse flex items-center justify-center">
-    Cargando tablero...
+  <div className="w-full h-[250px] sm:h-[300px] bg-muted/50 animate-pulse flex items-center justify-center rounded-lg">
+    <span className="text-muted-foreground text-sm">Cargando tablero...</span>
   </div>
 );
 
@@ -59,6 +59,7 @@ export default function ChessGameBlock({
     async function fetchUserDetails(playerId: string, setPlayerDetails: React.Dispatch<React.SetStateAction<UserDetails | null>>, setIsLoading: React.Dispatch<React.SetStateAction<boolean>>) {
       try {
         setIsLoading(true);
+        const supabase = createClient();
         const { data, error } = await supabase
           .from('users')
           .select('id, name, surname, profile_picture')
@@ -141,58 +142,58 @@ export default function ChessGameBlock({
   // Create the Lichess analysis URL
   const getLichessUrl = () => {
     // If we have PGN, use that for the full game analysis
-    if (pgn && encodedPgn) {
-      return `https://lichess.org/analysis?pgn=${encodedPgn}`;
+    if (pgn) {
+      return `https://lichess.org/analysis?pgn=${encodeURIComponent(pgn)}`;
     }
     // Otherwise just use the current position FEN
     return `https://lichess.org/analysis/${encodeURIComponent(currentFen)}`;
   };
   
   return (
-    <div className="my-6 p-4 bg-muted rounded-md">
+    <div className="my-4 sm:my-6 p-3 sm:p-4 md:p-6 bg-muted/30 rounded-lg border border-amber/10">
       {hasPlayerInfo && (
-        <div className="mb-4 border-b pb-2">
-          <div className="flex justify-between text-sm font-medium">
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-white border border-gray-300 rounded-full mr-2"></div>
-              <span>{whitePlayerElement}</span>
+        <div className="mb-3 sm:mb-4 pb-3 border-b border-amber/20">
+          <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-4">
+            <div className="flex items-center justify-center sm:justify-start">
+              <div className="w-3 h-3 bg-white border border-gray-400 rounded-full mr-2 flex-shrink-0"></div>
+              <div className="text-sm sm:text-base font-medium text-center sm:text-left">
+                {whitePlayerElement}
+              </div>
             </div>
-            <div className="text-xs">vs</div>
-            <div className="flex items-center">
-              <span>{blackPlayerElement}</span>
-              <div className="w-3 h-3 bg-black border border-gray-300 rounded-full ml-2"></div>
+            
+            <div className="text-xs sm:text-sm text-muted-foreground text-center font-medium">
+              vs
+            </div>
+            
+            <div className="flex items-center justify-center sm:justify-end">
+              <div className="text-sm sm:text-base font-medium text-center sm:text-right">
+                {blackPlayerElement}
+              </div>
+              <div className="w-3 h-3 bg-black border border-gray-400 rounded-full ml-2 flex-shrink-0"></div>
             </div>
           </div>
         </div>
       )}
       
-      <ChessBoard 
-        fen={fen} 
-        pgn={pgn} 
-        onPositionChange={handlePositionChange}
-      />
+      <div className="flex justify-center">
+        <ChessBoard 
+          fen={fen} 
+          pgn={pgn} 
+          onPositionChange={handlePositionChange}
+          width={400}
+        />
+      </div>
       
       {pgn && (
-        <details className="mt-4">
-          <summary className="cursor-pointer text-amber-dark hover:underline">
+        <details className="mt-3 sm:mt-4">
+          <summary className="cursor-pointer text-amber-dark hover:underline text-sm sm:text-base font-medium">
             Ver notación PGN
           </summary>
-          <pre className="mt-2 p-2 bg-background rounded border overflow-x-auto text-xs">
+          <pre className="mt-2 p-3 bg-background/50 rounded border border-amber/20 overflow-x-auto text-xs sm:text-sm font-mono">
             {pgn}
           </pre>
         </details>
       )}
-      {/* Temporarily disabled Lichess analysis button
-      <p className="text-center text-sm mt-4">
-        <Link 
-          href={getLichessUrl()}
-          target="_blank" 
-          className="text-amber-dark hover:underline"
-        >
-          Analizar en Lichess
-        </Link>
-      </p>
-      */}
     </div>
   )
 } 

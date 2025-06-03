@@ -1,5 +1,4 @@
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
-import { cookies } from "next/headers"
+import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
 import { Calendar, ChevronLeft } from "lucide-react"
 
@@ -29,9 +28,7 @@ interface News {
 
 // Server component
 export default async function NoticiaPage({ params }: { params: Promise<{ id: string }> }) {
-  const supabase = createServerComponentClient({ 
-    cookies
-  })
+  const supabase = await createClient()
   
   // Await params before using its properties (Next.js 15 requirement)
   const { id } = await params
@@ -60,11 +57,11 @@ export default async function NoticiaPage({ params }: { params: Promise<{ id: st
     return (
       <div className="flex min-h-screen flex-col">
         <SiteHeader />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-terracotta mb-4">Noticia no encontrada</h1>
-            <p className="text-muted-foreground mb-6">La noticia que estás buscando no existe o ha sido eliminada.</p>
-            <Button asChild className="bg-terracotta hover:bg-terracotta/90 text-white">
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center max-w-md">
+            <h1 className="text-xl sm:text-2xl font-bold text-terracotta mb-3 sm:mb-4">Noticia no encontrada</h1>
+            <p className="text-muted-foreground mb-4 sm:mb-6 text-sm sm:text-base">La noticia que estás buscando no existe o ha sido eliminada.</p>
+            <Button asChild className="bg-terracotta hover:bg-terracotta/90 text-white text-sm sm:text-base">
               <Link href="/noticias">Volver a noticias</Link>
             </Button>
           </div>
@@ -89,6 +86,12 @@ export default async function NoticiaPage({ params }: { params: Promise<{ id: st
     .order('date', { ascending: false })
     .limit(2)
 
-  return <NewsContentWrapper newsItem={newsItem} relatedNews={relatedNews || []} />
+  // Transform the newsItem to match the News interface
+  const transformedNewsItem: News = {
+    ...newsItem,
+    club: Array.isArray(newsItem.club) ? newsItem.club[0] || null : newsItem.club
+  }
+
+  return <NewsContentWrapper newsItem={transformedNewsItem} relatedNews={relatedNews || []} />
 }
 
