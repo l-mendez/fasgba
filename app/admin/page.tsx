@@ -1,12 +1,9 @@
-"use client"
-
 import Link from "next/link"
 import { FileText, Home, Plus, Trophy, Users } from "lucide-react"
-import { useState, useEffect } from "react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/server"
 
 // Type definitions for our stats
 interface DashboardStats {
@@ -22,76 +19,128 @@ interface DashboardStats {
   torneosActivos: number
   torneosProximos: number
   crecimientoMensual: string
-  loading: boolean
-  error?: string
 }
 
-// Helper function to make authenticated API calls
-async function apiCall(endpoint: string) {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  if (!session?.access_token) {
-    throw new Error('No authentication token available')
-  }
+// Server-side function to fetch dashboard statistics
+async function getDashboardStats(): Promise<DashboardStats> {
+  try {
+    const supabase = await createClient()
+    
+    // Get current date information
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    
+    // Fetch all statistics in parallel
+    const [
+      usersCount,
+      usersThisMonth,
+      usersToday,
+      verifiedUsers,
+      newsCount,
+      newsThisMonth,
+      clubsCount,
+      clubsWithContact,
+      tournamentsCount,
+      activeTournaments,
+      upcomingTournaments
+    ] = await Promise.all([
+      // Total users
+      supabase.from('profiles').select('*', { count: 'exact', head: true }),
+      
+      // Users this month
+      supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfMonth.toISOString()),
+      
+      // Users today
+      supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfToday.toISOString()),
+      
+      // Verified users (assuming email_verified field exists)
+      supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('email_verified', true),
+      
+      // Total news
+      supabase.from('news').select('*', { count: 'exact', head: true }),
+      
+      // News this month
+      supabase
+        .from('news')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfMonth.toISOString()),
+      
+      // Total clubs
+      supabase.from('clubs').select('*', { count: 'exact', head: true }),
+      
+      // Clubs with contact info
+      supabase
+        .from('clubs')
+        .select('*', { count: 'exact', head: true })
+        .or('mail.neq.null,telephone.neq.null'),
+      
+      // Total tournaments
+      supabase.from('tournaments').select('*', { count: 'exact', head: true }),
+      
+      // Active tournaments (assuming status field exists)
+      supabase
+        .from('tournaments')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active'),
+      
+      // Upcoming tournaments
+      supabase
+        .from('tournaments')
+        .select('*', { count: 'exact', head: true })
+        .gte('start_date', now.toISOString())
+    ])
 
-  const response = await fetch(`/api${endpoint}`, {
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-  })
+    // Calculate growth percentage
+    const totalUsers = usersCount.count || 0
+    const newUsersThisMonth = usersThisMonth.count || 0
+    const growthRate = totalUsers > 0 ? ((newUsersThisMonth / totalUsers) * 100).toFixed(1) : "0"
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Network error' }))
-    throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
-  }
-
-  return response.json()
-}
-
-export default function AdminDashboard() {
-  const [stats, setStats] = useState<DashboardStats>({
-    usuarios: 0,
-    usuariosNuevos: 0,
-    usuariosNuevosHoy: 0,
-    usuariosVerificados: 0,
-    noticias: 0,
-    noticiasEstesMes: 0,
-    clubes: 0,
-    clubesConContacto: 0,
-    torneos: 0,
-    torneosActivos: 0,
-    torneosProximos: 0,
-    crecimientoMensual: "0%",
-    loading: true,
-  })
-
-  // Load actual statistics from the new admin stats API
-  useEffect(() => {
-    async function loadStats() {
-      try {
-        setStats(prev => ({ ...prev, loading: true, error: undefined }))
-
-        // Fetch statistics from the dedicated admin stats endpoint
-        const statsData = await apiCall('/admin/stats')
-
-        setStats({
-          ...statsData,
-          loading: false
-        })
-      } catch (error) {
-        console.error('Error loading dashboard stats:', error)
-        setStats(prev => ({
-          ...prev,
-          loading: false,
-          error: error instanceof Error ? error.message : 'Failed to load statistics'
-        }))
-      }
+    return {
+      usuarios: totalUsers,
+      usuariosNuevos: newUsersThisMonth,
+      usuariosNuevosHoy: usersToday.count || 0,
+      usuariosVerificados: verifiedUsers.count || 0,
+      noticias: newsCount.count || 0,
+      noticiasEstesMes: newsThisMonth.count || 0,
+      clubes: clubsCount.count || 0,
+      clubesConContacto: clubsWithContact.count || 0,
+      torneos: tournamentsCount.count || 0,
+      torneosActivos: activeTournaments.count || 0,
+      torneosProximos: upcomingTournaments.count || 0,
+      crecimientoMensual: `${growthRate}%`
     }
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error)
+    // Return default values if there's an error
+    return {
+      usuarios: 0,
+      usuariosNuevos: 0,
+      usuariosNuevosHoy: 0,
+      usuariosVerificados: 0,
+      noticias: 0,
+      noticiasEstesMes: 0,
+      clubes: 0,
+      clubesConContacto: 0,
+      torneos: 0,
+      torneosActivos: 0,
+      torneosProximos: 0,
+      crecimientoMensual: "0%"
+    }
+  }
+}
 
-    loadStats()
-  }, [])
+export default async function AdminDashboard() {
+  const stats = await getDashboardStats()
 
   return (
     <div className="flex-1 space-y-4">
@@ -102,19 +151,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {stats.error && (
-        <div className="rounded-md bg-red-50 p-4">
-          <div className="flex">
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Error cargando estadísticas</h3>
-              <div className="mt-2 text-sm text-red-700">
-                <p>{stats.error}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -123,10 +159,10 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl md:text-2xl font-bold">
-              {stats.loading ? "..." : stats.usuarios.toLocaleString()}
+              {stats.usuarios.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
-              +{stats.loading ? "..." : stats.usuariosNuevos} nuevos este mes
+              +{stats.usuariosNuevos} nuevos este mes
             </p>
           </CardContent>
         </Card>
@@ -137,10 +173,10 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl md:text-2xl font-bold">
-              {stats.loading ? "..." : stats.noticias.toLocaleString()}
+              {stats.noticias.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
-              +{stats.loading ? "..." : stats.noticiasEstesMes} este mes
+              +{stats.noticiasEstesMes} este mes
             </p>
           </CardContent>
         </Card>
@@ -151,10 +187,10 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl md:text-2xl font-bold">
-              {stats.loading ? "..." : stats.torneosActivos}
+              {stats.torneosActivos}
             </div>
             <p className="text-xs text-muted-foreground">
-              {stats.loading ? "..." : stats.torneosProximos} próximos, {stats.loading ? "..." : stats.torneos} totales
+              {stats.torneosProximos} próximos, {stats.torneos} totales
             </p>
           </CardContent>
         </Card>
@@ -165,10 +201,10 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl md:text-2xl font-bold">
-              {stats.loading ? "..." : stats.clubes}
+              {stats.clubes}
             </div>
             <p className="text-xs text-muted-foreground">
-              {stats.loading ? "..." : stats.clubesConContacto} con información de contacto
+              {stats.clubesConContacto} con información de contacto
             </p>
           </CardContent>
         </Card>
@@ -183,56 +219,45 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-8">
-              {stats.loading ? (
-                <div className="flex items-center space-x-4">
-                  <div className="animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                  </div>
+              <div className="flex items-center">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    {stats.usuariosNuevosHoy > 0 ? 
+                      `${stats.usuariosNuevosHoy} nuevo${stats.usuariosNuevosHoy > 1 ? 's' : ''} usuario${stats.usuariosNuevosHoy > 1 ? 's' : ''} registrado${stats.usuariosNuevosHoy > 1 ? 's' : ''} hoy` :
+                      stats.usuariosNuevos > 0 ? "Nuevos usuarios este mes" : "Sistema inicializado"
+                    }
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {stats.usuariosVerificados} usuarios verificados
+                  </p>
                 </div>
-              ) : (
-                <>
-                  <div className="flex items-center">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {stats.usuariosNuevosHoy > 0 ? 
-                          `${stats.usuariosNuevosHoy} nuevo${stats.usuariosNuevosHoy > 1 ? 's' : ''} usuario${stats.usuariosNuevosHoy > 1 ? 's' : ''} registrado${stats.usuariosNuevosHoy > 1 ? 's' : ''} hoy` :
-                          stats.usuariosNuevos > 0 ? "Nuevos usuarios este mes" : "Sistema inicializado"
-                        }
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {stats.usuariosVerificados} usuarios verificados
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {stats.noticiasEstesMes > 0 ? 
-                          `${stats.noticiasEstesMes} noticia${stats.noticiasEstesMes > 1 ? 's' : ''} este mes` :
-                          stats.noticias > 0 ? "Noticias disponibles" : "Sistema configurado"
-                        }
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Crecimiento: {stats.crecimientoMensual}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {stats.torneosActivos > 0 ? 
-                          `${stats.torneosActivos} torneo${stats.torneosActivos > 1 ? 's' : ''} activo${stats.torneosActivos > 1 ? 's' : ''}` :
-                          stats.torneosProximos > 0 ? `${stats.torneosProximos} torneos próximos` : "Torneos listos"
-                        }
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Total: {stats.torneos} torneos
-                      </p>
-                    </div>
-                  </div>
-                </>
-              )}
+              </div>
+              <div className="flex items-center">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    {stats.noticiasEstesMes > 0 ? 
+                      `${stats.noticiasEstesMes} noticia${stats.noticiasEstesMes > 1 ? 's' : ''} este mes` :
+                      stats.noticias > 0 ? "Noticias disponibles" : "Sistema configurado"
+                    }
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Crecimiento: {stats.crecimientoMensual}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    {stats.torneosActivos > 0 ? 
+                      `${stats.torneosActivos} torneo${stats.torneosActivos > 1 ? 's' : ''} activo${stats.torneosActivos > 1 ? 's' : ''}` :
+                      stats.torneosProximos > 0 ? `${stats.torneosProximos} torneos próximos` : "Torneos listos"
+                    }
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Total: {stats.torneos} torneos
+                  </p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
