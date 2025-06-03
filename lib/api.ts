@@ -1,4 +1,7 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+// Use localhost for server-side requests, environment URL for client-side requests
+const API_BASE_URL = typeof window === 'undefined' 
+  ? 'http://localhost:3000' // Server-side: use localhost
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000') // Client-side: use full URL
 
 // Types based on API documentation
 interface NewsItem {
