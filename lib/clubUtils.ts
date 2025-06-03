@@ -24,6 +24,11 @@ export interface ClubWithStats extends Club {
   newsCount: number
 }
 
+// Club with follow state for UI
+export interface ClubWithFollowState extends Club {
+  isFollowing: boolean
+}
+
 // Club member information (now just from auth.users)
 export interface ClubMember {
   id: string // auth UUID
@@ -797,6 +802,47 @@ export async function getClubFollowers(clubId: number): Promise<{
     return data
   } catch (error) {
     console.error('Error fetching club followers:', error)
+    throw error
+  }
+}
+
+/**
+ * Server-side function to get clubs with follow status for a specific user
+ * Used for SSR
+ */
+export async function getClubsWithFollowStatus(
+  authId: string | null, 
+  searchTerm?: string
+): Promise<ClubWithFollowState[]> {
+  try {
+    const clubsData = searchTerm ? 
+      await searchClubsByName(searchTerm) : 
+      await getAllClubs()
+    
+    if (!authId) {
+      // If no user, return clubs with isFollowing: false
+      return clubsData.map(club => ({ ...club, isFollowing: false }))
+    }
+    
+    // Get all clubs the user follows
+    const { data: followRelations, error } = await supabase
+      .from('user_follows_club')
+      .select('club_id')
+      .eq('auth_id', authId)
+    
+    if (error) {
+      console.error('Error fetching follow relations:', error)
+      return clubsData.map(club => ({ ...club, isFollowing: false }))
+    }
+    
+    const followedClubIds = new Set(followRelations?.map(r => r.club_id) || [])
+    
+    return clubsData.map(club => ({
+      ...club,
+      isFollowing: followedClubIds.has(club.id)
+    }))
+  } catch (error) {
+    console.error('Error in getClubsWithFollowStatus:', error)
     throw error
   }
 }

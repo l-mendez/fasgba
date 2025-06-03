@@ -1,134 +1,101 @@
-"use client"
-
-import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Mail, MapPin, Phone, Heart, Search, Loader2 } from "lucide-react"
+import { Mail, MapPin, Phone } from "lucide-react"
+import { Suspense } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-import { Badge } from "@/components/ui/badge"
-import { 
-  getAllClubs, 
-  searchClubsByName, 
-  isUserFollowingClub, 
-  followClub, 
-  unfollowClub,
-  type Club 
-} from "@/lib/clubUtils"
-import { useAuth } from "@/hooks/useAuth"
+import { getClubsWithFollowStatus, type ClubWithFollowState } from "@/lib/clubUtils"
+import { getCurrentUserServer } from "@/lib/auth-server"
+import { ClubFollowButton } from "@/components/club-follow-button"
+import { ClubSearch } from "@/components/club-search"
 
-interface ClubWithFollowState extends Club {
-  isFollowing: boolean
+interface PageProps {
+  searchParams: Promise<{ search?: string }>
 }
 
-export default function ClubesPage() {
-  const [clubs, setClubs] = useState<ClubWithFollowState[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const { user, isLoading: authLoading } = useAuth()
+async function ClubsList({ searchTerm }: { searchTerm?: string }) {
+  const user = await getCurrentUserServer()
+  const clubs = await getClubsWithFollowStatus(user?.id || null, searchTerm)
 
-  // Load clubs when user authentication state changes
-  useEffect(() => {
-    if (!authLoading) {
-      loadClubs()
-    }
-  }, [user, authLoading])
-
-  const loadClubs = async () => {
-    try {
-      setLoading(true)
-      const clubsData = await getAllClubs()
-      
-      // Load additional data for each club
-      const clubsWithExtraData = await Promise.all(
-        clubsData.map(async (club) => {
-          const isFollowing = user ? await isUserFollowingClub(club.id, user.id) : false
-          
-          return {
-            ...club,
-            isFollowing
-          }
-        })
-      )
-      
-      setClubs(clubsWithExtraData)
-    } catch (error) {
-      console.error('Error loading clubs:', error)
-    } finally {
-      setLoading(false)
-    }
+  if (clubs.length === 0) {
+    return (
+      <div className="text-center py-12 min-h-[400px] flex flex-col justify-center">
+        <h3 className="text-lg font-semibold text-muted-foreground mb-2">
+          {searchTerm ? "No se encontraron clubes" : "No hay clubes disponibles"}
+        </h3>
+        <p className="text-muted-foreground">
+          {searchTerm ? "Intenta con otros términos de búsqueda." : "Vuelve más tarde para ver los clubes afiliados."}
+        </p>
+        {searchTerm && (
+          <Button asChild variant="outline" className="mt-4 mx-auto">
+            <Link href="/clubes">Ver todos los clubes</Link>
+          </Button>
+        )}
+      </div>
+    )
   }
 
-  const handleSearch = async (term: string) => {
-    setSearchTerm(term)
-    if (term.trim() === "") {
-      loadClubs()
-      return
-    }
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 min-h-[400px] transition-opacity duration-200">
+      {clubs.map((club) => (
+        <Card key={club.id} className="flex flex-col group hover:border-amber transition-colors">
+          <CardHeader>
+            <CardTitle>
+              <Link href={`/clubes/${club.id}`} className="text-terracotta hover:underline">
+                {club.name}
+              </Link>
+            </CardTitle>
+            <CardDescription>
+              <div className="flex items-center gap-2 mt-2">
+                {/* Member count removed as it's no longer used */}
+              </div>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1">
+            <div className="space-y-4">
+              {club.address && (
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <span className="text-sm">{club.address}</span>
+                </div>
+              )}
+              {club.telephone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="h-5 w-5 text-muted-foreground shrink-0" />
+                  <span className="text-sm">{club.telephone}</span>
+                </div>
+              )}
+              {club.mail && (
+                <div className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
+                  <span className="text-sm">{club.mail}</span>
+                </div>
+              )}
+              {club.schedule && (
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Horarios de actividad:</h4>
+                  <p className="text-sm text-muted-foreground">{club.schedule}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+          <CardFooter className="flex gap-2">
+            <Button asChild className="w-full">
+              <Link href={`/clubes/${club.id}`}>Ver Detalle</Link>
+            </Button>
+            <ClubFollowButton clubId={club.id} initialIsFollowing={club.isFollowing} />
+          </CardFooter>
+        </Card>
+      ))}
+    </div>
+  )
+}
 
-    try {
-      setLoading(true)
-      const searchResults = await searchClubsByName(term)
-      
-      const clubsWithExtraData = await Promise.all(
-        searchResults.map(async (club) => {
-          const isFollowing = user ? await isUserFollowingClub(club.id, user.id) : false
-          
-          return {
-            ...club,
-            isFollowing
-          }
-        })
-      )
-      
-      setClubs(clubsWithExtraData)
-    } catch (error) {
-      console.error('Error searching clubs:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleToggleFollow = async (clubId: number) => {
-    if (!user) return
-
-    const club = clubs.find(c => c.id === clubId)
-    if (!club) return
-
-    // Optimistic UI update - update state immediately
-    const newFollowState = !club.isFollowing
-    setClubs(clubs.map(c => 
-      c.id === clubId 
-        ? { ...c, isFollowing: newFollowState }
-        : c
-    ))
-
-    try {
-      // Perform the API call in the background
-      if (club.isFollowing) {
-        await unfollowClub(clubId, user.id)
-      } else {
-        await followClub(clubId, user.id)
-      }
-      
-      // API call succeeded - the optimistic update was correct, no need to change anything
-    } catch (error) {
-      // API call failed - revert the optimistic update
-      setClubs(clubs.map(c => 
-        c.id === clubId 
-          ? { ...c, isFollowing: club.isFollowing } // Revert to original state
-          : c
-      ))
-      
-      console.error('Error toggling follow status:', error)
-      
-      // Optional: Show a toast notification or alert to the user
-      // You could add a toast library here to show user-friendly error messages
-    }
-  }
+export default async function ClubesPage({ searchParams }: PageProps) {
+  const resolvedSearchParams = await searchParams
+  const searchTerm = resolvedSearchParams.search
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -156,112 +123,20 @@ export default function ClubesPage() {
                     Encuentra información detallada sobre cada club afiliado a FASGBA
                   </p>
                 </div>
-                <div className="w-full md:w-1/3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      type="search" 
-                      placeholder="Buscar club..." 
-                      className="w-full pl-10" 
-                      value={searchTerm}
-                      onChange={(e) => handleSearch(e.target.value)}
-                    />
-                  </div>
-                </div>
+                <Suspense fallback={<div className="w-full md:w-1/3 h-10 bg-muted animate-pulse rounded" />}>
+                  <ClubSearch />
+                </Suspense>
               </div>
             </div>
 
-            {loading || authLoading ? (
+            <Suspense fallback={
               <div className="flex justify-center items-center py-12 min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-terracotta" />
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-terracotta"></div>
                 <span className="ml-2 text-muted-foreground">Cargando clubes...</span>
               </div>
-            ) : clubs.length === 0 ? (
-              <div className="text-center py-12 min-h-[400px] flex flex-col justify-center">
-                <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-                  {searchTerm ? "No se encontraron clubes" : "No hay clubes disponibles"}
-                </h3>
-                <p className="text-muted-foreground">
-                  {searchTerm ? "Intenta con otros términos de búsqueda." : "Vuelve más tarde para ver los clubes afiliados."}
-                </p>
-                {searchTerm && (
-                  <Button 
-                    onClick={() => handleSearch("")} 
-                    variant="outline" 
-                    className="mt-4 mx-auto"
-                  >
-                    Ver todos los clubes
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 min-h-[400px] transition-opacity duration-200">
-                {clubs.map((club) => (
-                  <Card key={club.id} className="flex flex-col group hover:border-amber transition-colors">
-                    <CardHeader>
-                      <CardTitle>
-                        <Link href={`/clubes/${club.id}`} className="text-terracotta hover:underline">
-                          {club.name}
-                        </Link>
-                      </CardTitle>
-                      <CardDescription>
-                        <div className="flex items-center gap-2 mt-2">
-                          {/* Member count removed as it's no longer used */}
-                        </div>
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-1">
-                      <div className="space-y-4">
-                        {club.address && (
-                          <div className="flex items-start gap-2">
-                            <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                            <span className="text-sm">{club.address}</span>
-                          </div>
-                        )}
-                        {club.telephone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-5 w-5 text-muted-foreground shrink-0" />
-                            <span className="text-sm">{club.telephone}</span>
-                          </div>
-                        )}
-                        {club.mail && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
-                            <span className="text-sm">{club.mail}</span>
-                          </div>
-                        )}
-                        {club.schedule && (
-                          <div>
-                            <h4 className="text-sm font-medium mb-1">Horarios de actividad:</h4>
-                            <p className="text-sm text-muted-foreground">{club.schedule}</p>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex gap-2">
-                      <Button asChild className="w-full">
-                        <Link href={`/clubes/${club.id}`}>Ver Detalle</Link>
-                      </Button>
-                      {user && (
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className={`border-amber text-amber-dark hover:bg-amber/10 ${
-                            club.isFollowing ? 'bg-amber/10' : ''
-                          }`}
-                          onClick={() => handleToggleFollow(club.id)}
-                        >
-                          <Heart className={`h-4 w-4 ${club.isFollowing ? 'fill-current' : ''}`} />
-                          <span className="sr-only">
-                            {club.isFollowing ? 'Dejar de seguir' : 'Seguir'} club
-                          </span>
-                        </Button>
-                      )}
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
-            )}
+            }>
+              <ClubsList searchTerm={searchTerm} />
+            </Suspense>
           </div>
         </section>
       </main>
