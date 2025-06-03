@@ -172,17 +172,8 @@ export function SiteHeader() {
             <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
             <div className="flex items-center justify-between">
               <Link href="/" className="flex items-center space-x-2" onClick={() => setIsOpen(false)}>
-                <ChessKnight className="h-6 w-6 text-terracotta" />
                 <span className="font-bold text-terracotta">FASGBA</span>
               </Link>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsOpen(false)}
-                className="text-terracotta hover:bg-amber/10 hover:text-terracotta"
-              >
-                <X className="h-5 w-5" />
-              </Button>
             </div>
             <nav className="flex flex-col space-y-4 mt-6">
               <Link
@@ -268,7 +259,7 @@ export function SiteHeader() {
                           className="flex items-center text-muted-foreground hover:text-terracotta"
                           onClick={() => setIsOpen(false)}
                         >
-                          <Shield className="mr-2 h-5 w-5 text-terracotta" />
+                          <Shield className="mr-2 h-5 w-5 text-amber" />
                           <span>Admin</span>
                         </Link>
                       )}
