@@ -237,12 +237,33 @@ export default function UsersPage() {
     return null
   }
 
-  const filteredUsers = users.filter(user => 
-    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (user.nombre || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (user.apellido || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.adminClubs.some(club => club.toLowerCase().includes(searchQuery.toLowerCase()))
-  )
+  // Enhanced filtering logic to handle both text search and special filters
+  const filteredUsers = users.filter(user => {
+    const query = searchQuery.toLowerCase()
+    
+    // Handle special filter cases
+    if (query === 'admin' || query === 'administradores') {
+      return user.isAdmin
+    }
+    
+    if (query === 'delegado' || query === 'delegados') {
+      return user.isClubAdmin
+    }
+    
+    if (query === 'usuario' || query === 'usuarios básicos') {
+      return !user.isAdmin && !user.isClubAdmin
+    }
+    
+    if (query === 'verificado') {
+      return user.emailVerified
+    }
+    
+    // Regular text search
+    return user.email.toLowerCase().includes(query) ||
+           (user.nombre || '').toLowerCase().includes(query) ||
+           (user.apellido || '').toLowerCase().includes(query) ||
+           user.adminClubs.some(club => club.toLowerCase().includes(query))
+  })
 
   // Apply sorting to filtered users
   const sortedAndFilteredUsers = getSortedUsers(filteredUsers)
@@ -300,11 +321,11 @@ export default function UsersPage() {
               <DropdownMenuLabel>Filtrar por</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setSearchQuery("")}>Todos</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchQuery("Admin")}>Administradores</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchQuery("Delegado")}>Delegados</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchQuery("Usuario")}>Usuarios básicos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery("admin")}>Administradores</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery("delegado")}>Delegados</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery("usuario")}>Usuarios básicos</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSearchQuery("Verificado")}>Email verificado</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchQuery("verificado")}>Email verificado</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <DropdownMenu>
