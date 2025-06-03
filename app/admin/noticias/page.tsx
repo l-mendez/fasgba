@@ -83,6 +83,8 @@ async function apiCall(endpoint: string, options: RequestInit = {}) {
 export default function AdminNoticiasPage() {
   const [news, setNews] = useState<News[]>([])
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedClubFilter, setSelectedClubFilter] = useState<number | null | 'all'>('all')
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string>('')
   const [newsToDelete, setNewsToDelete] = useState<number | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -234,12 +236,49 @@ export default function AdminNoticiasPage() {
     }
   }
 
-  const filteredNews = news.filter(news =>
-    news.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    news.extract.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    news.club?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    news.author_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredNews = news.filter(newsItem => {
+    const search = searchTerm.toLowerCase().trim()
+    
+    // Apply club filter
+    if (selectedClubFilter !== 'all') {
+      if (selectedClubFilter === null) {
+        // FASGBA filter - club_id should be null
+        if (newsItem.club_id !== null) return false
+      } else {
+        // Specific club filter - club_id should match
+        if (newsItem.club_id !== selectedClubFilter) return false
+      }
+    }
+    
+    // Apply date filter
+    if (selectedDateFilter) {
+      const filterDate = new Date(selectedDateFilter)
+      const newsDate = new Date(newsItem.date)
+      if (newsDate < filterDate) return false
+    }
+    
+    // Apply text search (only if there's a search term)
+    if (search) {
+      return newsItem.title.toLowerCase().includes(search) ||
+             newsItem.extract.toLowerCase().includes(search) ||
+             newsItem.club?.name?.toLowerCase().includes(search) ||
+             newsItem.author_name?.toLowerCase().includes(search)
+    }
+    
+    return true
+  })
+
+  // Get unique clubs for filter options
+  const getUniqueClubs = () => {
+    const clubs = news.reduce((acc, newsItem) => {
+      if (newsItem.club && !acc.some(club => club.id === newsItem.club!.id)) {
+        acc.push(newsItem.club)
+      }
+      return acc
+    }, [] as Array<{ id: number; name: string }>)
+    
+    return clubs.sort((a, b) => a.name.localeCompare(b.name))
+  }
 
   // Apply sorting to filtered news
   const sortedAndFilteredNews = getSortedNews(filteredNews)
@@ -270,27 +309,53 @@ export default function AdminNoticiasPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
-                Filtrar
+                {selectedClubFilter === 'all' ? 'Todos los clubes' : 
+                 selectedClubFilter === null ? 'FASGBA' : 
+                 getUniqueClubs().find(club => club.id === selectedClubFilter)?.name || 'Club'}
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[200px]">
-              <DropdownMenuLabel>Filtrar por</DropdownMenuLabel>
+              <DropdownMenuLabel>Filtrar por club</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSearchTerm("")}>Todas</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchTerm("FASGBA")}>FASGBA</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedClubFilter('all')}>
+                Todos los clubes
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedClubFilter(null)}>
+                FASGBA
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
+              {getUniqueClubs().map((club) => (
+                <DropdownMenuItem key={club.id} onClick={() => setSelectedClubFilter(club.id)}>
+                  {club.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                {selectedDateFilter ? 'Filtro de fecha' : 'Fecha'}
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel>Filtrar por fecha</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setSelectedDateFilter('')}>
+                Todas las fechas
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => {
                 const today = new Date()
                 const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
                 const lastWeekStr = lastWeek.toISOString().split('T')[0]
-                setSearchTerm(lastWeekStr)
+                setSelectedDateFilter(lastWeekStr)
               }}>Última semana</DropdownMenuItem>
               <DropdownMenuItem onClick={() => {
                 const today = new Date()
                 const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
                 const lastMonthStr = lastMonth.toISOString().split('T')[0]
-                setSearchTerm(lastMonthStr)
+                setSelectedDateFilter(lastMonthStr)
               }}>Último mes</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
