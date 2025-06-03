@@ -104,40 +104,15 @@ export default function ChessGameBlock({
       );
     }
   }, [whitePlayer, blackPlayer]);
-  
-  // Format player name based on type
-  const formatPlayerName = (player?: PlayerInfo, playerDetails?: UserDetails | null, isLoading?: boolean) => {
-    if (isLoading) {
-      return <span className="text-muted-foreground animate-pulse">Cargando...</span>;
-    }
-    
-    if (!player) return "Jugador";
-    
-    switch (player.type) {
-      case 'user':
-        if (playerDetails) {
-          return (
-            <Link 
-              href={`/jugadores/${playerDetails.id}`} 
-              className="text-amber-dark hover:underline"
-            >
-              {`${playerDetails.name} ${playerDetails.surname}`}
-            </Link>
-          );
-        }
-        return player.value ? `Usuario ${player.value}` : "Jugador";
-      case 'custom':
-        return player.value || "Jugador";
-      case 'anonymous':
-        return "Jugador anónimo";
-      default:
-        return "Jugador";
-    }
-  };
 
-  const whitePlayerElement = formatPlayerName(whitePlayer, whitePlayerDetails, isLoadingWhitePlayer);
-  const blackPlayerElement = formatPlayerName(blackPlayer, blackPlayerDetails, isLoadingBlackPlayer);
-  const hasPlayerInfo = whitePlayer || blackPlayer;
+  // Create player objects with user details if available
+  const whitePlayerInfo = whitePlayer?.type === 'user' && whitePlayerDetails 
+    ? { ...whitePlayer, value: `${whitePlayerDetails.name} ${whitePlayerDetails.surname}` }
+    : whitePlayer;
+    
+  const blackPlayerInfo = blackPlayer?.type === 'user' && blackPlayerDetails 
+    ? { ...blackPlayer, value: `${blackPlayerDetails.name} ${blackPlayerDetails.surname}` }
+    : blackPlayer;
   
   // Create the Lichess analysis URL
   const getLichessUrl = () => {
@@ -151,35 +126,13 @@ export default function ChessGameBlock({
   
   return (
     <div className="my-4 sm:my-6 p-3 sm:p-4 md:p-6 bg-muted/30 rounded-lg border border-amber/10">
-      {hasPlayerInfo && (
-        <div className="mb-3 sm:mb-4 pb-3 border-b border-amber/20">
-          <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-4">
-            <div className="flex items-center justify-center sm:justify-start">
-              <div className="w-3 h-3 bg-white border border-gray-400 rounded-full mr-2 flex-shrink-0"></div>
-              <div className="text-sm sm:text-base font-medium text-center sm:text-left">
-                {whitePlayerElement}
-              </div>
-            </div>
-            
-            <div className="text-xs sm:text-sm text-muted-foreground text-center font-medium">
-              vs
-            </div>
-            
-            <div className="flex items-center justify-center sm:justify-end">
-              <div className="text-sm sm:text-base font-medium text-center sm:text-right">
-                {blackPlayerElement}
-              </div>
-              <div className="w-3 h-3 bg-black border border-gray-400 rounded-full ml-2 flex-shrink-0"></div>
-            </div>
-          </div>
-        </div>
-      )}
-      
       <div className="flex justify-center">
         <ChessBoard 
           fen={fen} 
           pgn={pgn} 
           onPositionChange={handlePositionChange}
+          whitePlayer={whitePlayerInfo}
+          blackPlayer={blackPlayerInfo}
           width={400}
         />
       </div>
