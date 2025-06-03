@@ -51,6 +51,11 @@ interface Tournament {
   is_past: boolean
   status: "upcoming" | "ongoing" | "past"
   participants?: number
+  created_by_club_id?: number | null
+  club?: {
+    id: number
+    name: string
+  } | null
 }
 
 // API helper function
@@ -91,6 +96,8 @@ async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any
 export default function AdminTorneosPage() {
   const [torneos, setTorneos] = useState<Tournament[]>([])
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedClubFilter, setSelectedClubFilter] = useState<number | null | 'all'>('all')
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all')
   const [torneoToDelete, setTorneoToDelete] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -157,7 +164,9 @@ export default function AdminTorneosPage() {
           is_ongoing: tournament.is_ongoing || false,
           is_past: tournament.is_past || false,
           status,
-          participants: tournament.participants || 0
+          participants: tournament.participants || 0,
+          created_by_club_id: tournament.created_by_club_id || null,
+          club: tournament.club || null
         }
       })
       
@@ -253,13 +262,46 @@ export default function AdminTorneosPage() {
   }
 
   // Filtrar torneos según término de búsqueda
-  const filteredTorneos = torneos.filter(
-    (torneo) =>
-      torneo.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (torneo.location && torneo.location.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (torneo.description && torneo.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      torneo.status.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const filteredTorneos = torneos.filter((torneo) => {
+    const search = searchTerm.toLowerCase().trim()
+    
+    // Apply club filter
+    if (selectedClubFilter !== 'all') {
+      if (selectedClubFilter === null) {
+        // FASGBA filter - created_by_club_id should be null
+        if (torneo.created_by_club_id !== null) return false
+      } else {
+        // Specific club filter - created_by_club_id should match
+        if (torneo.created_by_club_id !== selectedClubFilter) return false
+      }
+    }
+    
+    // Apply status filter
+    if (selectedStatusFilter !== 'all') {
+      if (torneo.status !== selectedStatusFilter) return false
+    }
+    
+    // Apply text search (only if there's a search term)
+    if (search) {
+      return torneo.title.toLowerCase().includes(search) ||
+             (torneo.location && torneo.location.toLowerCase().includes(search)) ||
+             (torneo.description && torneo.description.toLowerCase().includes(search))
+    }
+    
+    return true
+  })
+
+  // Get unique clubs for filter options
+  const getUniqueClubs = () => {
+    const clubs = torneos.reduce((acc, torneo) => {
+      if (torneo.club && !acc.some(club => club.id === torneo.club!.id)) {
+        acc.push(torneo.club)
+      }
+      return acc
+    }, [] as Array<{ id: number; name: string }>)
+    
+    return clubs.sort((a, b) => a.name.localeCompare(b.name))
+  }
 
   // Apply sorting to filtered tournaments
   const sortedAndFilteredTorneos = getSortedTorneos(filteredTorneos)
@@ -410,17 +452,46 @@ export default function AdminTorneosPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
-                Filtrar
+                {selectedClubFilter === 'all' ? 'Todos los clubes' : 
+                 selectedClubFilter === null ? 'FASGBA' : 
+                 getUniqueClubs().find(club => club.id === selectedClubFilter)?.name || 'Club'}
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[200px]">
+              <DropdownMenuLabel>Filtrar por club</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setSelectedClubFilter('all')}>
+                Todos los clubes
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedClubFilter(null)}>
+                FASGBA
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {getUniqueClubs().map((club) => (
+                <DropdownMenuItem key={club.id} onClick={() => setSelectedClubFilter(club.id)}>
+                  {club.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                {selectedStatusFilter === 'all' ? 'Todos los estados' :
+                 selectedStatusFilter === 'upcoming' ? 'Próximos' :
+                 selectedStatusFilter === 'ongoing' ? 'En curso' :
+                 selectedStatusFilter === 'past' ? 'Finalizados' : 'Estado'}
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[200px]">
               <DropdownMenuLabel>Filtrar por estado</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSearchTerm("")}>Todos</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchTerm("upcoming")}>Próximos</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchTerm("ongoing")}>En curso</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchTerm("past")}>Finalizados</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedStatusFilter('all')}>Todos los estados</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedStatusFilter('upcoming')}>Próximos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedStatusFilter('ongoing')}>En curso</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedStatusFilter('past')}>Finalizados</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <DropdownMenu>
