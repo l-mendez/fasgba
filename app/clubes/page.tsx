@@ -18,7 +18,7 @@ import {
   unfollowClub,
   type Club 
 } from "@/lib/clubUtils"
-import { getCurrentUser } from "@/lib/userUtils"
+import { useAuth } from "@/hooks/useAuth"
 
 interface ClubWithFollowState extends Club {
   isFollowing: boolean
@@ -28,28 +28,14 @@ export default function ClubesPage() {
   const [clubs, setClubs] = useState<ClubWithFollowState[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const { user, isLoading: authLoading } = useAuth()
 
-  // Load current user first
+  // Load clubs when user authentication state changes
   useEffect(() => {
-    loadCurrentUser()
-  }, [])
-
-  // Load clubs when currentUserId changes
-  useEffect(() => {
-    loadClubs()
-  }, [currentUserId])
-
-  const loadCurrentUser = async () => {
-    try {
-      const user = await getCurrentUser()
-      if (user) {
-        setCurrentUserId(user.id) // Use the auth UUID directly
-      }
-    } catch (error) {
-      console.error('Error loading current user:', error)
+    if (!authLoading) {
+      loadClubs()
     }
-  }
+  }, [user, authLoading])
 
   const loadClubs = async () => {
     try {
@@ -59,7 +45,7 @@ export default function ClubesPage() {
       // Load additional data for each club
       const clubsWithExtraData = await Promise.all(
         clubsData.map(async (club) => {
-          const isFollowing = currentUserId ? await isUserFollowingClub(club.id, currentUserId) : false
+          const isFollowing = user ? await isUserFollowingClub(club.id, user.id) : false
           
           return {
             ...club,
@@ -89,7 +75,7 @@ export default function ClubesPage() {
       
       const clubsWithExtraData = await Promise.all(
         searchResults.map(async (club) => {
-          const isFollowing = currentUserId ? await isUserFollowingClub(club.id, currentUserId) : false
+          const isFollowing = user ? await isUserFollowingClub(club.id, user.id) : false
           
           return {
             ...club,
@@ -107,7 +93,7 @@ export default function ClubesPage() {
   }
 
   const handleToggleFollow = async (clubId: number) => {
-    if (!currentUserId) return
+    if (!user) return
 
     const club = clubs.find(c => c.id === clubId)
     if (!club) return
@@ -123,9 +109,9 @@ export default function ClubesPage() {
     try {
       // Perform the API call in the background
       if (club.isFollowing) {
-        await unfollowClub(clubId, currentUserId)
+        await unfollowClub(clubId, user.id)
       } else {
-        await followClub(clubId, currentUserId)
+        await followClub(clubId, user.id)
       }
       
       // API call succeeded - the optimistic update was correct, no need to change anything
@@ -185,7 +171,7 @@ export default function ClubesPage() {
               </div>
             </div>
 
-            {loading ? (
+            {loading || authLoading ? (
               <div className="flex justify-center items-center py-12 min-h-[400px]">
                 <Loader2 className="h-8 w-8 animate-spin text-terracotta" />
                 <span className="ml-2 text-muted-foreground">Cargando clubes...</span>
@@ -256,7 +242,7 @@ export default function ClubesPage() {
                       <Button asChild className="w-full">
                         <Link href={`/clubes/${club.id}`}>Ver Detalle</Link>
                       </Button>
-                      {currentUserId && (
+                      {user && (
                         <Button 
                           variant="outline" 
                           size="icon" 

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createBrowserClient } from '@/lib/supabase/client'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -336,8 +337,9 @@ export async function getClubFollowersCount(clubId: number): Promise<number> {
  */
 export async function isUserFollowingClub(clubId: number, authId: string): Promise<boolean> {
   try {
-    // Get authentication token
-    const { data: { session } } = await supabase.auth.getSession()
+    // Get authentication token from client-side Supabase
+    const clientSupabase = createBrowserClient()
+    const { data: { session } } = await clientSupabase.auth.getSession()
     const token = session?.access_token
     
     if (!token) {
@@ -374,8 +376,9 @@ export async function isUserFollowingClub(clubId: number, authId: string): Promi
  */
 export async function followClub(clubId: number, authId: string): Promise<boolean> {
   try {
-    // Get authentication token
-    const { data: { session } } = await supabase.auth.getSession()
+    // Get authentication token from client-side Supabase
+    const clientSupabase = createBrowserClient()
+    const { data: { session } } = await clientSupabase.auth.getSession()
     const token = session?.access_token
     
     if (!token) {
@@ -407,8 +410,9 @@ export async function followClub(clubId: number, authId: string): Promise<boolea
  */
 export async function unfollowClub(clubId: number, authId: string): Promise<boolean> {
   try {
-    // Get authentication token
-    const { data: { session } } = await supabase.auth.getSession()
+    // Get authentication token from client-side Supabase
+    const clientSupabase = createBrowserClient()
+    const { data: { session } } = await clientSupabase.auth.getSession()
     const token = session?.access_token
     
     if (!token) {
@@ -763,7 +767,8 @@ export async function getClubFollowers(clubId: number): Promise<{
 } | null> {
   try {
     // Get authentication token (optional for this endpoint since it's public data)
-    const { data: { session } } = await supabase.auth.getSession()
+    const clientSupabase = createBrowserClient()
+    const { data: { session } } = await clientSupabase.auth.getSession()
     const token = session?.access_token
 
     const headers: HeadersInit = {

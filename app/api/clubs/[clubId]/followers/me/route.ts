@@ -17,10 +17,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     
     // Check if user follows this club
     const { data, error } = await supabase
-      .from('club_followers')
+      .from('user_follows_club')
       .select('*')
-      .eq('club_id', resolvedParams.clubId)
-      .eq('user_id', user.id)
+      .eq('club_id', parseInt(resolvedParams.clubId))
+      .eq('auth_id', user.id)
       .single()
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
@@ -41,10 +41,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     
     // Add user as follower
     const { error } = await supabase
-      .from('club_followers')
+      .from('user_follows_club')
       .insert({
-        club_id: resolvedParams.clubId,
-        user_id: user.id
+        club_id: parseInt(resolvedParams.clubId),
+        auth_id: user.id
       })
 
     if (error) throw error
@@ -63,10 +63,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     
     // Remove user as follower
     const { error } = await supabase
-      .from('club_followers')
+      .from('user_follows_club')
       .delete()
-      .eq('club_id', resolvedParams.clubId)
-      .eq('user_id', user.id)
+      .eq('club_id', parseInt(resolvedParams.clubId))
+      .eq('auth_id', user.id)
 
     if (error) throw error
 
