@@ -7,9 +7,8 @@ import { ArrowRight, CalendarDays, FileText, MessageSquare, Plus, Trophy, Trendi
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { getUserAdminClubs, getClubFollowers, type Club } from "@/lib/clubUtils"
-import { getCurrentUser } from "@/lib/userUtils"
-import { createClient } from "@/lib/supabase/client"
+import { getClubFollowers } from "@/lib/clubUtils"
+import { useClubContext, apiCall } from "./context/club-context"
 
 interface ClubStats {
   noticias: number
@@ -28,6 +27,7 @@ interface ActivityItem {
 }
 
 export default function ClubAdminDashboard() {
+  const { selectedClub } = useClubContext()
   const [stats, setStats] = useState<ClubStats>({
     noticias: 0,
     torneos: 0,
@@ -35,88 +35,40 @@ export default function ClubAdminDashboard() {
     seguidores: 0,
     crecimientoSeguidores: 0,
   })
-  const [adminClub, setAdminClub] = useState<Club | null>(null)
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Helper function for API calls
-  const apiCall = async (endpoint: string, options: RequestInit = {}) => {
-    try {
-      // Get authentication token from Supabase
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
-
-      if (!token) {
-        throw new Error('No authentication token available')
-      }
-
-      const apiResponse = await fetch(endpoint, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          ...options.headers
-        },
-        ...options
-      })
-
-      if (!apiResponse.ok) {
-        throw new Error(`HTTP ${apiResponse.status}: ${apiResponse.statusText}`)
-      }
-
-      return apiResponse.json()
-    } catch (error) {
-      console.error(`API call failed for ${endpoint}:`, error)
-      throw error
-    }
-  }
-
   // Fetch real statistics from API
   useEffect(() => {
     const fetchStats = async () => {
+      if (!selectedClub) return
+
       try {
         setLoading(true)
         setError(null)
 
-        // Get current user
-        const user = await getCurrentUser()
-        if (!user) {
-          throw new Error('User not authenticated')
-        }
-
-        // Get clubs the user administers
-        const adminClubs = await getUserAdminClubs(user.id)
-        if (adminClubs.length === 0) {
-          setError('No tienes clubes asignados como administrador')
-          return
-        }
-
-        // Use the first club the user administers
-        const club = adminClubs[0]
-        setAdminClub(club)
-
         // Fetch club statistics and recent data in parallel
         const [newsCountData, tournamentCountData, followersData, recentNewsData, recentTournamentsData] = await Promise.all([
-          apiCall(`/api/clubs/${club.id}/news/count`).catch(() => ({ count: 0 })),
-          apiCall(`/api/clubs/${club.id}/tournaments/count`).catch(() => ({ count: 0 })),
-          getClubFollowers(club.id).catch(async () => {
+          apiCall(`/clubs/${selectedClub.id}/news/count`).catch(() => ({ count: 0 })),
+          apiCall(`/clubs/${selectedClub.id}/tournaments/count`).catch(() => ({ count: 0 })),
+          getClubFollowers(selectedClub.id).catch(async () => {
             // Fallback: just get the count without detailed follower info
             try {
-              const countData = await apiCall(`/api/clubs/${club.id}/followers/count`)
+              const countData = await apiCall(`/clubs/${selectedClub.id}/followers/count`)
               return {
-                club: { id: club.id, name: club.name },
+                club: { id: selectedClub.id, name: selectedClub.name },
                 followers: [],
                 count: countData.count
               }
             } catch {
-              return { club: { id: club.id, name: club.name }, followers: [], count: 0 }
+              return { club: { id: selectedClub.id, name: selectedClub.name }, followers: [], count: 0 }
             }
           }),
           // Get recent news (limit 5)
-          apiCall(`/api/clubs/${club.id}/news?limit=5`).catch(() => []),
+          apiCall(`/clubs/${selectedClub.id}/news?limit=5`).catch(() => []),
           // Get recent tournaments (limit 5)
-          apiCall(`/api/clubs/${club.id}/tournaments?limit=5`).catch(() => ({ tournaments: [] }))
+          apiCall(`/clubs/${selectedClub.id}/tournaments?limit=5`).catch(() => ({ tournaments: [] }))
         ])
 
         // Calculate growth (followers who joined in the last 30 days)
@@ -203,7 +155,7 @@ export default function ClubAdminDashboard() {
     }
 
     fetchStats()
-  }, [])
+  }, [selectedClub])
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -244,14 +196,25 @@ export default function ClubAdminDashboard() {
     )
   }
 
+  if (!selectedClub) {
+    return (
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold mb-2">Selecciona un club</h3>
+            <p className="text-muted-foreground">Por favor selecciona un club del menú desplegable para ver las estadísticas.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard del Club</h2>
-          {adminClub && (
-            <p className="text-muted-foreground">{adminClub.name}</p>
-          )}
+          <p className="text-muted-foreground">{selectedClub.name}</p>
         </div>
       </div>
       <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -365,14 +328,12 @@ export default function ClubAdminDashboard() {
                   Nuevo torneo
                 </Link>
               </Button>
-              {adminClub && (
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link href={`/clubes/${adminClub.id}`}>
-                    <Users className="mr-2 h-4 w-4" />
-                    Ver página del club
-                  </Link>
-                </Button>
-              )}
+              <Button asChild variant="outline" className="w-full justify-start">
+                <Link href={`/clubes/${selectedClub.id}`}>
+                  <Users className="mr-2 h-4 w-4" />
+                  Ver página del club
+                </Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
