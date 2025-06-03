@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
 import { UsersTable } from "@/components/users-table"
 
+// Mark this page as dynamic since it requires server-side authentication
+export const dynamic = 'force-dynamic'
+
 // Updated interface to include additional user metadata
 interface UserWithPermissions {
   id: string

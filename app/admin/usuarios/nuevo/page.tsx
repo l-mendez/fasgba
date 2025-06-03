@@ -1,108 +1,77 @@
-"use client"
+import { createClient } from "@/lib/supabase/server"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { UserCreateForm } from "@/components/user-create-form"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+// Mark this page as dynamic since it requires server-side authentication
+export const dynamic = 'force-dynamic'
 
-export default function NewUserPage() {
-  const router = useRouter()
-  const [formData, setFormData] = useState({
-    name: "",
-    surname: "",
-    email: "",
-    club: "",
-    role: "user",
-  })
+interface Club {
+  id: number
+  name: string
+}
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    // Here you would typically send the data to your backend
-    console.log("Form submitted:", formData)
-    router.push("/admin/usuarios")
+// Server-side function to fetch clubs data
+async function fetchClubs(): Promise<Club[]> {
+  try {
+    const supabase = await createClient()
+    
+    // Check if the current user is an admin
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      throw new Error('No tienes acceso a esta información')
+    }
+
+    // Check if user is an admin
+    const { data: adminData, error: adminError } = await supabase
+      .from('admins')
+      .select('auth_id')
+      .eq('auth_id', user.id)
+      .single()
+
+    if (adminError || !adminData) {
+      throw new Error('No tienes permisos de administrador para ver esta información')
+    }
+
+    // Fetch all clubs
+    const { data: clubsData, error: clubsError } = await supabase
+      .from('clubs')
+      .select('id, name')
+      .order('name', { ascending: true })
+
+    if (clubsError) {
+      console.error('Error fetching clubs:', clubsError)
+      throw new Error('Error al obtener los clubes')
+    }
+
+    return clubsData || []
+  } catch (error) {
+    console.error('Error fetching clubs:', error)
+    throw error
+  }
+}
+
+export default async function NewUserPage() {
+  let clubs: Club[] = []
+  let error: string | null = null
+
+  try {
+    clubs = await fetchClubs()
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Error al cargar los clubes"
   }
 
-  return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Nuevo Usuario</h2>
+  if (error) {
+    return (
+      <div className="flex flex-col gap-8 p-8">
+        <Alert>
+          <span className="text-red-600 mr-2">⚠️</span>
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid gap-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="surname">Apellido</Label>
-              <Input
-                id="surname"
-                value={formData.surname}
-                onChange={(e) => setFormData({ ...formData, surname: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="club">Club</Label>
-            <Input
-              id="club"
-              value={formData.club}
-              onChange={(e) => setFormData({ ...formData, club: e.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="role">Rol</Label>
-            <Select
-              value={formData.role}
-              onValueChange={(value) => setFormData({ ...formData, role: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar rol" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="user">Usuario</SelectItem>
-                <SelectItem value="admin">Administrador</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="flex justify-end space-x-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push("/admin/usuarios")}
-          >
-            Cancelar
-          </Button>
-          <Button type="submit">Crear usuario</Button>
-        </div>
-      </form>
-    </div>
-  )
+    )
+  }
+
+  return <UserCreateForm clubs={clubs} />
 } 

@@ -3,6 +3,9 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { SettingsForm } from "@/components/settings-form"
 
+// Mark this page as dynamic since it requires server-side authentication
+export const dynamic = 'force-dynamic'
+
 export default function AjustesPage() {
   return (
     <div className="flex min-h-screen flex-col">

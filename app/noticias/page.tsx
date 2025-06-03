@@ -9,6 +9,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { NewsFilters } from "@/components/news-filters"
 import { NewsPagination } from "@/components/news-pagination"
 
+// Force dynamic rendering for SSR
+export const dynamic = 'force-dynamic'
+
 // Define the news interface
 interface News {
   id: number
@@ -63,7 +66,7 @@ function getClubDisplayName(newsItem: News) {
 async function fetchNews(): Promise<News[]> {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/news?limit=100&include=club`, {
-      cache: 'no-store' // or 'revalidate' with a time interval
+      next: { revalidate: 0 }
     })
     
     if (!response.ok) {
@@ -81,7 +84,7 @@ async function fetchNews(): Promise<News[]> {
 async function fetchTags(): Promise<string[]> {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/news/tags`, {
-      cache: 'no-store'
+      next: { revalidate: 0 }
     })
     
     if (!response.ok) {
@@ -99,7 +102,7 @@ async function fetchTags(): Promise<string[]> {
 async function fetchClubs(): Promise<Club[]> {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/clubs`, {
-      cache: 'no-store'
+      next: { revalidate: 0 }
     })
     
     if (!response.ok) {

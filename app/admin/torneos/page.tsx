@@ -2,6 +2,9 @@ import Link from "next/link"
 import { Plus, AlertCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 
+// Mark this page as dynamic since it requires server-side authentication  
+export const dynamic = 'force-dynamic'
+
 import { Button } from "@/components/ui/button"
 import { TournamentsTable } from "@/components/tournaments-table"
 import { Alert, AlertDescription } from "@/components/ui/alert"

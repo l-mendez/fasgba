@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 
+// Force dynamic rendering for SSR
+export const dynamic = 'force-dynamic'
+
 // Types for the data structures
 interface NewsItem {
   id: number
@@ -59,7 +62,7 @@ interface NoticiaProps {
 async function fetchNews(): Promise<NewsItem[]> {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/news?limit=5&orderBy=date&order=desc&include=club`, {
-      cache: 'no-store'
+      next: { revalidate: 0 }
     })
     
     if (!response.ok) {
@@ -77,7 +80,7 @@ async function fetchNews(): Promise<NewsItem[]> {
 async function fetchTournaments(): Promise<Tournament[]> {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/tournaments?limit=3&status=upcoming`, {
-      cache: 'no-store'
+      next: { revalidate: 0 }
     })
     
     if (!response.ok) {
@@ -95,7 +98,7 @@ async function fetchTournaments(): Promise<Tournament[]> {
 async function fetchClubs(): Promise<Club[]> {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/clubs?limit=6`, {
-      cache: 'no-store'
+      next: { revalidate: 0 }
     })
     
     if (!response.ok) {

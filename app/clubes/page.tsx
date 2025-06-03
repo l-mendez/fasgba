@@ -11,6 +11,9 @@ import { getCurrentUserServer } from "@/lib/auth-server"
 import { ClubFollowButton } from "@/components/club-follow-button"
 import { ClubSearch } from "@/components/club-search"
 
+// Force dynamic rendering for SSR
+export const dynamic = 'force-dynamic'
+
 interface PageProps {
   searchParams: Promise<{ search?: string }>
 }

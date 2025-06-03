@@ -10,6 +10,9 @@ import {
 } from "@/lib/tournamentUtils"
 import TorneosClient from "./components/torneos-client"
 
+// Force dynamic rendering for SSR
+export const dynamic = 'force-dynamic'
+
 export default async function TorneosPage() {
   let tournaments: TournamentDisplay[] = []
   let error: string | null = null

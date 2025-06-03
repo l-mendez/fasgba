@@ -8,6 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 
+// Force dynamic rendering for SSR
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Reglamentos FIDE',
   description: 'Consulta los reglamentos oficiales de la FIDE y FASGBA para competiciones de ajedrez',

@@ -6,7 +6,7 @@ import dynamic from "next/dynamic"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { SiteHeader } from "@/components/site-header"
+import { ClientSiteHeader } from "@/components/client-site-header"
 import { SiteFooter } from "@/components/site-footer"
 
 // Simpler loading placeholder
@@ -118,7 +118,7 @@ export default function NewsContentWrapper({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader pathname={`/noticias/${newsItem.id}`} />
+      <ClientSiteHeader pathname={`/noticias/${newsItem.id}`} />
       <main className="flex-1">
         <article>
           {/* Imagen de cabecera - Optimized for mobile */}

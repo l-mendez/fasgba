@@ -10,6 +10,9 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
+// Force dynamic rendering for SSR
+export const dynamic = 'force-dynamic'
+
 // Datos de ejemplo para los cursos
 const cursos = [
   {

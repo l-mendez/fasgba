@@ -1,9 +1,12 @@
 import Link from "next/link"
-import { FileText, Home, Plus, Trophy, Users } from "lucide-react"
+import { FileText, Home, Plus, Trophy, Users, AlertCircle } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/server"
+
+// Mark this page as dynamic since it requires server-side authentication
+export const dynamic = 'force-dynamic'
 
 // Type definitions for our stats
 interface DashboardStats {

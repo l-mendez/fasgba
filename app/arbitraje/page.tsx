@@ -6,6 +6,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 
+// Force dynamic rendering for SSR
+export const dynamic = 'force-dynamic'
+
 // Datos de ejemplo para los árbitros
 const arbitros = [
   {

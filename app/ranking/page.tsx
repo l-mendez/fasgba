@@ -11,6 +11,9 @@ import { SiteFooter } from "@/components/site-footer"
 import { PlayerList } from "@/app/ranking/components/PlayerList"
 import { getPlayers, type PaginatedPlayersResponse } from "@/lib/rankingUtils"
 
+// Force dynamic rendering for SSR
+export const dynamic = 'force-dynamic'
+
 // Define interfaces for the data we're working with
 export interface Player {
   id: number;
