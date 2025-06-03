@@ -272,13 +272,7 @@ export default async function AdminDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-3 md:gap-4">
-              <Button asChild className="w-full justify-start" variant="outline">
-                <Link href="/admin/usuarios/nuevo">
-                  <Users className="mr-2 h-4 w-4" />
-                  Nuevo usuario
-                </Link>
-              </Button>
+            <div className="grid gap-2 md:gap-3">
               <Button asChild className="w-full justify-start" variant="outline">
                 <Link href="/admin/noticias/nueva">
                   <FileText className="mr-2 h-4 w-4" />
