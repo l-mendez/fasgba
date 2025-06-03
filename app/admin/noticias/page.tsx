@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ChevronDown, Edit, Eye, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -46,6 +47,38 @@ interface News {
   updated_at: string
 }
 
+// Helper function to make authenticated API calls
+async function apiCall(endpoint: string, options: RequestInit = {}) {
+  const supabase = createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  if (!session) {
+    throw new Error('No hay sesión activa')
+  }
+
+  const url = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`
+  const config: RequestInit = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      ...options.headers
+    },
+    ...options
+  }
+
+  const response = await fetch(url, config)
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
+    throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
+  }
+  
+  if (response.status === 204) {
+    return null // No content
+  }
+  
+  return response.json()
+}
 
 export default function AdminNoticiasPage() {
   const [news, setNews] = useState<News[]>([])
@@ -63,18 +96,7 @@ export default function AdminNoticiasPage() {
       setIsLoading(true)
       setError(null)
       
-      const response = await fetch('/api/news?include=author,club', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
+      const data = await apiCall('/news?include=author,club')
       
       // The API returns an object with news array and pagination
       if (data.news && Array.isArray(data.news)) {
@@ -114,6 +136,13 @@ export default function AdminNoticiasPage() {
   useEffect(() => {
     fetchNews()
   }, [])
+
+  // Delete news function
+  const deleteNews = async (newsId: number) => {
+    return await apiCall(`/news/${newsId}`, {
+      method: 'DELETE'
+    })
+  }
 
   // Sorting functions
   const handleSort = (field: string) => {

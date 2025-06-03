@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
 import { getNewsById, updateNews, deleteNews, canUserEditNews } from '@/lib/newsUtils'
 import { validateNewsId, validateUpdateNews } from '@/lib/schemas/newsSchemas'
 import { apiSuccess, handleError, notFoundError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
