@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { useClubContext } from "../context/club-context"
+import { useClubContext, apiCall } from "../context/club-context"
 
 // Tournament type based on the API response
 interface Tournament {
@@ -91,24 +91,6 @@ function getTournamentSortDate(tournament: Tournament): Date {
   const dates = tournament.tournament_dates.map(d => d.event_date).sort()
   if (dates.length === 0) return new Date(0) // Very old date for tournaments without dates
   return new Date(dates[0])
-}
-
-// API call helper
-async function apiCall(endpoint: string, options: RequestInit = {}) {
-  const response = await fetch(`/api${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-    ...options,
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error || `HTTP ${response.status}`)
-  }
-
-  return response.json()
 }
 
 // Get status badge variant
