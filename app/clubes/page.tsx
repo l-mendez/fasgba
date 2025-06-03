@@ -30,10 +30,15 @@ export default function ClubesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
+  // Load current user first
   useEffect(() => {
-    loadClubs()
     loadCurrentUser()
   }, [])
+
+  // Load clubs when currentUserId changes
+  useEffect(() => {
+    loadClubs()
+  }, [currentUserId])
 
   const loadCurrentUser = async () => {
     try {
@@ -107,21 +112,35 @@ export default function ClubesPage() {
     const club = clubs.find(c => c.id === clubId)
     if (!club) return
 
+    // Optimistic UI update - update state immediately
+    const newFollowState = !club.isFollowing
+    setClubs(clubs.map(c => 
+      c.id === clubId 
+        ? { ...c, isFollowing: newFollowState }
+        : c
+    ))
+
     try {
+      // Perform the API call in the background
       if (club.isFollowing) {
         await unfollowClub(clubId, currentUserId)
       } else {
         await followClub(clubId, currentUserId)
       }
-
-      // Update local state
+      
+      // API call succeeded - the optimistic update was correct, no need to change anything
+    } catch (error) {
+      // API call failed - revert the optimistic update
       setClubs(clubs.map(c => 
         c.id === clubId 
-          ? { ...c, isFollowing: !c.isFollowing }
+          ? { ...c, isFollowing: club.isFollowing } // Revert to original state
           : c
       ))
-    } catch (error) {
+      
       console.error('Error toggling follow status:', error)
+      
+      // Optional: Show a toast notification or alert to the user
+      // You could add a toast library here to show user-friendly error messages
     }
   }
 

@@ -1,8 +1,12 @@
 import { NextRequest } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
+import { createClient } from '@supabase/supabase-js'
 import { requireAuth } from '@/lib/middleware/auth'
 import { apiSuccess, noContent, handleError, validationError, notFoundError, conflictError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
+
+// Create server-side Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 interface RouteParams {
   params: Promise<{
@@ -16,9 +20,23 @@ interface ClubFollower {
   created_at: string // Note: placeholder date since table doesn't track follow date
 }
 
+// Helper function to create user-context Supabase client
+function createUserClient(token: string) {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  })
+}
+
 // GET: Get all followers of a club
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    // Use regular client for public read operations
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    
     const { clubId: clubIdParam } = await params
     const clubId = parseInt(clubIdParam)
     
@@ -78,6 +96,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return validationError('Invalid club ID')
     }
     
+    // Extract JWT token from request
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
+    
+    if (!token) {
+      return validationError('Missing authentication token')
+    }
+    
+    // Create user-context Supabase client
+    const supabase = createUserClient(token)
+    
     // Check if club exists
     const { data: club, error: clubError } = await supabase
       .from('clubs')
@@ -92,7 +121,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Check if already following
     const { data: existingFollow } = await supabase
       .from('user_follows_club')
-      .select('id')
+      .select('auth_id')
       .eq('auth_id', user.id)
       .eq('club_id', clubId)
       .single()
@@ -128,6 +157,17 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (isNaN(clubId)) {
       return validationError('Invalid club ID')
     }
+    
+    // Extract JWT token from request
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
+    
+    if (!token) {
+      return validationError('Missing authentication token')
+    }
+    
+    // Create user-context Supabase client
+    const supabase = createUserClient(token)
     
     // Remove follow relationship
     const { error } = await supabase

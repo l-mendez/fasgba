@@ -160,7 +160,8 @@ CREATE POLICY "Allow public read access to user_follows_club" ON user_follows_cl
     FOR SELECT USING (true);
 
 CREATE POLICY "Allow users to manage their own follows" ON user_follows_club
-    FOR ALL USING (auth.uid() = auth_id);
+    FOR ALL USING (auth.uid() = auth_id)
+    WITH CHECK (auth.uid() = auth_id);
 
 -- News table policies
 CREATE POLICY "Allow public read access to news" ON news
