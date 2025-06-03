@@ -1,24 +1,4 @@
-// Determine the base URL for API calls
-function getApiBaseUrl() {
-  // In production, try to use VERCEL_URL or NEXT_PUBLIC_API_URL for server-side calls
-  if (typeof window === 'undefined') {
-    // Server-side
-    if (process.env.VERCEL_URL) {
-      return `https://${process.env.VERCEL_URL}`
-    }
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL
-    }
-    // Fallback to localhost for development
-    return 'http://localhost:3000'
-  } else {
-    // Client-side
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
-  }
-}
-
-const API_BASE_URL = getApiBaseUrl()
-
+// For server-side direct imports
 // Types based on API documentation
 interface NewsItem {
   id: number
@@ -86,9 +66,27 @@ interface Club {
   schedule: string | null
 }
 
+// Get the correct base URL for API calls
+function getApiBaseUrl(): string {
+  // On client-side, always use relative URLs
+  if (typeof window !== 'undefined') {
+    return ''
+  }
+  
+  // On server-side, we need to determine the correct URL
+  // In Vercel, use the deployment URL (automatically set)
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
+  }
+  
+  // Default to localhost for development
+  return 'http://localhost:3000'
+}
+
 // API call helper
 async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`
+  const baseUrl = getApiBaseUrl()
+  const url = `${baseUrl}${endpoint}`
   
   const response = await fetch(url, {
     headers: {

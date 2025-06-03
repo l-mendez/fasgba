@@ -1,19 +1,14 @@
+'use client'
+
 import Link from "next/link"
 import { Calendar, ChevronLeft, ChevronRight, MapPin } from "lucide-react"
-import { createClient } from "@/lib/supabase/server"
-import type { Database } from "@/lib/database.types"
-import { ReactNode } from "react"
-import type { Metadata } from 'next'
+import { ReactNode, useEffect, useState } from "react"
 import { getNews, getTournaments, getClubs, type NewsItem, type Tournament, type Club } from "@/lib/api"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-
-export const metadata: Metadata = {
-  description: 'Federación de Ajedrez del Sur de Buenos Aires - Promoviendo el ajedrez en la región sur de Buenos Aires desde 1985',
-}
 
 // Interface for processed news items (mapping API data to component props)
 interface Noticia {
@@ -177,225 +172,202 @@ function ClubCard({ club }: { club: Club }): ReactNode {
   )
 }
 
-export default async function Home() {
-  const supabase = await createClient()
+export default function Home() {
+  const [news, setNews] = useState<NewsItem[]>([])
+  const [tournaments, setTournaments] = useState<Tournament[]>([])
+  const [clubs, setClubs] = useState<Club[]>([])
 
-  try {
-    // Fetch data from APIs in parallel
-    const [newsResponse, tournaments, clubs] = await Promise.all([
-      getNews({ 
-        limit: 5, 
-        orderBy: 'date', 
-        order: 'desc',
-        include: 'author,club'
-      }).catch(err => {
-        console.error('Failed to fetch news:', err)
-        return { news: [], pagination: { page: 1, limit: 5, total: 0, totalPages: 0 } }
-      }),
-      getTournaments({ 
-        limit: 3, 
-        status: 'upcoming',
-        format: 'display',
-        orderBy: 'start_date',
-        order: 'asc'
-      }).catch(err => {
-        console.error('Failed to fetch tournaments:', err)
-        return []
-      }),
-      getClubs({ 
-        hasContact: true
-      }).catch(err => {
-        console.error('Failed to fetch clubs:', err)
-        return []
-      })
-    ])
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const response = await getNews({ 
+          limit: 5, 
+          orderBy: 'date', 
+          order: 'desc',
+          include: 'author,club'
+        })
+        setNews(response.news)
+      } catch (error) {
+        console.error('Failed to fetch news:', error)
+        setNews([])
+      }
+    }
 
-    // Process news data
-    const noticias = newsResponse.news.map((item, index) => 
-      mapNewsToNoticia(item, index === 0) // First news item is featured
-    )
-    
-    const noticiaDestacada = noticias.find(noticia => noticia.destacada)
-    const noticiasSecundarias = noticias.filter(noticia => !noticia.destacada)
+    const fetchTournaments = async () => {
+      try {
+        const response = await getTournaments({ 
+          limit: 3, 
+          status: 'upcoming',
+          format: 'display',
+          orderBy: 'start_date',
+          order: 'asc'
+        })
+        setTournaments(response)
+      } catch (error) {
+        console.error('Failed to fetch tournaments:', error)
+        setTournaments([])
+      }
+    }
 
-    return (
-      <div className="flex min-h-screen flex-col">
-        <SiteHeader />
-        <main className="flex-1">
-          {/* Hero section */}
-          <section className="w-full py-12 md:py-24 lg:py-32 bg-[url('/placeholder.svg?height=800&width=1600')] bg-cover bg-center relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-terracotta/80 to-amber/60"></div>
-            <div className="container px-4 md:px-6 flex flex-col items-center space-y-4 text-center relative z-10">
-              <div className="space-y-2 bg-background/90 p-6 rounded-lg backdrop-blur-sm border border-amber/20 shadow-lg">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-terracotta">
-                  Federación de Ajedrez del Sur de Buenos Aires
-                </h1>
-                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
-                  Promoviendo el ajedrez en la región sur de Buenos Aires desde 1985
-                </p>
-                <div className="flex flex-col gap-2 min-[400px]:flex-row justify-center pt-4">
-                  <Button asChild size="lg" className="bg-terracotta hover:bg-terracotta/90 text-white">
-                    <Link href="/torneos">Próximos Torneos</Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="lg"
-                    className="border-amber text-amber-dark hover:bg-amber/10 hover:text-amber-dark"
-                  >
-                    <Link href="/clubes">Clubes Afiliados</Link>
-                  </Button>
-                </div>
+    const fetchClubs = async () => {
+      try {
+        const response = await getClubs({ 
+          hasContact: true
+        })
+        setClubs(response)
+      } catch (error) {
+        console.error('Failed to fetch clubs:', error)
+        setClubs([])
+      }
+    }
+
+    fetchNews()
+    fetchTournaments()
+    fetchClubs()
+  }, [])
+
+  // Process news data
+  const noticias = news.map((item, index) => 
+    mapNewsToNoticia(item, index === 0) // First news item is featured
+  )
+  
+  const noticiaDestacada = noticias.find(noticia => noticia.destacada)
+  const noticiasSecundarias = noticias.filter(noticia => !noticia.destacada)
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <SiteHeader />
+      <main className="flex-1">
+        {/* Hero section */}
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-[url('/placeholder.svg?height=800&width=1600')] bg-cover bg-center relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-terracotta/80 to-amber/60"></div>
+          <div className="container px-4 md:px-6 flex flex-col items-center space-y-4 text-center relative z-10">
+            <div className="space-y-2 bg-background/90 p-6 rounded-lg backdrop-blur-sm border border-amber/20 shadow-lg">
+              <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-terracotta">
+                Federación de Ajedrez del Sur de Buenos Aires
+              </h1>
+              <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
+                Promoviendo el ajedrez en la región sur de Buenos Aires desde 1985
+              </p>
+              <div className="flex flex-col gap-2 min-[400px]:flex-row justify-center pt-4">
+                <Button asChild size="lg" className="bg-terracotta hover:bg-terracotta/90 text-white">
+                  <Link href="/torneos">Próximos Torneos</Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="border-amber text-amber-dark hover:bg-amber/10 hover:text-amber-dark"
+                >
+                  <Link href="/clubes">Clubes Afiliados</Link>
+                </Button>
               </div>
             </div>
-          </section>
+          </div>
+        </section>
 
-          {/* News section */}
-          <section className="w-full py-12 md:py-16 bg-gradient-to-b from-terracotta/5 to-amber/5">
-            <div className="container px-4 md:px-6">
-              <div className="mb-8 flex items-center justify-between">
-                <h2 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Últimas Noticias</h2>
-              </div>
+        {/* News section */}
+        <section className="w-full py-12 md:py-16 bg-gradient-to-b from-terracotta/5 to-amber/5">
+          <div className="container px-4 md:px-6">
+            <div className="mb-8 flex items-center justify-between">
+              <h2 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Últimas Noticias</h2>
+            </div>
 
-              {noticias.length > 0 ? (
-                <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
-                  {/* Featured news */}
-                  {noticiaDestacada && (
-                    <div className="lg:col-span-1 h-[400px] md:h-[500px] lg:h-full">
-                      <Link href={`/noticias/${noticiaDestacada.id}`} className="block h-full">
-                        <NoticiaDestacada noticia={noticiaDestacada} />
-                      </Link>
-                    </div>
-                  )}
-
-                  {/* Secondary news grid */}
-                  <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {noticiasSecundarias.slice(0, 4).map((noticia) => (
-                      <Link key={noticia.id} href={`/noticias/${noticia.id}`} className="block h-[250px]">
-                        <NoticiaCard noticia={noticia} />
-                      </Link>
-                    ))}
+            {noticias.length > 0 ? (
+              <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
+                {/* Featured news */}
+                {noticiaDestacada && (
+                  <div className="lg:col-span-1 h-[400px] md:h-[500px] lg:h-full">
+                    <Link href={`/noticias/${noticiaDestacada.id}`} className="block h-full">
+                      <NoticiaDestacada noticia={noticiaDestacada} />
+                    </Link>
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No hay noticias disponibles en este momento.</p>
-                </div>
-              )}
+                )}
 
-              <div className="mt-8 text-center">
-                <Button asChild variant="outline" className="border-amber text-amber-dark hover:bg-amber/10">
-                  <Link href="/noticias">Ver todas las noticias</Link>
-                </Button>
-              </div>
-            </div>
-          </section>
-
-          {/* Tournaments section */}
-          <section className="w-full py-12 md:py-16 bg-muted">
-            <div className="container px-4 md:px-6">
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Próximos Torneos</h2>
-                <p className="mt-2 text-muted-foreground">Calendario de torneos organizados por FASGBA</p>
-              </div>
-
-              {tournaments.length > 0 ? (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {tournaments.map((tournament) => (
-                    <TournamentCard key={tournament.id} tournament={tournament} />
+                {/* Secondary news grid */}
+                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {noticiasSecundarias.slice(0, 4).map((noticia) => (
+                    <Link key={noticia.id} href={`/noticias/${noticia.id}`} className="block h-[250px]">
+                      <NoticiaCard noticia={noticia} />
+                    </Link>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No hay torneos próximos programados.</p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Mantente atento a nuestras redes sociales para futuras actualizaciones.
-                  </p>
-                </div>
-              )}
-
-              <div className="mt-8 text-center">
-                <Button asChild className="bg-terracotta hover:bg-terracotta/90 text-white">
-                  <Link href="/torneos">Ver todos los torneos</Link>
-                </Button>
               </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No hay noticias disponibles en este momento.</p>
+              </div>
+            )}
+
+            <div className="mt-8 text-center">
+              <Button asChild variant="outline" className="border-amber text-amber-dark hover:bg-amber/10">
+                <Link href="/noticias">Ver todas las noticias</Link>
+              </Button>
             </div>
-          </section>
+          </div>
+        </section>
 
-          {/* Clubs section */}
-          <section className="w-full py-12 md:py-16">
-            <div className="container px-4 md:px-6">
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Clubes Afiliados</h2>
-                <p className="mt-2 text-muted-foreground">Conoce los clubes que forman parte de FASGBA</p>
-              </div>
-
-              {clubs.length > 0 ? (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                  {clubs.slice(0, 6).map((club) => (
-                    <ClubCard key={club.id} club={club} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No hay clubes afiliados disponibles.</p>
-                </div>
-              )}
-
-              <div className="mt-8 text-center">
-                <Button asChild variant="outline" className="border-amber text-amber-dark hover:bg-amber/10">
-                  <Link href="/clubes">Ver todos los clubes</Link>
-                </Button>
-              </div>
+        {/* Tournaments section */}
+        <section className="w-full py-12 md:py-16 bg-muted">
+          <div className="container px-4 md:px-6">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Próximos Torneos</h2>
+              <p className="mt-2 text-muted-foreground">Calendario de torneos organizados por FASGBA</p>
             </div>
-          </section>
-        </main>
-        <SiteFooter />
-      </div>
-    )
-  } catch (error) {
-    console.error('Error in Home page:', error)
-    
-    // Fallback UI in case of error
-    return (
-      <div className="flex min-h-screen flex-col">
-        <SiteHeader />
-        <main className="flex-1">
-          <section className="w-full py-12 md:py-24 lg:py-32 bg-[url('/placeholder.svg?height=800&width=1600')] bg-cover bg-center relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-terracotta/80 to-amber/60"></div>
-            <div className="container px-4 md:px-6 flex flex-col items-center space-y-4 text-center relative z-10">
-              <div className="space-y-2 bg-background/90 p-6 rounded-lg backdrop-blur-sm border border-amber/20 shadow-lg">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-terracotta">
-                  Federación de Ajedrez del Sur de Buenos Aires
-                </h1>
-                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
-                  Promoviendo el ajedrez en la región sur de Buenos Aires desde 1985
+
+            {tournaments.length > 0 ? (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {tournaments.map((tournament) => (
+                  <TournamentCard key={tournament.id} tournament={tournament} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No hay torneos próximos programados.</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Mantente atento a nuestras redes sociales para futuras actualizaciones.
                 </p>
-                <div className="text-center mt-4">
-                  <p className="text-sm text-red-600">
-                    Hubo un problema cargando el contenido. Por favor, intenta más tarde.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2 min-[400px]:flex-row justify-center pt-4">
-                  <Button asChild size="lg" className="bg-terracotta hover:bg-terracotta/90 text-white">
-                    <Link href="/torneos">Próximos Torneos</Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="lg"
-                    className="border-amber text-amber-dark hover:bg-amber/10 hover:text-amber-dark"
-                  >
-                    <Link href="/clubes">Clubes Afiliados</Link>
-                  </Button>
-                </div>
               </div>
+            )}
+
+            <div className="mt-8 text-center">
+              <Button asChild className="bg-terracotta hover:bg-terracotta/90 text-white">
+                <Link href="/torneos">Ver todos los torneos</Link>
+              </Button>
             </div>
-          </section>
-        </main>
-        <SiteFooter />
-      </div>
-    )
-  }
+          </div>
+        </section>
+
+        {/* Clubs section */}
+        <section className="w-full py-12 md:py-16">
+          <div className="container px-4 md:px-6">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Clubes Afiliados</h2>
+              <p className="mt-2 text-muted-foreground">Conoce los clubes que forman parte de FASGBA</p>
+            </div>
+
+            {clubs.length > 0 ? (
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                {clubs.slice(0, 6).map((club) => (
+                  <ClubCard key={club.id} club={club} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No hay clubes afiliados disponibles.</p>
+              </div>
+            )}
+
+            <div className="mt-8 text-center">
+              <Button asChild variant="outline" className="border-amber text-amber-dark hover:bg-amber/10">
+                <Link href="/clubes">Ver todos los clubes</Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+      </main>
+      <SiteFooter />
+    </div>
+  )
 }
 
