@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Calendar, ChevronDown, Edit, Eye, MoreHorizontal, Plus, Search, Trash2, AlertCircle } from "lucide-react"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -61,6 +61,7 @@ interface NewsDisplay {
 
 // Helper function para hacer llamadas a la API
 async function apiCall(endpoint: string, options: RequestInit = {}) {
+  const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
   
   if (!session) {
@@ -101,63 +102,31 @@ export default function ClubAdminNoticiasPage() {
   const [error, setError] = useState<string | null>(null)
   
   // Cargar noticias del club seleccionado usando la nueva API
-  useEffect(() => {
-    async function fetchNoticias() {
-      if (!selectedClub) {
-        setIsLoading(false)
-        return
-      }
-
-      try {
-        setIsLoading(true)
-        setError(null)
-        
-        console.log('Fetching news for club:', selectedClub.id)
-        
-        // Usar la API específica del club para obtener noticias
-        const newsData = await apiCall(`/clubs/${selectedClub.id}/news`)
-        
-        console.log('API response:', newsData)
-        console.log('Found news:', newsData?.length || 0)
-        
-        // Procesar los datos para el formato que necesitamos
-        const processedNoticias: NewsDisplay[] = (newsData || []).map((noticia: any) => {
-          // Determinar la categoría basada en tags, o 'General' si no hay tags
-          const categoria = noticia.tags && noticia.tags.length > 0 
-            ? noticia.tags[0] 
-            : 'General'
-          
-          // Formatear fecha de manera amigable
-          const fecha = new Date(noticia.date || noticia.created_at)
-          const fecha_formateada = fecha.toLocaleDateString('es-ES')
-          
-          // Usar información real del autor desde la API
-          const autor = noticia.author_name 
-            ? `${noticia.author_name} (${noticia.author_email || 'Sin email'})` 
-            : noticia.author_email || 'Autor desconocido'
-          
-          // Estado de la noticia (por ahora todas publicadas)
-          const estado = 'publicada'
-          
-          return {
-            ...noticia,
-            fecha_formateada,
-            autor,
-            categoria,
-            estado
-          }
-        })
-        
-        setNoticias(processedNoticias)
-      } catch (err) {
-        console.error('Error al cargar noticias:', err instanceof Error ? err.message : JSON.stringify(err))
-        setError(err instanceof Error ? err.message : 'Ocurrió un error al cargar las noticias del club')
-      } finally {
-        setIsLoading(false)
-      }
-    }
+  const loadNews = async () => {
+    if (!selectedClub) return
     
-    fetchNoticias()
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      const newsData = await apiCall(`/clubs/${selectedClub.id}/news`)
+      
+      if (newsData && Array.isArray(newsData)) {
+        setNoticias(newsData)
+      } else {
+        setNoticias([])
+      }
+    } catch (err) {
+      console.error('Error loading news:', err)
+      setError(err instanceof Error ? err.message : 'Error al cargar las noticias')
+      setNoticias([])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadNews()
   }, [selectedClub])
 
   // Filtrar noticias según término de búsqueda

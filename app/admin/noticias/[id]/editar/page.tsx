@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { supabase, supabaseAdmin } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { ArrowLeft, Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -75,6 +76,7 @@ export default function EditNewsPage({ params }: { params: { id: string } }) {
     async function fetchNews() {
       try {
         setDebugInfo("Fetching news with ID: " + newsId);
+        const supabase = createClient()
         const { data, error } = await supabase
           .from('news')
           .select(`
@@ -86,13 +88,10 @@ export default function EditNewsPage({ params }: { params: { id: string } }) {
             text,
             tags,
             club_id,
-            club:clubs(id, name),
-            created_by_auth_id,
-            created_at,
-            updated_at
+            club:clubs(id, name)
           `)
           .eq('id', newsId)
-          .single()
+          .single();
 
         if (error) {
           setDebugInfo(prev => prev + "\nError fetching news: " + error.message);
@@ -190,14 +189,17 @@ export default function EditNewsPage({ params }: { params: { id: string } }) {
       
       setDebugInfo(prev => prev + "\nUpdate data prepared");
       
-      // Use supabaseAdmin to bypass Row Level Security, fallback to regular client
-      const client = supabaseAdmin || supabase;
+      // Use createAdminClient to bypass Row Level Security, fallback to regular client
+      const adminClient = createAdminClient()
+      const regularClient = createClient()
+      const client = adminClient || regularClient;
       
       const { data, error } = await client
         .from('news')
         .update(updateData)
-        .eq('id', news.id)
-        .select();
+        .eq('id', newsId)
+        .select()
+        .single();
 
       if (error) {
         setDebugInfo(prev => prev + "\nSupabase error: " + error.message);

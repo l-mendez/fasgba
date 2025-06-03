@@ -189,25 +189,19 @@ export default function AdminNoticiasPage() {
     return null
   }
 
-  const handleDelete = async () => {
+  const handleDeleteNews = async () => {
     if (!newsToDelete) return
-
+    
     try {
-      console.log(`Attempting to delete news with ID: ${newsToDelete}`)
+      await deleteNews(newsToDelete)
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      // Update the local state by filtering out the deleted news
+      // Update local state
       setNews(prevNews => prevNews.filter(item => item.id !== newsToDelete))
-      
-      console.log(`Successfully deleted news with ID: ${newsToDelete}`)
-      
       setShowDeleteDialog(false)
       setNewsToDelete(null)
     } catch (err) {
-      console.error('Error in handleDelete:', err)
-      setError(err instanceof Error ? err.message : "Error al eliminar la noticia")
+      console.error('Error deleting news:', err)
+      // Handle error appropriately
     }
   }
 
@@ -559,7 +553,7 @@ export default function AdminNoticiasPage() {
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button variant="destructive" onClick={handleDeleteNews}>
               Eliminar
             </Button>
           </DialogFooter>

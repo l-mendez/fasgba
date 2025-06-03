@@ -116,23 +116,14 @@ export default function ClubAdminTorneosPage() {
   // Load tournaments when selected club changes
   useEffect(() => {
     async function loadTournaments() {
-      if (!selectedClub) {
-        setTorneos([])
-        setIsLoading(false)
-        return
-      }
-
+      if (!selectedClub) return
+      
       try {
         setIsLoading(true)
         setError(null)
         
-        console.log('Loading tournaments for club:', selectedClub.id)
-        
-        const response = await apiCall(`/clubs/${selectedClub.id}/tournaments`)
-        const tournaments = response.tournaments || []
-        
-        console.log('Tournaments loaded:', tournaments.length)
-        setTorneos(tournaments)
+        const tournaments = await apiCall(`/clubs/${selectedClub.id}/tournaments`)
+        setTorneos(tournaments.tournaments || [])
       } catch (err) {
         console.error('Error loading tournaments:', err)
         setError(err instanceof Error ? err.message : 'Error al cargar los torneos')

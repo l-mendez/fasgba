@@ -1,7 +1,8 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
+import { useAuth } from "@/hooks/useAuth"
 
 // Definir el tipo para el club según la API
 export type Club = {
@@ -37,6 +38,7 @@ export const useClubContext = () => {
 
 // Helper function para hacer llamadas a la API
 export async function apiCall(endpoint: string, options: RequestInit = {}) {
+  const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
   
   if (!session) {
@@ -67,81 +69,91 @@ export async function apiCall(endpoint: string, options: RequestInit = {}) {
   return response.json()
 }
 
+// Helper functions
+async function getAdminClubs(userId: string): Promise<Club[]> {
+  try {
+    return await apiCall('/users/me/admin-clubs')
+  } catch (error) {
+    console.error('Error fetching admin clubs:', error)
+    return []
+  }
+}
+
+function getMockClubs(): Club[] {
+  return [
+    { 
+      id: 1, 
+      name: "Club de Ajedrez Central", 
+      address: "Av. Corrientes 1234, CABA",
+      telephone: "+54-11-1234-5678",
+      mail: "admin@clubcentral.com",
+      schedule: "Lunes a Viernes 18:00-22:00"
+    },
+    { 
+      id: 2, 
+      name: "Club Gambito de Rey", 
+      address: "Calle San Martín 567, La Plata",
+      telephone: "+54-221-9876-5432",
+      mail: "contacto@gambitoderey.com",
+      schedule: "Martes y Jueves 19:00-23:00"
+    },
+  ]
+}
+
 // Proveedor del contexto
 export function ClubContextProvider({ children }: { children: ReactNode }) {
   const [selectedClub, setSelectedClub] = useState<Club | null>(null)
   const [clubesAdministrados, setClubesAdministrados] = useState<Club[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
 
   // Cargar clubes administrados al iniciar
   useEffect(() => {
-    async function loadClubs() {
+    const loadAdminClubs = async () => {
+      if (!user?.id) return
+
       try {
         setIsLoading(true)
         setError(null)
         
-        console.log('Loading admin clubs...')
+        // Get admin clubs for the current user
+        const adminClubs = await getAdminClubs(user.id)
         
-        try {
-          // Obtener clubes que el usuario administra usando la nueva API
-          const adminClubs = await apiCall('/users/me/admin-clubs')
-          
-          console.log('Admin clubs received:', adminClubs)
-          
-          setClubesAdministrados(adminClubs || [])
-          
-          // Seleccionar el primer club por defecto o mantener la selección actual
-          if (adminClubs && adminClubs.length > 0) {
-            if (!selectedClub) {
-              setSelectedClub(adminClubs[0])
-            }
-          } else {
-            setSelectedClub(null)
+        if (adminClubs && adminClubs.length > 0) {
+          setClubesAdministrados(adminClubs)
+          if (!selectedClub) {
+            setSelectedClub(adminClubs[0])
           }
-        } catch (apiError) {
-          console.error('API Error:', apiError)
-          // Fallback to mock data if API fails
-          console.log('Using fallback mock data...')
-          const mockClubs: Club[] = [
-            { 
-              id: 1, 
-              name: "Club de Ajedrez Central", 
-              address: "Av. Corrientes 1234, CABA",
-              telephone: "+54-11-1234-5678",
-              mail: "admin@clubcentral.com",
-              schedule: "Lunes a Viernes 18:00-22:00"
-            },
-            { 
-              id: 2, 
-              name: "Club Gambito de Rey", 
-              address: "Calle San Martín 567, La Plata",
-              telephone: "+54-221-9876-5432",
-              mail: "contacto@gambitoderey.com",
-              schedule: "Martes y Jueves 19:00-23:00"
-            },
-          ]
-          
+        } else {
+          // Fallback to mock data for testing
+          const mockClubs = getMockClubs()
           setClubesAdministrados(mockClubs)
-          setSelectedClub(mockClubs[0])
-          setError(`Usando datos de prueba: ${apiError instanceof Error ? apiError.message : 'Error de conexión'}`)
+          if (!selectedClub) {
+            setSelectedClub(mockClubs[0])
+          }
         }
       } catch (err) {
-        console.error("Error loading clubs:", err)
+        console.error('Error loading admin clubs:', err)
         setError(err instanceof Error ? err.message : 'Error desconocido al cargar clubes')
+        // Fallback to mock data
+        const mockClubs = getMockClubs()
+        setClubesAdministrados(mockClubs)
+        if (!selectedClub) {
+          setSelectedClub(mockClubs[0])
+        }
       } finally {
         setIsLoading(false)
       }
     }
-    
-    loadClubs()
-  }, []) // Removed selectedClub from dependencies to prevent infinite loop
+
+    loadAdminClubs()
+  }, [user?.id]) // Removed selectedClub from dependencies to prevent infinite loop
 
   const handleClubChange = (clubId: string) => {
     const club = clubesAdministrados.find(c => c.id === parseInt(clubId))
     if (club) {
       setSelectedClub(club)
-      console.log('Club changed to:', club.name)
     }
   }
 

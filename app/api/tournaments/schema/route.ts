@@ -1,17 +1,31 @@
-import { NextRequest } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
-import { checkTournamentsTableStructure } from '@/lib/tournamentUtils'
-import { requireAdmin } from '@/lib/middleware/auth'
-import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
+import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    // Require admin authentication
-    await requireAdmin(request)
+    const supabase = await createClient()
     
-    const schemaInfo = await checkTournamentsTableStructure(supabase)
-    return apiSuccess(schemaInfo)
+    // Get table schema information
+    const { data, error } = await supabase
+      .from('tournaments')
+      .select('*')
+      .limit(0) // Just get schema, no data
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      message: 'Schema endpoint - tournaments table accessible',
+      timestamp: new Date().toISOString()
+    })
   } catch (error) {
-    return handleError(error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 } 

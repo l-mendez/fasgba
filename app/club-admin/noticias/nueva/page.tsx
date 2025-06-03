@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { supabase, supabaseAdmin } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { useClubContext } from "../../context/club-context"
 import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
@@ -59,6 +60,35 @@ const IMAGE_ALIGNMENTS = {
   RIGHT: "right",
 } as const
 
+type ImageAlignment = typeof IMAGE_ALIGNMENTS[keyof typeof IMAGE_ALIGNMENTS]
+
+// Block content types
+interface TextBlockContent {
+  type: "text"
+  content: string
+}
+
+interface ImageBlockContent {
+  type: "image"
+  content: {
+    file: File | null
+    imageUrl: string | null
+    caption: string
+    alignment: ImageAlignment
+  }
+}
+
+interface ChessGameBlockContent {
+  type: "chess_game"
+  content: {
+    pgn: string
+    whitePlayer: { type: string; value: string }
+    blackPlayer: { type: string; value: string }
+  }
+}
+
+type BlockContent = TextBlockContent | ImageBlockContent | ChessGameBlockContent
+
 // Interfaces para TypeScript
 interface ChessBoardProps {
   pgn: string
@@ -87,11 +117,11 @@ interface ImageBlockProps {
     file: File | null
     imageUrl: string | null
     caption: string
-    alignment: string
+    alignment: ImageAlignment
   }
   onImageChange: (file: File, imageUrl: string) => void
   onCaptionChange: (caption: string) => void
-  onAlignmentChange: (alignment: string) => void
+  onAlignmentChange: (alignment: ImageAlignment) => void
   onDelete: () => void
   onMoveUp: () => void
   onMoveDown: () => void
@@ -493,18 +523,16 @@ const ImageBlock = ({
             <ToggleGroup
               type="single"
               value={value.alignment}
-              onValueChange={(val) => {
-                if (val) onAlignmentChange(val)
-              }}
+              onValueChange={(val) => onAlignmentChange(val as ImageAlignment)}
               className="justify-start"
             >
-              <ToggleGroupItem value={IMAGE_ALIGNMENTS.LEFT} aria-label="Alinear a la izquierda">
+              <ToggleGroupItem value="left" aria-label="Alinear a la izquierda">
                 <AlignLeft className="h-4 w-4" />
               </ToggleGroupItem>
-              <ToggleGroupItem value={IMAGE_ALIGNMENTS.CENTER} aria-label="Centrar">
+              <ToggleGroupItem value="center" aria-label="Centrar">
                 <AlignCenter className="h-4 w-4" />
               </ToggleGroupItem>
-              <ToggleGroupItem value={IMAGE_ALIGNMENTS.RIGHT} aria-label="Alinear a la derecha">
+              <ToggleGroupItem value="right" aria-label="Alinear a la derecha">
                 <AlignRight className="h-4 w-4" />
               </ToggleGroupItem>
             </ToggleGroup>
@@ -683,6 +711,17 @@ const AddBlockButton = ({ onAddTextBlock, onAddChessGameBlock, onAddImageBlock }
   )
 }
 
+// Define proper types for form data
+interface FormData {
+  titulo: string
+  extracto: string
+  categoria: string
+  imagen: File | null
+  imagenPreview: string | null
+  publicarAhora: boolean
+  bloques: BlockContent[]
+}
+
 export default function NuevaNoticiaPage() {
   const router = useRouter()
   const { selectedClub } = useClubContext()
@@ -690,16 +729,18 @@ export default function NuevaNoticiaPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     titulo: "",
     extracto: "",
-    categoria: "",
+    categoria: "general",
     imagen: null,
     imagenPreview: null,
     publicarAhora: true,
     bloques: [
-      // Iniciar con un bloque de texto vacío
-      { type: BLOCK_TYPES.TEXT, content: "" },
+      {
+        type: BLOCK_TYPES.TEXT,
+        content: "",
+      } as TextBlockContent,
     ],
   })
 
@@ -716,8 +757,8 @@ export default function NuevaNoticiaPage() {
     )
   }
 
-  const handleChange = (e) => {
-    const { name, value, files } = e.target
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, files } = e.target as HTMLInputElement
     
     if (name === "imagen" && files && files[0]) {
       const file = files[0]
@@ -732,174 +773,159 @@ export default function NuevaNoticiaPage() {
     }
   }
 
-  const handleSelectChange = (name, value) => {
+  const handleSelectChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleCheckboxChange = (name, checked) => {
+  const handleCheckboxChange = (name: string, checked: boolean) => {
     setFormData((prev) => ({ ...prev, [name]: checked }))
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!selectedClub) {
-      setError('No hay un club seleccionado. Por favor, selecciona un club antes de continuar.')
+      setError('Debes seleccionar un club')
       return
     }
 
+    if (!formData.titulo.trim()) {
+      setError('El título es obligatorio')
+      return
+    }
+
+    if (!formData.extracto.trim()) {
+      setError('El extracto es obligatorio')
+      return
+    }
+
+    setIsSubmitting(true)
+    setError(null)
+
     try {
-      setIsSubmitting(true)
-      setError(null)
+      const supabase = createClient()
+      const adminClient = createAdminClient()
       
-      console.log('Starting news creation process...')
-      
-      // Verificar que el servicio de admin está disponible
-      if (!supabaseAdmin) {
-        console.error('Error: supabaseAdmin client is not available')
-        throw new Error('Error de configuración del servidor. Contacte al administrador.')
-      }
-      
-      // 1. Obtener usuario autenticado usando el patrón correcto
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      
-      if (userError) {
-        console.error('Error getting user:', userError)
-        throw new Error('No se pudo obtener la información del usuario. Por favor, inicie sesión nuevamente.')
-      }
-      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        throw new Error('No hay usuario autenticado. Por favor, inicie sesión.')
+        throw new Error('Usuario no autenticado')
       }
-      
-      console.log('User authenticated:', { id: user.id, email: user.email })
-      
-      // 2. Verificar que el usuario es administrador del club
-      const { data: clubAdminData, error: clubAdminError } = await supabase
-        .from('club_admins')
-        .select('auth_id')
-        .eq('auth_id', user.id)
-        .eq('club_id', selectedClub.id)
-        .single()
-      
-      if (clubAdminError || !clubAdminData) {
-        throw new Error('No tienes permisos para crear noticias en este club.')
-      }
-      
-      // 3. Procesar contenido de la noticia
-      const processedContent = await processNewsContent(formData.bloques)
-      
-      // 4. Subir imagen destacada si existe
-      let imagePath = null
+
+      // Upload featured image if provided
+      let featuredImagePath = null
       if (formData.imagen) {
         const file = formData.imagen
         const fileExt = file.name.split('.').pop()
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`
         const filePath = `news/${fileName}`
         
-        const { error: uploadError } = await supabaseAdmin.storage
+        const { error: uploadError } = await adminClient.storage
           .from('images')
           .upload(filePath, file)
         
         if (uploadError) {
-          throw new Error('Error al subir imagen: ' + uploadError.message)
+          throw new Error(`Error al subir imagen principal: ${uploadError.message}`)
         }
         
-        imagePath = filePath
+        featuredImagePath = filePath
       }
-      
-      // 5. Preparar datos para insertar en BD
+
+      // Process content blocks
+      const processedContent = await processNewsContent(formData.bloques)
+
+      // Create news entry
       const newsData = {
         title: formData.titulo,
         extract: formData.extracto,
         text: JSON.stringify(processedContent),
-        date: new Date().toISOString(),
-        image: imagePath,
-        tags: formData.categoria ? [formData.categoria] : [],
+        tags: [formData.categoria],
+        image: featuredImagePath,
+        date: formData.publicarAhora ? new Date().toISOString() : new Date().toISOString(),
         club_id: selectedClub.id,
-        created_by_auth_id: user.id,  // Usar auth_id directamente
+        created_by_auth_id: user.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
-      
-      // 6. Insertar noticia en la base de datos
-      console.log('Inserting news with data:', newsData)
-      
-      const { data: newsItem, error: insertError } = await supabaseAdmin
+
+      const { error: insertError } = await adminClient
         .from('news')
         .insert([newsData])
-        .select()
-      
+
       if (insertError) {
-        console.error('Error inserting news:', insertError)
-        throw new Error('Error al crear noticia: ' + insertError.message)
+        throw new Error(`Error al crear la noticia: ${insertError.message}`)
       }
-      
-      console.log('News created successfully:', newsItem)
-      
-      // 7. Mostrar notificación y redirigir
-      toast({
-        title: "Noticia creada",
-        description: `La noticia "${formData.titulo}" ha sido creada exitosamente.`,
-        duration: 5000,
-      })
-      
-      router.push("/club-admin/noticias")
-    } catch (err) {
-      console.error('Error al crear noticia:', err)
-      setError(err instanceof Error ? err.message : 'Ocurrió un error al crear la noticia')
+
+      // Redirect on success
+      router.push('/club-admin/noticias')
+    } catch (error) {
+      console.error('Error creating news:', error)
+      setError(error instanceof Error ? error.message : 'Error desconocido')
     } finally {
       setIsSubmitting(false)
     }
   }
   
   // Función para procesar el contenido antes de guardar
-  const processNewsContent = async (bloques) => {
+  const processNewsContent = async (bloques: BlockContent[]) => {
     // Convertir los bloques en un formato adecuado para guardar
     const processedBlocks = await Promise.all(bloques.map(async (bloque, index) => {
       if (bloque.type === BLOCK_TYPES.TEXT) {
         return {
           id: `block-${index}`,
-          type: bloque.type,
+          type: 'text',
           content: bloque.content
         }
-      } 
-      else if (bloque.type === BLOCK_TYPES.IMAGE) {
-        // Subir imagen si existe
-        let imagePath = null
+      } else if (bloque.type === BLOCK_TYPES.IMAGE) {
+        // Handle image upload
         if (bloque.content.file) {
           const file = bloque.content.file
           const fileExt = file.name.split('.').pop()
-          const fileName = `${Date.now()}-${index}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`
-          const filePath = `news/blocks/${fileName}`
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`
+          const filePath = `news/${fileName}`
           
           try {
-            const { error: uploadError } = await supabaseAdmin.storage
+            const adminClient = createAdminClient()
+            const { error: uploadError } = await adminClient.storage
               .from('images')
               .upload(filePath, file)
             
-            if (uploadError) throw uploadError
+            if (uploadError) {
+              throw new Error(`Error al subir imagen: ${uploadError.message}`)
+            }
             
-            imagePath = filePath
+            return {
+              id: `block-${index}`,
+              type: 'image',
+              content: {
+                imageUrl: filePath,
+                caption: bloque.content.caption,
+                alignment: bloque.content.alignment
+              }
+            }
           } catch (error) {
-            console.error('Error uploading image for block', index, error)
+            console.error('Error uploading image:', error)
+            return {
+              id: `block-${index}`,
+              type: 'text',
+              content: `[Error al cargar imagen: ${bloque.content.caption || 'imagen sin título'}]`
+            }
+          }
+        } else {
+          return {
+            id: `block-${index}`,
+            type: 'image',
+            content: {
+              imageUrl: bloque.content.imageUrl,
+              caption: bloque.content.caption,
+              alignment: bloque.content.alignment
+            }
           }
         }
-        
+      } else if (bloque.type === BLOCK_TYPES.CHESS_GAME) {
         return {
           id: `block-${index}`,
-          type: bloque.type,
-          content: {
-            src: imagePath,
-            caption: bloque.content.caption,
-            alignment: bloque.content.alignment
-          }
-        }
-      } 
-      else if (bloque.type === BLOCK_TYPES.CHESS_GAME) {
-        return {
-          id: `block-${index}`,
-          type: bloque.type,
+          type: 'chess_game',
           content: {
             pgn: bloque.content.pgn,
             whitePlayer: bloque.content.whitePlayer,
@@ -908,17 +934,26 @@ export default function NuevaNoticiaPage() {
         }
       }
       
-      return null
+      return {
+        id: `block-${index}`,
+        type: 'text',
+        content: 'Contenido no válido'
+      }
     }))
-    
-    return processedBlocks.filter(block => block !== null)
+
+    return processedBlocks
   }
 
-  // Funciones para manejar los bloques
   const addTextBlock = () => {
     setFormData((prev) => ({
       ...prev,
-      bloques: [...prev.bloques, { type: BLOCK_TYPES.TEXT, content: "" }],
+      bloques: [
+        ...prev.bloques,
+        {
+          type: BLOCK_TYPES.TEXT,
+          content: "",
+        } as TextBlockContent,
+      ],
     }))
   }
 
@@ -935,7 +970,7 @@ export default function NuevaNoticiaPage() {
             caption: "",
             alignment: IMAGE_ALIGNMENTS.CENTER,
           },
-        },
+        } as ImageBlockContent,
       ],
     }))
   }
@@ -952,132 +987,158 @@ export default function NuevaNoticiaPage() {
             whitePlayer: { type: "user", value: "" },
             blackPlayer: { type: "user", value: "" },
           },
-        },
+        } as ChessGameBlockContent,
       ],
     }))
   }
 
-  const updateTextBlock = (index, newContent) => {
+  const updateTextBlock = (index: number, newContent: string) => {
     const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = { ...updatedBloques[index], content: newContent }
-    setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
-  }
-
-  const updateImageFile = (index, file, imageUrl) => {
-    const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
-        file: file,
-        imageUrl: imageUrl,
-      },
+    if (updatedBloques[index] && updatedBloques[index].type === BLOCK_TYPES.TEXT) {
+      updatedBloques[index] = { ...updatedBloques[index], content: newContent }
+      setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
     }
-    setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const updateImageCaption = (index, caption) => {
+  const updateImageFile = (index: number, file: File, imageUrl: string) => {
     const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
-        caption: caption,
-      },
-    }
-    setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
-  }
-
-  const updateImageAlignment = (index, alignment) => {
-    const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
-        alignment: alignment,
-      },
-    }
-    setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
-  }
-
-  const updateChessGamePgn = (index, newPgn) => {
-    const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
-        pgn: newPgn,
-      },
-    }
-    setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
-  }
-
-  const updateChessGameWhitePlayer = (index, newValue) => {
-    const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
-        whitePlayer: {
-          ...updatedBloques[index].content.whitePlayer,
-          value: newValue,
+    if (updatedBloques[index] && updatedBloques[index].type === BLOCK_TYPES.IMAGE) {
+      const imageBlock = updatedBloques[index] as ImageBlockContent
+      updatedBloques[index] = {
+        ...imageBlock,
+        content: {
+          ...imageBlock.content,
+          file: file,
+          imageUrl: imageUrl,
         },
-      },
+      }
+      setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
     }
-    setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const updateChessGameBlackPlayer = (index, newValue) => {
+  const updateImageCaption = (index: number, caption: string) => {
     const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
-        blackPlayer: {
-          ...updatedBloques[index].content.blackPlayer,
-          value: newValue,
+    if (updatedBloques[index] && updatedBloques[index].type === BLOCK_TYPES.IMAGE) {
+      const imageBlock = updatedBloques[index] as ImageBlockContent
+      updatedBloques[index] = {
+        ...imageBlock,
+        content: {
+          ...imageBlock.content,
+          caption: caption,
         },
-      },
+      }
+      setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
     }
-    setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const updateChessGameWhitePlayerType = (index, newType) => {
+  const updateImageAlignment = (index: number, alignment: ImageAlignment) => {
     const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
-        whitePlayer: {
-          type: newType,
-          value: "", // Resetear el valor al cambiar el tipo
+    if (updatedBloques[index] && updatedBloques[index].type === BLOCK_TYPES.IMAGE) {
+      const imageBlock = updatedBloques[index] as ImageBlockContent
+      updatedBloques[index] = {
+        ...imageBlock,
+        content: {
+          ...imageBlock.content,
+          alignment: alignment,
         },
-      },
+      }
+      setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
     }
-    setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const updateChessGameBlackPlayerType = (index, newType) => {
+  const updateChessGamePgn = (index: number, newPgn: string) => {
     const updatedBloques = [...formData.bloques]
-    updatedBloques[index] = {
-      ...updatedBloques[index],
-      content: {
-        ...updatedBloques[index].content,
-        blackPlayer: {
-          type: newType,
-          value: "", // Resetear el valor al cambiar el tipo
+    if (updatedBloques[index] && updatedBloques[index].type === BLOCK_TYPES.CHESS_GAME) {
+      const chessBlock = updatedBloques[index] as ChessGameBlockContent
+      updatedBloques[index] = {
+        ...chessBlock,
+        content: {
+          ...chessBlock.content,
+          pgn: newPgn,
         },
-      },
+      }
+      setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
     }
-    setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const deleteBlock = (index) => {
+  const updateChessGameWhitePlayer = (index: number, newValue: string) => {
+    const updatedBloques = [...formData.bloques]
+    if (updatedBloques[index] && updatedBloques[index].type === BLOCK_TYPES.CHESS_GAME) {
+      const chessBlock = updatedBloques[index] as ChessGameBlockContent
+      updatedBloques[index] = {
+        ...chessBlock,
+        content: {
+          ...chessBlock.content,
+          whitePlayer: {
+            ...chessBlock.content.whitePlayer,
+            value: newValue,
+          },
+        },
+      }
+      setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
+    }
+  }
+
+  const updateChessGameBlackPlayer = (index: number, newValue: string) => {
+    const updatedBloques = [...formData.bloques]
+    if (updatedBloques[index] && updatedBloques[index].type === BLOCK_TYPES.CHESS_GAME) {
+      const chessBlock = updatedBloques[index] as ChessGameBlockContent
+      updatedBloques[index] = {
+        ...chessBlock,
+        content: {
+          ...chessBlock.content,
+          blackPlayer: {
+            ...chessBlock.content.blackPlayer,
+            value: newValue,
+          },
+        },
+      }
+      setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
+    }
+  }
+
+  const updateChessGameWhitePlayerType = (index: number, newType: string) => {
+    const updatedBloques = [...formData.bloques]
+    if (updatedBloques[index] && updatedBloques[index].type === BLOCK_TYPES.CHESS_GAME) {
+      const chessBlock = updatedBloques[index] as ChessGameBlockContent
+      updatedBloques[index] = {
+        ...chessBlock,
+        content: {
+          ...chessBlock.content,
+          whitePlayer: {
+            type: newType,
+            value: "", // Resetear el valor al cambiar el tipo
+          },
+        },
+      }
+      setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
+    }
+  }
+
+  const updateChessGameBlackPlayerType = (index: number, newType: string) => {
+    const updatedBloques = [...formData.bloques]
+    if (updatedBloques[index] && updatedBloques[index].type === BLOCK_TYPES.CHESS_GAME) {
+      const chessBlock = updatedBloques[index] as ChessGameBlockContent
+      updatedBloques[index] = {
+        ...chessBlock,
+        content: {
+          ...chessBlock.content,
+          blackPlayer: {
+            type: newType,
+            value: "", // Resetear el valor al cambiar el tipo
+          },
+        },
+      }
+      setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
+    }
+  }
+
+  const deleteBlock = (index: number) => {
     const updatedBloques = formData.bloques.filter((_, i) => i !== index)
     setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const moveBlockUp = (index) => {
+  const moveBlockUp = (index: number) => {
     if (index === 0) return
     const updatedBloques = [...formData.bloques]
     const temp = updatedBloques[index]
@@ -1086,7 +1147,7 @@ export default function NuevaNoticiaPage() {
     setFormData((prev) => ({ ...prev, bloques: updatedBloques }))
   }
 
-  const moveBlockDown = (index) => {
+  const moveBlockDown = (index: number) => {
     if (index === formData.bloques.length - 1) return
     const updatedBloques = [...formData.bloques]
     const temp = updatedBloques[index]
@@ -1213,10 +1274,10 @@ export default function NuevaNoticiaPage() {
                   return (
                     <ImageBlock
                       key={`image-${index}`}
-                      value={bloque.content}
+                      value={(bloque as ImageBlockContent).content}
                       onImageChange={(file, imageUrl) => updateImageFile(index, file, imageUrl)}
                       onCaptionChange={(caption) => updateImageCaption(index, caption)}
-                      onAlignmentChange={(alignment) => updateImageAlignment(index, alignment)}
+                      onAlignmentChange={(alignment) => updateImageAlignment(index, alignment as ImageAlignment)}
                       onDelete={() => deleteBlock(index)}
                       onMoveUp={() => moveBlockUp(index)}
                       onMoveDown={() => moveBlockDown(index)}
@@ -1228,7 +1289,7 @@ export default function NuevaNoticiaPage() {
                   return (
                     <ChessGameBlock
                       key={`chess-${index}`}
-                      value={bloque.content}
+                      value={(bloque as ChessGameBlockContent).content}
                       onPgnChange={(newPgn) => updateChessGamePgn(index, newPgn)}
                       onWhitePlayerChange={(newValue) => updateChessGameWhitePlayer(index, newValue)}
                       onBlackPlayerChange={(newValue) => updateChessGameBlackPlayer(index, newValue)}

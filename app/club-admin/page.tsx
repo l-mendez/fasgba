@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge"
 import { getUserAdminClubs, getClubFollowers, type Club } from "@/lib/clubUtils"
 import { getCurrentUser } from "@/lib/userUtils"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 
 interface ClubStats {
   noticias: number
@@ -44,6 +44,7 @@ export default function ClubAdminDashboard() {
   const apiCall = async (endpoint: string, options: RequestInit = {}) => {
     try {
       // Get authentication token from Supabase
+      const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
 

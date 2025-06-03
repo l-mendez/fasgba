@@ -255,16 +255,6 @@ export default async function Home() {
             <div className="container px-4 md:px-6">
               <div className="mb-8 flex items-center justify-between">
                 <h2 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Últimas Noticias</h2>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="border-amber text-amber-dark hover:bg-amber/10">
-                    <ChevronLeft className="h-4 w-4" />
-                    <span className="sr-only">Anterior</span>
-                  </Button>
-                  <Button variant="outline" size="icon" className="border-amber text-amber-dark hover:bg-amber/10">
-                    <ChevronRight className="h-4 w-4" />
-                    <span className="sr-only">Siguiente</span>
-                  </Button>
-                </div>
               </div>
 
               {noticias.length > 0 ? (

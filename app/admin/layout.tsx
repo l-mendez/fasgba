@@ -59,46 +59,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const { isAuthenticated, isAdmin, isLoading, user, permissions, error } = useAuth()
 
-  // Debug logging
-  useEffect(() => {
-    console.log('🎯 Admin Layout Debug:', {
-      isLoading,
-      isAuthenticated,
-      isAdmin,
-      user: user ? { id: user.id, email: user.email } : null,
-      permissions,
-      error
-    })
-  }, [isLoading, isAuthenticated, isAdmin, user, permissions, error])
-
-  // Handle authentication and authorization
-  useEffect(() => {
-    // Don't redirect while still loading
-    if (isLoading) {
-      console.log('⏳ Still loading authentication...')
-      return
-    }
-
-    // If not authenticated or not admin, redirect to 404
-    if (!isAuthenticated || !isAdmin) {
-      console.log('❌ Client-side: Redirecting to 404. Auth:', isAuthenticated, 'Admin:', isAdmin)
-      router.replace('/not-found')
-      return
-    }
-
-    console.log('✅ Client-side: Admin access granted')
-  }, [isAuthenticated, isAdmin, isLoading, router])
-
-  // Show loading while checking authentication
-  if (isLoading) {
-    return <AdminLoadingPage />
-  }
-
-  // If not authenticated or not admin, show nothing (redirect is in progress)
-  if (!isAuthenticated || !isAdmin) {
-    return null
-  }
-
   // Sidebar content component for reuse in both desktop and mobile
   const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => (
     <div className="space-y-4 py-4">
@@ -164,6 +124,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     </div>
   )
 
+  // Handle client-side logic
+  if (isLoading) {
+    return <AdminLoadingPage />
+  }
+
+  if (!isAuthenticated || !isAdmin) {
+    router.replace('/not-found')
+    return null
+  }
+
+  // User is authenticated and is an admin
   return (
     <div className="min-h-screen lg:flex">
       {/* Desktop Sidebar */}

@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/useAuth"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 // Tournament type based on the API response format
@@ -55,10 +55,11 @@ interface Tournament {
 
 // API helper function
 async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
+  const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
   
   if (!session) {
-    throw new Error('No hay sesión autenticada')
+    throw new Error('No hay sesión activa')
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin

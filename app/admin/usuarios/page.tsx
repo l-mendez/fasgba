@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 
 // Updated interface to include additional user metadata
 interface UserWithPermissions {
@@ -43,6 +43,7 @@ interface UserWithPermissions {
 
 // API utility functions
 async function getAuthToken(): Promise<string | null> {
+  const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
   return session?.access_token || null
 }

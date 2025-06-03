@@ -21,7 +21,7 @@ import {
   Save
 } from "lucide-react"
 import { Chess } from "chess.js"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 
 import { Button } from "@/components/ui/button"
@@ -779,11 +779,12 @@ export default function NewNewsPage() {
       console.log('Starting news creation process...')
       
       // Check authentication first
+      const supabase = createClient()
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
       if (sessionError) {
         console.error('Session error:', sessionError)
-        throw new Error('Error al verificar la sesión: ' + sessionError.message)
+        throw new Error('Error de autenticación')
       }
       
       if (!session?.access_token) {
@@ -871,6 +872,7 @@ export default function NewNewsPage() {
   // Función para procesar el contenido antes de guardar
   const processNewsContent = async (bloques: BlockContent[]) => {
     // Get session once for all image uploads
+    const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
     
     if (!session?.access_token) {

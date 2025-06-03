@@ -1,8 +1,8 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/middleware/auth'
 import { validatePermissionParam } from '@/lib/schemas/userSchemas'
 import { apiSuccess, handleError, forbiddenError } from '@/lib/utils/apiResponse'
-import { supabase } from '@/lib/supabaseClient'
+import { createClient } from '@/lib/supabase/server'
 
 interface RouteParams {
   params: Promise<{
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const permission = validatePermissionParam(permissionParam)
     
     // Check if user is admin
-    const { data: admin } = await supabase
+    const { data: admin } = await createClient()
       .from('admins')
       .select('auth_id')
       .eq('auth_id', user.id)

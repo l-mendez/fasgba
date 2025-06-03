@@ -19,12 +19,13 @@ import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/useAuth"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 
 export function SiteHeader() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const { isAuthenticated, isAdmin, isClubAdmin, isLoading } = useAuth()
+  const supabase = createClient()
 
   const handleLogout = async () => {
     await supabase.auth.signOut()

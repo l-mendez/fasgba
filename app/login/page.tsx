@@ -12,9 +12,9 @@ export default function Login() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
 
-  const handleSubmit = async (email: string, password: string) => {
-    // Here you can implement the actual login logic
-    console.log("Login attempt with:", { email, password })
+  const handleLogin = () => {
+    // Validation is handled by AuthButton component
+    return true
   }
 
   return (

@@ -8,7 +8,7 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 
 interface FormData {
   name: string
@@ -54,7 +54,7 @@ export default function NuevoClubPage() {
     setIsLoading(true)
 
     try {
-      const { error } = await supabase
+      const { error } = await createClient()
         .from('clubs')
         .insert([
           {

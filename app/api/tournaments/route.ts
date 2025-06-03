@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
+import { createClient } from '@/lib/supabase/server'
 import {
   getAllTournamentsWithDates,
   getAllTournamentsForDisplay,
@@ -13,15 +13,10 @@ import {
 import { validateTournamentQuery, validateCreateTournament } from '@/lib/schemas/tournamentSchemas'
 import { apiSuccess, handleError, unauthorizedError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
-import { createClient } from '@supabase/supabase-js'
-
-// Create a Supabase client for server-side operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = await createClient()
     const { searchParams } = new URL(request.url)
     const queryParams = validateTournamentQuery(searchParams)
     
@@ -107,6 +102,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient()
+    
     // Get the authorization header
     const authHeader = request.headers.get('authorization')
     
@@ -117,14 +114,14 @@ export async function POST(request: NextRequest) {
     const token = authHeader.substring(7) // Remove 'Bearer ' prefix
 
     // Verify the JWT token with Supabase
-    const { data: { user }, error: authError } = await serverSupabase.auth.getUser(token)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     
     if (authError || !user) {
       return unauthorizedError(ERROR_MESSAGES.UNAUTHORIZED)
     }
 
     // Check if user is an admin
-    const { data: admin, error: adminError } = await serverSupabase
+    const { data: admin, error: adminError } = await supabase
       .from('admins')
       .select('auth_id')
       .eq('auth_id', user.id)
@@ -139,7 +136,7 @@ export async function POST(request: NextRequest) {
     const validatedData = validateCreateTournament(body)
 
     // Create the tournament
-    const newTournament = await createTournament(serverSupabase, validatedData)
+    const newTournament = await createTournament(supabase, validatedData)
     
     return apiSuccess(newTournament, 201)
   } catch (error) {

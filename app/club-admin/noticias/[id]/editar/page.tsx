@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 import { ArrowLeft, Save } from "lucide-react"
 import { notFound } from "next/navigation"
 
@@ -35,6 +35,7 @@ interface News {
 
 // Helper function para hacer llamadas a la API
 async function apiCall(endpoint: string, options: RequestInit = {}) {
+  const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
   
   if (!session) {
@@ -95,6 +96,7 @@ export default function EditClubNewsPage({ params }: { params: { id: string } })
         }
 
         // Get current user to check permissions
+        const supabase = createClient()
         const { data: { session } } = await supabase.auth.getSession()
         if (!session?.user?.id) {
           throw new Error('No hay sesión activa')

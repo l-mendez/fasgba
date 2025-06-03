@@ -1,4 +1,5 @@
-import { supabase, supabaseAdmin } from './supabaseClient';
+import { createClient } from "@/lib/supabase/client"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export interface Player {
   id: number;
@@ -43,7 +44,7 @@ export async function fetchRankingData(): Promise<RankingData> {
     console.log('Fetching ranking data from Supabase Storage...');
     
     // Get the public URL for the ranking file
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = createClient().storage
       .from('ranking-data')
       .getPublicUrl('ranking.json');
 
@@ -199,7 +200,7 @@ export async function getClubs(): Promise<string[]> {
  * Updates the ranking data in Supabase Storage (admin only)
  */
 export async function updateRankingData(newData: RankingData): Promise<void> {
-  if (!supabaseAdmin) {
+  if (!createAdminClient()) {
     throw new Error('Admin access required to update ranking data');
   }
 
@@ -216,7 +217,7 @@ export async function updateRankingData(newData: RankingData): Promise<void> {
     const jsonBuffer = Buffer.from(JSON.stringify(dataWithTimestamp, null, 2));
     
     // Upload to Supabase Storage
-    const { error } = await supabaseAdmin.storage
+    const { error } = createAdminClient().storage
       .from('ranking-data')
       .upload('ranking.json', jsonBuffer, {
         contentType: 'application/json',

@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 
 interface Club {
   id: number
@@ -40,6 +40,7 @@ interface ClubAdmin {
 
 // API utility functions
 async function getAuthToken(): Promise<string | null> {
+  const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
   return session?.access_token || null
 }
@@ -121,6 +122,7 @@ export default function EditarUsuarioPage() {
         setUser(userData)
         
         // Fetch all clubs
+        const supabase = createClient()
         const { data: clubsData, error: clubsError } = await supabase
           .from('clubs')
           .select('id, name')
@@ -187,6 +189,7 @@ export default function EditarUsuarioPage() {
       // 1. Update admin permissions
       if (permissions.isAdmin && !user.isAdmin) {
         // Add to admins table
+        const supabase = createClient()
         const { error: adminInsertError } = await supabase
           .from('admins')
           .upsert({ auth_id: userId })
@@ -194,6 +197,7 @@ export default function EditarUsuarioPage() {
         if (adminInsertError) throw adminInsertError
       } else if (!permissions.isAdmin && user.isAdmin) {
         // Remove from admins table
+        const supabase = createClient()
         const { error: adminDeleteError } = await supabase
           .from('admins')
           .delete()
@@ -203,6 +207,7 @@ export default function EditarUsuarioPage() {
       }
       
       // 2. Update club admin relationships
+      const supabase = createClient()
       const { data: currentClubAdmins } = await supabase
         .from('club_admins')
         .select('club_id')

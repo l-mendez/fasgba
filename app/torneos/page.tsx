@@ -20,7 +20,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 import {
   type TournamentDisplay,
   getAllTournamentsForDisplay,
@@ -277,7 +277,7 @@ export default function TorneosPage() {
         setLoading(true)
         setError(null)
         
-        const tournamentsData = await getAllTournamentsForDisplay(supabase)
+        const tournamentsData = await getAllTournamentsForDisplay(createClient())
         const sortedTournaments = sortTournamentsByDate(tournamentsData, 'asc')
         setTournaments(sortedTournaments)
       } catch (err) {

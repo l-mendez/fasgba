@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/hooks/useAuth"
@@ -25,6 +25,7 @@ export default function SetupPage() {
     setError(null)
 
     try {
+      const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session?.access_token) {
@@ -56,14 +57,21 @@ export default function SetupPage() {
     }
   }
 
-  const checkTables = async () => {
+  const checkTableStatus = async () => {
     try {
-      const response = await fetch('/api/setup/check-tables')
-      const result = await response.json()
-      console.log('Table status:', result)
-      setMessage('Table status logged to console (press F12 to see)')
-    } catch (err) {
-      setError('Failed to check tables')
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('tournaments')
+        .select('count')
+        .limit(1)
+      
+      if (error) {
+        setMessage(`Error al verificar la tabla: ${error.message}`)
+      } else {
+        setMessage('Verificación de tabla completada. La tabla tournaments está accesible.')
+      }
+    } catch (error) {
+      setMessage(`Error al verificar la tabla: ${error instanceof Error ? error.message : 'Error desconocido'}`)
     }
   }
 
@@ -160,7 +168,7 @@ export default function SetupPage() {
             </CardHeader>
             <CardContent>
               <Button 
-                onClick={checkTables}
+                onClick={checkTableStatus}
                 variant="outline"
               >
                 Check Table Status

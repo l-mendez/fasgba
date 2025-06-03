@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/hooks/useAuth"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 
 interface Tournament {
   id: string
@@ -48,6 +48,7 @@ interface FormData {
 
 // API helper function
 async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
+  const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
   
   if (!session) {

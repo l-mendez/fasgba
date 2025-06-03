@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabaseClient'
+import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
 
 interface UserPermissions {
@@ -30,6 +30,7 @@ export function useAuth(): AuthState {
   const [isClubAdmin, setIsClubAdmin] = useState(false)
   const [adminClubsCount, setAdminClubsCount] = useState(0)
   const [error, setError] = useState<string | undefined>(undefined)
+  const supabase = createClient()
 
   useEffect(() => {
     // Get initial session

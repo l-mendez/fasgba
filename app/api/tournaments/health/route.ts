@@ -1,17 +1,32 @@
-import { NextRequest } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
-import { checkTournamentsTable } from '@/lib/tournamentUtils'
-import { requireAdmin } from '@/lib/middleware/auth'
-import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
+import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    // Require admin authentication
-    await requireAdmin(request)
+    const supabase = await createClient()
     
-    const healthStatus = await checkTournamentsTable(supabase)
-    return apiSuccess(healthStatus)
+    // Test database connection
+    const { data, error } = await supabase
+      .from('tournaments')
+      .select('count')
+      .limit(1)
+
+    if (error) {
+      return NextResponse.json(
+        { status: 'error', message: error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      database: 'connected'
+    })
   } catch (error) {
-    return handleError(error)
+    return NextResponse.json(
+      { status: 'error', message: 'Internal server error' },
+      { status: 500 }
+    )
   }
 } 

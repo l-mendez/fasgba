@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -26,6 +26,7 @@ export function AuthButton({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const supabase = createClient()
 
   const handleClick = async () => {
     if (!email || !password) {
@@ -72,13 +73,6 @@ export function AuthButton({
       const { data, error: authError } = response
 
       if (authError) {
-        console.log("Full auth error:", {
-          message: authError.message,
-          status: authError.status,
-          name: authError.name,
-          error: authError
-        })
-        
         if (authError.message === "Invalid login credentials") {
           setError("Credenciales inválidas")
         } else if (authError.message.includes("Email not confirmed")) {
@@ -99,12 +93,19 @@ export function AuthButton({
         if (mode === "signup") {
           router.push('/confirmar-email')
         } else {
-          router.push('/')
+          // Force a page refresh to update the session
+          router.push('/admin')
+          router.refresh() 
         }
       }
-    } catch (error: any) {
-      console.error("Auth failed:", error)
-      setError("Error de conexión. Por favor, verifica tu conexión a internet e intenta nuevamente.")
+    } catch (error) {
+      setIsLoading(false)
+      if (error instanceof Error) {
+        console.error('Auth error:', error.message)
+        setError(error.message)
+      } else {
+        setError('An unexpected error occurred')
+      }
     } finally {
       setIsLoading(false)
     }

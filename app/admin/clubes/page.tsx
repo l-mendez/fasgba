@@ -25,7 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 
 interface Club {
   id: number
@@ -45,6 +45,7 @@ interface ClubAdmin {
 
 // API utility functions
 async function getAuthToken(): Promise<string | null> {
+  const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
   return session?.access_token || null
 }

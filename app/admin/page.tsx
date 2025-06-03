@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { supabase } from "@/lib/supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 
 // Type definitions for our stats
 interface DashboardStats {
@@ -28,6 +28,7 @@ interface DashboardStats {
 
 // Helper function to make authenticated API calls
 async function apiCall(endpoint: string) {
+  const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
   
   if (!session?.access_token) {

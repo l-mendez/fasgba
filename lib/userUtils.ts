@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient"
+import { createClient } from "@/lib/supabase/client"
 import { User } from "@supabase/supabase-js"
 
 export interface UserProfile {
@@ -23,9 +23,10 @@ export interface UserPermissions {
 }
 
 /**
- * Gets the current authenticated user
+ * Get the current authenticated user
  */
 export async function getCurrentUser(): Promise<User | null> {
+  const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   return user
 }
@@ -37,6 +38,7 @@ export async function getUserProfile(): Promise<UserProfile | null> {
   const user = await getCurrentUser()
   if (!user) return null
 
+  const supabase = createClient()
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -58,6 +60,7 @@ export async function updateUserProfile(updates: Partial<UserProfile>): Promise<
   const user = await getCurrentUser()
   if (!user) return false
 
+  const supabase = createClient()
   const { error } = await supabase
     .from('profiles')
     .update(updates)
@@ -118,6 +121,7 @@ export async function getUserFullName(): Promise<string> {
  * Updates the user's password
  */
 export async function updatePassword(newPassword: string): Promise<boolean> {
+  const supabase = createClient()
   const { error } = await supabase.auth.updateUser({
     password: newPassword
   })
@@ -134,6 +138,7 @@ export async function updatePassword(newPassword: string): Promise<boolean> {
  * Signs out the current user
  */
 export async function signOut(): Promise<void> {
+  const supabase = createClient()
   await supabase.auth.signOut()
 }
 
@@ -149,6 +154,7 @@ export async function isEmailVerified(): Promise<boolean> {
  * Gets the user's session
  */
 export async function getSession() {
+  const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
   return session
 }
@@ -168,7 +174,7 @@ export async function getUserAvatarUrl(): Promise<string | null> {
   const profile = await getUserProfile()
   if (!profile) return null
 
-  const { data } = await supabase
+  const { data } = await createClient
     .storage
     .from('avatars')
     .getPublicUrl(`${profile.id}/avatar`)
@@ -183,7 +189,7 @@ export async function uploadAvatar(file: File): Promise<boolean> {
   const user = await getCurrentUser()
   if (!user) return false
 
-  const { error } = await supabase
+  const { error } = await createClient
     .storage
     .from('avatars')
     .upload(`${user.id}/avatar`, file, {
