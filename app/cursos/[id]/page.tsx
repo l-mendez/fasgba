@@ -211,7 +211,7 @@ export default function CursoDetailPage({ params }: { params: { id: string } }) 
   if (!curso) {
     return (
       <div className="flex min-h-screen flex-col">
-        <SiteHeader />
+        <SiteHeader pathname={`/cursos/${parseInt(params.id)}`} />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-terracotta mb-4">Curso no encontrado</h1>
@@ -233,7 +233,7 @@ export default function CursoDetailPage({ params }: { params: { id: string } }) 
 
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
+      <SiteHeader pathname={`/cursos/${parseInt(params.id)}`} />
       <main className="flex-1">
         {/* Imagen de cabecera */}
         <div className="relative h-[300px] md:h-[400px] lg:h-[500px] w-full">

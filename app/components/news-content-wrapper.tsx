@@ -118,7 +118,7 @@ export default function NewsContentWrapper({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
+      <SiteHeader pathname={`/noticias/${newsItem.id}`} />
       <main className="flex-1">
         <article>
           {/* Imagen de cabecera - Optimized for mobile */}

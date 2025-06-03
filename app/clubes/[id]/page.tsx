@@ -120,7 +120,7 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col">
-        <SiteHeader />
+        <SiteHeader pathname={`/clubes/${clubId}`} />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin text-terracotta mx-auto mb-4" />
@@ -135,7 +135,7 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
   if (error || !club) {
     return (
       <div className="flex min-h-screen flex-col">
-        <SiteHeader />
+        <SiteHeader pathname={`/clubes/${clubId}`} />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-terracotta mb-4">
@@ -156,7 +156,7 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
+      <SiteHeader pathname={`/clubes/${clubId}`} />
       <main className="flex-1">
         <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
           <div className="container px-4 md:px-6">
