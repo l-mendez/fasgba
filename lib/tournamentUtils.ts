@@ -12,6 +12,7 @@ export interface Tournament {
   cost: string | null;
   prizes: string | null;
   image: string | null;
+  created_by_club_id?: number | null;
 }
 
 // Tournament dates from the separate table
@@ -369,29 +370,20 @@ export async function getAllTournamentsWithDates(supabase: any): Promise<Tournam
  */
 export async function getAllTournaments(supabase: any): Promise<Tournament[]> {
   try {
-    const { data, error } = await supabase
+    const { data: tournaments, error } = await supabase
       .from('tournaments')
-      .select('*')
-      .order('id', { ascending: true });
+      .select('id, title, description, time, place, location, rounds, pace, inscription_details, cost, prizes, image, created_by_club_id')
+      .order('id', { ascending: false });
 
     if (error) {
-      console.error('Supabase error fetching tournaments:', error);
-      console.error('Error details:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      });
-      throw new Error(`Database error: ${error.message || 'Unknown error'}`);
+      console.error('Error fetching tournaments:', error);
+      throw new Error('Failed to fetch tournaments');
     }
 
-    return data || [];
+    return tournaments || [];
   } catch (error) {
-    console.error('Database error in getAllTournaments:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to fetch tournaments: Unknown error occurred');
+    console.error('Error in getAllTournaments:', error);
+    throw error;
   }
 }
 
@@ -481,7 +473,7 @@ export async function getTournamentsWithPagination(
       // For other fields, we can order directly
       const { data, error } = await supabase
         .from('tournaments')
-        .select('*')
+        .select('id, title, description, time, place, location, rounds, pace, inscription_details, cost, prizes, image, created_by_club_id')
         .order(orderBy, { ascending })
         .range(from, to);
 
@@ -530,6 +522,7 @@ export async function getUpcomingTournaments(supabase: any, limit?: number): Pro
       cost: t.cost,
       prizes: t.prizes,
       image: t.image,
+      created_by_club_id: null, // Add this field since it's not in TournamentDisplay
     }));
 
     return limit ? result.slice(0, limit) : result;
@@ -563,6 +556,7 @@ export async function getOngoingTournaments(supabase: any): Promise<Tournament[]
       cost: t.cost,
       prizes: t.prizes,
       image: t.image,
+      created_by_club_id: null, // Add this field since it's not in TournamentDisplay
     }));
   } catch (error) {
     console.error('Database error:', error);
@@ -581,7 +575,7 @@ export async function searchTournaments(
   try {
     const { data, error } = await supabase
       .from('tournaments')
-      .select('*')
+      .select('id, title, description, time, place, location, rounds, pace, inscription_details, cost, prizes, image, created_by_club_id')
       .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
       .order('id', { ascending: true })
       .limit(limit);
@@ -739,15 +733,23 @@ export async function createTournament(supabase: any, tournamentData: {
   prizes?: string;
   image?: string;
   dates: string[];
+  created_by_club?: number;
 }): Promise<Tournament> {
   try {
     // Extract dates from tournament data
     const { dates, ...tournamentFields } = tournamentData;
 
+    // If created_by_club is provided, rename it to created_by_club_id for the database
+    const dbTournamentFields = { ...tournamentFields };
+    if (tournamentData.created_by_club) {
+      (dbTournamentFields as any).created_by_club_id = tournamentData.created_by_club;
+      delete (dbTournamentFields as any).created_by_club;
+    }
+
     // Create the tournament record
     const { data: tournament, error: tournamentError } = await supabase
       .from('tournaments')
-      .insert([tournamentFields])
+      .insert([dbTournamentFields])
       .select()
       .single();
 
@@ -797,15 +799,23 @@ export async function updateTournament(supabase: any, tournamentId: number, tour
   prizes?: string;
   image?: string;
   dates?: string[];
+  created_by_club?: number;
 }): Promise<boolean> {
   try {
     // Extract dates from tournament data
     const { dates, ...tournamentFields } = tournamentData;
 
+    // If created_by_club is provided, rename it to created_by_club_id for the database
+    const dbTournamentFields = { ...tournamentFields };
+    if (tournamentData.created_by_club) {
+      (dbTournamentFields as any).created_by_club_id = tournamentData.created_by_club;
+      delete (dbTournamentFields as any).created_by_club;
+    }
+
     // Update the tournament record
     const { error: tournamentError } = await supabase
       .from('tournaments')
-      .update(tournamentFields)
+      .update(dbTournamentFields)
       .eq('id', tournamentId);
 
     if (tournamentError) {

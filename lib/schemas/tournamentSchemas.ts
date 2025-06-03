@@ -25,7 +25,8 @@ export const createTournamentSchema = z.object({
   cost: z.string().max(255, 'Cost too long').optional(),
   prizes: z.string().max(1000, 'Prizes too long').optional(),
   image: z.string().max(255, 'Image URL too long').optional(),
-  dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')).min(1, 'At least one date is required')
+  dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')).min(1, 'At least one date is required'),
+  created_by_club: z.number().int().positive('Club ID must be positive').optional()
 })
 
 // Schema for updating a tournament
@@ -41,7 +42,8 @@ export const updateTournamentSchema = z.object({
   cost: z.string().max(255, 'Cost too long').optional(),
   prizes: z.string().max(1000, 'Prizes too long').optional(),
   image: z.string().max(255, 'Image URL too long').optional(),
-  dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')).min(1, 'At least one date is required').optional()
+  dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')).min(1, 'At least one date is required').optional(),
+  created_by_club: z.number().int().positive('Club ID must be positive').optional()
 })
 
 // Schema for tournament query parameters
