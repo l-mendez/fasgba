@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 
 interface Club {
   id: number
@@ -73,8 +74,6 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
   })
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [newTag, setNewTag] = useState("")
-  const [tags, setTags] = useState<string[]>([])
   const [category, setCategory] = useState<string>("")
   const [contentBlocks, setContentBlocks] = useState<any[]>([
     { type: 'text', content: '' } // Start with one text block
@@ -93,15 +92,12 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
       // Convert content blocks to JSON string
       const contentJson = JSON.stringify(contentBlocks)
 
-      // Prepare tags with category as first tag
-      const allTags = category ? [category, ...tags.filter(tag => tag !== category)] : tags
-
       const newsData = {
         title: formData.title,
         date: formattedDate,
         extract: formData.extract,
         text: contentJson, // Save the structured content
-        tags: allTags,
+        tags: category ? [category] : [],
         club_id: formData.club_id
       }
       
@@ -122,20 +118,6 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
     } finally {
       setIsSaving(false)
     }
-  }
-
-  const handleAddTag = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && newTag.trim()) {
-      e.preventDefault()
-      if (!tags.includes(newTag.trim())) {
-        setTags([...tags, newTag.trim()])
-      }
-      setNewTag("")
-    }
-  }
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove))
   }
 
   // Function to add a new content block
@@ -277,10 +259,9 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
                   
                   {block.type === 'text' && (
                     <div className="pt-6">
-                      <Textarea
-                        value={block.content}
-                        onChange={(e) => updateContentBlock(index, { ...block, content: e.target.value })}
-                        className="min-h-[150px]"
+                      <RichTextEditor
+                        content={block.content}
+                        onChange={(content) => updateContentBlock(index, { ...block, content })}
                         placeholder="Escribe el contenido aquí..."
                       />
                     </div>
@@ -338,28 +319,6 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
                 <Button type="button" variant="outline" onClick={() => addContentBlock('chess_game')}>+ Partida de ajedrez</Button>
               </div>
             </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label>Etiquetas</Label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="cursor-pointer"
-                  onClick={() => handleRemoveTag(tag)}
-                >
-                  {tag} ×
-                </Badge>
-              ))}
-            </div>
-            <Input
-              placeholder="Agregar etiqueta (presiona Enter)"
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              onKeyDown={handleAddTag}
-            />
           </div>
 
           {clubs.length > 1 && (

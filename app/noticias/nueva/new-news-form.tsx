@@ -30,6 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 
 interface Club {
   id: number
@@ -184,12 +185,10 @@ const TextBlock = ({
           </Button>
         </div>
       </div>
-      <Textarea
-        id={`text-block-${index}`}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+      <RichTextEditor
+        content={value}
+        onChange={onChange}
         placeholder="Escribe el contenido aquí..."
-        className="min-h-[150px]"
       />
     </div>
   )
@@ -521,14 +520,12 @@ export function NewNewsForm({ user, allClubs, userClubs, isAdmin, defaultEntityI
     image: null as File | null,
     imagePreview: null as string | null,
     category: "",
-    tags: [] as string[],
     contentBlocks: [
       { type: BLOCK_TYPES.TEXT, content: "" } as TextBlockContent,
     ] as BlockContent[]
   })
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [newTag, setNewTag] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -567,9 +564,6 @@ export function NewNewsForm({ user, allClubs, userClubs, isAdmin, defaultEntityI
         imagePath = filePath
       }
 
-      // Prepare tags with category as first tag
-      const allTags = formData.category ? [formData.category, ...formData.tags.filter(tag => tag !== formData.category)] : formData.tags
-
       // Prepare data for API
       const newsData = {
         title: formData.title,
@@ -577,7 +571,7 @@ export function NewNewsForm({ user, allClubs, userClubs, isAdmin, defaultEntityI
         extract: formData.extract,
         text: JSON.stringify(processedContent),
         image: imagePath,
-        tags: allTags,
+        tags: formData.category ? [formData.category] : [],
         club_id: formData.club_id
       }
       
@@ -683,26 +677,6 @@ export function NewNewsForm({ user, allClubs, userClubs, isAdmin, defaultEntityI
     }))
     
     return processedBlocks.filter(block => block !== null)
-  }
-
-  const handleAddTag = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && newTag.trim()) {
-      e.preventDefault()
-      if (!formData.tags.includes(newTag.trim())) {
-        setFormData(prev => ({
-          ...prev,
-          tags: [...prev.tags, newTag.trim()]
-        }))
-      }
-      setNewTag("")
-    }
-  }
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
-    }))
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -981,28 +955,6 @@ export function NewNewsForm({ user, allClubs, userClubs, isAdmin, defaultEntityI
                 <SelectItem value="partidas">Partidas</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="grid gap-2">
-            <Label>Etiquetas</Label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {formData.tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="cursor-pointer"
-                  onClick={() => handleRemoveTag(tag)}
-                >
-                  {tag} ×
-                </Badge>
-              ))}
-            </div>
-            <Input
-              placeholder="Agregar etiqueta (presiona Enter)"
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              onKeyDown={handleAddTag}
-            />
           </div>
 
           {/* Entity selection - unified for all users */}

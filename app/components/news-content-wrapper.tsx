@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ClientSiteHeader } from "@/components/client-site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { RichTextDisplay } from "@/components/ui/rich-text-display"
 
 // Simpler loading placeholder
 const ChessComponentLoader = () => (
@@ -57,10 +58,10 @@ interface News {
 // Component to render content blocks
 const ContentRenderer = ({ content }: { content: any[] }) => {
   return (
-    <div className="prose prose-amber max-w-none prose-sm sm:prose-base prose-img:rounded-lg prose-img:mx-auto prose-figcaption:text-center prose-figcaption:text-xs prose-figcaption:sm:text-sm">
+    <div className="space-y-4 sm:space-y-6">
       {content.map((block, index) => {
         if (block.type === 'text') {
-          return <div key={index} dangerouslySetInnerHTML={{ __html: block.content }} />
+          return <RichTextDisplay key={index} content={block.content} />
         }
         
         if (block.type === 'image') {

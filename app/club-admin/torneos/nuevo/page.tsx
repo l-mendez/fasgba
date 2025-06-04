@@ -62,11 +62,8 @@ async function getUserClubs(): Promise<{ clubs: Club[], selectedClub: Club | nul
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
     if (userError || !user) {
-      console.log('No authenticated user found:', userError?.message)
       return { clubs: [], selectedClub: null }
     }
-
-    console.log('Found authenticated user:', user.id, user.email)
 
     // Get clubs where user is admin using the admin client for the query
     const adminClient = createAdminClient()
@@ -90,8 +87,6 @@ async function getUserClubs(): Promise<{ clubs: Club[], selectedClub: Club | nul
       return { clubs: [], selectedClub: null }
     }
 
-    console.log('Found admin data:', adminData)
-
     // Properly type and filter the clubs data
     const dbClubs: DbClub[] = (adminData || [])
       .filter(item => item.clubs)
@@ -111,8 +106,6 @@ async function getUserClubs(): Promise<{ clubs: Club[], selectedClub: Club | nul
     const clubs: Club[] = dbClubs.map(mapDbClubToClub)
 
     const selectedClub = clubs.length > 0 ? clubs[0] : null
-
-    console.log('Final clubs result:', clubs.length, 'clubs found')
 
     return { clubs, selectedClub }
   } catch (error) {

@@ -19,6 +19,31 @@ interface Club {
   updated_at: string
 }
 
+// Database Club interface (matches actual schema)
+interface DbClub {
+  id: number
+  name: string
+  address?: string
+  telephone?: string
+  mail?: string
+  schedule?: string
+}
+
+// Function to map database club to expected club format
+function mapDbClubToClub(dbClub: DbClub): Club {
+  return {
+    id: dbClub.id,
+    name: dbClub.name,
+    description: undefined,
+    location: dbClub.address,
+    website: undefined,
+    email: dbClub.mail,
+    phone: dbClub.telephone,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+}
+
 // Server function to get user from session
 async function getCurrentUser() {
   try {
@@ -55,16 +80,13 @@ async function getUserClubs(userId: string): Promise<Club[]> {
         clubs (
           id,
           name,
-          description,
-          location,
-          website,
-          email,
-          phone,
-          created_at,
-          updated_at
+          address,
+          telephone,
+          mail,
+          schedule
         )
       `)
-      .eq('user_id', userId)
+      .eq('auth_id', userId)
 
     if (adminError) {
       console.error('Error fetching user clubs:', adminError)
@@ -72,25 +94,25 @@ async function getUserClubs(userId: string): Promise<Club[]> {
     }
 
     // Properly type and filter the clubs data
-    const clubs: Club[] = (adminData || [])
+    const dbClubs: DbClub[] = (adminData || [])
       .filter(item => item.clubs)
       .map(item => {
         const club = item.clubs as any
         return {
           id: club.id,
           name: club.name,
-          description: club.description,
-          location: club.location,
-          website: club.website,
-          email: club.email,
-          phone: club.phone,
-          created_at: club.created_at,
-          updated_at: club.updated_at
+          address: club.address,
+          telephone: club.telephone,
+          mail: club.mail,
+          schedule: club.schedule
         }
       })
 
+    // Convert to expected Club format
+    const clubs: Club[] = dbClubs.map(mapDbClubToClub)
+
     return clubs
-          } catch (error) {
+  } catch (error) {
     console.error('Error in getUserClubs:', error)
     return []
   }
