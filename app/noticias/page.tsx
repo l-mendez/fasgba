@@ -8,6 +8,8 @@ import { SiteFooter } from "@/components/site-footer"
 import { Card, CardContent } from "@/components/ui/card"
 import { NewsFilters } from "@/components/news-filters"
 import { NewsPagination } from "@/components/news-pagination"
+import { getAllNews, getAllNewsTags } from "@/lib/newsUtils"
+import { getAllClubs } from "@/lib/clubUtils"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
@@ -65,16 +67,28 @@ function getClubDisplayName(newsItem: News) {
 
 async function fetchNews(): Promise<News[]> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/news?limit=100&include=club`, {
-      next: { revalidate: 0 }
+    const { data } = await getAllNews({ 
+      limit: 100, 
+      include: ['club'] 
     })
     
-    if (!response.ok) {
-      throw new Error('Failed to fetch news')
-    }
-    
-    const data = await response.json()
-    return data.news || []
+    return data.map(item => ({
+      id: item.id,
+      title: item.title,
+      date: item.date,
+      image: item.image,
+      extract: item.extract || '',
+      text: item.text,
+      tags: item.tags || [],
+      club_id: item.club_id,
+      club: item.club ? {
+        id: item.club.id,
+        name: item.club.name
+      } : null,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      created_by_auth_id: item.created_by_auth_id
+    }))
   } catch (error) {
     console.error('Error fetching news:', error)
     return []
@@ -83,16 +97,7 @@ async function fetchNews(): Promise<News[]> {
 
 async function fetchTags(): Promise<string[]> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/news/tags`, {
-      next: { revalidate: 0 }
-    })
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch tags')
-    }
-    
-    const data = await response.json()
-    return data.tags || []
+    return await getAllNewsTags()
   } catch (error) {
     console.error('Error fetching tags:', error)
     return []
@@ -101,16 +106,8 @@ async function fetchTags(): Promise<string[]> {
 
 async function fetchClubs(): Promise<Club[]> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/clubs`, {
-      next: { revalidate: 0 }
-    })
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch clubs')
-    }
-    
-    const data = await response.json()
-    return data || []
+    const clubs = await getAllClubs()
+    return clubs as Club[]
   } catch (error) {
     console.error('Error fetching clubs:', error)
     return []

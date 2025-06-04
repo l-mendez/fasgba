@@ -1,14 +1,23 @@
 import Link from "next/link"
 import { Calendar, ChevronLeft, ChevronRight, MapPin } from "lucide-react"
 import { ReactNode } from "react"
+import { createClient } from '@supabase/supabase-js'
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { getAllNews } from "@/lib/newsUtils"
+import { getUpcomingTournaments } from "@/lib/tournamentUtils"
+import { getAllClubs } from "@/lib/clubUtils"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
+
+// Create Supabase client for server-side operations
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Types for the data structures
 interface NewsItem {
@@ -28,10 +37,17 @@ interface NewsItem {
 interface Tournament {
   id: number
   title: string
-  start_date: string
+  description: string | null
   time: string | null
   place: string | null
-  description: string | null
+  location: string | null
+  rounds: number | null
+  pace: string | null
+  inscription_details: string | null
+  cost: string | null
+  prizes: string | null
+  image: string | null
+  created_by_club_id?: number | null
   formatted_start_date?: string
 }
 
@@ -61,16 +77,26 @@ interface NoticiaProps {
 // Server-side data fetching functions
 async function fetchNews(): Promise<NewsItem[]> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/news?limit=5&orderBy=date&order=desc&include=club`, {
-      next: { revalidate: 0 }
+    const { data } = await getAllNews({ 
+      limit: 5, 
+      orderBy: 'date', 
+      order: 'desc',
+      include: ['club']
     })
     
-    if (!response.ok) {
-      throw new Error('Failed to fetch news')
-    }
-    
-    const data = await response.json()
-    return data.news || []
+    return data.map(item => ({
+      id: item.id,
+      title: item.title,
+      date: item.date,
+      image: item.image,
+      extract: item.extract || '',
+      tags: item.tags || [],
+      club_id: item.club_id,
+      club: item.club ? {
+        id: item.club.id,
+        name: item.club.name
+      } : null
+    }))
   } catch (error) {
     console.error('Error fetching news:', error)
     return []
@@ -79,16 +105,13 @@ async function fetchNews(): Promise<NewsItem[]> {
 
 async function fetchTournaments(): Promise<Tournament[]> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/tournaments?limit=3&status=upcoming`, {
-      next: { revalidate: 0 }
-    })
+    const tournaments = await getUpcomingTournaments(supabase, 3)
     
-    if (!response.ok) {
-      throw new Error('Failed to fetch tournaments')
-    }
-    
-    const data = await response.json()
-    return data || []
+    // Add formatted dates for display - tournaments don't have direct start_date
+    return tournaments.map(tournament => ({
+      ...tournament,
+      formatted_start_date: 'Fecha por confirmar' // We'll update this based on tournament dates logic
+    }))
   } catch (error) {
     console.error('Error fetching tournaments:', error)
     return []
@@ -97,16 +120,9 @@ async function fetchTournaments(): Promise<Tournament[]> {
 
 async function fetchClubs(): Promise<Club[]> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/clubs?limit=6`, {
-      next: { revalidate: 0 }
-    })
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch clubs')
-    }
-    
-    const data = await response.json()
-    return data || []
+    const clubs = await getAllClubs()
+    // Limit the results to 6 after fetching
+    return (clubs as Club[]).slice(0, 6)
   } catch (error) {
     console.error('Error fetching clubs:', error)
     return []
@@ -137,15 +153,6 @@ function mapNewsToNoticia(newsItem: NewsItem, isFeatured = false): Noticia {
 function formatTournamentDate(tournament: Tournament): string {
   if (tournament.formatted_start_date) {
     return tournament.formatted_start_date
-  }
-  
-  if (tournament.start_date) {
-    const date = new Date(tournament.start_date)
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
   }
   
   return 'Fecha por confirmar'
