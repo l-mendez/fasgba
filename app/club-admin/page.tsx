@@ -10,10 +10,6 @@ import { Badge } from "@/components/ui/badge"
 import { ClubProvider } from "./context/club-provider"
 import { QuickActions } from "./components/quick-actions"
 
-// Client component for context-aware actions
-"use client"
-import { useClubContext } from "./context/club-provider"
-
 interface ClubStats {
   noticias: number
   torneos: number
