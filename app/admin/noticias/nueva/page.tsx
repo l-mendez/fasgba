@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import {
   ArrowLeft as ChevronLeft,
   Plus,
-  Eye,
   ChevronDown,
   ChevronUp,
   Trash2,
@@ -20,7 +19,6 @@ import {
   AlertCircle,
   Save
 } from "lucide-react"
-import { Chess } from "chess.js"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -124,122 +122,6 @@ interface News {
   updated_at: string
 }
 
-// Componente para visualizar el tablero de ajedrez
-const ChessBoard = ({ pgn }: { pgn: string }) => {
-  const [position, setPosition] = useState<string | null>(null)
-  const [currentMove, setCurrentMove] = useState(0)
-  const [moves, setMoves] = useState<Array<{ number: number; white: string; black: string }>>([])
-  const [error, setError] = useState("")
-
-  useEffect(() => {
-    if (!pgn) return
-
-    try {
-      const chess = new Chess()
-      chess.loadPgn(pgn)
-
-      // Guardar la posición inicial
-      const history = chess.history({ verbose: true })
-      const allPositions = [chess.fen()]
-
-      // Revertir a la posición inicial
-      chess.reset()
-
-      // Generar todas las posiciones
-      const allMoves: Array<{ number: number; white: string; black: string }> = []
-      for (let i = 0; i < history.length; i++) {
-        chess.move(history[i])
-        allPositions.push(chess.fen())
-
-        // Guardar la notación de cada movimiento
-        if (i % 2 === 0) {
-          allMoves.push({
-            number: Math.floor(i / 2) + 1,
-            white: history[i].san,
-            black: i + 1 < history.length ? history[i + 1].san : "",
-          })
-        }
-      }
-
-      setMoves(allMoves)
-      setPosition(allPositions[0])
-      setCurrentMove(0)
-      setError("")
-    } catch (e) {
-      setError("Error al cargar la notación PGN. Verifique que sea válida.")
-      console.error(e)
-    }
-  }, [pgn])
-
-  const handleMoveChange = (moveIndex: number) => {
-    if (!moves.length) return
-    setCurrentMove(moveIndex)
-    // Aquí actualizaríamos la posición del tablero
-  }
-
-  if (error) {
-    return <div className="text-red-500 p-4">{error}</div>
-  }
-
-  // Renderizado simplificado del tablero (en producción usaríamos una biblioteca como react-chessboard)
-  return (
-    <div className="flex flex-col md:flex-row gap-4">
-      <div className="w-full md:w-2/3 bg-gray-100 aspect-square flex items-center justify-center">
-        <div className="text-center">
-          {position ? (
-            <div className="text-sm">
-              <div className="font-mono text-xs block mt-2 bg-gray-200 p-2 rounded">{position.substring(0, 30)}...</div>
-              <p className="mt-4 text-xs text-muted-foreground">
-                En producción, este componente utilizaría react-chessboard u otra biblioteca similar para mostrar el
-                tablero real.
-              </p>
-            </div>
-          ) : (
-            <p>Cargando tablero...</p>
-          )}
-        </div>
-      </div>
-
-      <div className="w-full md:w-1/3">
-        <h3 className="font-medium mb-2">Movimientos</h3>
-        <div className="bg-gray-50 p-2 rounded max-h-[300px] overflow-y-auto">
-          {moves.length > 0 ? (
-            <div className="grid grid-cols-3 gap-1">
-              <div className="font-medium text-sm">#</div>
-              <div className="font-medium text-sm">Blancas</div>
-              <div className="font-medium text-sm">Negras</div>
-
-              {moves.map((move, index) => (
-                <>
-                  <div key={`num-${index}`} className="text-sm text-gray-500">
-                    {move.number}.
-                  </div>
-                  <button
-                    key={`white-${index}`}
-                    className={`text-sm text-left px-1 hover:bg-gray-200 rounded ${currentMove === index * 2 + 1 ? "bg-blue-100" : ""}`}
-                    onClick={() => handleMoveChange(index * 2 + 1)}
-                  >
-                    {move.white}
-                  </button>
-                  <button
-                    key={`black-${index}`}
-                    className={`text-sm text-left px-1 hover:bg-gray-200 rounded ${currentMove === index * 2 + 2 ? "bg-blue-100" : ""}`}
-                    onClick={() => handleMoveChange(index * 2 + 2)}
-                  >
-                    {move.black}
-                  </button>
-                </>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">No hay movimientos para mostrar</p>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // Componente para seleccionar jugadores
 const PlayerSelector = ({ 
   label, 
@@ -254,78 +136,20 @@ const PlayerSelector = ({
   onChange: (value: string) => void
   onTypeChange: (type: string) => void
 }) => {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; elo: number }>>([])
-
-  // Simulación de búsqueda de usuarios
-  useEffect(() => {
-    if (type === "user" && searchTerm.length > 2) {
-      // En producción, esto sería una llamada a la API
-      const mockResults = [
-        { id: "1", name: "Juan Pérez", elo: 1850 },
-        { id: "2", name: "María García", elo: 2100 },
-        { id: "3", name: "Carlos López", elo: 1750 },
-        { id: "4", name: "Ana Martínez", elo: 2200 },
-      ].filter((user) => user.name.toLowerCase().includes(searchTerm.toLowerCase()))
-
-      setSearchResults(mockResults)
-    }
-  }, [searchTerm, type])
-
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <div className="flex flex-col space-y-2 p-3 border rounded-md">
-        <RadioGroup value={type} onValueChange={onTypeChange} className="flex space-x-4">
-          <div className="flex items-center space-x-1">
-            <RadioGroupItem value="user" id={`user-${label}`} />
-            <Label htmlFor={`user-${label}`}>Usuario</Label>
-          </div>
-          <div className="flex items-center space-x-1">
+      <div className="flex flex-col space-y-3 p-3 border rounded-md">
+        <RadioGroup value={type} onValueChange={onTypeChange} className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+          <div className="flex items-center space-x-2">
             <RadioGroupItem value="custom" id={`custom-${label}`} />
             <Label htmlFor={`custom-${label}`}>Nombre personalizado</Label>
           </div>
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-2">
             <RadioGroupItem value="anonymous" id={`anonymous-${label}`} />
             <Label htmlFor={`anonymous-${label}`}>Anónimo</Label>
           </div>
         </RadioGroup>
-
-        {type === "user" && (
-          <div className="space-y-2">
-            <div className="relative">
-              <Input
-                placeholder="Buscar usuario..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              {searchResults.length > 0 && searchTerm.length > 2 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
-                  {searchResults.map((user) => (
-                    <button
-                      key={user.id}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-100 flex justify-between items-center"
-                      onClick={() => {
-                        onChange(user.id)
-                        setSearchTerm("")
-                      }}
-                    >
-                      <span>{user.name}</span>
-                      <Badge variant="outline">{user.elo}</Badge>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {value && (
-              <div className="bg-gray-50 p-2 rounded">
-                {/* En producción, esto mostraría los detalles del usuario seleccionado */}
-                <p className="text-sm">Usuario seleccionado: ID {value}</p>
-              </div>
-            )}
-          </div>
-        )}
 
         {type === "custom" && (
           <Input placeholder="Nombre del jugador" value={value || ""} onChange={(e) => onChange(e.target.value)} />
@@ -569,7 +393,6 @@ const ChessGameBlock = ({
   totalBlocks: number
 }) => {
   const [isOpen, setIsOpen] = useState(true)
-  const [previewPgn, setPreviewPgn] = useState("")
 
   return (
     <div className="border rounded-md p-4 mb-4">
@@ -619,28 +442,9 @@ const ChessGameBlock = ({
               className="font-mono text-sm"
               rows={6}
             />
-            <div className="flex justify-end">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" onClick={() => setPreviewPgn(value.pgn)}>
-                    <Eye className="mr-1 h-4 w-4" />
-                    Previsualizar tablero
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-3xl">
-                  <DialogHeader>
-                    <DialogTitle>Previsualización de la partida</DialogTitle>
-                    <DialogDescription>Vista previa del tablero y los movimientos de la partida</DialogDescription>
-                  </DialogHeader>
-                  <div className="mt-4">
-                    <ChessBoard pgn={previewPgn} />
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <PlayerSelector
               label="Jugador con blancas"
               type={value.whitePlayer.type}
@@ -973,8 +777,8 @@ export default function NewNewsPage() {
           type: BLOCK_TYPES.CHESS_GAME,
           content: {
             pgn: "",
-            whitePlayer: { type: "user", value: "" },
-            blackPlayer: { type: "user", value: "" },
+            whitePlayer: { type: "custom", value: "" },
+            blackPlayer: { type: "custom", value: "" },
           },
         } as ChessGameBlockContent,
       ],
