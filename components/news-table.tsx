@@ -444,13 +444,13 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                         <DropdownMenuItem asChild>
-                          <Link href={`/admin/noticias/${item.id}`} className="flex items-center">
+                          <Link href={`/noticias/${item.id}`} className="flex items-center">
                             <Eye className="mr-2 h-4 w-4" />
                             Ver
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href={`/admin/noticias/${item.id}/editar`} className="flex items-center">
+                          <Link href={`/noticias/${item.id}/editar`} className="flex items-center">
                             <Edit className="mr-2 h-4 w-4" />
                             Editar
                           </Link>
@@ -546,7 +546,7 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href={`/admin/noticias/${item.id}/editar`} className="flex items-center">
+                      <Link href={`/noticias/${item.id}/editar`} className="flex items-center">
                         <Edit className="mr-2 h-4 w-4" />
                         Editar
                       </Link>

@@ -499,7 +499,7 @@ export function NoticiasContent({ initialNews, selectedClub }: NoticiasContentPr
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                              <Link href={`/club-admin/noticias/${noticia.id}/editar`}>
+                              <Link href={`/noticias/${noticia.id}/editar`}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 Editar
                               </Link>
@@ -601,7 +601,7 @@ export function NoticiasContent({ initialNews, selectedClub }: NoticiasContentPr
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link href={`/club-admin/noticias/${noticia.id}/editar`}>
+                            <Link href={`/noticias/${noticia.id}/editar`}>
                               <Edit className="mr-2 h-4 w-4" />
                               Editar
                             </Link>

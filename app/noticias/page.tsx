@@ -42,11 +42,11 @@ interface Club {
 }
 
 interface PageProps {
-  searchParams: {
+  searchParams: Promise<{
     tag?: string
     club?: string
     page?: string
-  }
+  }>
 }
 
 // Format date to a more readable format
@@ -155,9 +155,10 @@ function paginateNews(news: News[], page: number, itemsPerPage: number = 9) {
 }
 
 export default async function NoticiasPage({ searchParams }: PageProps) {
-  const selectedTag = searchParams.tag || 'all'
-  const selectedClub = searchParams.club || 'all'
-  const currentPage = parseInt(searchParams.page || '1', 10)
+  const params = await searchParams
+  const selectedTag = params.tag || 'all'
+  const selectedClub = params.club || 'all'
+  const currentPage = parseInt(params.page || '1', 10)
 
   // Fetch all data in parallel
   const [allNews, tags, clubs] = await Promise.all([
@@ -314,7 +315,6 @@ export default async function NoticiasPage({ searchParams }: PageProps) {
                   <NewsPagination
                     currentPage={currentPage}
                     totalPages={totalPages}
-                    searchParams={searchParams}
                   />
                 )}
               </>

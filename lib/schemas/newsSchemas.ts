@@ -16,7 +16,7 @@ export const createNewsSchema = z.object({
   text: z.string().min(1, 'Content is required'),
   image: z.string().min(1, 'Image must not be empty').nullable().optional(),
   tags: z.array(z.string()).max(10, 'Maximum 10 tags allowed').optional(),
-  club_id: z.number().int().positive('Club ID must be a positive integer').optional(),
+  club_id: z.number().int().positive('Club ID must be a positive integer').nullable().optional(),
 })
 
 // Schema for updating a news item
@@ -26,7 +26,7 @@ export const updateNewsSchema = z.object({
   text: z.string().min(1, 'Content is required').optional(),
   image: z.string().min(1, 'Image must not be empty').nullable().optional(),
   tags: z.array(z.string()).max(10, 'Maximum 10 tags allowed').optional(),
-  club_id: z.number().int().positive('Club ID must be a positive integer').optional(),
+  club_id: z.number().int().positive('Club ID must be a positive integer').nullable().optional(),
 })
 
 // Schema for news query parameters

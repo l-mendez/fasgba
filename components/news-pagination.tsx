@@ -8,17 +8,11 @@ import { Button } from "@/components/ui/button"
 interface NewsPaginationProps {
   currentPage: number
   totalPages: number
-  searchParams: {
-    tag?: string
-    club?: string
-    page?: string
-  }
 }
 
 export function NewsPagination({ 
   currentPage, 
-  totalPages, 
-  searchParams 
+  totalPages
 }: NewsPaginationProps) {
   const urlSearchParams = useSearchParams()
   

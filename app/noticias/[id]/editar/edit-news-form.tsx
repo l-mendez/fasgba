@@ -33,6 +33,7 @@ interface News {
 
 interface EditNewsFormProps {
   news: News
+  redirectPath: string
 }
 
 // Helper function para hacer llamadas a la API
@@ -68,7 +69,7 @@ async function apiCall(endpoint: string, options: RequestInit = {}) {
   return response.json()
 }
 
-export function EditNewsForm({ news: initialNews }: EditNewsFormProps) {
+export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormProps) {
   const router = useRouter()
   const [news, setNews] = useState(() => {
     // Format the date for the input field (YYYY-MM-DD)
@@ -173,7 +174,7 @@ export function EditNewsForm({ news: initialNews }: EditNewsFormProps) {
 
       // Add a small delay to ensure the update is completed before redirecting
       setTimeout(() => {
-        router.push('/club-admin/noticias')
+        router.push(redirectPath)
         router.refresh()
       }, 500)
     } catch (err) {
@@ -250,69 +251,73 @@ export function EditNewsForm({ news: initialNews }: EditNewsFormProps) {
   }
 
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="flex flex-col gap-4 md:gap-8 p-4 md:p-8">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/club-admin/noticias')}>
+        <div className="flex items-center gap-2 md:gap-4">
+          <Button variant="ghost" size="sm" className="md:size-icon" onClick={() => router.push(redirectPath)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-terracotta">Editar Noticia</h1>
-            <p className="text-muted-foreground">
-              Modifica los detalles de la noticia para {news.club?.name}.
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-terracotta">Editar Noticia</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
+              {news.club?.name ? `Modifica los detalles de la noticia para ${news.club.name}.` : 'Modifica los detalles de la noticia.'}
             </p>
           </div>
         </div>
-        <Button onClick={handleSubmit} disabled={isSaving}>
-          <Save className="mr-2 h-4 w-4" />
-          {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+        <Button onClick={handleSubmit} disabled={isSaving} className="text-sm md:text-base" size="sm">
+          <Save className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
+          <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Guardar Cambios'}</span>
+          <span className="sm:hidden">{isSaving ? 'Guardando...' : 'Guardar'}</span>
         </Button>
       </div>
 
       {error && (
         <Alert variant="destructive">
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="text-sm">{error}</AlertDescription>
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="grid gap-4">
+      <form onSubmit={handleSubmit} className="space-y-4 md:space-y-8">
+        <div className="grid gap-3 md:gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="title">Título</Label>
+            <Label htmlFor="title" className="text-sm md:text-sm font-medium">Título</Label>
             <Input
               id="title"
               value={news.title}
               onChange={(e) => setNews({ ...news, title: e.target.value })}
               required
+              className="text-sm md:text-base"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="date">Fecha</Label>
+            <Label htmlFor="date" className="text-sm md:text-sm font-medium">Fecha</Label>
             <Input
               id="date"
               type="date"
               value={news.date}
               onChange={(e) => setNews({ ...news, date: e.target.value })}
               required
+              className="text-sm md:text-base"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="extract">Extracto</Label>
+            <Label htmlFor="extract" className="text-sm md:text-sm font-medium">Extracto</Label>
             <Textarea
               id="extract"
               value={news.extract}
               onChange={(e) => setNews({ ...news, extract: e.target.value })}
               placeholder="Breve descripción de la noticia..."
+              className="text-sm md:text-base min-h-[80px] md:min-h-[100px]"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="category">Categoría</Label>
+            <Label htmlFor="category" className="text-sm md:text-sm font-medium">Categoría</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger id="category">
+              <SelectTrigger id="category" className="text-sm md:text-base">
                 <SelectValue placeholder="Seleccionar categoría" />
               </SelectTrigger>
               <SelectContent>
@@ -327,89 +332,125 @@ export function EditNewsForm({ news: initialNews }: EditNewsFormProps) {
           </div>
 
           <div className="grid gap-2">
-            <Label>Contenido</Label>
-            <div className="border rounded-md p-4 space-y-4">
+            <Label className="text-sm md:text-sm font-medium">Contenido</Label>
+            <div className="border rounded-md p-3 md:p-4 space-y-3 md:space-y-4">
               {contentBlocks.map((block, index) => (
-                <div key={index} className="border rounded-md p-4 relative">
-                  <div className="absolute right-2 top-2 flex space-x-2">
-                    <Button variant="ghost" size="sm" onClick={() => moveBlock(index, 'up')} disabled={index === 0} type="button">↑</Button>
-                    <Button variant="ghost" size="sm" onClick={() => moveBlock(index, 'down')} disabled={index === contentBlocks.length - 1} type="button">↓</Button>
-                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => removeContentBlock(index)} type="button">×</Button>
+                <div key={index} className="border rounded-md p-3 md:p-4 relative">
+                  <div className="absolute right-2 top-2 flex space-x-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => moveBlock(index, 'up')} 
+                      disabled={index === 0} 
+                      type="button"
+                      className="h-7 w-7 md:h-8 md:w-8 p-0 text-xs"
+                    >
+                      ↑
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => moveBlock(index, 'down')} 
+                      disabled={index === contentBlocks.length - 1} 
+                      type="button"
+                      className="h-7 w-7 md:h-8 md:w-8 p-0 text-xs"
+                    >
+                      ↓
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-destructive h-7 w-7 md:h-8 md:w-8 p-0 text-xs" 
+                      onClick={() => removeContentBlock(index)} 
+                      type="button"
+                    >
+                      ×
+                    </Button>
                   </div>
                   
                   {block.type === 'text' && (
-                    <div className="pt-6">
+                    <div className="pt-8 md:pt-6">
                       <Textarea
                         value={block.content}
                         onChange={(e) => updateContentBlock(index, { ...block, content: e.target.value })}
-                        className="min-h-[150px]"
+                        className="min-h-[120px] md:min-h-[150px] text-sm md:text-base"
                         placeholder="Escribe el contenido aquí..."
                       />
                     </div>
                   )}
                   
                   {block.type === 'image' && (
-                    <div className="pt-6 space-y-2">
+                    <div className="pt-8 md:pt-6 space-y-2">
                       <Input
                         placeholder="URL de la imagen"
                         value={block.url}
                         onChange={(e) => updateContentBlock(index, { ...block, url: e.target.value })}
+                        className="text-sm md:text-base"
                       />
                       <Input
                         placeholder="Pie de foto (opcional)"
                         value={block.caption}
                         onChange={(e) => updateContentBlock(index, { ...block, caption: e.target.value })}
+                        className="text-sm md:text-base"
                       />
                       {block.url && (
                         <div className="mt-2">
-                          <img src={block.url} alt={block.caption} className="max-h-48 object-contain" />
+                          <img src={block.url} alt={block.caption} className="max-h-32 md:max-h-48 object-contain w-full" />
                         </div>
                       )}
                     </div>
                   )}
                   
                   {block.type === 'chess_game' && block.content && (
-                    <div className="pt-6 space-y-2">
+                    <div className="pt-8 md:pt-6 space-y-2">
                       <Textarea
                         placeholder="PGN (notación)"
                         value={block.content.pgn || ''}
                         onChange={(e) => updateContentBlock(index, { ...block, content: { ...block.content, pgn: e.target.value } })}
-                        className="min-h-[100px]"
+                        className="min-h-[100px] md:min-h-[120px] text-sm md:text-base"
                       />
                       <Input
                         placeholder="Jugador blanco"
                         value={block.content.whitePlayer?.value || ''}
                         onChange={(e) => updateContentBlock(index, { ...block, content: { ...block.content, whitePlayer: { ...block.content.whitePlayer, value: e.target.value } } })}
+                        className="text-sm md:text-base"
                       />
                       <Input
                         placeholder="Jugador negro"
                         value={block.content.blackPlayer?.value || ''}
                         onChange={(e) => updateContentBlock(index, { ...block, content: { ...block.content, blackPlayer: { ...block.content.blackPlayer, value: e.target.value } } })}
+                        className="text-sm md:text-base"
                       />
                       <div className="mt-2 p-2 border rounded-md bg-muted">
-                        <p className="text-sm text-muted-foreground">Vista previa del tablero no disponible en el editor</p>
+                        <p className="text-xs md:text-sm text-muted-foreground">Vista previa del tablero no disponible en el editor</p>
                       </div>
                     </div>
                   )}
                 </div>
               ))}
               
-              <div className="flex space-x-2 mt-4">
-                <Button type="button" variant="outline" onClick={() => addContentBlock('text')}>+ Texto</Button>
-                <Button type="button" variant="outline" onClick={() => addContentBlock('image')}>+ Imagen</Button>
-                <Button type="button" variant="outline" onClick={() => addContentBlock('chess_game')}>+ Partida de ajedrez</Button>
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mt-4">
+                <Button type="button" variant="outline" onClick={() => addContentBlock('text')} size="sm" className="text-sm w-full sm:w-auto">
+                  + Texto
+                </Button>
+                <Button type="button" variant="outline" onClick={() => addContentBlock('image')} size="sm" className="text-sm w-full sm:w-auto">
+                  + Imagen
+                </Button>
+                <Button type="button" variant="outline" onClick={() => addContentBlock('chess_game')} size="sm" className="text-sm w-full sm:w-auto">
+                  + Partida de ajedrez
+                </Button>
               </div>
             </div>
           </div>
 
           <div className="grid gap-2">
-            <Label>Etiquetas</Label>
+            <Label className="text-sm md:text-sm font-medium">Etiquetas</Label>
             <div className="flex flex-wrap gap-2 mb-2">
               {tags.map((tag) => (
                 <Badge
                   key={tag}
                   variant="secondary"
-                  className="cursor-pointer"
+                  className="cursor-pointer text-xs"
                   onClick={() => handleRemoveTag(tag)}
                 >
                   {tag} ×
@@ -421,16 +462,19 @@ export function EditNewsForm({ news: initialNews }: EditNewsFormProps) {
               value={newTag}
               onChange={(e) => setNewTag(e.target.value)}
               onKeyDown={handleAddTag}
+              className="text-sm md:text-base"
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label>Club Asociado</Label>
-            <div className="p-3 bg-muted rounded-md">
-              <p className="text-sm font-medium">{news.club?.name}</p>
-              <p className="text-xs text-muted-foreground">La noticia estará asociada a este club</p>
+          {news.club && (
+            <div className="grid gap-2">
+              <Label className="text-sm md:text-sm font-medium">Club Asociado</Label>
+              <div className="p-3 bg-muted rounded-md">
+                <p className="text-sm font-medium">{news.club.name}</p>
+                <p className="text-xs text-muted-foreground">La noticia estará asociada a este club</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </form>
     </div>
