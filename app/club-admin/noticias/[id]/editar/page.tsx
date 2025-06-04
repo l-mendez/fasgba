@@ -102,11 +102,34 @@ export default function EditClubNewsPage({ params }: { params: { id: string } })
           throw new Error('No hay sesión activa')
         }
 
-        // Check if the current user is an admin of the club that created this news
-        const adminCheck = await apiCall(`/clubs/${data.club_id}/admins/${session.user.id}`)
+        // Check if the current user is a site-wide admin or admin of the club that created this news
+        let hasPermission = false
+        let errorMessage = ''
         
-        if (!adminCheck.isAdmin) {
-          // User is not admin of this club, redirect to 404
+        try {
+          // First check if user is a site-wide admin
+          const permissionsCheck = await apiCall('/users/me/permissions')
+          if (permissionsCheck.isAdmin) {
+            hasPermission = true
+          }
+        } catch (err) {
+          console.warn('Error checking site admin status:', err)
+        }
+        
+        // If not a site admin, check if user is admin of the specific club
+        if (!hasPermission) {
+          try {
+            const adminCheck = await apiCall(`/clubs/${data.club_id}/admins/${session.user.id}`)
+            hasPermission = adminCheck.isAdmin
+          } catch (err) {
+            errorMessage = err instanceof Error ? err.message : 'Error al verificar permisos de club'
+            console.error('Club admin check failed:', err)
+          }
+        }
+        
+        if (!hasPermission) {
+          // User is not admin of this club or site admin, redirect to 404
+          console.error('Access denied. Site admin:', false, 'Club admin:', false, 'Error:', errorMessage)
           notFound()
           return
         }
