@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "migrate:ranking": "npx tsx scripts/migrate-ranking-to-supabase.ts"
+    "migrate:ranking": "npx tsx scripts/migrate-ranking-to-supabase.ts",
+    "setup:storage": "npx tsx scripts/setup-storage-buckets.ts"
   },
   "dependencies": {
     "@mliebelt/pgn-parser": "^1.4.18",

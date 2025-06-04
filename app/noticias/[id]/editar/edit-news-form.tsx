@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { ImageUpload } from "@/components/ui/image-upload"
 
 interface News {
   id: number
@@ -125,6 +126,18 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
               }
             }
           }
+          // Handle image blocks - convert URLs to proper structure for display
+          if (block.type === 'image') {
+            const imageUrl = block.url || block.content?.src || block.content?.url || null
+            return {
+              type: 'image',
+              content: {
+                url: imageUrl,
+                caption: block.caption || block.content?.caption || '',
+                filePath: block.content?.src || null // Store the file path for deletion
+              }
+            }
+          }
           return block
         })
         
@@ -138,6 +151,16 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
       return [{ type: 'text', content: String(initialNews.text) }]
     }
   })
+
+  // Function to get public URL from file path
+  const getPublicUrl = (filePath: string) => {
+    if (!filePath) return null
+    const supabase = createClient()
+    const { data: { publicUrl } } = supabase.storage
+      .from('images')
+      .getPublicUrl(filePath)
+    return publicUrl
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -159,7 +182,8 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
         extract: news.extract,
         text: contentJson, // Save the structured content
         tags: category ? [category] : [],
-        club_id: news.club_id // Keep the original club_id
+        club_id: news.club_id, // Keep the original club_id
+        image: news.image // Include the featured image path
       }
       
       // Use the API to update news
@@ -189,7 +213,14 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
         newBlock = { type: 'text', content: '' }
         break
       case 'image':
-        newBlock = { type: 'image', url: '', caption: '' }
+        newBlock = { 
+          type: 'image', 
+          content: {
+            url: null,
+            caption: '',
+            filePath: null
+          }
+        }
         break
       case 'chess_game':
         newBlock = { 
@@ -230,6 +261,42 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
       ;[newBlocks[index], newBlocks[index + 1]] = [newBlocks[index + 1], newBlocks[index]]
       setContentBlocks(newBlocks)
     }
+  }
+
+  // Handler for featured image upload
+  const handleFeaturedImageUpload = (filePath: string, publicUrl: string) => {
+    setNews({ ...news, image: filePath })
+  }
+
+  // Handler for featured image removal
+  const handleFeaturedImageRemove = () => {
+    setNews({ ...news, image: null })
+  }
+
+  // Handler for content block image upload
+  const handleBlockImageUpload = (index: number, filePath: string, publicUrl: string) => {
+    const updatedBlock = {
+      ...contentBlocks[index],
+      content: {
+        ...contentBlocks[index].content,
+        url: publicUrl,
+        filePath: filePath
+      }
+    }
+    updateContentBlock(index, updatedBlock)
+  }
+
+  // Handler for content block image removal
+  const handleBlockImageRemove = (index: number, filePath: string) => {
+    const updatedBlock = {
+      ...contentBlocks[index],
+      content: {
+        ...contentBlocks[index].content,
+        url: null,
+        filePath: null
+      }
+    }
+    updateContentBlock(index, updatedBlock)
   }
 
   return (
@@ -313,6 +380,17 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
             </Select>
           </div>
 
+          {/* Featured Image Upload */}
+          <ImageUpload
+            newsId={news.id.toString()}
+            currentImage={news.image ? getPublicUrl(news.image) : undefined}
+            currentImagePath={news.image || undefined}
+            onImageUpload={handleFeaturedImageUpload}
+            onImageRemove={handleFeaturedImageRemove}
+            label="Imagen destacada"
+            placeholder="Haz clic para subir la imagen destacada"
+          />
+
           <div className="grid gap-2">
             <Label className="text-sm md:text-sm font-medium">Contenido</Label>
             <div className="border rounded-md p-3 md:p-4 space-y-3 md:space-y-4">
@@ -362,23 +440,24 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
                   
                   {block.type === 'image' && (
                     <div className="pt-8 md:pt-6 space-y-2">
-                      <Input
-                        placeholder="URL de la imagen"
-                        value={block.url}
-                        onChange={(e) => updateContentBlock(index, { ...block, url: e.target.value })}
-                        className="text-sm md:text-base"
+                      <ImageUpload
+                        newsId={news.id.toString()}
+                        currentImage={block.content?.url}
+                        currentImagePath={block.content?.filePath}
+                        onImageUpload={(filePath, publicUrl) => handleBlockImageUpload(index, filePath, publicUrl)}
+                        onImageRemove={(filePath) => handleBlockImageRemove(index, filePath)}
+                        label="Imagen del bloque"
+                        placeholder="Haz clic para subir una imagen"
                       />
                       <Input
                         placeholder="Pie de foto (opcional)"
-                        value={block.caption}
-                        onChange={(e) => updateContentBlock(index, { ...block, caption: e.target.value })}
+                        value={block.content?.caption || ''}
+                        onChange={(e) => updateContentBlock(index, { 
+                          ...block, 
+                          content: { ...block.content, caption: e.target.value }
+                        })}
                         className="text-sm md:text-base"
                       />
-                      {block.url && (
-                        <div className="mt-2">
-                          <img src={block.url} alt={block.caption} className="max-h-32 md:max-h-48 object-contain w-full" />
-                        </div>
-                      )}
                     </div>
                   )}
                   

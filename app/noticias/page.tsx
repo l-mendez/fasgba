@@ -10,6 +10,7 @@ import { NewsFilters } from "@/components/news-filters"
 import { NewsPagination } from "@/components/news-pagination"
 import { getAllNews, getAllNewsTags } from "@/lib/newsUtils"
 import { getAllClubs } from "@/lib/clubUtils"
+import { createClient } from "@/lib/supabase/client"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
@@ -63,6 +64,24 @@ function formatDate(dateString: string) {
 // Helper function to get display name for club
 function getClubDisplayName(newsItem: News) {
   return newsItem.club?.name || 'FASGBA'
+}
+
+// Helper function to get public URL from file path
+function getImageUrl(imagePath: string | null): string | null {
+  if (!imagePath) return null
+  
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http')) {
+    return imagePath
+  }
+  
+  // Convert Supabase Storage path to public URL
+  const supabase = createClient()
+  const { data: { publicUrl } } = supabase.storage
+    .from('images')
+    .getPublicUrl(imagePath)
+  
+  return publicUrl
 }
 
 async function fetchNews(): Promise<News[]> {
@@ -249,7 +268,7 @@ export default async function NoticiasPage({ searchParams }: PageProps) {
                           <div className="aspect-video relative bg-muted">
                             {item.image ? (
                               <img
-                                src={item.image}
+                                src={getImageUrl(item.image) || undefined}
                                 alt={item.title}
                                 className="w-full h-full object-cover"
                               />

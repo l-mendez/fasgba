@@ -19,6 +19,23 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+// Helper function to get public URL from file path
+function getImageUrl(imagePath: string | null): string {
+  if (!imagePath) return "/placeholder.svg"
+  
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http')) {
+    return imagePath
+  }
+  
+  // Convert Supabase Storage path to public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from('images')
+    .getPublicUrl(imagePath)
+  
+  return publicUrl
+}
+
 // Types for the data structures
 interface NewsItem {
   id: number
@@ -142,7 +159,7 @@ function mapNewsToNoticia(newsItem: NewsItem, isFeatured = false): Noticia {
     id: newsItem.id.toString(),
     titulo: newsItem.title,
     fecha: formattedDate,
-    imagen: newsItem.image || "/placeholder.svg?height=600&width=800",
+    imagen: getImageUrl(newsItem.image),
     categorias: newsItem.tags,
     extracto: newsItem.extract || newsItem.title,
     destacada: isFeatured

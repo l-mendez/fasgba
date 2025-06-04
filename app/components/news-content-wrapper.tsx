@@ -9,6 +9,25 @@ import { Badge } from "@/components/ui/badge"
 import { ClientSiteHeader } from "@/components/client-site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { RichTextDisplay } from "@/components/ui/rich-text-display"
+import { createClient } from "@/lib/supabase/client"
+
+// Helper function to get public URL from file path
+function getImageUrl(imagePath: string | null): string {
+  if (!imagePath) return "/placeholder.svg"
+  
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http')) {
+    return imagePath
+  }
+  
+  // Convert Supabase Storage path to public URL
+  const supabase = createClient()
+  const { data: { publicUrl } } = supabase.storage
+    .from('images')
+    .getPublicUrl(imagePath)
+  
+  return publicUrl
+}
 
 // Simpler loading placeholder
 const ChessComponentLoader = () => (
@@ -57,22 +76,42 @@ interface News {
 
 // Component to render content blocks
 const ContentRenderer = ({ content }: { content: any[] }) => {
+  console.log('ContentRenderer - content blocks:', content) // Debug log
+  
   return (
     <div className="space-y-4 sm:space-y-6">
       {content.map((block, index) => {
+        console.log(`Block ${index}:`, block) // Debug log
+        
         if (block.type === 'text') {
           return <RichTextDisplay key={index} content={block.content} />
         }
         
         if (block.type === 'image') {
+          // Handle different image block structures for backward compatibility
+          const imageUrl = block.content?.url || block.content?.src || block.url || null
+          const imageCaption = block.content?.caption || block.caption || ''
+          
+          console.log(`Image block ${index}:`, { imageUrl, imageCaption, block }) // Debug log
+          
+          if (!imageUrl) {
+            console.log(`No image URL found for block ${index}`) // Debug log
+            return null
+          }
+          
+          const finalImageUrl = getImageUrl(imageUrl)
+          console.log(`Final image URL for block ${index}:`, finalImageUrl) // Debug log
+          
           return (
             <figure key={index} className="my-4 sm:my-6">
               <img 
-                src={block.url} 
-                alt={block.caption || 'Imagen'} 
+                src={finalImageUrl} 
+                alt={imageCaption || 'Imagen'} 
                 className="rounded-lg mx-auto max-w-full h-auto"
+                onError={(e) => console.error(`Image failed to load:`, finalImageUrl)} // Debug log
+                onLoad={() => console.log(`Image loaded successfully:`, finalImageUrl)} // Debug log
               />
-              {block.caption && <figcaption className="text-center text-xs sm:text-sm text-muted-foreground mt-2">{block.caption}</figcaption>}
+              {imageCaption && <figcaption className="text-center text-xs sm:text-sm text-muted-foreground mt-2">{imageCaption}</figcaption>}
             </figure>
           )
         }
@@ -104,18 +143,26 @@ export default function NewsContentWrapper({
   newsItem: News, 
   relatedNews: any[]
 }) {
+  console.log('NewsContentWrapper - newsItem.text:', newsItem.text) // Debug log
+  
   // Process the news content
   let contentBlocks;
   try {
     contentBlocks = JSON.parse(newsItem.text);
+    console.log('Parsed content blocks:', contentBlocks) // Debug log
+    
     if (!Array.isArray(contentBlocks)) {
       // If it's not an array, create a single text block
       contentBlocks = [{ type: 'text', content: newsItem.text }];
+      console.log('Not an array, created text block:', contentBlocks) // Debug log
     }
   } catch (e) {
     // If parsing fails, treat it as HTML content
     contentBlocks = [{ type: 'text', content: newsItem.text }];
+    console.log('Parsing failed, created text block:', contentBlocks) // Debug log
   }
+
+  console.log('Final content blocks to render:', contentBlocks) // Debug log
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -125,7 +172,7 @@ export default function NewsContentWrapper({
           {/* Imagen de cabecera - Optimized for mobile */}
           <div className="relative h-[250px] sm:h-[300px] md:h-[400px] lg:h-[500px] w-full">
             <img
-              src={newsItem.image || "/placeholder.svg"}
+              src={getImageUrl(newsItem.image)}
               alt={newsItem.title}
               className="h-full w-full object-cover"
             />
@@ -177,7 +224,7 @@ export default function NewsContentWrapper({
                       <div className="overflow-hidden rounded-lg border border-amber/20 bg-background shadow-md transition-colors hover:border-amber">
                         <div className="aspect-video overflow-hidden">
                           <img
-                            src={news.image || "/placeholder.svg"}
+                            src={getImageUrl(news.image)}
                             alt={news.title}
                             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
