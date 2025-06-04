@@ -267,35 +267,37 @@ export default async function ClubDetailPage({ params }: ClubDetailPageProps) {
                       <div className="space-y-6">
                         {news.map((article, index) => (
                           <div key={article.id}>
-                            <article className="space-y-3">
-                              <div>
-                                <h3 className="text-lg font-bold break-words">{article.title}</h3>
-                                <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="h-4 w-4" />
-                                    <span>{new Date(article.date).toLocaleDateString()}</span>
-                                  </div>
-                                  {article.author_name && (
+                            <Link href={`/noticias/${article.id}`} className="block group">
+                              <article className="space-y-3 cursor-pointer hover:bg-muted/30 p-3 rounded-lg transition-colors">
+                                <div>
+                                  <h3 className="text-lg font-bold break-words group-hover:text-primary transition-colors">{article.title}</h3>
+                                  <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
                                     <div className="flex items-center gap-1">
-                                      <User className="h-4 w-4" />
-                                      <span>Por {article.author_name}</span>
+                                      <Calendar className="h-4 w-4" />
+                                      <span>{new Date(article.date).toLocaleDateString()}</span>
                                     </div>
-                                  )}
+                                    {article.author_name && (
+                                      <div className="flex items-center gap-1">
+                                        <User className="h-4 w-4" />
+                                        <span>Por {article.author_name}</span>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                              {article.extract && (
-                                <p className="text-muted-foreground leading-relaxed">{article.extract}</p>
-                              )}
-                              {article.tags && article.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                  {article.tags.map((tag, tagIndex) => (
-                                    <Badge key={tagIndex} variant="secondary" className="text-xs">
-                                      {tag}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              )}
-                            </article>
+                                {article.extract && (
+                                  <p className="text-muted-foreground leading-relaxed">{article.extract}</p>
+                                )}
+                                {article.tags && article.tags.length > 0 && (
+                                  <div className="flex flex-wrap gap-2">
+                                    {article.tags.map((tag, tagIndex) => (
+                                      <Badge key={tagIndex} variant="secondary" className="text-xs">
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </article>
+                            </Link>
                             {index < news.length - 1 && <Separator className="mt-6" />}
                           </div>
                         ))}
