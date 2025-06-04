@@ -168,7 +168,7 @@ export default async function AdminNoticiasPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-terracotta">Noticias</h1>
         <Button asChild className="bg-terracotta hover:bg-terracotta/90">
-          <Link href="/admin/noticias/nueva">
+          <Link href="/noticias/nueva?source=admin">
             <Plus className="h-4 w-4 mr-2" />
             Nueva noticia
           </Link>

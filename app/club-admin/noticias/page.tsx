@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { ClubProvider } from "../context/club-provider"
 import { NoticiasContent } from "./noticias-content"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { NewNewsButton } from "../components/new-news-button"
 
 // Force dynamic rendering since we use cookies
 export const dynamic = 'force-dynamic'
@@ -197,12 +198,7 @@ export default async function ClubAdminNoticiasPage() {
               Gestiona las noticias publicadas por {selectedClub?.name || 'tu club'}.
             </p>
           </div>
-          <Button asChild className="w-fit">
-            <Link href="/club-admin/noticias/nueva">
-              <Plus className="mr-2 h-4 w-4" />
-              Nueva Noticia
-            </Link>
-          </Button>
+          <NewNewsButton />
         </div>
 
         <Suspense fallback={<LoadingSpinner />}>

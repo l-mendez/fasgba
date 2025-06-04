@@ -198,9 +198,6 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
           </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-terracotta">Nueva Noticia</h1>
-            <p className="text-muted-foreground">
-              Crea una nueva noticia para {selectedClub.name}.
-            </p>
           </div>
         </div>
         <Button onClick={handleSubmit} disabled={isSaving}>

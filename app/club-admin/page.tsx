@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ClubProvider } from "./context/club-provider"
+import { QuickActions } from "./components/quick-actions"
 
-// Force dynamic rendering since we use authentication
-export const dynamic = 'force-dynamic'
+// Client component for context-aware actions
+"use client"
+import { useClubContext } from "./context/club-provider"
 
 interface ClubStats {
   noticias: number
@@ -364,28 +366,7 @@ export default async function ClubAdminDashboard() {
               <CardTitle>Acciones rápidas</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-3 md:gap-4">
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link href="/club-admin/noticias/nueva">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Nueva noticia
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full justify-start">
-                  <Link href="/club-admin/torneos/nuevo">
-                    <Trophy className="mr-2 h-4 w-4" />
-                    Nuevo torneo
-                  </Link>
-                </Button>
-                {selectedClub && (
-                  <Button asChild variant="outline" className="w-full justify-start">
-                    <Link href={`/clubes/${selectedClub.id}`}>
-                      <Users className="mr-2 h-4 w-4" />
-                      Ver página del club
-                    </Link>
-                  </Button>
-                )}
-              </div>
+              <QuickActions />
             </CardContent>
           </Card>
         </div>
@@ -393,4 +374,7 @@ export default async function ClubAdminDashboard() {
     </ClubProvider>
   )
 }
+
+// Force dynamic rendering since we use authentication
+export const dynamic = 'force-dynamic'
 
