@@ -335,10 +335,10 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" className="w-full sm:w-auto">
                 {selectedClubFilter === 'all' ? 'Todos los clubes' : 
                  selectedClubFilter === null ? 'FASGBA' : 
                  getUniqueClubs().find(club => club.id === selectedClubFilter)?.name || 'Club'}
@@ -364,7 +364,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
           </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" className="w-full sm:w-auto">
                 {selectedStatusFilter === 'all' ? 'Todos los estados' :
                  selectedStatusFilter === 'upcoming' ? 'Próximos' :
                  selectedStatusFilter === 'ongoing' ? 'En curso' :
@@ -383,7 +383,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
           </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" className="w-full sm:w-auto">
                 Ordenar
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>

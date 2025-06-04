@@ -233,10 +233,10 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" className="w-full sm:w-auto">
                 {selectedDelegadoFilter === 'all' ? 'Todos los clubes' :
                  selectedDelegadoFilter === 'con_delegado' ? 'Con delegado' :
                  selectedDelegadoFilter === 'sin_delegado' ? 'Sin delegado' : 'Filtrar'}
@@ -253,7 +253,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
           </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" className="w-full sm:w-auto">
                 Ordenar
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
