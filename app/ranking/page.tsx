@@ -11,6 +11,9 @@ import { SiteFooter } from "@/components/site-footer"
 import { PlayerList } from "@/app/ranking/components/PlayerList"
 import { getPlayers, type PaginatedPlayersResponse } from "@/lib/rankingUtils"
 
+// Force dynamic rendering for SSR
+export const dynamic = 'force-dynamic'
+
 // Define interfaces for the data we're working with
 export interface Player {
   id: number;
@@ -70,7 +73,7 @@ export default async function RankingPage({
 }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
+      <SiteHeader pathname="/ranking" />
       <main className="flex-1">
         <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
           <div className="container px-4 md:px-6">

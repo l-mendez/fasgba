@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { notFound } from "next/navigation"
-import { ChevronDown, Edit, Eye, MoreHorizontal, Plus, Search, Trash2, Users, AlertCircle, Loader2 } from "lucide-react"
+import { Calendar, ChevronDown, Edit, Eye, MoreHorizontal, Search, Trash2, AlertCircle, Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,83 +25,115 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { useClubContext, apiCall } from "../context/club-context"
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 
-// Tournament type based on the API response
-interface Tournament {
+// Define el tipo para noticias según la API
+interface ClubNews {
   id: number
   title: string
+  date: string
+  image: string | null
+  extract: string | null
+  text: string
+  tags: string[]
+  created_by_auth_id: string | null
+  created_at: string
+  updated_at: string
+  author_name?: string
+  author_email?: string
+}
+
+interface Club {
+  id: number
+  name: string
   description?: string
-  time?: string
-  place?: string
   location?: string
-  rounds?: number
-  pace?: string
-  inscription_details?: string
-  cost?: string
-  prizes?: string
-  image?: string
-  created_by_club_id: number
-  tournament_dates: {
-    id: number
-    tournament_id: number
-    event_date: string
-  }[]
+  website?: string
+  email?: string
+  phone?: string
+  created_at: string
+  updated_at: string
 }
 
-// Helper function to determine tournament status
-function getTournamentStatus(tournament: Tournament): "próximo" | "finalizado" | "en_curso" {
-  const today = new Date().toISOString().split('T')[0]
-  const dates = tournament.tournament_dates.map(d => d.event_date).sort()
-  
-  if (dates.length === 0) return "finalizado"
-  
-  const startDate = dates[0]
-  const endDate = dates[dates.length - 1]
-  
-  if (startDate > today) return "próximo"
-  if (endDate < today) return "finalizado"
-  return "en_curso"
+interface NoticiasContentProps {
+  initialNews: ClubNews[]
+  selectedClub: Club | null
 }
 
-// Helper function to format dates
-function formatTournamentDates(tournament: Tournament): string {
-  const dates = tournament.tournament_dates.map(d => d.event_date).sort()
+// Helper function para hacer llamadas a la API
+async function apiCall(endpoint: string, options: RequestInit = {}) {
+  const supabase = createClient()
+  const { data: { session } } = await supabase.auth.getSession()
   
-  if (dates.length === 0) return "Sin fecha"
+  if (!session) {
+    throw new Error('No hay sesión activa')
+  }
+
+  const url = `/api${endpoint}`
+  const config: RequestInit = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+      ...options.headers
+    },
+    ...options
+  }
+
+  const response = await fetch(url, config)
   
-  // Format YYYY-MM-DD to DD/MM/YYYY
-  const formatDate = (dateStr: string) => {
-    const [year, month, day] = dateStr.split('-')
-    return `${day}/${month}/${year}`
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
+    throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
   }
   
-  if (dates.length === 1) {
-    return formatDate(dates[0])
+  if (response.status === 204) {
+    return null // No content
   }
   
-  const startDate = formatDate(dates[0])
-  const endDate = formatDate(dates[dates.length - 1])
-  
-  return `${startDate} al ${endDate}`
+  return response.json()
 }
 
-// Get date range for sorting (returns earliest date as Date object)
-function getTournamentSortDate(tournament: Tournament): Date {
-  const dates = tournament.tournament_dates.map(d => d.event_date).sort()
-  if (dates.length === 0) return new Date(0) // Very old date for tournaments without dates
-  return new Date(dates[0])
+// Helper functions for data processing
+const formatDate = (dateString: string) => {
+  try {
+    return new Date(dateString).toLocaleDateString('es-AR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
+  } catch {
+    return 'Fecha inválida'
+  }
+}
+
+const getAuthorName = (news: ClubNews) => {
+  return news.author_name || news.author_email || 'Autor desconocido'
+}
+
+const getNewsCategory = (news: ClubNews) => {
+  if (news.tags && news.tags.length > 0) {
+    return news.tags[0].charAt(0).toUpperCase() + news.tags[0].slice(1)
+  }
+  return 'General'
+}
+
+const getNewsStatus = (news: ClubNews) => {
+  // For now, we'll consider all news as published since we don't have a status field
+  // In the future, this could be based on a publication date or status field
+  return 'publicada'
+}
+
+// Get date for sorting (use the news date)
+const getNewsSortDate = (news: ClubNews): Date => {
+  return new Date(news.date)
 }
 
 // Get status badge variant
 const getStatusBadgeVariant = (status: string) => {
   switch (status) {
-    case "próximo":
+    case "publicada":
       return "default"
-    case "en_curso":
-      return "default"
-    case "finalizado":
+    case "borrador":
       return "outline"
     default:
       return "outline"
@@ -111,11 +143,9 @@ const getStatusBadgeVariant = (status: string) => {
 // Get status badge class
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
-    case "próximo":
-      return "bg-blue-500 hover:bg-blue-500/80"
-    case "en_curso":
+    case "publicada":
       return "bg-green-500 hover:bg-green-500/80"
-    case "finalizado":
+    case "borrador":
       return "text-muted-foreground"
     default:
       return ""
@@ -125,60 +155,60 @@ const getStatusBadgeClass = (status: string) => {
 // Get status display text
 const getStatusText = (status: string) => {
   switch (status) {
-    case "próximo":
-      return "Próximo"
-    case "en_curso":
-      return "En curso"
-    case "finalizado":
-      return "Finalizado"
+    case "publicada":
+      return "Publicada"
+    case "borrador":
+      return "Borrador"
     default:
       return status.charAt(0).toUpperCase() + status.slice(1)
   }
 }
 
-export default function ClubAdminTorneosPage() {
-  const { selectedClub, isLoading: clubsLoading, hasNoClubs } = useClubContext()
-  const [torneos, setTorneos] = useState<Tournament[]>([])
+export function NoticiasContent({ initialNews, selectedClub }: NoticiasContentProps) {
+  const [noticias, setNoticias] = useState<ClubNews[]>(initialNews)
   const [searchTerm, setSearchTerm] = useState("")
-  const [tournamentToDelete, setTournamentToDelete] = useState<number | null>(null)
+  const [noticiaToDelete, setNoticiaToDelete] = useState<number | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [sortBy, setSortBy] = useState<string | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
-  const [originalOrder, setOriginalOrder] = useState<Tournament[]>([])
-
-  // Check for unauthorized access once clubs are loaded
+  const [originalOrder, setOriginalOrder] = useState<ClubNews[]>(initialNews)
+  
+  // Update news when selectedClub changes
   useEffect(() => {
-    if (!clubsLoading && hasNoClubs) {
-      notFound()
+    if (selectedClub) {
+      loadNews()
     }
-  }, [clubsLoading, hasNoClubs])
-
-  // Load tournaments when selected club changes
-  useEffect(() => {
-    async function loadTournaments() {
-      if (!selectedClub) return
-      
-      try {
-        setIsLoading(true)
-        setError(null)
-        
-        const tournaments = await apiCall(`/clubs/${selectedClub.id}/tournaments`)
-        const tournamentList = tournaments.tournaments || []
-        setTorneos(tournamentList)
-        setOriginalOrder(tournamentList)
-      } catch (err) {
-        console.error('Error loading tournaments:', err)
-        setError(err instanceof Error ? err.message : 'Error al cargar los torneos')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    loadTournaments()
   }, [selectedClub])
+
+  // Cargar noticias del club seleccionado usando la API
+  const loadNews = async () => {
+    if (!selectedClub) return
+    
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      const newsData = await apiCall(`/clubs/${selectedClub.id}/news`)
+      
+      if (newsData && Array.isArray(newsData)) {
+        setNoticias(newsData)
+        setOriginalOrder(newsData)
+      } else {
+        setNoticias([])
+        setOriginalOrder([])
+      }
+    } catch (err) {
+      console.error('Error loading news:', err)
+      setError(err instanceof Error ? err.message : 'Error al cargar las noticias')
+      setNoticias([])
+      setOriginalOrder([])
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   // Sorting functions
   const handleSort = (field: string) => {
@@ -196,33 +226,33 @@ export default function ClubAdminTorneosPage() {
     }
   }
 
-  const getSortedTorneos = (torneosToSort: Tournament[]) => {
+  const getSortedNoticias = (noticiasToSort: ClubNews[]) => {
     if (!sortBy || sortOrder === 'original') {
-      return originalOrder.filter(torneo => 
-        torneosToSort.some(filtered => filtered.id === torneo.id)
+      return originalOrder.filter(noticia => 
+        noticiasToSort.some(filtered => filtered.id === noticia.id)
       )
     }
 
-    const sorted = [...torneosToSort].sort((a, b) => {
+    const sorted = [...noticiasToSort].sort((a, b) => {
       let aValue: any
       let bValue: any
 
       switch (sortBy) {
-        case 'name':
+        case 'title':
           aValue = a.title.toLowerCase()
           bValue = b.title.toLowerCase()
           break
         case 'date':
-          aValue = getTournamentSortDate(a).getTime()
-          bValue = getTournamentSortDate(b).getTime()
+          aValue = getNewsSortDate(a).getTime()
+          bValue = getNewsSortDate(b).getTime()
           break
-        case 'location':
-          aValue = (a.place || '').toLowerCase()
-          bValue = (b.place || '').toLowerCase()
+        case 'author':
+          aValue = getAuthorName(a).toLowerCase()
+          bValue = getAuthorName(b).toLowerCase()
           break
-        case 'rounds':
-          aValue = a.rounds || 0
-          bValue = b.rounds || 0
+        case 'category':
+          aValue = getNewsCategory(a).toLowerCase()
+          bValue = getNewsCategory(b).toLowerCase()
           break
         default:
           return 0
@@ -254,77 +284,51 @@ export default function ClubAdminTorneosPage() {
     return null
   }
 
-  // Filter tournaments by search term
-  const filteredTorneos = torneos.filter((torneo) => {
+  // Filtrar noticias según término de búsqueda
+  const filteredNoticias = noticias.filter((noticia) => {
     const searchLower = searchTerm.toLowerCase()
-    const status = getTournamentStatus(torneo)
+    const author = getAuthorName(noticia)
+    const category = getNewsCategory(noticia)
+    const status = getNewsStatus(noticia)
     
     return (
-      torneo.title.toLowerCase().includes(searchLower) ||
-      (torneo.place || "").toLowerCase().includes(searchLower) ||
-      (torneo.description || "").toLowerCase().includes(searchLower) ||
-      status.includes(searchLower)
+      noticia.title.toLowerCase().includes(searchLower) ||
+      author.toLowerCase().includes(searchLower) ||
+      category.toLowerCase().includes(searchLower) ||
+      status.toLowerCase().includes(searchLower) ||
+      (noticia.extract && noticia.extract.toLowerCase().includes(searchLower)) ||
+      (noticia.tags && noticia.tags.some(tag => tag.toLowerCase().includes(searchLower)))
     )
   })
 
-  // Apply sorting to filtered tournaments
-  const sortedAndFilteredTorneos = getSortedTorneos(filteredTorneos)
+  // Apply sorting to filtered news
+  const sortedAndFilteredNoticias = getSortedNoticias(filteredNoticias)
 
-  // Function to delete a tournament
-  const handleDeleteTorneo = async () => {
-    if (!tournamentToDelete) return
-
+  // Función para eliminar una noticia usando la API
+  const handleDeleteNoticia = async () => {
+    if (!noticiaToDelete) return
+    
     try {
       setIsDeleting(true)
       setError(null)
       
-      await apiCall(`/tournaments/${tournamentToDelete}`, {
-        method: 'DELETE'
-      })
+      await apiCall(`/news/${noticiaToDelete}`, { method: 'DELETE' })
       
-      // Update the local state by filtering out the deleted tournament
-      setTorneos(torneos.filter((torneo) => torneo.id !== tournamentToDelete))
-      setOriginalOrder(originalOrder.filter((torneo) => torneo.id !== tournamentToDelete))
-      
+      // Actualizar el estado local
+      setNoticias(noticias.filter((noticia) => noticia.id !== noticiaToDelete))
+      setOriginalOrder(originalOrder.filter((noticia) => noticia.id !== noticiaToDelete))
       setShowDeleteDialog(false)
-      setTournamentToDelete(null)
+      setNoticiaToDelete(null)
     } catch (err) {
-      console.error('Error deleting tournament:', err)
-      setError(err instanceof Error ? err.message : 'Error al eliminar el torneo')
+      console.error('Error al eliminar noticia:', err)
+      setError(err instanceof Error ? err.message : 'Ocurrió un error al eliminar la noticia')
     } finally {
       setIsDeleting(false)
     }
   }
 
-  // Show loading while clubs are being loaded or if no club is selected yet
-  if (clubsLoading || !selectedClub) {
-    return (
-      <div className="flex flex-col gap-8 p-8">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold mb-2">Cargando...</h3>
-          <p className="text-muted-foreground">Cargando información del club...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex flex-col gap-8 p-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Torneos</h1>
-          <p className="text-muted-foreground">
-            Gestiona los torneos organizados por {selectedClub.name}.
-          </p>
-        </div>
-        <Button asChild className="w-fit">
-          <Link href="/club-admin/torneos/nuevo">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Torneo
-          </Link>
-        </Button>
-      </div>
-
+    <>
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -338,7 +342,7 @@ export default function ClubAdminTorneosPage() {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Buscar por nombre, lugar o descripción..."
+            placeholder="Buscar por título, autor, categoría o contenido..."
             className="pl-8 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -355,10 +359,9 @@ export default function ClubAdminTorneosPage() {
             <DropdownMenuContent align="end" className="w-[200px]">
               <DropdownMenuLabel>Filtrar por estado</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSearchTerm("")}>Todos</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchTerm("próximo")}>Próximos</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchTerm("en_curso")}>En curso</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchTerm("finalizado")}>Finalizados</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchTerm("")}>Todas</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchTerm("publicada")}>Publicadas</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSearchTerm("borrador")}>Borradores</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <DropdownMenu>
@@ -371,17 +374,17 @@ export default function ClubAdminTorneosPage() {
             <DropdownMenuContent align="end" className="w-[200px]">
               <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleSort('name')}>
-                Nombre {getSortIcon('name')}
+              <DropdownMenuItem onClick={() => handleSort('title')}>
+                Título {getSortIcon('title')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleSort('date')}>
                 Fecha {getSortIcon('date')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('location')}>
-                Lugar {getSortIcon('location')}
+              <DropdownMenuItem onClick={() => handleSort('author')}>
+                Autor {getSortIcon('author')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('rounds')}>
-                Rondas {getSortIcon('rounds')}
+              <DropdownMenuItem onClick={() => handleSort('category')}>
+                Categoría {getSortIcon('category')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => {
@@ -402,12 +405,21 @@ export default function ClubAdminTorneosPage() {
             <TableHeader>
               <TableRow>
                 <TableHead 
-                  className="cursor-pointer hover:bg-muted/50 select-none"
-                  onClick={() => handleSort('name')}
+                  className="w-[400px] cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('title')}
                 >
                   <div className="flex items-center gap-1">
-                    Nombre
-                    {getSortIcon('name') && <span className="text-xs">{getSortIcon('name')}</span>}
+                    Título
+                    {getSortIcon('title') && <span className="text-xs">{getSortIcon('title')}</span>}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('author')}
+                >
+                  <div className="flex items-center gap-1">
+                    Autor
+                    {getSortIcon('author') && <span className="text-xs">{getSortIcon('author')}</span>}
                   </div>
                 </TableHead>
                 <TableHead 
@@ -415,29 +427,20 @@ export default function ClubAdminTorneosPage() {
                   onClick={() => handleSort('date')}
                 >
                   <div className="flex items-center gap-1">
-                    Fechas
+                    Fecha
                     {getSortIcon('date') && <span className="text-xs">{getSortIcon('date')}</span>}
                   </div>
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer hover:bg-muted/50 select-none"
-                  onClick={() => handleSort('location')}
+                  onClick={() => handleSort('category')}
                 >
                   <div className="flex items-center gap-1">
-                    Lugar
-                    {getSortIcon('location') && <span className="text-xs">{getSortIcon('location')}</span>}
+                    Categoría
+                    {getSortIcon('category') && <span className="text-xs">{getSortIcon('category')}</span>}
                   </div>
                 </TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50 select-none"
-                  onClick={() => handleSort('rounds')}
-                >
-                  <div className="flex items-center gap-1">
-                    Rondas
-                    {getSortIcon('rounds') && <span className="text-xs">{getSortIcon('rounds')}</span>}
-                  </div>
-                </TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -446,27 +449,30 @@ export default function ClubAdminTorneosPage() {
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                    <p className="mt-2 text-muted-foreground">Cargando torneos...</p>
+                    <p className="mt-2 text-muted-foreground">Cargando noticias...</p>
                   </TableCell>
                 </TableRow>
-              ) : sortedAndFilteredTorneos.length === 0 ? (
+              ) : sortedAndFilteredNoticias.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8">
                     <p className="text-muted-foreground">
-                      {searchTerm ? 'No se encontraron torneos que coincidan con la búsqueda.' : 'No hay torneos registrados.'}
+                      {searchTerm ? 'No se encontraron noticias que coincidan con la búsqueda.' : 'No hay noticias registradas.'}
                     </p>
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedAndFilteredTorneos.map((torneo) => {
-                  const status = getTournamentStatus(torneo)
-                  const formattedDates = formatTournamentDates(torneo)
+                sortedAndFilteredNoticias.map((noticia) => {
+                  const author = getAuthorName(noticia)
+                  const formattedDate = formatDate(noticia.date)
+                  const category = getNewsCategory(noticia)
+                  const status = getNewsStatus(noticia)
                   
                   return (
-                    <TableRow key={torneo.id}>
-                      <TableCell className="font-medium">{torneo.title}</TableCell>
-                      <TableCell>{formattedDates}</TableCell>
-                      <TableCell>{torneo.place || "Sin lugar definido"}</TableCell>
+                    <TableRow key={noticia.id}>
+                      <TableCell className="font-medium">{noticia.title}</TableCell>
+                      <TableCell>{author}</TableCell>
+                      <TableCell>{formattedDate}</TableCell>
+                      <TableCell>{category}</TableCell>
                       <TableCell>
                         <Badge
                           variant={getStatusBadgeVariant(status)}
@@ -475,7 +481,6 @@ export default function ClubAdminTorneosPage() {
                           {getStatusText(status)}
                         </Badge>
                       </TableCell>
-                      <TableCell>{torneo.rounds || "N/A"}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -488,27 +493,21 @@ export default function ClubAdminTorneosPage() {
                             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem asChild>
-                              <Link href={`/torneos/${torneo.id}`} target="_blank">
+                              <Link href={`/noticias/${noticia.id}`} target="_blank">
                                 <Eye className="mr-2 h-4 w-4" />
                                 Ver en sitio
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                              <Link href={`/club-admin/torneos/${torneo.id}/editar`}>
+                              <Link href={`/club-admin/noticias/${noticia.id}/editar`}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 Editar
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/club-admin/torneos/${torneo.id}/inscripciones`}>
-                                <Users className="mr-2 h-4 w-4" />
-                                Ver inscripciones
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => {
-                                setTournamentToDelete(torneo.id)
+                                setNoticiaToDelete(noticia.id)
                                 setShowDeleteDialog(true)
                               }}
                               className="text-red-500 focus:text-red-500"
@@ -532,46 +531,54 @@ export default function ClubAdminTorneosPage() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin mb-4" />
-              <p className="text-muted-foreground">Cargando torneos...</p>
+              <p className="text-muted-foreground">Cargando noticias...</p>
             </div>
-          ) : sortedAndFilteredTorneos.length === 0 ? (
+          ) : sortedAndFilteredNoticias.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">
-                {searchTerm ? 'No se encontraron torneos que coincidan con la búsqueda.' : 'No hay torneos registrados.'}
+                {searchTerm ? 'No se encontraron noticias que coincidan con la búsqueda.' : 'No hay noticias registradas.'}
               </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {sortedAndFilteredTorneos.map((torneo) => {
-                const status = getTournamentStatus(torneo)
-                const formattedDates = formatTournamentDates(torneo)
+              {sortedAndFilteredNoticias.map((noticia) => {
+                const author = getAuthorName(noticia)
+                const formattedDate = formatDate(noticia.date)
+                const category = getNewsCategory(noticia)
+                const status = getNewsStatus(noticia)
                 
                 return (
-                  <div key={torneo.id} className="bg-card rounded-lg border p-4 shadow-sm">
+                  <div key={noticia.id} className="bg-card rounded-lg border p-4 shadow-sm">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium text-sm leading-5 text-card-foreground mb-2 line-clamp-2">
-                          {torneo.title}
+                          {noticia.title}
                         </h3>
+                        
+                        {noticia.extract && (
+                          <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                            {noticia.extract}
+                          </p>
+                        )}
                         
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <span className="font-medium text-terracotta">
-                              {formattedDates}
+                              {formattedDate}
                             </span>
                             <span>•</span>
-                            <span className="truncate">{torneo.place || "Sin lugar definido"}</span>
+                            <span className="truncate">{author}</span>
                           </div>
                           
                           <div className="flex items-center justify-between gap-2">
-                            <Badge
-                              variant={getStatusBadgeVariant(status)}
-                              className={`text-xs ${getStatusBadgeClass(status)}`}
-                            >
-                              {getStatusText(status)}
-                            </Badge>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <span>Rondas: {torneo.rounds || "N/A"}</span>
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant={getStatusBadgeVariant(status)}
+                                className={`text-xs ${getStatusBadgeClass(status)}`}
+                              >
+                                {getStatusText(status)}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">{category}</span>
                             </div>
                           </div>
                         </div>
@@ -588,27 +595,21 @@ export default function ClubAdminTorneosPage() {
                           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem asChild>
-                            <Link href={`/torneos/${torneo.id}`} target="_blank">
+                            <Link href={`/noticias/${noticia.id}`} target="_blank">
                               <Eye className="mr-2 h-4 w-4" />
                               Ver en sitio
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link href={`/club-admin/torneos/${torneo.id}/editar`}>
+                            <Link href={`/club-admin/noticias/${noticia.id}/editar`}>
                               <Edit className="mr-2 h-4 w-4" />
                               Editar
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/club-admin/torneos/${torneo.id}/inscripciones`}>
-                              <Users className="mr-2 h-4 w-4" />
-                              Ver inscripciones
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => {
-                              setTournamentToDelete(torneo.id)
+                              setNoticiaToDelete(noticia.id)
                               setShowDeleteDialog(true)
                             }}
                             className="text-red-500 focus:text-red-500"
@@ -627,13 +628,13 @@ export default function ClubAdminTorneosPage() {
         </div>
       </>
 
-      {/* Diálogo de confirmación para eliminar torneo */}
+      {/* Diálogo de confirmación para eliminar noticia */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmar eliminación</DialogTitle>
             <DialogDescription>
-              ¿Estás seguro de que deseas eliminar este torneo? Esta acción no se puede deshacer.
+              ¿Estás seguro de que deseas eliminar esta noticia? Esta acción no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -646,7 +647,7 @@ export default function ClubAdminTorneosPage() {
             </Button>
             <Button 
               variant="destructive" 
-              onClick={handleDeleteTorneo}
+              onClick={handleDeleteNoticia}
               disabled={isDeleting}
             >
               {isDeleting ? (
@@ -661,7 +662,6 @@ export default function ClubAdminTorneosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
-}
-
+} 

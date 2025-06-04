@@ -1,15 +1,16 @@
-"use client"
-
-import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowRight, CalendarDays, FileText, MessageSquare, Plus, Trophy, TrendingUp, Users } from "lucide-react"
+import { notFound } from "next/navigation"
+import { FileText, Trophy, Users } from "lucide-react"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { createClient } from "@/lib/supabase/server"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { getUserAdminClubs, getClubFollowers, type Club } from "@/lib/clubUtils"
-import { getCurrentUser } from "@/lib/userUtils"
-import { createClient } from "@/lib/supabase/client"
+import { ClubProvider } from "./context/club-provider"
+
+// Force dynamic rendering since we use authentication
+export const dynamic = 'force-dynamic'
 
 interface ClubStats {
   noticias: number
@@ -27,357 +28,369 @@ interface ActivityItem {
   author?: string
 }
 
-export default function ClubAdminDashboard() {
-  const [stats, setStats] = useState<ClubStats>({
-    noticias: 0,
-    torneos: 0,
-    torneosActivos: 0,
-    seguidores: 0,
-    crecimientoSeguidores: 0,
-  })
-  const [adminClub, setAdminClub] = useState<Club | null>(null)
-  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+// Database Club interface (matches actual schema)
+interface DbClub {
+  id: number
+  name: string
+  address?: string
+  telephone?: string
+  mail?: string
+  schedule?: string
+}
 
-  // Helper function for API calls
-  const apiCall = async (endpoint: string, options: RequestInit = {}) => {
-    try {
-      // Get authentication token from Supabase
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
+// Expected Club interface (matches ClubProvider context)
+interface Club {
+  id: number
+  name: string
+  description?: string
+  location?: string
+  website?: string
+  email?: string
+  phone?: string
+  created_at: string
+  updated_at: string
+}
 
-      if (!token) {
-        throw new Error('No authentication token available')
-      }
+// Function to map database club to expected club format
+function mapDbClubToClub(dbClub: DbClub): Club {
+  return {
+    id: dbClub.id,
+    name: dbClub.name,
+    description: undefined,
+    location: dbClub.address,
+    website: undefined,
+    email: dbClub.mail,
+    phone: dbClub.telephone,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+}
 
-      const apiResponse = await fetch(endpoint, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          ...options.headers
-        },
-        ...options
+// Server component to get user's clubs
+async function getUserClubs(): Promise<{ clubs: Club[], selectedClub: Club | null }> {
+  try {
+    // Use the proper server client that handles authentication correctly
+    const supabase = await createClient()
+    
+    // Get the authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      return { clubs: [], selectedClub: null }
+    }
+
+    // Get clubs where user is admin using the admin client for the query
+    const adminClient = createAdminClient()
+    const { data: adminData, error: adminError } = await adminClient
+      .from('club_admins')
+      .select(`
+        club_id,
+        clubs (
+          id,
+          name,
+          address,
+          telephone,
+          mail,
+          schedule
+        )
+      `)
+      .eq('auth_id', user.id)
+
+    if (adminError) {
+      console.error('Error fetching user clubs:', adminError)
+      return { clubs: [], selectedClub: null }
+    }
+
+    // Properly type and filter the clubs data
+    const dbClubs: DbClub[] = (adminData || [])
+      .filter(item => item.clubs)
+      .map(item => {
+        const club = item.clubs as any
+        return {
+          id: club.id,
+          name: club.name,
+          address: club.address,
+          telephone: club.telephone,
+          mail: club.mail,
+          schedule: club.schedule
+        }
       })
 
-      if (!apiResponse.ok) {
-        throw new Error(`HTTP ${apiResponse.status}: ${apiResponse.statusText}`)
-      }
+    // Convert to expected Club format
+    const clubs: Club[] = dbClubs.map(mapDbClubToClub)
 
-      return apiResponse.json()
-    } catch (error) {
-      console.error(`API call failed for ${endpoint}:`, error)
-      throw error
-    }
+    const selectedClub = clubs.length > 0 ? clubs[0] : null
+
+    return { clubs, selectedClub }
+  } catch (error) {
+    console.error('Error in getUserClubs:', error)
+    return { clubs: [], selectedClub: null }
   }
+}
 
-  // Fetch real statistics from API
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true)
-        setError(null)
+// Server function to fetch club statistics
+async function getClubStats(clubId: number): Promise<{ stats: ClubStats, recentActivity: ActivityItem[] }> {
+  try {
+    const adminClient = createAdminClient()
 
-        // Get current user
-        const user = await getCurrentUser()
-        if (!user) {
-          throw new Error('User not authenticated')
-        }
+    // Fetch data in parallel
+    const [
+      newsData,
+      tournamentsData,
+      followersData,
+      recentNewsData,
+      recentTournamentsData
+    ] = await Promise.all([
+      // Count news
+      adminClient
+        .from('news')
+        .select('id', { count: 'exact' })
+        .eq('club_id', clubId),
+      
+      // Count tournaments
+      adminClient
+        .from('tournaments')
+        .select('id', { count: 'exact' })
+        .eq('created_by_club_id', clubId),
+      
+      // Count followers
+      adminClient
+        .from('user_follows_club')
+        .select('auth_id', { count: 'exact' })
+        .eq('club_id', clubId),
+      
+      // Get recent news (last 3)
+      adminClient
+        .from('news')
+        .select('id, title, date, extract, created_at, created_by_auth_id')
+        .eq('club_id', clubId)
+        .order('created_at', { ascending: false })
+        .limit(3),
+      
+      // Get recent tournaments (last 3)
+      adminClient
+        .from('tournaments')
+        .select(`
+          id,
+          title,
+          description,
+          created_at,
+          tournamentdates (
+            event_date
+          )
+        `)
+        .eq('created_by_club_id', clubId)
+        .order('created_at', { ascending: false })
+        .limit(3)
+    ])
 
-        // Get clubs the user administers
-        const adminClubs = await getUserAdminClubs(user.id)
-        if (adminClubs.length === 0) {
-          setError('No tienes clubes asignados como administrador')
-          return
-        }
+    const stats: ClubStats = {
+      noticias: newsData.count || 0,
+      torneos: tournamentsData.count || 0,
+      torneosActivos: 0, // We would need tournament status to calculate this
+      seguidores: followersData.count || 0,
+      crecimientoSeguidores: 0, // Would need timestamp data to calculate growth
+    }
 
-        // Use the first club the user administers
-        const club = adminClubs[0]
-        setAdminClub(club)
+    // Create unified activity feed
+    const activities: ActivityItem[] = []
 
-        // Fetch club statistics and recent data in parallel
-        const [newsCountData, tournamentCountData, followersData, recentNewsData, recentTournamentsData] = await Promise.all([
-          apiCall(`/api/clubs/${club.id}/news/count`).catch(() => ({ count: 0 })),
-          apiCall(`/api/clubs/${club.id}/tournaments/count`).catch(() => ({ count: 0 })),
-          getClubFollowers(club.id).catch(async () => {
-            // Fallback: just get the count without detailed follower info
-            try {
-              const countData = await apiCall(`/api/clubs/${club.id}/followers/count`)
-              return {
-                club: { id: club.id, name: club.name },
-                followers: [],
-                count: countData.count
-              }
-            } catch {
-              return { club: { id: club.id, name: club.name }, followers: [], count: 0 }
-            }
-          }),
-          // Get recent news (limit 5)
-          apiCall(`/api/clubs/${club.id}/news?limit=5`).catch(() => []),
-          // Get recent tournaments (limit 5)
-          apiCall(`/api/clubs/${club.id}/tournaments?limit=5`).catch(() => ({ tournaments: [] }))
-        ])
-
-        // Calculate growth (followers who joined in the last 30 days)
-        const thirtyDaysAgo = new Date()
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-        let recentFollowersCount = 0
-
-        if (followersData) {
-          recentFollowersCount = followersData.followers
-            .filter(follower => new Date(follower.created_at) >= thirtyDaysAgo).length
-        }
-
-        // Calculate growth percentage (assuming we had some baseline)
-        const totalFollowers = followersData?.count || 0
-        const growthPercentage = totalFollowers > 0 
-          ? Math.round((recentFollowersCount / totalFollowers) * 100)
-          : 0
-
-        setStats({
-          noticias: newsCountData.count,
-          torneos: tournamentCountData.count,
-          torneosActivos: 0, // We'll need to implement this with tournament status
-          seguidores: totalFollowers,
-          crecimientoSeguidores: growthPercentage,
+    // Add recent news
+    if (recentNewsData.data) {
+      recentNewsData.data.forEach((news: any) => {
+        activities.push({
+          type: 'news',
+          title: news.title,
+          date: news.date || news.created_at,
+          description: news.extract,
+          author: 'Autor del club' // We could join with profiles if needed
         })
+      })
+    }
 
-        // Create unified activity feed
-        const activities: ActivityItem[] = []
+    // Add recent tournaments
+    if (recentTournamentsData.data) {
+      recentTournamentsData.data.forEach((tournament: any) => {
+        const tournamentDate = tournament.tournamentdates?.[0]?.event_date || tournament.created_at
+        activities.push({
+          type: 'tournament',
+          title: tournament.title,
+          date: tournamentDate,
+          description: tournament.description
+        })
+      })
+    }
 
-        // Add recent news
-        if (recentNewsData && Array.isArray(recentNewsData)) {
-          recentNewsData.slice(0, 3).forEach((news: any) => {
-            activities.push({
-              type: 'news',
-              title: news.title,
-              date: news.date || news.created_at,
-              description: news.extract,
-              author: news.author_email || 'Autor desconocido'
-            })
-          })
-        }
+    // Sort activities by date (most recent first)
+    activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-        // Add recent tournaments
-        if (recentTournamentsData?.tournaments) {
-          recentTournamentsData.tournaments.slice(0, 3).forEach((tournament: any) => {
-            const tournamentDate = tournament.tournament_dates?.[0]?.event_date || new Date().toISOString()
-            activities.push({
-              type: 'tournament',
-              title: tournament.title,
-              date: tournamentDate,
-              description: tournament.description
-            })
-          })
-        }
+    // Keep only the 5 most recent activities
+    const recentActivity = activities.slice(0, 5)
 
-        // Add recent followers (note: user_follows_club table doesn't track created_at)
-        // We'll skip adding followers to recent activity since we can't determine when they followed
-        // if (followersData?.followers) {
-        //   followersData.followers
-        //     .filter(follower => new Date(follower.created_at) >= thirtyDaysAgo)
-        //     .slice(0, 3)
-        //     .forEach((follower: any) => {
-        //       activities.push({
-        //         type: 'follower',
-        //         title: `Nuevo seguidor: ${follower.email}`,
-        //         date: follower.created_at
-        //       })
-        //     })
-        // }
+    return { stats, recentActivity }
+  } catch (error) {
+    console.error('Error fetching club stats:', error)
+    return {
+      stats: {
+        noticias: 0,
+        torneos: 0,
+        torneosActivos: 0,
+        seguidores: 0,
+        crecimientoSeguidores: 0,
+      },
+      recentActivity: []
+    }
+  }
+}
 
-        // Sort activities by date (most recent first)
-        activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+// Main server component
+export default async function ClubAdminDashboard() {
+  const { clubs, selectedClub } = await getUserClubs()
+  
+  // If no clubs, return not found
+  if (clubs.length === 0) {
+    notFound()
+  }
 
-        // Keep only the 5 most recent activities
-        setRecentActivity(activities.slice(0, 5))
-
-      } catch (error) {
-        console.error('Error fetching stats:', error)
-        setError(error instanceof Error ? error.message : 'Error al cargar estadísticas')
-      } finally {
-        setLoading(false)
+  // Get club statistics if we have a selected club
+  const { stats, recentActivity } = selectedClub 
+    ? await getClubStats(selectedClub.id)
+    : { 
+        stats: { noticias: 0, torneos: 0, torneosActivos: 0, seguidores: 0, crecimientoSeguidores: 0 },
+        recentActivity: []
       }
-    }
-
-    fetchStats()
-  }, [])
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'news':
-        return <FileText className="h-4 w-4 text-blue-500" />
-      case 'tournament':
-        return <Trophy className="h-4 w-4 text-yellow-500" />
-      case 'follower':
-        return <Users className="h-4 w-4 text-green-500" />
-      default:
-        return <MessageSquare className="h-4 w-4 text-gray-500" />
-    }
-  }
-
-  const getActivityTypeLabel = (type: string) => {
-    switch (type) {
-      case 'news':
-        return 'Noticia publicada'
-      case 'tournament':
-        return 'Torneo creado'
-      case 'follower':
-        return 'Nuevo seguidor'
-      default:
-        return 'Actividad'
-    }
-  }
-
-  if (error) {
-    return (
+    
+  return (
+    <ClubProvider initialClubs={clubs} initialSelectedClub={selectedClub}>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold text-destructive mb-2">Error</h3>
-            <p className="text-muted-foreground">{error}</p>
+        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard del Club</h2>
+            <p className="text-muted-foreground">{selectedClub?.name || 'Cargando...'}</p>
           </div>
         </div>
-      </div>
-    )
-  }
 
-  return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard del Club</h2>
-          {adminClub && (
-            <p className="text-muted-foreground">{adminClub.name}</p>
-          )}
+        <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Noticias publicadas</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="pb-3">
+              <div className="text-xl md:text-2xl font-bold">{stats.noticias}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Torneos creados</CardTitle>
+              <Trophy className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="pb-3">
+              <div className="text-xl md:text-2xl font-bold">{stats.torneos}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Seguidores</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="pb-3">
+              <div className="text-xl md:text-2xl font-bold">{stats.seguidores}</div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
-      <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Noticias publicadas</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="pb-3">
-            <div className="text-xl md:text-2xl font-bold">{loading ? '...' : stats.noticias}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Torneos creados</CardTitle>
-            <Trophy className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="pb-3">
-            <div className="text-xl md:text-2xl font-bold">{loading ? '...' : stats.torneos}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Seguidores</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="pb-3">
-            <div className="text-xl md:text-2xl font-bold">{loading ? '...' : stats.seguidores}</div>
-          </CardContent>
-        </Card>
-      </div>
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
-        <Card className="lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Actividad reciente</CardTitle>
-            <CardDescription>
-              Últimas acciones realizadas en el club
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="animate-pulse">
-                    <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-muted rounded w-1/2"></div>
-                  </div>
-                ))}
-              </div>
-            ) : recentActivity.length > 0 ? (
-              <div className="space-y-6">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 mt-1">
-                      {getActivityIcon(activity.type)}
-                    </div>
-                    <div className="space-y-1 flex-grow">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                        <p className="text-sm font-medium leading-none">
-                          {activity.title}
-                        </p>
-                        <Badge variant="outline" className="text-xs w-fit">
-                          {getActivityTypeLabel(activity.type)}
-                        </Badge>
+
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+          <Card className="lg:col-span-4">
+            <CardHeader>
+              <CardTitle>Actividad reciente</CardTitle>
+              <CardDescription>
+                Últimas acciones realizadas en el club
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {recentActivity.length > 0 ? (
+                <div className="space-y-6">
+                  {recentActivity.map((activity, index) => (
+                    <div key={index} className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 mt-1">
+                        {activity.type === 'news' && <FileText className="h-4 w-4 text-blue-500" />}
+                        {activity.type === 'tournament' && <Trophy className="h-4 w-4 text-yellow-500" />}
+                        {activity.type === 'follower' && <Users className="h-4 w-4 text-green-500" />}
                       </div>
-                      {activity.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          {activity.description}
+                      <div className="space-y-1 flex-grow">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <p className="text-sm font-medium leading-none">
+                            {activity.title}
+                          </p>
+                          <Badge variant="outline" className="text-xs w-fit">
+                            {activity.type === 'news' && 'Noticia publicada'}
+                            {activity.type === 'tournament' && 'Torneo creado'}
+                            {activity.type === 'follower' && 'Nuevo seguidor'}
+                          </Badge>
+                        </div>
+                        {activity.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {activity.description}
+                          </p>
+                        )}
+                        {activity.author && (
+                          <p className="text-xs text-muted-foreground italic">
+                            Por: {activity.author}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(activity.date).toLocaleDateString('es-ES', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
                         </p>
-                      )}
-                      {activity.author && (
-                        <p className="text-xs text-muted-foreground italic">
-                          Por: {activity.author}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(activity.date).toLocaleDateString('es-ES', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No hay actividad reciente en el club
-              </p>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Acciones rápidas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 md:gap-4">
-              <Button asChild variant="outline" className="w-full justify-start">
-                <Link href="/club-admin/noticias/nueva">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Nueva noticia
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full justify-start">
-                <Link href="/club-admin/torneos/nuevo">
-                  <Trophy className="mr-2 h-4 w-4" />
-                  Nuevo torneo
-                </Link>
-              </Button>
-              {adminClub && (
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No hay actividad reciente en el club
+                </p>
+              )}
+            </CardContent>
+          </Card>
+          <Card className="lg:col-span-3">
+            <CardHeader>
+              <CardTitle>Acciones rápidas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 md:gap-4">
                 <Button asChild variant="outline" className="w-full justify-start">
-                  <Link href={`/clubes/${adminClub.id}`}>
-                    <Users className="mr-2 h-4 w-4" />
-                    Ver página del club
+                  <Link href="/club-admin/noticias/nueva">
+                    <FileText className="mr-2 h-4 w-4" />
+                    Nueva noticia
                   </Link>
                 </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                <Button asChild variant="outline" className="w-full justify-start">
+                  <Link href="/club-admin/torneos/nuevo">
+                    <Trophy className="mr-2 h-4 w-4" />
+                    Nuevo torneo
+                  </Link>
+                </Button>
+                {selectedClub && (
+                  <Button asChild variant="outline" className="w-full justify-start">
+                    <Link href={`/clubes/${selectedClub.id}`}>
+                      <Users className="mr-2 h-4 w-4" />
+                      Ver página del club
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </ClubProvider>
   )
 }
 

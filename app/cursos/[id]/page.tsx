@@ -7,7 +7,7 @@ import { Calendar, ChevronLeft, Clock, MapPin, Users, CheckCircle2 } from "lucid
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { SiteHeader } from "@/components/site-header"
+import { ClientSiteHeader } from "@/components/client-site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -211,7 +211,7 @@ export default function CursoDetailPage({ params }: { params: { id: string } }) 
   if (!curso) {
     return (
       <div className="flex min-h-screen flex-col">
-        <SiteHeader />
+        <ClientSiteHeader pathname={`/cursos/${parseInt(params.id)}`} />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-terracotta mb-4">Curso no encontrado</h1>
@@ -233,7 +233,7 @@ export default function CursoDetailPage({ params }: { params: { id: string } }) 
 
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
+      <ClientSiteHeader pathname={`/cursos/${parseInt(params.id)}`} />
       <main className="flex-1">
         {/* Imagen de cabecera */}
         <div className="relative h-[300px] md:h-[400px] lg:h-[500px] w-full">

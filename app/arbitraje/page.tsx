@@ -6,6 +6,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 
+// Force dynamic rendering for SSR
+export const dynamic = 'force-dynamic'
+
 // Datos de ejemplo para los árbitros
 const arbitros = [
   {
@@ -104,7 +107,7 @@ const cursos = [
 export default function ArbitrajePage() {
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
+      <SiteHeader pathname="/arbitraje" />
       <main className="flex-1">
         <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
           <div className="container px-4 md:px-6">

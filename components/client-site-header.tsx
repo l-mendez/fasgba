@@ -1,57 +1,67 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { CastleIcon as ChessKnight, Menu, X, Bell, User, Settings, Trophy, Calendar, Home, FileText, Shield, LogOut, BarChart3 } from "lucide-react"
-import { cookies } from "next/headers"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { MobileNavigation } from "@/components/mobile-navigation"
 import { AuthButtons } from "@/components/auth-buttons"
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/client"
 
-interface SiteHeaderProps {
+interface ClientSiteHeaderProps {
   pathname: string
 }
 
-async function getUser() {
-  try {
-    const supabase = await createClient()
-    
-    const { data: { user }, error } = await supabase.auth.getUser()
-    
-    if (error || !user) {
-      return null
+export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  
+  useEffect(() => {
+    async function getUser() {
+      try {
+        const supabase = createClient()
+        
+        const { data: { user }, error } = await supabase.auth.getUser()
+        
+        if (error || !user) {
+          setUser(null)
+          return
+        }
+
+        // Check if user is an admin
+        const { data: adminData, error: adminError } = await supabase
+          .from('admins')
+          .select('auth_id')
+          .eq('auth_id', user.id)
+          .single()
+
+        // Check if user is a club admin
+        const { data: clubAdminData, error: clubAdminError } = await supabase
+          .from('club_admins')
+          .select('auth_id, club_id')
+          .eq('auth_id', user.id)
+
+        const userData = {
+          id: user.id,
+          email: user.email,
+          isAdmin: !!adminData,
+          isClubAdmin: !!(clubAdminData && clubAdminData.length > 0),
+          clubAdminClubs: clubAdminData || []
+        }
+
+        setUser(userData)
+      } catch (error) {
+        console.error('Error getting user:', error)
+        setUser(null)
+      } finally {
+        setLoading(false)
+      }
     }
 
-    // Check if user is an admin
-    const { data: adminData, error: adminError } = await supabase
-      .from('admins')
-      .select('auth_id')
-      .eq('auth_id', user.id)
-      .single()
-
-    // Check if user is a club admin
-    const { data: clubAdminData, error: clubAdminError } = await supabase
-      .from('club_admins')
-      .select('auth_id, club_id')
-      .eq('auth_id', user.id)
-
-    const userData = {
-      id: user.id,
-      email: user.email,
-      isAdmin: !!adminData,
-      isClubAdmin: !!(clubAdminData && clubAdminData.length > 0),
-      clubAdminClubs: clubAdminData || []
-    }
-
-    return userData
-  } catch (error) {
-    console.error('Error getting user:', error)
-    return null
-  }
-}
-
-export async function SiteHeader({ pathname }: SiteHeaderProps) {
-  const user = await getUser()
+    getUser()
+  }, [])
   
   const isAuthenticated = !!user
   const isAdmin = user?.isAdmin || false
@@ -117,23 +127,26 @@ export async function SiteHeader({ pathname }: SiteHeaderProps) {
         
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-4">
-          <AuthButtons 
+          {!loading && (
+            <AuthButtons 
+              isAuthenticated={isAuthenticated}
+              isAdmin={isAdmin}
+              isClubAdmin={isClubAdmin}
+              pathname={pathname}
+            />
+          )}
+        </div>
+
+        {/* Mobile Navigation */}
+        {!loading && (
+          <MobileNavigation 
             isAuthenticated={isAuthenticated}
             isAdmin={isAdmin}
             isClubAdmin={isClubAdmin}
             pathname={pathname}
           />
-        </div>
-
-        {/* Mobile Navigation */}
-        <MobileNavigation 
-          isAuthenticated={isAuthenticated}
-          isAdmin={isAdmin}
-          isClubAdmin={isClubAdmin}
-          pathname={pathname}
-        />
+        )}
       </div>
     </header>
   )
-}
-
+} 

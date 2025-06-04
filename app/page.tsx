@@ -1,14 +1,63 @@
-'use client'
-
 import Link from "next/link"
 import { Calendar, ChevronLeft, ChevronRight, MapPin } from "lucide-react"
-import { ReactNode, useEffect, useState } from "react"
-import { getNews, getTournaments, getClubs, type NewsItem, type Tournament, type Club } from "@/lib/api"
+import { ReactNode } from "react"
+import { createClient } from '@supabase/supabase-js'
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { getAllNews } from "@/lib/newsUtils"
+import { getUpcomingTournaments } from "@/lib/tournamentUtils"
+import { getAllClubs } from "@/lib/clubUtils"
+
+// Force dynamic rendering for SSR
+export const dynamic = 'force-dynamic'
+
+// Create Supabase client for server-side operations
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+// Types for the data structures
+interface NewsItem {
+  id: number
+  title: string
+  date: string
+  image: string | null
+  extract: string
+  tags: string[]
+  club_id: number | null
+  club: {
+    id: number
+    name: string
+  } | null
+}
+
+interface Tournament {
+  id: number
+  title: string
+  description: string | null
+  time: string | null
+  place: string | null
+  location: string | null
+  rounds: number | null
+  pace: string | null
+  inscription_details: string | null
+  cost: string | null
+  prizes: string | null
+  image: string | null
+  created_by_club_id?: number | null
+  formatted_start_date?: string
+}
+
+interface Club {
+  id: number
+  name: string
+  address: string | null
+  telephone: string | null
+  mail: string | null
+}
 
 // Interface for processed news items (mapping API data to component props)
 interface Noticia {
@@ -23,6 +72,61 @@ interface Noticia {
 
 interface NoticiaProps {
   noticia: Noticia
+}
+
+// Server-side data fetching functions
+async function fetchNews(): Promise<NewsItem[]> {
+  try {
+    const { data } = await getAllNews({ 
+      limit: 5, 
+      orderBy: 'date', 
+      order: 'desc',
+      include: ['club']
+    })
+    
+    return data.map(item => ({
+      id: item.id,
+      title: item.title,
+      date: item.date,
+      image: item.image,
+      extract: item.extract || '',
+      tags: item.tags || [],
+      club_id: item.club_id,
+      club: item.club ? {
+        id: item.club.id,
+        name: item.club.name
+      } : null
+    }))
+  } catch (error) {
+    console.error('Error fetching news:', error)
+    return []
+  }
+}
+
+async function fetchTournaments(): Promise<Tournament[]> {
+  try {
+    const tournaments = await getUpcomingTournaments(supabase, 3)
+    
+    // Add formatted dates for display - tournaments don't have direct start_date
+    return tournaments.map(tournament => ({
+      ...tournament,
+      formatted_start_date: 'Fecha por confirmar' // We'll update this based on tournament dates logic
+    }))
+  } catch (error) {
+    console.error('Error fetching tournaments:', error)
+    return []
+  }
+}
+
+async function fetchClubs(): Promise<Club[]> {
+  try {
+    const clubs = await getAllClubs()
+    // Limit the results to 6 after fetching
+    return (clubs as Club[]).slice(0, 6)
+  } catch (error) {
+    console.error('Error fetching clubs:', error)
+    return []
+  }
 }
 
 // Helper function to convert API news to component format
@@ -49,15 +153,6 @@ function mapNewsToNoticia(newsItem: NewsItem, isFeatured = false): Noticia {
 function formatTournamentDate(tournament: Tournament): string {
   if (tournament.formatted_start_date) {
     return tournament.formatted_start_date
-  }
-  
-  if (tournament.start_date) {
-    const date = new Date(tournament.start_date)
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
   }
   
   return 'Fecha por confirmar'
@@ -172,59 +267,13 @@ function ClubCard({ club }: { club: Club }): ReactNode {
   )
 }
 
-export default function Home() {
-  const [news, setNews] = useState<NewsItem[]>([])
-  const [tournaments, setTournaments] = useState<Tournament[]>([])
-  const [clubs, setClubs] = useState<Club[]>([])
-
-  useEffect(() => {
-    const fetchNews = async () => {
-      try {
-        const response = await getNews({ 
-          limit: 5, 
-          orderBy: 'date', 
-          order: 'desc',
-          include: 'author,club'
-        })
-        setNews(response.news)
-      } catch (error) {
-        console.error('Failed to fetch news:', error)
-        setNews([])
-      }
-    }
-
-    const fetchTournaments = async () => {
-      try {
-        const response = await getTournaments({ 
-          limit: 3, 
-          status: 'upcoming',
-          format: 'display',
-          orderBy: 'start_date',
-          order: 'asc'
-        })
-        setTournaments(response)
-      } catch (error) {
-        console.error('Failed to fetch tournaments:', error)
-        setTournaments([])
-      }
-    }
-
-    const fetchClubs = async () => {
-      try {
-        const response = await getClubs({ 
-          hasContact: true
-        })
-        setClubs(response)
-      } catch (error) {
-        console.error('Failed to fetch clubs:', error)
-        setClubs([])
-      }
-    }
-
-    fetchNews()
-    fetchTournaments()
+export default async function Home() {
+  // Fetch all data in parallel on the server
+  const [news, tournaments, clubs] = await Promise.all([
+    fetchNews(),
+    fetchTournaments(),
     fetchClubs()
-  }, [])
+  ])
 
   // Process news data
   const noticias = news.map((item, index) => 
@@ -236,7 +285,7 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
+      <SiteHeader pathname="/" />
       <main className="flex-1">
         {/* Hero section */}
         <section className="w-full py-12 md:py-24 lg:py-32 bg-[url('/placeholder.svg?height=800&width=1600')] bg-cover bg-center relative">

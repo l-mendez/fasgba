@@ -1,18 +1,18 @@
-"use client"
-
-import { useState, useEffect, use } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense } from "react"
 import Link from "next/link"
-import { ArrowLeft, Plus, X, Calendar, Loader2 } from "lucide-react"
+import { notFound, redirect } from "next/navigation"
+import { ArrowLeft } from "lucide-react"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { createClient } from "@/lib/supabase/server"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useAuth } from "@/hooks/useAuth"
-import { createClient } from "@/lib/supabase/client"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ClubProvider } from "../../../context/club-provider"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+
+// Force dynamic rendering since we use authentication
+export const dynamic = 'force-dynamic'
 
 interface Tournament {
   id: string
@@ -32,68 +32,239 @@ interface Tournament {
   created_by_club_id?: number
 }
 
-interface FormData {
-  title: string
-  description: string
-  time: string
-  place: string
-  location: string
-  rounds: string
-  pace: string
-  inscription_details: string
-  cost: string
-  prizes: string
-  image: string
-  dates: string[]
+// Database Club interface (matches actual schema)
+interface DbClub {
+  id: number
+  name: string
+  address?: string
+  telephone?: string
+  mail?: string
+  schedule?: string
 }
 
-// API helper function
-async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  if (!session) {
-    throw new Error('No hay sesión autenticada')
-  }
+// Expected Club interface (matches ClubProvider context)
+interface Club {
+  id: number
+  name: string
+  description?: string
+  location?: string
+  website?: string
+  email?: string
+  phone?: string
+  created_at: string
+  updated_at: string
+}
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
-  const url = `${baseUrl}${endpoint}`
-  
-  const config: RequestInit = {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-      ...options.headers
-    },
-    ...options
+// Function to map database club to expected club format
+function mapDbClubToClub(dbClub: DbClub): Club {
+  return {
+    id: dbClub.id,
+    name: dbClub.name,
+    description: undefined,
+    location: dbClub.address,
+    website: undefined,
+    email: dbClub.mail,
+    phone: dbClub.telephone,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   }
+}
 
-  const response = await fetch(url, config)
-  
-  if (!response.ok) {
-    let errorMessage = `Error ${response.status}: ${response.statusText}`
+// Check authentication early
+async function checkAuthentication(): Promise<boolean> {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    return !userError && !!user
+  } catch {
+    return false
+  }
+}
+
+// Server component to get user's clubs
+async function getUserClubs(): Promise<{ clubs: Club[], selectedClub: Club | null }> {
+  try {
+    // Use the proper server client that handles authentication correctly
+    const supabase = await createClient()
     
-    try {
-      const errorData = await response.text()
-      
-      try {
-        const jsonError = JSON.parse(errorData)
-        errorMessage = jsonError.error || jsonError.message || errorMessage
-      } catch {
-        errorMessage = errorData || errorMessage
-      }
-    } catch {
-      // Use default error message
+    // Get the authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      return { clubs: [], selectedClub: null }
     }
+
+    // Get clubs where user is admin using the admin client for the query
+    const adminClient = createAdminClient()
+    const { data: adminData, error: adminError } = await adminClient
+      .from('club_admins')
+      .select(`
+        club_id,
+        clubs (
+          id,
+          name,
+          address,
+          telephone,
+          mail,
+          schedule
+        )
+      `)
+      .eq('auth_id', user.id)
+
+    if (adminError) {
+      console.error('Error fetching user clubs:', adminError)
+      return { clubs: [], selectedClub: null }
+    }
+
+    // Properly type and filter the clubs data
+    const dbClubs: DbClub[] = (adminData || [])
+      .filter(item => item.clubs)
+      .map(item => {
+        const club = item.clubs as any
+        return {
+          id: club.id,
+          name: club.name,
+          address: club.address,
+          telephone: club.telephone,
+          mail: club.mail,
+          schedule: club.schedule
+        }
+      })
+
+    // Convert to expected Club format
+    const clubs: Club[] = dbClubs.map(mapDbClubToClub)
+
+    const selectedClub = clubs.length > 0 ? clubs[0] : null
+
+    return { clubs, selectedClub }
+  } catch (error) {
+    console.error('Error in getUserClubs:', error)
+    return { clubs: [], selectedClub: null }
+  }
+}
+
+// Server function to fetch tournament and check authorization
+async function getTournamentData(tournamentId: string): Promise<{
+  tournament: Tournament | null
+  isAuthorized: boolean
+  error: string | null
+  userClubs: number[]
+}> {
+  try {
+    // Get authenticated user
+    const supabase = await createClient()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    throw new Error(errorMessage)
+    if (userError || !user) {
+      return {
+        tournament: null,
+        isAuthorized: false,
+        error: 'Usuario no autenticado',
+        userClubs: []
+      }
+    }
+
+    // Get user's admin clubs
+    const adminClient = createAdminClient()
+    const { data: adminData, error: adminError } = await adminClient
+      .from('club_admins')
+      .select('club_id')
+      .eq('auth_id', user.id)
+
+    if (adminError) {
+      console.error('Error fetching user clubs:', adminError)
+      return {
+        tournament: null,
+        isAuthorized: false,
+        error: 'Error verificando permisos de club',
+        userClubs: []
+      }
+    }
+
+    const userClubs = (adminData || []).map(item => item.club_id)
+
+    // Fetch tournament data
+    const { data: tournamentData, error: tournamentError } = await adminClient
+      .from('tournaments')
+      .select(`
+        id,
+        title,
+        description,
+        time,
+        place,
+        location,
+        rounds,
+        pace,
+        inscription_details,
+        cost,
+        prizes,
+        image,
+        created_by_club_id,
+        tournamentdates (
+          event_date
+        )
+      `)
+      .eq('id', tournamentId)
+      .single()
+
+    if (tournamentError || !tournamentData) {
+      console.error('Error fetching tournament:', tournamentError)
+      return {
+        tournament: null,
+        isAuthorized: false,
+        error: 'Torneo no encontrado',
+        userClubs
+      }
+    }
+
+    // Transform tournament data
+    const tournament: Tournament = {
+      id: tournamentData.id,
+      title: tournamentData.title,
+      description: tournamentData.description,
+      time: tournamentData.time,
+      place: tournamentData.place,
+      location: tournamentData.location,
+      rounds: tournamentData.rounds,
+      pace: tournamentData.pace,
+      inscription_details: tournamentData.inscription_details,
+      cost: tournamentData.cost,
+      prizes: tournamentData.prizes,
+      image: tournamentData.image,
+      created_by_club_id: tournamentData.created_by_club_id,
+      all_dates: (tournamentData.tournamentdates || []).map((date: any) => date.event_date)
+    }
+
+    // Check authorization
+    const isAuthorized = tournament.created_by_club_id && userClubs.includes(tournament.created_by_club_id)
+
+    if (!isAuthorized) {
+      return {
+        tournament,
+        isAuthorized: false,
+        error: tournament.created_by_club_id 
+          ? 'No tienes permisos para editar este torneo. Solo los administradores del club que creó el torneo pueden editarlo.'
+          : 'Este torneo no fue creado por ningún club, por lo que no puede ser editado desde el panel de club.',
+        userClubs
+      }
+    }
+
+    return {
+      tournament,
+      isAuthorized: true,
+      error: null,
+      userClubs
+    }
+
+  } catch (error) {
+    console.error('Error in getTournamentData:', error)
+    return {
+      tournament: null,
+      isAuthorized: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+      userClubs: []
+    }
   }
-  
-  if (response.status === 204) {
-    return null
-  }
-  
-  return response.json()
 }
 
 interface PageProps {
@@ -102,311 +273,36 @@ interface PageProps {
   }>
 }
 
-export default function EditarTorneoPage({ params }: PageProps) {
-  const router = useRouter()
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
-  const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingTournament, setIsLoadingTournament] = useState(true)
-  const [isCheckingAuthorization, setIsCheckingAuthorization] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [newDate, setNewDate] = useState("")
-  const [tournament, setTournament] = useState<Tournament | null>(null)
-  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
+// Main server component
+export default async function EditarTorneoPage({ params }: PageProps) {
+  const { id } = await params
   
-  // Unwrap the params Promise
-  const resolvedParams = use(params)
+  // Check authentication first - if not authenticated, redirect to login
+  const isAuthenticated = await checkAuthentication()
   
-  const [formData, setFormData] = useState<FormData>({
-    title: "",
-    description: "",
-    time: "",
-    place: "",
-    location: "",
-    rounds: "",
-    pace: "",
-    inscription_details: "",
-    cost: "",
-    prizes: "",
-    image: "",
-    dates: [],
-  })
-  
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
-
-  // Load tournament data and check authorization
-  useEffect(() => {
-    if (isAuthenticated && !authLoading) {
-      fetchTournamentAndCheckAuth()
-    }
-  }, [isAuthenticated, authLoading, resolvedParams.id])
-
-  const fetchTournamentAndCheckAuth = async () => {
-    try {
-      setIsLoadingTournament(true)
-      setError(null)
-      
-      // First fetch the tournament data
-      const tournamentData = await apiCall(`/api/tournaments/${resolvedParams.id}?format=display`)
-      setTournament(tournamentData)
-      
-      // Check if tournament has a club that created it
-      if (!tournamentData.created_by_club_id) {
-        // Instead of redirecting, show an error message
-        setError('Este torneo no fue creado por ningún club, por lo que no puede ser editado desde el panel de club.')
-        setIsAuthorized(false)
-        return
-      }
-      
-      // Check if user is admin of the club that created this tournament
-      setIsCheckingAuthorization(true)
-      try {
-        const supabase = createClient()
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user?.id) {
-          router.push('/404')
-          return
-        }
-        
-        // Try to call the authorization API
-        try {
-          const authResponse = await apiCall(
-            `/api/clubs/${tournamentData.created_by_club_id}/admins/${session.user.id}`
-          )
-          
-          if (!authResponse.isAdmin) {
-            setError('No tienes permisos para editar este torneo. Solo los administradores del club que creó el torneo pueden editarlo.')
-            setIsAuthorized(false)
-            return
-          }
-          
-          setIsAuthorized(true)
-          
-        } catch (authApiError) {
-          console.error('Authorization API call failed:', authApiError)
-          
-          // If the API call fails, let's try an alternative approach
-          // Get the list of clubs the user administers
-          try {
-            const userAdminClubs = await apiCall('/api/users/me/admin-clubs')
-            
-            const isAuthorizedViaClubs = userAdminClubs.some(
-              (club: any) => club.id === tournamentData.created_by_club_id
-            )
-            
-            if (!isAuthorizedViaClubs) {
-              setError('No tienes permisos para editar este torneo. Solo los administradores del club que creó el torneo pueden editarlo.')
-              setIsAuthorized(false)
-              return
-            }
-            
-            setIsAuthorized(true)
-            
-          } catch (alternativeError) {
-            console.error('Alternative authorization check also failed:', alternativeError)
-            setError(`Error de autorización: ${authApiError instanceof Error ? authApiError.message : 'No se pudo verificar los permisos'}`)
-            setIsAuthorized(false)
-            return
-          }
-        }
-        
-        // If we reach here, user is authorized - populate form data
-        const formattedDates = tournamentData.all_dates?.map((dateStr: string) => {
-          const date = new Date(dateStr)
-          return date.toISOString().split('T')[0]
-        }) || []
-        
-        setFormData({
-          title: tournamentData.title || "",
-          description: tournamentData.description || "",
-          time: tournamentData.time || "",
-          place: tournamentData.place || "",
-          location: tournamentData.location || "",
-          rounds: tournamentData.rounds ? String(tournamentData.rounds) : "",
-          pace: tournamentData.pace || "",
-          inscription_details: tournamentData.inscription_details || "",
-          cost: tournamentData.cost || "",
-          prizes: tournamentData.prizes || "",
-          image: tournamentData.image || "",
-          dates: formattedDates,
-        })
-        
-      } catch (authError) {
-        console.error('Authorization check failed:', authError)
-        
-        // Instead of immediately redirecting, let's show the error
-        setError(`Error de autorización: ${authError instanceof Error ? authError.message : 'Error desconocido'}`)
-        setIsAuthorized(false)
-      } finally {
-        setIsCheckingAuthorization(false)
-      }
-      
-    } catch (err) {
-      console.error('Error fetching tournament:', err)
-      setError(err instanceof Error ? err.message : 'Error al cargar el torneo')
-      setIsAuthorized(false)
-    } finally {
-      setIsLoadingTournament(false)
-    }
-  }
-
-  const validateForm = () => {
-    const errors: Record<string, string> = {}
-    
-    if (!formData.title.trim()) {
-      errors.title = "El título es requerido"
-    }
-    
-    if (formData.dates.length === 0) {
-      errors.dates = "Debe agregar al menos una fecha"
-    }
-
-    if (formData.rounds && (isNaN(Number(formData.rounds)) || Number(formData.rounds) <= 0)) {
-      errors.rounds = "El número de rondas debe ser un número positivo"
-    }
-
-    setValidationErrors(errors)
-    return Object.keys(errors).length === 0
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setValidationErrors({})
-
-    if (!validateForm()) {
-      return
-    }
-
-    setIsLoading(true)
-
-    try {
-      // Prepare data for API
-      const tournamentData = {
-        title: formData.title.trim(),
-        description: formData.description.trim() || undefined,
-        time: formData.time.trim() || undefined,
-        place: formData.place.trim() || undefined,
-        location: formData.location.trim() || undefined,
-        rounds: formData.rounds ? Number(formData.rounds) : undefined,
-        pace: formData.pace.trim() || undefined,
-        inscription_details: formData.inscription_details.trim() || undefined,
-        cost: formData.cost.trim() || undefined,
-        prizes: formData.prizes.trim() || undefined,
-        image: formData.image.trim() || undefined,
-        dates: formData.dates,
-      }
-
-      // Remove undefined values
-      const cleanData = Object.fromEntries(
-        Object.entries(tournamentData).filter(([_, value]) => value !== undefined)
-      )
-
-      console.log('Updating tournament data:', cleanData)
-
-      await apiCall(`/api/tournaments/${resolvedParams.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(cleanData)
-      })
-
-      // Redirect back to club-admin tournaments list
-      router.push("/club-admin/torneos")
-    } catch (err) {
-      console.error('Error updating tournament:', err)
-      setError(err instanceof Error ? err.message : "Error al actualizar el torneo")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-    // Clear validation error when user starts typing
-    if (validationErrors[name]) {
-      setValidationErrors((prev) => ({ ...prev, [name]: "" }))
-    }
-  }
-
-  const addDate = () => {
-    if (!newDate) return
-    
-    // Check if date already exists
-    if (formData.dates.includes(newDate)) {
-      setError("Esta fecha ya está agregada")
-      return
-    }
-    
-    setFormData((prev) => ({
-      ...prev,
-      dates: [...prev.dates, newDate].sort()
-    }))
-    setNewDate("")
-    setError(null)
-    
-    // Clear validation error
-    if (validationErrors.dates) {
-      setValidationErrors((prev) => ({ ...prev, dates: "" }))
-    }
-  }
-
-  const removeDate = (dateToRemove: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      dates: prev.dates.filter(date => date !== dateToRemove)
-    }))
-  }
-
-  const formatDisplayDate = (dateString: string) => {
-    try {
-      // Parse as local date to avoid timezone issues
-      const [year, month, day] = dateString.split('-').map(Number)
-      const date = new Date(year, month - 1, day)
-      return date.toLocaleDateString('es-AR', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    } catch {
-      return dateString
-    }
-  }
-
-  if (authLoading || isLoadingTournament || isCheckingAuthorization) {
-    return (
-      <div className="flex flex-col gap-8 p-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <Loader2 className="animate-spin h-8 w-8 mx-auto mb-2" />
-            <p className="text-muted-foreground">
-              {authLoading 
-                ? "Verificando autenticación..." 
-                : isCheckingAuthorization
-                ? "Verificando permisos..."
-                : "Cargando torneo..."
-              }
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   if (!isAuthenticated) {
-    return (
-      <div className="flex flex-col gap-8 p-8">
-        <Alert variant="destructive">
-          <AlertDescription>
-            Debes estar autenticado para acceder a esta página.
-          </AlertDescription>
-        </Alert>
-      </div>
-    )
+    redirect('/login')
+  }
+  
+  // Get user clubs and tournament data in parallel
+  const [
+    { clubs, selectedClub },
+    { tournament, isAuthorized, error, userClubs }
+  ] = await Promise.all([
+    getUserClubs(),
+    getTournamentData(id)
+  ])
+
+  // If no clubs, return not found
+  if (clubs.length === 0) {
+    notFound()
   }
 
-  // If authorization check completed but user is not authorized, or tournament doesn't exist
-  if (isAuthorized === false || (!tournament && !isLoadingTournament && error)) {
-    return (
+  // Dynamic import the form component only when we need it
+  const EditarTorneoForm = (await import("./editar-torneo-form")).EditarTorneoForm
+
+  return (
+    <ClubProvider initialClubs={clubs} initialSelectedClub={selectedClub}>
       <div className="flex flex-col gap-8 p-8">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
@@ -416,21 +312,24 @@ export default function EditarTorneoPage({ params }: PageProps) {
           </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-terracotta">
-              {tournament ? 'Sin Permisos' : 'Error'}
+              {tournament ? 'Editar Torneo' : 'Error'}
             </h1>
             <p className="text-muted-foreground">
-              {tournament ? 'No tienes permisos para editar este torneo' : 'No se pudo cargar el torneo'}
+              {tournament 
+                ? `Editando: ${tournament.title}` 
+                : 'No se pudo cargar el torneo'
+              }
             </p>
           </div>
         </div>
-        
-        <Alert variant="destructive">
-          <AlertDescription>
-            {error || "No tienes permisos para editar este torneo."}
-          </AlertDescription>
-        </Alert>
-        
-        {tournament && (
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {tournament && !isAuthorized && (
           <Card>
             <CardHeader>
               <CardTitle>Información del Torneo</CardTitle>
@@ -452,278 +351,16 @@ export default function EditarTorneoPage({ params }: PageProps) {
             </CardContent>
           </Card>
         )}
+
+        {tournament && isAuthorized && (
+          <Suspense fallback={<LoadingSpinner />}>
+            <EditarTorneoForm 
+              tournament={tournament}
+              tournamentId={id}
+            />
+          </Suspense>
+        )}
       </div>
-    )
-  }
-
-  // Only render the form if user is authorized
-  if (!isAuthorized || !tournament) {
-    return null
-  }
-
-  return (
-    <div className="flex flex-col gap-8 p-8">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/club-admin/torneos">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Editar Torneo</h1>
-          <p className="text-muted-foreground">
-            {tournament ? `Editando: ${tournament.title}` : 'Modifica la información del torneo'}
-          </p>
-        </div>
-      </div>
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Información Básica</CardTitle>
-            <CardDescription>Información esencial del torneo</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title">Título del Torneo *</Label>
-              <Input
-                id="title"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                placeholder="Ej: Gran Prix FASGBA 2025"
-                className={validationErrors.title ? "border-red-500" : ""}
-              />
-              {validationErrors.title && (
-                <p className="text-sm text-red-500">{validationErrors.title}</p>
-              )}
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="description">Descripción</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="Descripción detallada del torneo..."
-                rows={3}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="time">Horario</Label>
-                <Input
-                  id="time"
-                  name="time"
-                  value={formData.time}
-                  onChange={handleChange}
-                  placeholder="Ej: 10:00 AM"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="rounds">Número de Rondas</Label>
-                <Input
-                  id="rounds"
-                  name="rounds"
-                  type="number"
-                  min="1"
-                  value={formData.rounds}
-                  onChange={handleChange}
-                  placeholder="Ej: 7"
-                  className={validationErrors.rounds ? "border-red-500" : ""}
-                />
-                {validationErrors.rounds && (
-                  <p className="text-sm text-red-500">{validationErrors.rounds}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="pace">Ritmo de Juego</Label>
-              <Input
-                id="pace"
-                name="pace"
-                value={formData.pace}
-                onChange={handleChange}
-                placeholder="Ej: 90 min + 30 seg"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Fechas del Torneo</CardTitle>
-            <CardDescription>Modifica las fechas en que se realizará el torneo</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Input
-                  type="date"
-                  value={newDate}
-                  onChange={(e) => setNewDate(e.target.value)}
-                  placeholder="Seleccionar fecha"
-                />
-              </div>
-              <Button type="button" onClick={addDate} variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar
-              </Button>
-            </div>
-            
-            {validationErrors.dates && (
-              <p className="text-sm text-red-500">{validationErrors.dates}</p>
-            )}
-
-            {formData.dates.length > 0 && (
-              <div className="space-y-2">
-                <Label>Fechas agregadas:</Label>
-                <div className="space-y-2">
-                  {formData.dates.map((date, index) => (
-                    <div key={index} className="flex items-center justify-between bg-muted p-3 rounded-md">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{formatDisplayDate(date)}</span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeDate(date)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Ubicación</CardTitle>
-            <CardDescription>Información sobre el lugar del torneo</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="place">Lugar</Label>
-              <Input
-                id="place"
-                name="place"
-                value={formData.place}
-                onChange={handleChange}
-                placeholder="Ej: Club de Ajedrez Bahía Blanca"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="location">Dirección</Label>
-              <Input
-                id="location"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                placeholder="Ej: Av. Colón 123, Bahía Blanca"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Inscripción y Premios</CardTitle>
-            <CardDescription>Información sobre inscripciones, costos y premios</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="inscription_details">Detalles de Inscripción</Label>
-              <Textarea
-                id="inscription_details"
-                name="inscription_details"
-                value={formData.inscription_details}
-                onChange={handleChange}
-                placeholder="Información sobre cómo inscribirse, fechas límite, etc."
-                rows={3}
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="cost">Costo</Label>
-              <Input
-                id="cost"
-                name="cost"
-                value={formData.cost}
-                onChange={handleChange}
-                placeholder="Ej: $5000 general, $3000 sub-18"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="prizes">Premios</Label>
-              <Textarea
-                id="prizes"
-                name="prizes"
-                value={formData.prizes}
-                onChange={handleChange}
-                placeholder="Descripción de los premios..."
-                rows={2}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Imagen</CardTitle>
-            <CardDescription>Imagen representativa del torneo (opcional)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-2">
-              <Label htmlFor="image">URL de la Imagen</Label>
-              <Input
-                id="image"
-                name="image"
-                value={formData.image}
-                onChange={handleChange}
-                placeholder="https://ejemplo.com/imagen.jpg"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-end gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push("/club-admin/torneos")}
-            disabled={isLoading}
-          >
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Actualizando...
-              </>
-            ) : (
-              'Guardar Cambios'
-            )}
-          </Button>
-        </div>
-      </form>
-    </div>
+    </ClubProvider>
   )
 }

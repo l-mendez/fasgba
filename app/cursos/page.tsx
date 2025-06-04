@@ -10,6 +10,9 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
+// Force dynamic rendering for SSR
+export const dynamic = 'force-dynamic'
+
 // Datos de ejemplo para los cursos
 const cursos = [
   {
@@ -304,7 +307,7 @@ const faq = [
 export default function CursosPage() {
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
+      <SiteHeader pathname="/cursos" />
       <main className="flex-1">
         {/* Hero section */}
         <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-terracotta/10 to-amber/5">

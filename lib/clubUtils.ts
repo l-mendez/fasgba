@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createBrowserClient } from '@/lib/supabase/client'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -21,6 +22,11 @@ export interface ClubWithStats extends Club {
   adminCount: number
   followersCount: number
   newsCount: number
+}
+
+// Club with follow state for UI
+export interface ClubWithFollowState extends Club {
+  isFollowing: boolean
 }
 
 // Club member information (now just from auth.users)
@@ -336,8 +342,9 @@ export async function getClubFollowersCount(clubId: number): Promise<number> {
  */
 export async function isUserFollowingClub(clubId: number, authId: string): Promise<boolean> {
   try {
-    // Get authentication token
-    const { data: { session } } = await supabase.auth.getSession()
+    // Get authentication token from client-side Supabase
+    const clientSupabase = createBrowserClient()
+    const { data: { session } } = await clientSupabase.auth.getSession()
     const token = session?.access_token
     
     if (!token) {
@@ -374,8 +381,9 @@ export async function isUserFollowingClub(clubId: number, authId: string): Promi
  */
 export async function followClub(clubId: number, authId: string): Promise<boolean> {
   try {
-    // Get authentication token
-    const { data: { session } } = await supabase.auth.getSession()
+    // Get authentication token from client-side Supabase
+    const clientSupabase = createBrowserClient()
+    const { data: { session } } = await clientSupabase.auth.getSession()
     const token = session?.access_token
     
     if (!token) {
@@ -407,8 +415,9 @@ export async function followClub(clubId: number, authId: string): Promise<boolea
  */
 export async function unfollowClub(clubId: number, authId: string): Promise<boolean> {
   try {
-    // Get authentication token
-    const { data: { session } } = await supabase.auth.getSession()
+    // Get authentication token from client-side Supabase
+    const clientSupabase = createBrowserClient()
+    const { data: { session } } = await clientSupabase.auth.getSession()
     const token = session?.access_token
     
     if (!token) {
@@ -763,7 +772,8 @@ export async function getClubFollowers(clubId: number): Promise<{
 } | null> {
   try {
     // Get authentication token (optional for this endpoint since it's public data)
-    const { data: { session } } = await supabase.auth.getSession()
+    const clientSupabase = createBrowserClient()
+    const { data: { session } } = await clientSupabase.auth.getSession()
     const token = session?.access_token
 
     const headers: HeadersInit = {
@@ -792,6 +802,47 @@ export async function getClubFollowers(clubId: number): Promise<{
     return data
   } catch (error) {
     console.error('Error fetching club followers:', error)
+    throw error
+  }
+}
+
+/**
+ * Server-side function to get clubs with follow status for a specific user
+ * Used for SSR
+ */
+export async function getClubsWithFollowStatus(
+  authId: string | null, 
+  searchTerm?: string
+): Promise<ClubWithFollowState[]> {
+  try {
+    const clubsData = searchTerm ? 
+      await searchClubsByName(searchTerm) : 
+      await getAllClubs()
+    
+    if (!authId) {
+      // If no user, return clubs with isFollowing: false
+      return clubsData.map(club => ({ ...club, isFollowing: false }))
+    }
+    
+    // Get all clubs the user follows
+    const { data: followRelations, error } = await supabase
+      .from('user_follows_club')
+      .select('club_id')
+      .eq('auth_id', authId)
+    
+    if (error) {
+      console.error('Error fetching follow relations:', error)
+      return clubsData.map(club => ({ ...club, isFollowing: false }))
+    }
+    
+    const followedClubIds = new Set(followRelations?.map(r => r.club_id) || [])
+    
+    return clubsData.map(club => ({
+      ...club,
+      isFollowing: followedClubIds.has(club.id)
+    }))
+  } catch (error) {
+    console.error('Error in getClubsWithFollowStatus:', error)
     throw error
   }
 }

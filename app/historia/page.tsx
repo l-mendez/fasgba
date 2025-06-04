@@ -6,6 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 
+// Force dynamic rendering for SSR
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Historia',
   description: 'Conoce la historia y evolución de la Federación de Ajedrez del Sur de Buenos Aires desde 1985',
@@ -14,7 +17,7 @@ export const metadata: Metadata = {
 export default function HistoriaPage() {
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
+      <SiteHeader pathname="/historia" />
       <main className="flex-1">
         <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
           <div className="container px-4 md:px-6">
