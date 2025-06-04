@@ -1,29 +1,28 @@
-"use client"
-
-import { useState, useEffect, use } from "react"
 import Link from "next/link"
-import { ChevronLeft, Mail, MapPin, Phone, Clock, Calendar, User, Heart, Loader2 } from "lucide-react"
+import { ChevronLeft, Mail, MapPin, Phone, Clock, Calendar, User, Heart, Loader2, Users, UserCheck, FileText, Star } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ClientSiteHeader } from "@/components/client-site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 import {
   getClubById,
   getClubAdmins,
   getClubNews,
-  isUserFollowingClub,
-  followClub,
-  unfollowClub,
+  isUserFollowingClubServer,
   getClubFollowersCount,
   type Club,
   type ClubWithStats,
   type ClubAdmin,
   type ClubNews
 } from "@/lib/clubUtils"
-import { getCurrentUser } from "@/lib/userUtils"
+import { getCurrentUserServer } from "@/lib/auth-server"
+import { ClubFollowButton } from "@/components/club-follow-button"
+
+// Force dynamic rendering for SSR
+export const dynamic = 'force-dynamic'
 
 interface ClubDetailPageProps {
   params: Promise<{
@@ -31,100 +30,85 @@ interface ClubDetailPageProps {
   }>
 }
 
-export default function ClubDetailPage({ params }: ClubDetailPageProps) {
-  const resolvedParams = use(params)
-  const [club, setClub] = useState<ClubWithStats | null>(null)
-  const [admins, setAdmins] = useState<ClubAdmin[]>([])
-  const [news, setNews] = useState<ClubNews[]>([])
-  const [loading, setLoading] = useState(true)
-  const [followersCount, setFollowersCount] = useState(0)
-  const [isFollowing, setIsFollowing] = useState(false)
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+interface ClubPageData {
+  club: ClubWithStats | null
+  admins: ClubAdmin[]
+  news: ClubNews[]
+  followersCount: number
+  isFollowing: boolean
+  user: any | null
+  error: string | null
+}
 
+async function loadClubData(clubId: number): Promise<ClubPageData> {
+  try {
+    // Get current user for follow status
+    const user = await getCurrentUserServer()
+    
+    // Load club basic info with stats
+    const clubData = await getClubById(clubId, true) as ClubWithStats | null
+    if (!clubData) {
+      return {
+        club: null,
+        admins: [],
+        news: [],
+        followersCount: 0,
+        isFollowing: false,
+        user,
+        error: "Club no encontrado"
+      }
+    }
+
+    // Load additional data in parallel
+    const [adminsData, newsData, followersCountData, isFollowingData] = await Promise.all([
+      getClubAdmins(clubId),
+      getClubNews(clubId, 5), // Limit to 5 most recent news
+      getClubFollowersCount(clubId),
+      user ? isUserFollowingClubServer(clubId, user.id) : false
+    ])
+
+    return {
+      club: clubData,
+      admins: adminsData,
+      news: newsData,
+      followersCount: followersCountData,
+      isFollowing: isFollowingData,
+      user,
+      error: null
+    }
+  } catch (error) {
+    console.error('Error loading club data:', error)
+    return {
+      club: null,
+      admins: [],
+      news: [],
+      followersCount: 0,
+      isFollowing: false,
+      user: null,
+      error: "Error al cargar los datos del club"
+    }
+  }
+}
+
+export default async function ClubDetailPage({ params }: ClubDetailPageProps) {
+  const resolvedParams = await params
   const clubId = parseInt(resolvedParams.id)
 
-  useEffect(() => {
-    if (!isNaN(clubId)) {
-      loadClubData()
-      loadCurrentUser()
-    } else {
-      setError("ID de club inválido")
-      setLoading(false)
-    }
-  }, [clubId])
-
-  const loadCurrentUser = async () => {
-    try {
-      const user = await getCurrentUser()
-      if (user) {
-        setCurrentUserId(user.id) // Use the auth UUID directly
-      }
-    } catch (error) {
-      console.error('Error loading current user:', error)
-    }
-  }
-
-  const loadClubData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Load club basic info with stats
-      const clubData = await getClubById(clubId, true) as ClubWithStats | null
-      if (!clubData) {
-        setError("Club no encontrado")
-        return
-      }
-
-      setClub(clubData)
-
-      // Load additional data in parallel
-      const [adminsData, newsData, followersCountData, isFollowingData] = await Promise.all([
-        getClubAdmins(clubId),
-        getClubNews(clubId, 5), // Limit to 5 most recent news
-        getClubFollowersCount(clubId),
-        currentUserId ? isUserFollowingClub(clubId, currentUserId) : false
-      ])
-
-      setAdmins(adminsData)
-      setNews(newsData)
-      setFollowersCount(followersCountData)
-      setIsFollowing(isFollowingData)
-
-    } catch (error) {
-      console.error('Error loading club data:', error)
-      setError("Error al cargar los datos del club")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleToggleFollow = async () => {
-    if (!currentUserId || !club) return
-
-    try {
-      if (isFollowing) {
-        await unfollowClub(club.id, currentUserId)
-        setFollowersCount(prev => prev - 1)
-      } else {
-        await followClub(club.id, currentUserId)
-        setFollowersCount(prev => prev + 1)
-      }
-      setIsFollowing(!isFollowing)
-    } catch (error) {
-      console.error('Error toggling follow status:', error)
-    }
-  }
-
-  if (loading) {
+  if (isNaN(clubId)) {
     return (
       <div className="flex min-h-screen flex-col">
         <ClientSiteHeader pathname={`/clubes/${clubId}`} />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-terracotta mx-auto mb-4" />
-            <p className="text-muted-foreground">Cargando información del club...</p>
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center max-w-md mx-auto">
+            <h1 className="text-xl sm:text-2xl font-bold mb-4">
+              ID de club inválido
+            </h1>
+            <p className="text-muted-foreground mb-6 text-sm sm:text-base">
+              El enlace que has seguido no es válido.
+            </p>
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link href="/clubes">Volver a clubes</Link>
+            </Button>
           </div>
         </main>
         <SiteFooter />
@@ -132,19 +116,21 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
     )
   }
 
+  const { club, admins, news, followersCount, isFollowing, user, error } = await loadClubData(clubId)
+
   if (error || !club) {
     return (
       <div className="flex min-h-screen flex-col">
         <ClientSiteHeader pathname={`/clubes/${clubId}`} />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-terracotta mb-4">
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center max-w-md mx-auto">
+            <h1 className="text-xl sm:text-2xl font-bold mb-4">
               {error || "Club no encontrado"}
             </h1>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-muted-foreground mb-6 text-sm sm:text-base">
               {error || "El club que estás buscando no existe o ha sido eliminado."}
             </p>
-            <Button asChild className="bg-terracotta hover:bg-terracotta/90 text-white">
+            <Button asChild variant="outline" className="w-full sm:w-auto">
               <Link href="/clubes">Volver a clubes</Link>
             </Button>
           </div>
@@ -158,297 +144,203 @@ export default function ClubDetailPage({ params }: ClubDetailPageProps) {
     <div className="flex min-h-screen flex-col">
       <ClientSiteHeader pathname={`/clubes/${clubId}`} />
       <main className="flex-1">
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
+        <section className="w-full py-6 sm:py-12 md:py-24 lg:py-32 bg-muted">
           <div className="container px-4 md:px-6">
-            <Button asChild variant="outline" size="sm" className="mb-6 border-amber text-amber-dark hover:bg-amber/10">
+            <Button asChild variant="outline" size="sm" className="mb-4 sm:mb-6">
               <Link href="/clubes">
                 <ChevronLeft className="mr-1 h-4 w-4" />
                 Volver a clubes
               </Link>
             </Button>
 
-            <div className="grid gap-8 lg:grid-cols-[2fr_1fr] lg:gap-12">
-              {/* Columna izquierda - Información principal */}
-              <div className="space-y-6">
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                  <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-terracotta">{club.name}</h1>
-                    <div className="mt-2 flex items-center gap-4">
-                      <Badge variant="secondary">{club.adminCount} administradores</Badge>
-                      <Badge variant="secondary">{club.newsCount} noticias</Badge>
+            {/* Club Header */}
+            <div className="mb-8 lg:mb-12">
+              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+                <div className="flex-1">
+                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground mb-4 break-words">
+                    {club.name}
+                  </h1>
+                  
+                  {/* Quick Stats Bar */}
+                  <div className="flex flex-wrap gap-4 sm:gap-6 mb-6">
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-sm font-medium text-muted-foreground">{club.adminCount} administradores</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Heart className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-sm font-medium text-muted-foreground">{followersCount} seguidores</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-sm font-medium text-muted-foreground">{club.newsCount} noticias</span>
                     </div>
                   </div>
-                  {currentUserId && (
-                    <Button
-                      onClick={handleToggleFollow}
-                      variant={isFollowing ? "default" : "outline"}
-                      className={
-                        isFollowing
-                          ? "bg-terracotta hover:bg-terracotta/90 text-white"
-                          : "border-terracotta text-terracotta hover:bg-terracotta/10"
-                      }
-                    >
-                      <Heart className={`mr-2 h-4 w-4 ${isFollowing ? "fill-current" : ""}`} />
-                      {isFollowing ? "Siguiendo" : "Seguir"}
-                    </Button>
-                  )}
                 </div>
 
-                <Tabs defaultValue="informacion" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3 bg-muted border border-amber/20 mb-6">
-                    <TabsTrigger
-                      value="informacion"
-                      className="data-[state=active]:bg-amber data-[state=active]:text-white"
-                    >
-                      Información
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="noticias"
-                      className="data-[state=active]:bg-amber data-[state=active]:text-white"
-                    >
-                      Noticias
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="administradores"
-                      className="data-[state=active]:bg-amber data-[state=active]:text-white"
-                    >
-                      Administradores
-                    </TabsTrigger>
-                  </TabsList>
-
-                  {/* Pestaña de Información */}
-                  <TabsContent value="informacion">
-                    <Card className="border-amber/20">
-                      <CardHeader>
-                        <CardTitle className="text-terracotta">Información del Club</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid gap-4">
-                          {club.address && (
-                            <div className="flex items-start gap-3">
-                              <MapPin className="h-5 w-5 text-amber shrink-0 mt-0.5" />
-                              <div>
-                                <p className="text-sm font-medium">Dirección</p>
-                                <p className="text-sm text-muted-foreground">{club.address}</p>
-                              </div>
-                            </div>
-                          )}
-                          {club.telephone && (
-                            <div className="flex items-center gap-3">
-                              <Phone className="h-5 w-5 text-amber" />
-                              <div>
-                                <p className="text-sm font-medium">Teléfono</p>
-                                <p className="text-sm text-muted-foreground">{club.telephone}</p>
-                              </div>
-                            </div>
-                          )}
-                          {club.mail && (
-                            <div className="flex items-center gap-3">
-                              <Mail className="h-5 w-5 text-amber" />
-                              <div>
-                                <p className="text-sm font-medium">Email</p>
-                                <p className="text-sm text-muted-foreground">{club.mail}</p>
-                              </div>
-                            </div>
-                          )}
-                          {club.schedule && (
-                            <div className="flex items-center gap-3">
-                              <Clock className="h-5 w-5 text-amber" />
-                              <div>
-                                <p className="text-sm font-medium">Horarios</p>
-                                <p className="text-sm text-muted-foreground">{club.schedule}</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  {/* Pestaña de Noticias */}
-                  <TabsContent value="noticias">
-                    <div className="space-y-6">
-                      <h3 className="text-xl font-bold text-terracotta">Noticias del Club</h3>
-                      {news.length === 0 ? (
-                        <Card className="border-amber/20">
-                          <CardContent className="p-6 text-center">
-                            <p className="text-muted-foreground">No hay noticias disponibles para este club.</p>
-                          </CardContent>
-                        </Card>
-                      ) : (
-                        news.map((article) => (
-                          <Card key={article.id} className="border-amber/20">
-                            <CardContent className="p-6">
-                              <div className="flex flex-col gap-4">
-                                <div>
-                                  <h4 className="text-lg font-bold text-terracotta">{article.title}</h4>
-                                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2">
-                                    <div className="flex items-center gap-1">
-                                      <Calendar className="h-4 w-4 text-amber" />
-                                      <span className="text-sm">{new Date(article.date).toLocaleDateString()}</span>
-                                    </div>
-                                    {article.author_name && (
-                                      <div className="flex items-center gap-1">
-                                        <User className="h-4 w-4 text-amber" />
-                                        <span className="text-sm">Por {article.author_name}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                                {article.extract && (
-                                  <p className="text-muted-foreground">{article.extract}</p>
-                                )}
-                                {article.tags && article.tags.length > 0 && (
-                                  <div className="flex flex-wrap gap-2">
-                                    {article.tags.map((tag, index) => (
-                                      <Badge key={index} variant="outline" className="text-xs">
-                                        {tag}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))
-                      )}
-                    </div>
-                  </TabsContent>
-
-                  {/* Pestaña de Administradores */}
-                  <TabsContent value="administradores">
-                    <div className="space-y-6">
-                      <h3 className="text-xl font-bold text-terracotta">Administradores del Club</h3>
-                      {admins.length === 0 ? (
-                        <Card className="border-amber/20">
-                          <CardContent className="p-6 text-center">
-                            <p className="text-muted-foreground">No hay administradores registrados para este club.</p>
-                          </CardContent>
-                        </Card>
-                      ) : (
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          {admins.map((admin) => (
-                            <Card key={admin.id} className="border-amber/20">
-                              <CardContent className="p-6">
-                                <div className="flex items-center gap-4">
-                                  <div className="h-12 w-12 rounded-full bg-amber/10 flex items-center justify-center">
-                                    <User className="h-6 w-6 text-amber" />
-                                  </div>
-                                  <div>
-                                    <h4 className="font-bold text-terracotta">
-                                      <Badge className="mr-2 bg-amber text-white">ADMIN</Badge>
-                                      {admin.email}
-                                    </h4>
-                                    <p className="text-sm text-muted-foreground">ID: {admin.id.slice(0, 8)}...</p>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                </Tabs>
+                {/* Follow Button */}
+                {user && (
+                  <div className="lg:flex-shrink-0">
+                    <ClubFollowButton 
+                      clubId={club.id} 
+                      initialIsFollowing={isFollowing} 
+                      isUserAuthenticated={!!user}
+                      className="w-full lg:w-auto"
+                      size="lg"
+                    />
+                  </div>
+                )}
               </div>
+            </div>
 
-              {/* Columna derecha - Información de contacto */}
-              <div className="space-y-6">
-                <Card className="border-amber/20">
-                  <CardHeader>
-                    <CardTitle className="text-terracotta">Información de contacto</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {club.address && (
-                      <div className="flex items-start gap-3">
-                        <MapPin className="h-5 w-5 text-amber shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium">Dirección</p>
-                          <p className="text-sm text-muted-foreground">{club.address}</p>
-                        </div>
-                      </div>
-                    )}
-                    {club.telephone && (
-                      <div className="flex items-center gap-3">
-                        <Phone className="h-5 w-5 text-amber" />
-                        <div>
-                          <p className="text-sm font-medium">Teléfono</p>
-                          <p className="text-sm text-muted-foreground">{club.telephone}</p>
-                        </div>
-                      </div>
-                    )}
-                    {club.mail && (
-                      <div className="flex items-center gap-3">
-                        <Mail className="h-5 w-5 text-amber" />
-                        <div>
-                          <p className="text-sm font-medium">Email</p>
-                          <p className="text-sm text-muted-foreground">{club.mail}</p>
-                        </div>
-                      </div>
-                    )}
-                    {club.schedule && (
-                      <div className="flex items-center gap-3">
-                        <Clock className="h-5 w-5 text-amber" />
-                        <div>
-                          <p className="text-sm font-medium">Horarios</p>
-                          <p className="text-sm text-muted-foreground">{club.schedule}</p>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card className="border-amber/20">
-                  <CardHeader>
-                    <CardTitle className="text-terracotta">Estadísticas</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Miembros</span>
-                      <span className="text-2xl font-bold text-terracotta">{club.memberCount}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Administradores</span>
-                      <span className="text-2xl font-bold text-terracotta">{club.adminCount}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Seguidores</span>
-                      <span className="text-2xl font-bold text-terracotta">{followersCount}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Noticias</span>
-                      <span className="text-2xl font-bold text-terracotta">{club.newsCount}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {currentUserId && (
-                  <Card className="border-amber/20">
+            <div className="grid gap-8 lg:grid-cols-3 lg:gap-12">
+              {/* Main Content - 2/3 width */}
+              <div className="lg:col-span-2 space-y-8">
+                
+                {/* Contact Information */}
+                {(club.address || club.telephone || club.mail || club.schedule) && (
+                  <Card>
                     <CardHeader>
-                      <CardTitle className="text-terracotta">Seguir Club</CardTitle>
+                      <CardTitle className="flex items-center gap-2">
+                        <MapPin className="h-5 w-5" />
+                        Información de Contacto
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          {isFollowing ? "Estás siguiendo este club" : "Sigue este club para recibir actualizaciones"}
-                        </span>
-                        <Button
-                          onClick={handleToggleFollow}
-                          variant={isFollowing ? "default" : "outline"}
-                          size="sm"
-                          className={
-                            isFollowing
-                              ? "bg-terracotta hover:bg-terracotta/90 text-white"
-                              : "border-terracotta text-terracotta hover:bg-terracotta/10"
-                          }
-                        >
-                          <Heart className={`mr-2 h-4 w-4 ${isFollowing ? "fill-current" : ""}`} />
-                          {isFollowing ? "Siguiendo" : "Seguir"}
-                        </Button>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {club.address && (
+                          <div className="flex gap-3">
+                            <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium">Dirección</p>
+                              <p className="text-sm text-muted-foreground break-words">{club.address}</p>
+                            </div>
+                          </div>
+                        )}
+                        {club.telephone && (
+                          <div className="flex gap-3">
+                            <Phone className="h-5 w-5 text-muted-foreground shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Teléfono</p>
+                              <p className="text-sm text-muted-foreground">{club.telephone}</p>
+                            </div>
+                          </div>
+                        )}
+                        {club.mail && (
+                          <div className="flex gap-3">
+                            <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Email</p>
+                              <p className="text-sm text-muted-foreground break-all">{club.mail}</p>
+                            </div>
+                          </div>
+                        )}
+                        {club.schedule && (
+                          <div className="flex gap-3">
+                            <Clock className="h-5 w-5 text-muted-foreground shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium">Horarios</p>
+                              <p className="text-sm text-muted-foreground break-words">{club.schedule}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
                 )}
+
+                {/* News Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Últimas Noticias
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {news.length === 0 ? (
+                      <div className="text-center py-8">
+                        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground text-sm sm:text-base">No hay noticias disponibles para este club.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {news.map((article, index) => (
+                          <div key={article.id}>
+                            <article className="space-y-3">
+                              <div>
+                                <h3 className="text-lg font-bold break-words">{article.title}</h3>
+                                <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="h-4 w-4" />
+                                    <span>{new Date(article.date).toLocaleDateString()}</span>
+                                  </div>
+                                  {article.author_name && (
+                                    <div className="flex items-center gap-1">
+                                      <User className="h-4 w-4" />
+                                      <span>Por {article.author_name}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              {article.extract && (
+                                <p className="text-muted-foreground leading-relaxed">{article.extract}</p>
+                              )}
+                              {article.tags && article.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {article.tags.map((tag, tagIndex) => (
+                                    <Badge key={tagIndex} variant="secondary" className="text-xs">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </article>
+                            {index < news.length - 1 && <Separator className="mt-6" />}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Sidebar - 1/3 width */}
+              <div className="space-y-6">
+                
+                {/* Administrators */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <UserCheck className="h-5 w-5" />
+                      Administradores
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {admins.length === 0 ? (
+                      <div className="text-center py-6">
+                        <UserCheck className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                        <p className="text-muted-foreground text-sm">No hay administradores registrados.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {admins.map((admin) => (
+                          <div key={admin.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <User className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge className="text-xs">ADMIN</Badge>
+                              </div>
+                              <p className="text-sm font-medium break-all">{admin.email}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>

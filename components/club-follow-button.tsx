@@ -10,16 +10,25 @@ interface ClubFollowButtonProps {
   clubId: number
   initialIsFollowing: boolean
   isUserAuthenticated: boolean
+  className?: string
+  size?: "default" | "sm" | "lg" | "icon"
 }
 
-export function ClubFollowButton({ clubId, initialIsFollowing, isUserAuthenticated }: ClubFollowButtonProps) {
+export function ClubFollowButton({ 
+  clubId, 
+  initialIsFollowing, 
+  isUserAuthenticated,
+  className,
+  size = "icon"
+}: ClubFollowButtonProps) {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
-  const [mounted, setMounted] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const { user } = useAuth()
 
+  // Update follow state when initialIsFollowing prop changes
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setIsFollowing(initialIsFollowing)
+  }, [initialIsFollowing])
 
   // Don't render anything if user is not authenticated
   if (!isUserAuthenticated) {
@@ -27,40 +36,47 @@ export function ClubFollowButton({ clubId, initialIsFollowing, isUserAuthenticat
   }
 
   const handleToggleFollow = async () => {
-    if (!user) return
+    if (!user || isLoading) return
     
+    setIsLoading(true)
+    const previousState = isFollowing
     const newFollowState = !isFollowing
     
     // Optimistic UI update
     setIsFollowing(newFollowState)
 
     try {
-      if (isFollowing) {
+      if (previousState) {
         await unfollowClub(clubId, user.id)
       } else {
         await followClub(clubId, user.id)
       }
     } catch (error) {
       // Revert on error
-      setIsFollowing(isFollowing)
+      setIsFollowing(previousState)
       console.error('Error toggling follow status:', error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
     <Button 
-      variant="outline" 
-      size="icon" 
-      className={`border-amber text-amber-dark hover:bg-amber/10 ${
-        isFollowing ? 'bg-amber/10' : ''
-      }`}
+      variant={isFollowing ? "default" : "outline"}
+      size={size}
+      className={className}
       onClick={handleToggleFollow}
-      disabled={!mounted || !user}
+      disabled={isLoading || !user}
     >
-      <Heart className={`h-4 w-4 ${isFollowing ? 'fill-current' : ''}`} />
-      <span className="sr-only">
-        {isFollowing ? 'Dejar de seguir' : 'Seguir'} club
-      </span>
+      <Heart className={`${size === "lg" ? "h-5 w-5" : "h-4 w-4"} ${size !== "icon" ? "mr-2" : ""} ${isFollowing ? 'fill-current' : ''}`} />
+      {size !== "icon" && (
+        <span>{isFollowing ? 'Siguiendo' : 'Seguir Club'}</span>
+      )}
+      {size === "icon" && (
+        <span className="sr-only">
+          {isFollowing ? 'Dejar de seguir' : 'Seguir'} club
+        </span>
+      )}
     </Button>
   )
 } 

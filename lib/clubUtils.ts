@@ -338,7 +338,7 @@ export async function getClubFollowersCount(clubId: number): Promise<number> {
 }
 
 /**
- * Checks if a user is following a club using API endpoint
+ * Checks if a user is following a club using API endpoint (CLIENT-SIDE ONLY)
  */
 export async function isUserFollowingClub(clubId: number, authId: string): Promise<boolean> {
   try {
@@ -372,6 +372,34 @@ export async function isUserFollowingClub(clubId: number, authId: string): Promi
     return data.isFollowing || false
   } catch (error) {
     console.error('Error checking if user is following club:', error)
+    return false
+  }
+}
+
+/**
+ * Checks if a user is following a club using direct database query (SERVER-SIDE)
+ */
+export async function isUserFollowingClubServer(clubId: number, authId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('user_follows_club')
+      .select('auth_id')
+      .eq('club_id', clubId)
+      .eq('auth_id', authId)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows returned - user is not following the club
+        return false
+      }
+      console.error('Error checking follow status:', error)
+      return false
+    }
+
+    return !!data
+  } catch (error) {
+    console.error('Error in isUserFollowingClubServer:', error)
     return false
   }
 }
