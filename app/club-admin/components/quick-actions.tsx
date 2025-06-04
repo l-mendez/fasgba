@@ -4,11 +4,24 @@ import Link from "next/link"
 import { FileText, Trophy, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { useClubContext } from "../context/club-provider"
 
-export function QuickActions() {
-  const { selectedClub } = useClubContext()
-  
+interface Club {
+  id: number
+  name: string
+  description?: string
+  location?: string
+  website?: string
+  email?: string
+  phone?: string
+  created_at: string
+  updated_at: string
+}
+
+interface QuickActionsProps {
+  selectedClub: Club | null
+}
+
+export function QuickActions({ selectedClub }: QuickActionsProps) {
   const newNewsUrl = selectedClub 
     ? `/noticias/nueva?source=club-admin&clubId=${selectedClub.id}`
     : '/noticias/nueva?source=club-admin'
