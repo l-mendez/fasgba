@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { Clock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { parse } from '@mliebelt/pgn-parser'
 
 // Dynamically import chess.js to avoid SSR issues
 // Using a simpler import approach
@@ -48,99 +49,62 @@ interface EnhancedMove {
   piece: string
 }
 
-// Function to parse PGN and extract annotations
-function parsePGNWithAnnotations(pgn: string): { cleanPgn: string; moveAnnotations: Map<string, MoveAnnotation> } {
-  const moveAnnotations = new Map<string, MoveAnnotation>();
-  
-  // Split PGN into lines and process moves
-  const lines = pgn.split('\n');
-  let cleanPgn = '';
-  
-  for (const line of lines) {
-    // Skip header lines (those starting with [)
-    if (line.trim().startsWith('[')) {
-      cleanPgn += line + '\n';
-      continue;
-    }
+// Function to parse PGN using @mliebelt/pgn-parser
+function parsePGNWithLibrary(pgn: string): { moves: any[], cleanPgn: string } {
+  try {
+    // Parse the PGN using the library with all features enabled
+    const parsed = parse(pgn, { 
+      startRule: "game"
+    }) as any;
     
-    // Skip empty lines
-    if (!line.trim()) {
-      cleanPgn += line + '\n';
-      continue;
-    }
+    // Extract clean PGN by rebuilding from parsed data
+    let cleanPgn = '';
     
-    // Process move lines
-    let processedLine = line;
-    
-    // Find all annotations in curly braces and their positions
-    const annotationRegex = /\{([^}]+)\}/g;
-    let match;
-    const annotations: Array<{ content: string; index: number; length: number }> = [];
-    
-    while ((match = annotationRegex.exec(line)) !== null) {
-      annotations.push({
-        content: match[1],
-        index: match.index,
-        length: match[0].length
+    // Add tags
+    if (parsed.tags) {
+      Object.entries(parsed.tags).forEach(([key, value]) => {
+        cleanPgn += `[${key} "${value}"]\n`;
       });
+      cleanPgn += '\n';
     }
     
-    // Process each annotation
-    annotations.forEach(ann => {
-      const annotationContent = ann.content;
-      const currentAnnotation: MoveAnnotation = {};
-      
-      // Parse evaluation
-      const evalMatch = annotationContent.match(/\[%eval ([+-]?\d*\.?\d+)\]/);
-      if (evalMatch) {
-        currentAnnotation.eval = parseFloat(evalMatch[1]);
-      }
-      
-      // Parse clock time
-      const clockMatch = annotationContent.match(/\[%clk ([^\]]+)\]/);
-      if (clockMatch) {
-        currentAnnotation.clock = clockMatch[1];
-      }
-      
-      // Parse comments (text that's not eval or clk)
-      const commentText = annotationContent
-        .replace(/\[%eval[^\]]+\]/g, '')
-        .replace(/\[%clk[^\]]+\]/g, '')
-        .trim();
-      
-      if (commentText) {
-        currentAnnotation.comment = commentText;
-      }
-      
-      // Find the move that comes before this annotation
-      const beforeAnnotation = line.substring(0, ann.index);
-      
-      // Look for the last move in the text before the annotation
-      const movePattern = /(\d+\.\.?\.?\s*(?:[NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQK])?[+#]?|O-O(?:-O)?))(?:\s*)$/;
-      const moveMatch = beforeAnnotation.match(movePattern);
-      
-      if (moveMatch && Object.keys(currentAnnotation).length > 0) {
-        // Count how many moves are before this one in the entire PGN processed so far
-        const allTextBeforeThisAnnotation = cleanPgn + beforeAnnotation;
-        const allMovesBefore = allTextBeforeThisAnnotation.match(/\d+\.\.?\.?\s*(?:[NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQK])?[+#]?|O-O(?:-O)?)/g) || [];
-        const moveIndex = allMovesBefore.length - 1;
-        
-        if (moveIndex >= 0) {
-          const moveKey = `move_${moveIndex}`;
-          moveAnnotations.set(moveKey, currentAnnotation);
+    // Add moves
+    if (parsed.moves && parsed.moves.length > 0) {
+      let moveText = '';
+      parsed.moves.forEach((move: any, index: number) => {
+        // Add move number for white moves
+        if (move.turn === 'w') {
+          moveText += `${move.moveNumber}. `;
         }
-      }
-    });
+        
+        // Add the move notation
+        const notation = move.notation?.notation || move.san || move.move || '';
+        moveText += notation;
+        
+        // Add space after move
+        moveText += ' ';
+        
+        // Add line break every few moves for readability
+        if ((index + 1) % 6 === 0) {
+          moveText += '\n';
+        }
+      });
+      cleanPgn += moveText.trim();
+    }
     
-    // Remove annotations from the line for clean PGN
-    processedLine = processedLine.replace(/\{[^}]+\}/g, '').trim();
+    return { moves: parsed.moves || [], cleanPgn };
+  } catch (error) {
+    console.error("Error parsing PGN with library:", error);
     
-    if (processedLine.trim()) {
-      cleanPgn += processedLine + '\n';
+    // Try a simpler parse without options
+    try {
+      const simpleParsed = parse(pgn, { startRule: "game" }) as any;
+      return { moves: simpleParsed.moves || [], cleanPgn: pgn };
+    } catch (fallbackError) {
+      console.error("Fallback parsing also failed:", fallbackError);
+      return { moves: [], cleanPgn: pgn };
     }
   }
-  
-  return { cleanPgn: cleanPgn.trim(), moveAnnotations };
 }
 
 // Function to format clock time
@@ -193,22 +157,62 @@ const EvaluationBar = ({ evaluation, className = "" }: { evaluation?: number, cl
     );
   }
   
-  // Convert evaluation to percentage (capped between -5 and +5)
-  const cappedEval = Math.max(-5, Math.min(5, evaluation));
-  const percentage = ((cappedEval + 5) / 10) * 100;
+  // Ensure evaluation is a number (handle both number and string inputs)
+  const numericEval = typeof evaluation === 'string' ? parseFloat(evaluation) : evaluation;
+  
+  // Check if conversion was successful
+  if (isNaN(numericEval)) {
+    return (
+      <div className={`w-3 bg-gray-300 rounded-sm ${className}`}>
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="w-1 h-4 bg-gray-500 rounded-full"></div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Check for mate positions (encoded as 1000 + moves or -1000 - moves)
+  const isMatePosition = Math.abs(numericEval) >= 1000;
+  let displayText: string;
+  let percentage: number;
+  
+  if (isMatePosition) {
+    // For mate positions, extract moves to mate
+    const movesToMate = Math.abs(numericEval) - 1000;
+    displayText = `#${movesToMate}`;
+    percentage = numericEval > 0 ? 100 : 0; // Full white or full black
+  } else {
+    // Regular evaluation - convert to percentage (capped between -5 and +5)
+    const cappedEval = Math.max(-5, Math.min(5, numericEval));
+    percentage = ((cappedEval + 5) / 10) * 100;
+    displayText = numericEval > 0 ? `+${numericEval.toFixed(1)}` : numericEval.toFixed(1);
+  }
   
   return (
-    <div className={`w-3 bg-gray-800 rounded-sm relative overflow-hidden ${className}`}>
+    <div className={`w-3 rounded-sm relative overflow-hidden ${className}`} style={{ backgroundColor: '#1f2937' }}>
+      {/* White advantage area (from bottom) */}
       <div 
-        className="bg-white transition-all duration-500 ease-in-out w-full absolute bottom-0"
-        style={{ height: `${percentage}%` }}
+        className="transition-all duration-500 ease-in-out w-full absolute bottom-0"
+        style={{ 
+          height: `${percentage}%`,
+          backgroundColor: '#ffffff'
+        }}
       />
       {/* Center line */}
-      <div className="absolute top-1/2 left-0 right-0 h-px bg-gray-600 transform -translate-y-1/2" />
+      <div 
+        className="absolute left-0 right-0 h-px transform -translate-y-1/2" 
+        style={{ 
+          top: '50%',
+          backgroundColor: '#6b7280'
+        }}
+      />
       {/* Evaluation text */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="bg-black/70 text-white text-xs px-1 rounded transform -rotate-90 whitespace-nowrap">
-          {evaluation > 0 ? `+${evaluation.toFixed(1)}` : evaluation.toFixed(1)}
+        <div 
+          className="text-white text-xs px-1 rounded transform -rotate-90 whitespace-nowrap"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+        >
+          {displayText}
         </div>
       </div>
     </div>
@@ -278,15 +282,24 @@ export default function ChessBoard({
   useEffect(() => {
     if (moves.length > 0 && moveIndex > 0) {
       const currentMove = moves[moveIndex - 1];
+      
       if (currentMove?.annotation) {
-        setCurrentEvaluation(currentMove.annotation.eval);
+        // Only update evaluation if it exists in the annotation
+        if (currentMove.annotation.eval !== undefined) {
+          setCurrentEvaluation(currentMove.annotation.eval);
+        }
+        // If no eval in annotation, keep previous evaluation
+        
+        // Set clock time based on the color that just moved
         if (currentMove.color === 'w') {
           setCurrentWhiteClock(currentMove.annotation.clock);
         } else {
           setCurrentBlackClock(currentMove.annotation.clock);
         }
       }
+      // If no annotation at all, keep previous evaluation and don't update clocks
     } else {
+      // Only reset evaluation at the very beginning (moveIndex = 0)
       setCurrentEvaluation(undefined);
       setCurrentWhiteClock(undefined);
       setCurrentBlackClock(undefined);
@@ -294,7 +307,8 @@ export default function ChessBoard({
     
     // Update whose turn it is
     if (gameRef.current) {
-      setCurrentToMove(gameRef.current.turn());
+      const turn = gameRef.current.turn();
+      setCurrentToMove(turn);
     }
   }, [moveIndex, moves]);
   
@@ -315,7 +329,7 @@ export default function ChessBoard({
         if (pgn) {
           try {
             // Parse PGN to extract annotations
-            const { cleanPgn, moveAnnotations } = parsePGNWithAnnotations(pgn);
+            const { moves, cleanPgn } = parsePGNWithLibrary(pgn);
             
             // Load the clean PGN
             newGame.loadPgn(cleanPgn);
@@ -324,16 +338,83 @@ export default function ChessBoard({
             const history = newGame.history({ verbose: true });
             
             // Create enhanced moves with annotations
-            const enhancedMoves: EnhancedMove[] = history.map((move, index) => {
+            const enhancedMoves: EnhancedMove[] = history.map((move: any, index: number) => {
               const moveNumber = Math.floor(index / 2) + 1;
               const color = index % 2 === 0 ? 'w' : 'b';
-              const moveKey = `move_${index}`;
+              
+              // Find corresponding parsed move for annotations
+              const parsedMove = moves[index];
+              let annotation: MoveAnnotation | undefined = undefined;
+              
+              if (parsedMove) {
+                annotation = {};
+                
+                // Check commentDiag for eval and clock data (this is where the library stores it)
+                if (parsedMove.commentDiag) {
+                  if (parsedMove.commentDiag.eval !== undefined) {
+                    const evalString = String(parsedMove.commentDiag.eval);
+                    
+                    // Check if it's a mate annotation like "#16"
+                    if (evalString.startsWith('#')) {
+                      const mateValue = parseInt(evalString.substring(1));
+                      if (!isNaN(mateValue)) {
+                        // Store mate as special value: 1000 + moves for white mate, -1000 - moves for black mate
+                        // We'll assume white mate for now, can be refined based on context
+                        annotation.eval = 1000 + mateValue;
+                      }
+                    } else {
+                      // Regular numeric evaluation
+                      const evalValue = typeof parsedMove.commentDiag.eval === 'string' 
+                        ? parseFloat(parsedMove.commentDiag.eval) 
+                        : parsedMove.commentDiag.eval;
+                      
+                      if (!isNaN(evalValue)) {
+                        annotation.eval = evalValue;
+                      }
+                    }
+                  }
+                  if (parsedMove.commentDiag.clk !== undefined) {
+                    annotation.clock = parsedMove.commentDiag.clk;
+                  }
+                }
+                
+                // Check different possible comment properties for text comments
+                const commentSources = [
+                  parsedMove.commentAfter,
+                  parsedMove.commentBefore, 
+                  parsedMove.comment,
+                  parsedMove.commentMove
+                ].filter(Boolean);
+                
+                // Process all comment sources for text comments
+                commentSources.forEach(commentText => {
+                  if (typeof commentText === 'string') {
+                    // Parse general comments (text that's not eval or clk)
+                    let generalComment = commentText
+                      .replace(/\[%eval[^\]]+\]/g, '')
+                      .replace(/\[%clk[^\]]+\]/g, '')
+                      .trim();
+                    
+                    // Remove extra braces that might be left
+                    generalComment = generalComment.replace(/^\{\s*|\s*\}$/g, '').trim();
+                    
+                    if (generalComment && !annotation!.comment) {
+                      annotation!.comment = generalComment;
+                    }
+                  }
+                });
+                
+                // If no annotation data was found, set to undefined
+                if (Object.keys(annotation).length === 0) {
+                  annotation = undefined;
+                }
+              }
               
               return {
                 san: move.san,
                 moveNumber,
                 color,
-                annotation: moveAnnotations.get(moveKey),
+                annotation,
                 from: move.from,
                 to: move.to,
                 piece: move.piece
@@ -346,12 +427,14 @@ export default function ChessBoard({
             newGame.reset();
             newGame.load(fen);
           } catch (e) {
-            console.error("Error loading PGN:", e);
+            console.error("Error loading PGN with annotations:", e);
+            
             // Fallback to basic PGN loading
             try {
-              newGame.loadPgn(pgn);
-              const history = newGame.history({ verbose: true });
-              const basicMoves: EnhancedMove[] = history.map((move, index) => ({
+              const fallbackGame = new Chess(fen);
+              fallbackGame.loadPgn(pgn);
+              const history = fallbackGame.history({ verbose: true });
+              const basicMoves: EnhancedMove[] = history.map((move: any, index: number) => ({
                 san: move.san,
                 moveNumber: Math.floor(index / 2) + 1,
                 color: index % 2 === 0 ? 'w' : 'b',
@@ -363,7 +446,8 @@ export default function ChessBoard({
               newGame.reset();
               newGame.load(fen);
             } catch (fallbackError) {
-              console.error("Fallback PGN loading also failed:", fallbackError);
+              console.error("Fallback PGN loading failed:", fallbackError);
+              setMoves([]);
             }
           }
         }
@@ -396,7 +480,21 @@ export default function ChessBoard({
       
       // Apply moves up to the specified index
       for (let i = 0; i < move && i < moves.length; i++) {
-        newGame.move(moves[i].san);
+        try {
+          const moveResult = newGame.move(moves[i].san);
+          if (!moveResult) {
+            console.error(`Failed to apply move ${i}: ${moves[i].san}`);
+            console.error('Current position FEN:', newGame.fen());
+            console.error('Available moves:', newGame.moves());
+            throw new Error(`Invalid move: ${moves[i].san}`);
+          }
+        } catch (moveError) {
+          console.error(`Error applying move ${i}: ${moves[i].san}`, moveError);
+          console.error('Current position FEN:', newGame.fen());
+          console.error('Available moves:', newGame.moves());
+          // Stop applying moves on error but don't crash the whole component
+          break;
+        }
       }
       
       // Update the current position
@@ -406,7 +504,7 @@ export default function ChessBoard({
       gameRef.current = newGame;
       setCurrentToMove(newGame.turn());
     } catch (e) {
-      console.error("Error making move:", e);
+      console.error("Error in handleMove:", e);
     }
   };
   
@@ -430,18 +528,20 @@ export default function ChessBoard({
   useEffect(() => {
     const updateWidth = () => {
       // Make the board responsive with better mobile sizing
+      // Account for evaluation bar (width ~12px + margin ~8px = ~20px) and general padding
       const containerWidth = window.innerWidth;
-      const availableWidth = containerWidth - 64; // Account for padding and eval bar
+      const evalBarSpace = 20; // Space for eval bar
+      const availableWidth = containerWidth - 64 - evalBarSpace; // Account for padding and eval bar
       
       if (containerWidth < 480) {
         // Extra small screens (phones in portrait)
-        setBoardWidth(Math.min(availableWidth, 280));
+        setBoardWidth(Math.min(availableWidth, 260));
       } else if (containerWidth < 640) {
         // Small screens (phones in landscape)
-        setBoardWidth(Math.min(availableWidth, 320));
+        setBoardWidth(Math.min(availableWidth, 300));
       } else if (containerWidth < 768) {
         // Medium screens (small tablets)
-        setBoardWidth(Math.min(availableWidth, 360));
+        setBoardWidth(Math.min(availableWidth, 340));
       } else {
         // Large screens
         setBoardWidth(Math.min(availableWidth, width));
@@ -478,16 +578,8 @@ export default function ChessBoard({
         />
       </div>
       
-      {/* Chess Board with Evaluation Bar */}
-      <div className="flex items-center gap-2">
-        {/* Evaluation Bar */}
-        <div className="relative h-full">
-          <EvaluationBar 
-            evaluation={currentEvaluation} 
-            className="h-[250px] sm:h-[300px] md:h-[360px]"
-          />
-        </div>
-        
+      {/* Chess Board with Evaluation Bar - Centered Layout */}
+      <div className="relative flex justify-center items-center">
         {/* Chess Board */}
         <div className="max-w-full overflow-hidden" style={{ width: boardWidth }}>
           {isReady && (
@@ -501,6 +593,14 @@ export default function ChessBoard({
               }}
             />
           )}
+        </div>
+        
+        {/* Evaluation Bar - Positioned to the right of the board */}
+        <div className="ml-2 relative">
+          <EvaluationBar 
+            evaluation={currentEvaluation} 
+            className="h-[250px] sm:h-[300px] md:h-[360px]"
+          />
         </div>
       </div>
       
