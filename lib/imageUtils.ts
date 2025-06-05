@@ -195,4 +195,67 @@ export async function deleteNewsImages(newsId: number): Promise<void> {
     console.error('Error in deleteNewsImages:', error)
     throw error
   }
+}
+
+/**
+ * Get public URL for an image stored in Supabase Storage
+ * This function works in both server and client contexts
+ */
+export function getImageUrl(imagePath: string | null): string {
+  if (!imagePath) return "/placeholder.svg"
+  
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http')) {
+    return imagePath
+  }
+  
+  // Create a simple Supabase client just for getting public URLs
+  // This doesn't require authentication and works in all contexts
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Missing Supabase environment variables')
+    return "/placeholder.svg"
+  }
+  
+  const supabase = createClient(supabaseUrl, supabaseAnonKey)
+  
+  // Convert Supabase Storage path to public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from('images')
+    .getPublicUrl(imagePath)
+  
+  return publicUrl
+}
+
+/**
+ * Get nullable public URL for an image stored in Supabase Storage
+ * Returns null if no image path is provided
+ */
+export function getImageUrlNullable(imagePath: string | null): string | null {
+  if (!imagePath) return null
+  
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http')) {
+    return imagePath
+  }
+  
+  // Create a simple Supabase client just for getting public URLs
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Missing Supabase environment variables')
+    return null
+  }
+  
+  const supabase = createClient(supabaseUrl, supabaseAnonKey)
+  
+  // Convert Supabase Storage path to public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from('images')
+    .getPublicUrl(imagePath)
+  
+  return publicUrl
 } 

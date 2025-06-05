@@ -9,25 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { ClientSiteHeader } from "@/components/client-site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { RichTextDisplay } from "@/components/ui/rich-text-display"
-import { createClient } from "@/lib/supabase/client"
-
-// Helper function to get public URL from file path
-function getImageUrl(imagePath: string | null): string {
-  if (!imagePath) return "/placeholder.svg"
-  
-  // If it's already a full URL, return as is
-  if (imagePath.startsWith('http')) {
-    return imagePath
-  }
-  
-  // Convert Supabase Storage path to public URL
-  const supabase = createClient()
-  const { data: { publicUrl } } = supabase.storage
-    .from('images')
-    .getPublicUrl(imagePath)
-  
-  return publicUrl
-}
+import { getImageUrl } from "@/lib/imageUtils"
 
 // Simpler loading placeholder
 const ChessComponentLoader = () => (
