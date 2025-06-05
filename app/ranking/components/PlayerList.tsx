@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Minus, Circle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Player } from "../page";
 
 interface PlayerListProps {
@@ -14,6 +15,8 @@ interface PlayerListProps {
   currentPage: number;
   totalPages: number;
   totalPlayers: number;
+  currentRanking?: string;
+  availableRankings?: Array<{filename: string, displayName: string, month: number, year: number, date: Date}>;
 }
 
 interface PaginationControlsProps {
@@ -25,14 +28,14 @@ interface PaginationControlsProps {
 function PaginationControls({ currentPage, totalPages, onPageChange }: PaginationControlsProps) {
   const [pageInput, setPageInput] = useState(currentPage.toString());
 
-  // Update input when current page changes
+  // Update pageInput when currentPage changes
   useEffect(() => {
     setPageInput(currentPage.toString());
   }, [currentPage]);
 
   const handlePageInputSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const page = parseInt(pageInput);
+    const page = parseInt(pageInput, 10);
     if (page >= 1 && page <= totalPages) {
       onPageChange(page);
     } else {
@@ -41,11 +44,7 @@ function PaginationControls({ currentPage, totalPages, onPageChange }: Paginatio
   };
 
   const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    // Allow empty string or numbers only
-    if (value === '' || /^\d+$/.test(value)) {
-      setPageInput(value);
-    }
+    setPageInput(e.target.value);
   };
 
   return (
@@ -116,7 +115,7 @@ function PaginationControls({ currentPage, totalPages, onPageChange }: Paginatio
   );
 }
 
-export function PlayerList({ players, currentPage, totalPages, totalPlayers }: PlayerListProps) {
+export function PlayerList({ players, currentPage, totalPages, totalPlayers, currentRanking, availableRankings }: PlayerListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
@@ -139,13 +138,24 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers }: P
     router.push(`?${params.toString()}`);
   };
 
-  // Get unique categories
-  const categories = [...new Set(players.map(player => player.categoria))];
+  const handleRankingChange = (rankingFilename: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (rankingFilename === (availableRankings?.[0]?.filename || '')) {
+      // If selecting the latest ranking, remove the ranking parameter
+      params.delete('ranking');
+    } else {
+      params.set('ranking', rankingFilename);
+    }
+    params.set('page', '1'); // Reset to first page when changing ranking
+    
+    // Use router.replace to ensure immediate navigation and data refresh
+    router.replace(`?${params.toString()}`);
+  };
 
   return (
     <div className="container px-4 md:px-6">
-      <div className="mb-6">
-        <div className="relative">
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="flex-1 relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
@@ -155,6 +165,27 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers }: P
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        
+        {/* Ranking Selector */}
+        {availableRankings && availableRankings.length > 1 && (
+          <div className="sm:w-48">
+            <Select
+              value={currentRanking || availableRankings[0]?.filename || ''}
+              onValueChange={handleRankingChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar ranking" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableRankings.map((ranking) => (
+                  <SelectItem key={ranking.filename} value={ranking.filename}>
+                    {ranking.displayName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {/* Top pagination */}
@@ -166,29 +197,10 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers }: P
         />
       </div>
 
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList className="w-full mb-6 grid grid-cols-2 md:grid-cols-5">
-          <TabsTrigger value="all">Todos</TabsTrigger>
-          {categories.map((category) => (
-            <TabsTrigger key={`tab-${category}`} value={category}>
-              {category}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        
-        <TabsContent value="all" className="space-y-4">
-          <RankingTable players={players} currentPage={currentPage} />
-        </TabsContent>
-        
-        {categories.map((category) => (
-          <TabsContent key={`content-${category}`} value={category} className="space-y-4">
-            <RankingTable 
-              players={players.filter(player => player.categoria === category)} 
-              currentPage={currentPage}
-            />
-          </TabsContent>
-        ))}
-      </Tabs>
+      {/* Single ranking table without category tabs */}
+      <div className="space-y-4">
+        <RankingTable players={players} currentPage={currentPage} />
+      </div>
 
       {/* Bottom pagination */}
       <div className="mt-6">
@@ -208,16 +220,65 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers }: P
 function RankingTable({ players, currentPage }: { players: Player[]; currentPage: number }) {
   const pageSize = 50; // This should match the pageSize in page.tsx
 
+  const getPositionChangeIndicator = (changes: Player['changes']) => {
+    if (!changes) return null;
+    
+    if (changes.isNew) {
+      return (
+        <Circle className="h-3 w-3 text-blue-600 ml-1" title="Nuevo jugador" />
+      );
+    }
+    
+    if (changes.position && changes.position > 0) {
+      return (
+        <div className="flex items-center ml-1 text-green-600" title={`Subió ${changes.position} posiciones`}>
+          <ArrowUp className="h-3 w-3" />
+          <span className="text-xs font-medium">{changes.position}</span>
+        </div>
+      );
+    }
+    
+    if (changes.position && changes.position < 0) {
+      return (
+        <div className="flex items-center ml-1 text-red-600" title={`Bajó ${Math.abs(changes.position)} posiciones`}>
+          <ArrowDown className="h-3 w-3" />
+          <span className="text-xs font-medium">{Math.abs(changes.position)}</span>
+        </div>
+      );
+    }
+    
+    if (changes.position === 0) {
+      return (
+        <Minus className="h-3 w-3 text-gray-500 ml-1" title="Sin cambio de posición" />
+      );
+    }
+    
+    return null;
+  };
+
+  const getPointsChangeText = (changes: Player['changes']) => {
+    if (!changes || changes.points === 0) return null;
+    
+    const sign = changes.points > 0 ? '+' : '';
+    const color = changes.points > 0 ? 'text-green-600' : 'text-red-600';
+    
+    return (
+      <span className={`text-xs ${color} ml-1`}>
+        {sign}{changes.points}
+      </span>
+    );
+  };
+
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[80px]">Pos.</TableHead>
+            <TableHead className="w-[100px]">Pos.</TableHead>
             <TableHead>Nombre</TableHead>
             <TableHead className="hidden md:table-cell">Club</TableHead>
-            <TableHead className="text-right">ELO</TableHead>
-            <TableHead className="hidden md:table-cell">Categoría</TableHead>
+            <TableHead className="text-right">Puntos</TableHead>
+            <TableHead className="hidden md:table-cell text-center">Partidos</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -229,19 +290,24 @@ function RankingTable({ players, currentPage }: { players: Player[]; currentPage
             </TableRow>
           ) : (
             players.map((player, index) => (
-              <TableRow key={`player-${player.id || index}`}>
+              <TableRow key={`player-${player.position}`}>
                 <TableCell className="font-medium">
-                  {((currentPage - 1) * pageSize) + index + 1}
+                  <div className="flex items-center">
+                    <span>{player.position}</span>
+                    {getPositionChangeIndicator(player.changes)}
+                  </div>
                 </TableCell>
                 <TableCell>
-                  {player.titulo && (
-                    <span className="mr-1 font-medium text-primary">{player.titulo}</span>
-                  )}
-                  {player.nombre}
+                  <span>{player.name}</span>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">{player.club}</TableCell>
-                <TableCell className="text-right font-medium">{player.elo}</TableCell>
-                <TableCell className="hidden md:table-cell">{player.categoria}</TableCell>
+                <TableCell className="text-right font-medium">
+                  <div className="flex items-center justify-end">
+                    {player.points}
+                    {getPointsChangeText(player.changes)}
+                  </div>
+                </TableCell>
+                <TableCell className="hidden md:table-cell text-center">{player.matches}</TableCell>
               </TableRow>
             ))
           )}

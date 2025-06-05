@@ -291,6 +291,12 @@ export default async function AdminDashboard() {
                   Nuevo club
                 </Link>
               </Button>
+              <Button asChild className="w-full justify-start" variant="outline">
+                <Link href="/admin/ranking">
+                  <Trophy className="mr-2 h-4 w-4" />
+                  Gestionar ranking
+                </Link>
+              </Button>
             </div>
           </CardContent>
         </Card>

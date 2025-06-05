@@ -9,20 +9,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { PlayerList } from "@/app/ranking/components/PlayerList"
-import { getPlayers, type PaginatedPlayersResponse } from "@/lib/rankingUtils"
+import { getPlayers, getAvailableRankings, type PaginatedPlayersResponse } from "@/lib/rankingUtils"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
 
 // Define interfaces for the data we're working with
 export interface Player {
-  id: number;
-  nombre: string;
+  position: number;
+  name: string;
   club: string;
-  elo: number;
-  categoria: string;
-  titulo: string;
-  edad: number;
+  points: number;
+  matches: number;
+  changes?: {
+    position: number | null; // positive = moved up, negative = moved down, null = new player
+    points: number; // positive = gained points, negative = lost points
+    isNew: boolean; // true if player wasn't in previous ranking
+  };
 }
 
 interface ApiResponse {
@@ -31,13 +34,29 @@ interface ApiResponse {
   page: number;
   pageSize: number;
   totalPages: number;
+  currentRanking?: string;
+  availableRankings?: Array<{filename: string, displayName: string, month: number, year: number, date: Date}>;
 }
 
 // Get players directly from rankingUtils instead of making HTTP call
-async function getPlayersData(page: number = 1, pageSize: number = 50, search: string = ''): Promise<ApiResponse> {
+async function getPlayersData(page: number = 1, pageSize: number = 50, search: string = '', ranking?: string): Promise<ApiResponse> {
   try {
-    const data: PaginatedPlayersResponse = await getPlayers(page, pageSize, search);
-    return data;
+    // Clear cache if a specific ranking is requested to ensure fresh data
+    if (ranking) {
+      const { clearRankingCache } = await import('@/lib/rankingUtils');
+      clearRankingCache();
+    }
+    
+    const [data, availableRankings]: [PaginatedPlayersResponse, Array<{filename: string, displayName: string, month: number, year: number, date: Date}>] = await Promise.all([
+      getPlayers(page, pageSize, search, ranking),
+      getAvailableRankings()
+    ]);
+    
+    return {
+      ...data,
+      currentRanking: ranking || (availableRankings.length > 0 ? availableRankings[0].filename : undefined),
+      availableRankings
+    };
   } catch (error) {
     console.error('Error fetching players:', error);
     throw new Error(`Failed to fetch data: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -69,7 +88,7 @@ function ErrorState({ message }: { message: string }) {
 export default async function RankingPage({
   searchParams,
 }: {
-  searchParams: { page?: string; search?: string };
+  searchParams: { page?: string; search?: string; ranking?: string };
 }) {
   return (
     <div className="flex min-h-screen flex-col">
@@ -101,21 +120,25 @@ export default async function RankingPage({
 async function RankingContent({ 
   searchParams,
 }: { 
-  searchParams: { page?: string; search?: string };
+  searchParams: { page?: string; search?: string; ranking?: string };
 }) {
   // Await the searchParams before using them
   const params = await Promise.resolve(searchParams);
   const page = parseInt(params.page || '1');
   const pageSize = 50;
   const search = params.search || '';
+  const ranking = params.ranking || '';
 
   try {
-    const data = await getPlayersData(page, pageSize, search);
+    const data = await getPlayersData(page, pageSize, search, ranking || undefined);
     return <PlayerList 
+      key={`${data.currentRanking || 'latest'}-${page}-${search}`}
       players={data.players} 
       currentPage={data.page}
       totalPages={data.totalPages}
       totalPlayers={data.total}
+      currentRanking={data.currentRanking}
+      availableRankings={data.availableRankings || []}
     />;
   } catch (error) {
     console.error("Error fetching players:", error);

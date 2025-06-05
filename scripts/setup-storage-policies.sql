@@ -11,6 +11,9 @@ DROP POLICY IF EXISTS "images_delete_policy" ON storage.objects;
 DROP POLICY IF EXISTS "avatars_upload_policy" ON storage.objects;
 DROP POLICY IF EXISTS "avatars_select_policy" ON storage.objects;
 DROP POLICY IF EXISTS "avatars_delete_policy" ON storage.objects;
+DROP POLICY IF EXISTS "ranking_data_upload_policy" ON storage.objects;
+DROP POLICY IF EXISTS "ranking_data_select_policy" ON storage.objects;
+DROP POLICY IF EXISTS "ranking_data_delete_policy" ON storage.objects;
 
 -- Images bucket policies
 CREATE POLICY "images_upload_policy" ON storage.objects
@@ -43,6 +46,36 @@ CREATE POLICY "avatars_delete_policy" ON storage.objects
   FOR DELETE
   TO authenticated
   USING (bucket_id = 'avatars');
+
+-- Ranking data bucket policies (admin only for insert/delete, public for select)
+CREATE POLICY "ranking_data_upload_policy" ON storage.objects
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'ranking-data' AND 
+    EXISTS (
+      SELECT 1 FROM profiles 
+      WHERE profiles.id = auth.uid() 
+      AND profiles.role = 'admin'
+    )
+  );
+
+CREATE POLICY "ranking_data_select_policy" ON storage.objects
+  FOR SELECT
+  TO public
+  USING (bucket_id = 'ranking-data');
+
+CREATE POLICY "ranking_data_delete_policy" ON storage.objects
+  FOR DELETE
+  TO authenticated
+  USING (
+    bucket_id = 'ranking-data' AND 
+    EXISTS (
+      SELECT 1 FROM profiles 
+      WHERE profiles.id = auth.uid() 
+      AND profiles.role = 'admin'
+    )
+  );
 
 -- Also enable RLS on storage.buckets if needed
 ALTER TABLE storage.buckets ENABLE ROW LEVEL SECURITY;
