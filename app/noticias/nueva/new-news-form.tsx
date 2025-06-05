@@ -541,35 +541,12 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
         throw new Error('No estás autenticado. Por favor, inicia sesión nuevamente.')
       }
 
-      // Process content blocks (upload images if needed)
-      const processedContent = await processNewsContent(formData.contentBlocks)
-      
-      // Upload featured image if exists
-      let imagePath = null
-      if (formData.image) {
-        const file = formData.image
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`
-        const filePath = `news/${fileName}`
-        
-        const { error: uploadError } = await supabase.storage
-          .from('images')
-          .upload(filePath, file)
-        
-        if (uploadError) {
-          throw new Error('Error al subir imagen: ' + uploadError.message)
-        }
-        
-        imagePath = filePath
-      }
-
-      // Prepare data for API
-      const newsData = {
+      // Create news item first (without images) to get the news ID
+      const initialNewsData = {
         title: formData.title,
         date: new Date(formData.date + 'T00:00:00Z').toISOString(),
         extract: formData.extract,
-        text: JSON.stringify(processedContent),
-        image: imagePath,
+        text: JSON.stringify([]), // Temporary empty content
         tags: formData.category ? [formData.category] : [],
         club_id: formData.club_id
       }
@@ -581,19 +558,48 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
         apiEndpoint = `/api/clubs/${formData.club_id}/news`
       }
 
-      // Call the API to create news
+      // Call the API to create news (initially without images)
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify(newsData),
+        body: JSON.stringify(initialNewsData),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+      }
+
+      const createdNews = await response.json()
+      const newsId = createdNews.id
+
+      // Now process images with the news ID for organized storage
+      const { processedContent, featuredImagePath } = await processNewsContentWithDeduplication(
+        formData.contentBlocks, 
+        formData.image, 
+        newsId,
+        session
+      )
+
+      // Update the news item with processed content and images
+      const updateResponse = await fetch(`/api/news/${newsId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          text: JSON.stringify(processedContent),
+          image: featuredImagePath
+        }),
+      })
+
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json()
+        throw new Error(errorData.error || `HTTP error! status: ${updateResponse.status}`)
       }
 
       // Determine redirect path based on user type
@@ -612,16 +618,69 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
     }
   }
 
-  // Function to process content blocks before saving
-  const processNewsContent = async (blocks: BlockContent[]) => {
-    const supabase = createClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.access_token) {
-      throw new Error('No estás autenticado. Por favor, inicia sesión nuevamente.')
+  // Function to process content blocks with deduplication and organized storage
+  const processNewsContentWithDeduplication = async (
+    blocks: BlockContent[], 
+    featuredImage: File | null, 
+    newsId: number,
+    session: any // Add session parameter
+  ) => {
+    // Collect all images to upload
+    const imagesToUpload: { file: File; prefix: string; blockIndex?: number }[] = []
+
+    // Add featured image if exists
+    if (featuredImage) {
+      imagesToUpload.push({ file: featuredImage, prefix: 'featured' })
     }
 
-    const processedBlocks = await Promise.all(blocks.map(async (block, index) => {
+    // Add block images
+    blocks.forEach((block, index) => {
+      if (block.type === BLOCK_TYPES.IMAGE && block.content.file) {
+        imagesToUpload.push({ 
+          file: block.content.file, 
+          prefix: `block-${index}`, 
+          blockIndex: index 
+        })
+      }
+    })
+
+    // Upload all images with deduplication
+    let uploadResults: Array<{ filePath: string; wasReused: boolean; originalIndex: number }> = []
+    
+    if (imagesToUpload.length > 0) {
+      // Use the server-side upload utility for deduplication
+      const formData = new FormData()
+      imagesToUpload.forEach((imageInfo, index) => {
+        formData.append(`file-${index}`, imageInfo.file)
+        formData.append(`prefix-${index}`, imageInfo.prefix)
+        if (imageInfo.blockIndex !== undefined) {
+          formData.append(`blockIndex-${index}`, imageInfo.blockIndex.toString())
+        }
+      })
+
+      const uploadResponse = await fetch(`/api/news/${newsId}/upload-images`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      })
+
+      if (!uploadResponse.ok) {
+        throw new Error('Error uploading images')
+      }
+
+      uploadResults = await uploadResponse.json()
+    }
+
+    // Find featured image path
+    const featuredImageResult = uploadResults.find((result, index) => 
+      imagesToUpload[index].prefix === 'featured'
+    )
+    const featuredImagePath = featuredImageResult?.filePath || null
+
+    // Process content blocks with uploaded image paths
+    const processedBlocks = blocks.map((block, index) => {
       if (block.type === BLOCK_TYPES.TEXT) {
         return {
           id: `block-${index}`,
@@ -630,31 +689,16 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
         }
       } 
       else if (block.type === BLOCK_TYPES.IMAGE) {
-        let imagePath = null
-        if (block.content.file) {
-          const file = block.content.file
-          const fileExt = file.name.split('.').pop()
-          const fileName = `${Date.now()}-${index}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`
-          const filePath = `news/blocks/${fileName}`
-          
-          try {
-            const { error: uploadError } = await supabase.storage
-              .from('images')
-              .upload(filePath, file)
-            
-            if (uploadError) throw uploadError
-            
-            imagePath = filePath
-          } catch (error) {
-            console.error('Error uploading image for block', index, error)
-          }
-        }
+        // Find the corresponding upload result
+        const uploadResult = uploadResults.find((result, uploadIndex) => 
+          imagesToUpload[uploadIndex].blockIndex === index
+        )
         
         return {
           id: `block-${index}`,
           type: block.type,
           content: {
-            src: imagePath,
+            src: uploadResult?.filePath || null,
             caption: block.content.caption,
             alignment: block.content.alignment
           }
@@ -673,9 +717,9 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
       }
       
       return null
-    }))
-    
-    return processedBlocks.filter(block => block !== null)
+    }).filter(block => block !== null)
+
+    return { processedContent: processedBlocks, featuredImagePath }
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {

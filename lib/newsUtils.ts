@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { deleteNewsImages } from './imageUtils.server'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -275,16 +276,17 @@ export async function getNewsById(id: number, include: Array<'author' | 'club'> 
 }
 
 /**
- * Creates a new news item
+ * Creates a new news item (initially without images, to be updated after creation)
  */
 export async function createNews(input: CreateNewsInput): Promise<News> {
+  // Create news item first without images to get the ID
   const { data, error } = await supabase
     .from('news')
     .insert({
       title: input.title,
       extract: input.extract,
       text: input.text,
-      image: input.image,
+      image: null, // Will be updated after processing
       tags: input.tags || [],
       club_id: input.club_id,
       created_by_auth_id: input.created_by_auth_id,
@@ -304,7 +306,37 @@ export async function createNews(input: CreateNewsInput): Promise<News> {
 }
 
 /**
- * Updates a news item
+ * Updates a news item with processed images in organized folders
+ */
+export async function updateNewsWithProcessedImages(
+  newsId: number, 
+  processedText: string, 
+  featuredImagePath?: string
+): Promise<boolean> {
+  const updateData: any = {
+    text: processedText,
+    updated_at: new Date().toISOString()
+  }
+
+  if (featuredImagePath) {
+    updateData.image = featuredImagePath
+  }
+
+  const { error } = await supabase
+    .from('news')
+    .update(updateData)
+    .eq('id', newsId)
+
+  if (error) {
+    console.error('Error updating news with processed images:', error)
+    throw new Error('Failed to update news with images')
+  }
+
+  return true
+}
+
+/**
+ * Updates a news item (regular update for other operations)
  */
 export async function updateNews(id: number, input: UpdateNewsInput): Promise<boolean> {
   const updateData: any = {
@@ -326,20 +358,45 @@ export async function updateNews(id: number, input: UpdateNewsInput): Promise<bo
 }
 
 /**
- * Deletes a news item
+ * Deletes a news item and its associated images from storage
  */
 export async function deleteNews(id: number): Promise<boolean> {
-  const { error } = await supabase
-    .from('news')
-    .delete()
-    .eq('id', id)
+  try {
+    // Check if news exists
+    const { data: news, error: fetchError } = await supabase
+      .from('news')
+      .select('id')
+      .eq('id', id)
+      .single()
 
-  if (error) {
-    console.error('Error deleting news:', error)
-    throw new Error('Failed to delete news')
+    if (fetchError) {
+      console.error('Error fetching news for deletion:', fetchError)
+      throw new Error('Failed to fetch news for deletion')
+    }
+
+    if (!news) {
+      throw new Error('News item not found')
+    }
+
+    // Delete all images for this news item using the new organized structure
+    await deleteNewsImages(id)
+
+    // Delete the news item from database
+    const { error: deleteError } = await supabase
+      .from('news')
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) {
+      console.error('Error deleting news from database:', deleteError)
+      throw new Error('Failed to delete news')
+    }
+
+    return true
+  } catch (error) {
+    console.error('Error in deleteNews:', error)
+    throw error
   }
-
-  return true
 }
 
 /**
