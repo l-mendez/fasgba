@@ -20,10 +20,11 @@ interface ActivityItem {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { clubId: string } }
+  { params }: { params: Promise<{ clubId: string }> }
 ) {
   try {
-    const clubId = parseInt(params.clubId)
+    const { clubId: clubIdParam } = await params
+    const clubId = parseInt(clubIdParam)
     
     if (isNaN(clubId)) {
       return NextResponse.json(

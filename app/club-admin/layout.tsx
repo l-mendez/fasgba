@@ -8,6 +8,7 @@ import {
   FileText,
   Home,
   Menu,
+  Settings,
   Trophy,
 } from "lucide-react"
 import { useState } from "react"
@@ -64,6 +65,17 @@ export default function ClubAdminLayout({ children }: ClubAdminLayoutProps) {
           >
             <Trophy className="mr-2 h-4 w-4" />
             Torneos
+          </Link>
+          <Link
+            href="/club-admin/settings"
+            className={cn(
+              "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
+              pathname.startsWith("/club-admin/settings") ? "bg-amber/10 text-amber" : "text-muted-foreground"
+            )}
+            onClick={onLinkClick}
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            Configuración
           </Link>
         </div>
       </div>
