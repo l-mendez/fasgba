@@ -53,9 +53,24 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = validateCreateNews(body)
 
+    // If creating FASGBA news (no club_id), check if user is site admin
+    if (!validatedData.club_id) {
+      const { data: admin, error: adminError } = await supabase
+        .from('admins')
+        .select('auth_id')
+        .eq('auth_id', user.id)
+        .single()
+
+      if (adminError || !admin) {
+        return forbiddenError('Only site admins can create FASGBA news')
+      }
+    }
+
     // Create the news item with auth_id directly
     const newsData = {
       ...validatedData,
+      image: validatedData.image || undefined, // Convert null to undefined for type compatibility
+      club_id: validatedData.club_id || undefined, // Convert null to undefined for type compatibility
       created_by_auth_id: user.id
     }
 

@@ -58,7 +58,7 @@ async function isSiteAdmin(userId: string): Promise<boolean> {
     
     const { data, error } = await supabase
       .from('admins')
-      .select('id')
+      .select('auth_id')
       .eq('auth_id', userId)
       .single()
 
@@ -169,16 +169,8 @@ export default async function NuevaNoticiaPage({ searchParams }: PageProps) {
   // Check if user is site admin
   const isAdmin = await isSiteAdmin(user.id)
   
-  let clubs: Club[] = []
-  let userClubs: Club[] = []
-
-  if (isAdmin) {
-    // Site admins can create news for any club or FASGBA
-    clubs = await getAllClubs()
-  }
-  
-  // Always get user's clubs (in case they're both site admin and club admin)
-  userClubs = await getUserClubs(user.id)
+  // Always get user's clubs (both site admins and club admins might have club admin permissions)
+  const userClubs = await getUserClubs(user.id)
   
   // If user is not site admin and has no clubs, they can't create news
   if (!isAdmin && userClubs.length === 0) {
@@ -215,7 +207,6 @@ export default async function NuevaNoticiaPage({ searchParams }: PageProps) {
   return (
     <NewNewsForm 
       user={user}
-      allClubs={clubs}
       userClubs={userClubs}
       isAdmin={isAdmin}
       defaultEntityId={defaultEntityId}

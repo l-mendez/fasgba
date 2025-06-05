@@ -52,7 +52,6 @@ interface User {
 
 interface NewNewsFormProps {
   user: User
-  allClubs: Club[]
   userClubs: Club[]
   isAdmin: boolean
   defaultEntityId: number | null
@@ -510,7 +509,7 @@ const AddBlockButton = ({
   )
 }
 
-export function NewNewsForm({ user, allClubs, userClubs, isAdmin, defaultEntityId, defaultEntityType }: NewNewsFormProps) {
+export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, defaultEntityType }: NewNewsFormProps) {
   const router = useRouter()
   const [formData, setFormData] = useState({
     title: "",
@@ -971,45 +970,22 @@ export function NewNewsForm({ user, allClubs, userClubs, isAdmin, defaultEntityI
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {/* FASGBA option - only for site admins or when they have explicit permission */}
+                {/* FASGBA option - only for site admins */}
                 {isAdmin && (
                   <SelectItem value="fasgba">FASGBA (Federación)</SelectItem>
                 )}
                 
-                {/* Site admins can see all clubs */}
-                {isAdmin && allClubs.map((club) => (
+                {/* Show clubs that the user is admin of */}
+                {userClubs.map((club) => (
                   <SelectItem key={club.id} value={club.id.toString()}>
                     {club.name}
                   </SelectItem>
                 ))}
-                
-                {/* Club admins can only see their clubs */}
-                {!isAdmin && userClubs.map((club) => (
-                  <SelectItem key={club.id} value={club.id.toString()}>
-                    {club.name}
-                  </SelectItem>
-                ))}
-                
-                {/* If user is both site admin and club admin, show user clubs separately */}
-                {isAdmin && userClubs.length > 0 && allClubs.length > 0 && (
-                  <>
-                    <SelectItem disabled value="separator" className="text-xs text-muted-foreground font-semibold">
-                      ── Mis Clubes ──
-                    </SelectItem>
-                    {userClubs
-                      .filter(userClub => !allClubs.some(allClub => allClub.id === userClub.id))
-                      .map((club) => (
-                        <SelectItem key={`user-${club.id}`} value={club.id.toString()}>
-                          {club.name} *
-                        </SelectItem>
-                      ))}
-                  </>
-                )}
               </SelectContent>
             </Select>
             <div className="text-xs text-muted-foreground">
               {formData.club_id ? 
-                `La noticia estará asociada a ${isAdmin && allClubs.find(c => c.id === formData.club_id)?.name || userClubs.find(c => c.id === formData.club_id)?.name}` :
+                `La noticia estará asociada a ${userClubs.find((c: Club) => c.id === formData.club_id)?.name}` :
                 'La noticia estará asociada a la Federación FASGBA'
               }
             </div>
