@@ -9,6 +9,8 @@ import { useRouter, useSearchParams } from "next/navigation"
 export interface AuthButtonProps {
   email: string
   password: string
+  nombre?: string
+  apellido?: string
   className?: string
   children?: React.ReactNode
   mode: "signin" | "signup"
@@ -21,6 +23,8 @@ export function AuthButton({
   children,
   email,
   password,
+  nombre,
+  apellido,
   mode,
   onSuccess,
   redirectTo
@@ -62,6 +66,12 @@ export function AuthButton({
       return
     }
 
+    // For signup, also check nombre and apellido
+    if (mode === "signup" && (!nombre?.trim() || !apellido?.trim())) {
+      setError("Nombre y apellido son requeridos")
+      return
+    }
+
     // Run validation before making API call
     if (onSuccess && !onSuccess()) {
       return
@@ -83,6 +93,12 @@ export function AuthButton({
         response = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              nombre: nombre?.trim(),
+              apellido: apellido?.trim()
+            }
+          }
         })
       }
 

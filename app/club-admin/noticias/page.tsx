@@ -5,17 +5,21 @@ import { Plus } from "lucide-react"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 import { cookies } from "next/headers"
+import { getClubNews } from "@/lib/clubUtils"
 
 import { Button } from "@/components/ui/button"
 import { ClubProvider } from "../context/club-provider"
 import { NoticiasContent } from "./noticias-content"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { NewNewsButton } from "../components/new-news-button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 
-// Force dynamic rendering since we use cookies
+// Mark this page as dynamic
 export const dynamic = 'force-dynamic'
 
-// Define el tipo para noticias según la API
+// Updated interface to include additional author metadata
 interface ClubNews {
   id: number
   title: string
@@ -52,6 +56,10 @@ interface Club {
   phone?: string
   created_at: string
   updated_at: string
+  address: string | null
+  telephone: string | null
+  mail: string | null
+  schedule: string | null
 }
 
 // Function to map database club to expected club format
@@ -60,47 +68,24 @@ function mapDbClubToClub(dbClub: DbClub): Club {
     id: dbClub.id,
     name: dbClub.name,
     description: undefined,
-    location: dbClub.address,
+    location: dbClub.address || undefined,
     website: undefined,
-    email: dbClub.mail,
-    phone: dbClub.telephone,
+    email: dbClub.mail || undefined,
+    phone: dbClub.telephone || undefined,
     created_at: new Date().toISOString(), // Default since not in DB
-    updated_at: new Date().toISOString() // Default since not in DB
+    updated_at: new Date().toISOString(), // Default since not in DB
+    address: dbClub.address || null,
+    telephone: dbClub.telephone || null,
+    mail: dbClub.mail || null,
+    schedule: dbClub.schedule || null
   }
 }
 
 // Server component to fetch initial data
 async function getNewsData(clubId: number): Promise<ClubNews[]> {
   try {
-    const adminClient = createAdminClient()
-    
-    // Get news for the club - removed the profiles join since profiles table doesn't exist
-    const { data: newsData, error } = await adminClient
-      .from('news')
-      .select('*')
-      .eq('club_id', clubId)
-      .order('date', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching news:', error)
-      return []
-    }
-
-    // Transform the data to match the expected format
-    return (newsData || []).map(item => ({
-      id: item.id,
-      title: item.title,
-      date: item.date,
-      image: item.image,
-      extract: item.extract,
-      text: item.text,
-      tags: item.tags || [],
-      created_by_auth_id: item.created_by_auth_id,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      author_name: undefined, // No profiles table available
-      author_email: undefined // No profiles table available
-    }))
+    // Use the clubUtils function which already fetches author information
+    return await getClubNews(clubId)
   } catch (error) {
     console.error('Error in getNewsData:', error)
     return []

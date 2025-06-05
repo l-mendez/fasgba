@@ -157,6 +157,13 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
           aValue = a.email.toLowerCase()
           bValue = b.email.toLowerCase()
           break
+        case 'name':
+          // Sort by full name (nombre + apellido), fallback to email
+          const aFullName = `${a.nombre || ''} ${a.apellido || ''}`.trim().toLowerCase() || a.email.toLowerCase()
+          const bFullName = `${b.nombre || ''} ${b.apellido || ''}`.trim().toLowerCase() || b.email.toLowerCase()
+          aValue = aFullName
+          bValue = bFullName
+          break
         case 'role':
           // Sort by role hierarchy: Admin > Club Admin > User
           aValue = a.isAdmin ? 2 : (a.isClubAdmin ? 1 : 0)
@@ -237,7 +244,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar usuarios..."
+            placeholder="Buscar por nombre, apellido, email o club..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -273,6 +280,9 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleSort('email')}>
                 Email {getSortIcon('email')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('name')}>
+                Nombre {getSortIcon('name')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleSort('role')}>
                 Rol {getSortIcon('role')}
@@ -311,6 +321,15 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                 </TableHead>
                 <TableHead 
                   className="whitespace-nowrap cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('name')}
+                >
+                  <div className="flex items-center gap-1">
+                    Nombre
+                    {getSortIcon('name') && <span className="text-xs">{getSortIcon('name')}</span>}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="whitespace-nowrap cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('role')}
                 >
                   <div className="flex items-center gap-1">
@@ -333,10 +352,10 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
             <TableBody>
               {sortedAndFilteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground md:table-cell">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground md:table-cell">
                     {searchQuery ? 'No se encontraron usuarios que coincidan con la búsqueda' : 'No hay usuarios registrados'}
                   </TableCell>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground md:hidden">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground md:hidden">
                     {searchQuery ? 'No se encontraron usuarios que coincidan con la búsqueda' : 'No hay usuarios registrados'}
                   </TableCell>
                 </TableRow>
@@ -351,6 +370,16 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                           <span className="hidden md:inline">Verificado</span>
                         </span>
                       )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <div className="truncate pr-2 md:pr-0">
+                        {user.nombre && user.apellido 
+                          ? `${user.nombre} ${user.apellido}`
+                          : user.nombre || user.apellido || (
+                            <span className="text-muted-foreground italic">Sin nombre</span>
+                          )
+                        }
+                      </div>
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       <div className="flex flex-col gap-1 items-center md:items-start md:flex-row md:flex-wrap">

@@ -162,8 +162,10 @@ export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data
             
             if (!userError && userData.user) {
               author_email = userData.user.email || undefined
-              // You can also get the name from user_metadata if it exists
-              author_name = userData.user.user_metadata?.full_name || userData.user.user_metadata?.name || undefined
+              // Get nombre and apellido from user_metadata and combine them
+              const nombre = userData.user.user_metadata?.nombre || ''
+              const apellido = userData.user.user_metadata?.apellido || ''
+              author_name = nombre && apellido ? `${nombre} ${apellido}` : (nombre || apellido || undefined)
             }
           } catch (error) {
             console.warn(`Could not fetch author info for news ${item.id}:`, error)
@@ -250,8 +252,10 @@ export async function getNewsById(id: number, include: Array<'author' | 'club'> 
         
         if (!userError && userData.user) {
           author_email = userData.user.email || undefined
-          // You can also get the name from user_metadata if it exists
-          author_name = userData.user.user_metadata?.full_name || userData.user.user_metadata?.name || undefined
+          // Get nombre and apellido from user_metadata and combine them
+          const nombre = userData.user.user_metadata?.nombre || ''
+          const apellido = userData.user.user_metadata?.apellido || ''
+          author_name = nombre && apellido ? `${nombre} ${apellido}` : (nombre || apellido || undefined)
         }
       } catch (error) {
         console.warn(`Could not fetch author info for news ${data.id}:`, error)

@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { SignupButton } from "@/app/components/signup-button"
 
 export default function Signup() {
+  const [nombre, setNombre] = useState("")
+  const [apellido, setApellido] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -18,10 +20,22 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  const validatePasswords = (currentPassword?: string, currentConfirmPassword?: string) => {
+  const validateForm = (currentPassword?: string, currentConfirmPassword?: string) => {
     const pwd = currentPassword ?? password
     const confirmPwd = currentConfirmPassword ?? confirmPassword
     
+    if (!nombre.trim()) {
+      setPasswordError("El nombre es requerido")
+      return false
+    }
+    if (!apellido.trim()) {
+      setPasswordError("El apellido es requerido")
+      return false
+    }
+    if (!email.trim()) {
+      setPasswordError("El email es requerido")
+      return false
+    }
     if (!pwd || !confirmPwd) {
       setPasswordError("Todos los campos son requeridos")
       return false
@@ -42,7 +56,7 @@ export default function Signup() {
     const newPassword = e.target.value
     setPassword(newPassword)
     if (confirmPassword) {
-      validatePasswords(newPassword, confirmPassword)
+      validateForm(newPassword, confirmPassword)
     }
   }
 
@@ -50,7 +64,7 @@ export default function Signup() {
     const newConfirmPassword = e.target.value
     setConfirmPassword(newConfirmPassword)
     if (password) {
-      validatePasswords(password, newConfirmPassword)
+      validateForm(password, newConfirmPassword)
     }
   }
 
@@ -87,6 +101,30 @@ export default function Signup() {
                 </CardHeader>
                 <CardContent>
                   <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nombre">Nombre</Label>
+                        <Input 
+                          id="nombre" 
+                          type="text" 
+                          placeholder="Tu nombre"
+                          value={nombre}
+                          onChange={(e) => setNombre(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="apellido">Apellido</Label>
+                        <Input 
+                          id="apellido" 
+                          type="text" 
+                          placeholder="Tu apellido"
+                          value={apellido}
+                          onChange={(e) => setApellido(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Correo electrónico</Label>
                       <Input 
@@ -154,9 +192,11 @@ export default function Signup() {
                       )}
                     </div>
                     <SignupButton 
+                      nombre={nombre}
+                      apellido={apellido}
                       email={email}
                       password={password}
-                      onSuccess={validatePasswords}
+                      onSuccess={validateForm}
                     />
                   </form>
                 </CardContent>

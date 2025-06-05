@@ -106,7 +106,11 @@ async function fetchNews(): Promise<News[]> {
         if (!userError && userData.user) {
           authorMap.set(authId, {
             email: userData.user.email || 'email@no-disponible.com',
-            name: userData.user.user_metadata?.nombre || userData.user.user_metadata?.name
+            name: (() => {
+              const nombre = userData.user.user_metadata?.nombre || ''
+              const apellido = userData.user.user_metadata?.apellido || ''
+              return nombre && apellido ? `${nombre} ${apellido}` : (nombre || apellido || undefined)
+            })()
           })
         }
       } catch (error) {

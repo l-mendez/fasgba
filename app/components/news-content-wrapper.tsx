@@ -52,6 +52,9 @@ interface News {
     id: number
     name: string
   } | null
+  created_by_auth_id: string | null
+  author_name?: string
+  author_email?: string
   created_at: string
   updated_at: string
 }
@@ -192,6 +195,12 @@ export default function NewsContentWrapper({
               </div>
 
               <h1 className="mb-3 sm:mb-4 text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-terracotta leading-tight">{newsItem.title}</h1>
+
+              {newsItem.author_name && (
+                <div className="mb-4 text-sm text-muted-foreground">
+                  Por: <span className="font-medium text-foreground">{newsItem.author_name}</span>
+                </div>
+              )}
 
               <div className="mb-6 sm:mb-8 flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-amber flex-shrink-0" />

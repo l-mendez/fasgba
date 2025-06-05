@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import NewsContentWrapper from "@/app/components/news-content-wrapper"
+import { getNewsById } from "@/lib/newsUtils"
 
 // Define the news interface
 interface News {
@@ -22,38 +23,23 @@ interface News {
     id: number
     name: string
   } | null
+  created_by_auth_id: string | null
+  author_name?: string
+  author_email?: string
   created_at: string
   updated_at: string
 }
 
 // Server component
 export default async function NoticiaPage({ params }: { params: Promise<{ id: string }> }) {
-  const supabase = await createClient()
-  
   // Await params before using its properties (Next.js 15 requirement)
   const { id } = await params
   
-  // Fetch the specific news item
-  const { data: newsItem, error } = await supabase
-    .from('news')
-    .select(`
-      id,
-      title,
-      date,
-      image,
-      extract,
-      text,
-      tags,
-      club_id,
-      club:clubs(id, name),
-      created_at,
-      updated_at
-    `)
-    .eq('id', id)
-    .single()
+  // Fetch the specific news item using the utility function
+  const newsItem = await getNewsById(parseInt(id), ['club', 'author'])
   
   // Handle not found or error
-  if (error || !newsItem) {
+  if (!newsItem) {
     return (
       <div className="flex min-h-screen flex-col">
         <SiteHeader pathname={`/noticias/${id}`} />
@@ -72,6 +58,7 @@ export default async function NoticiaPage({ params }: { params: Promise<{ id: st
   }
   
   // Fetch related news
+  const supabase = await createClient()
   const { data: relatedNews } = await supabase
     .from('news')
     .select(`
@@ -82,14 +69,29 @@ export default async function NoticiaPage({ params }: { params: Promise<{ id: st
       tags
     `)
     .neq('id', newsItem.id)
-    .filter('tags', 'cs', `{${newsItem.tags.join(',')}}`)
+    .filter('tags', 'cs', `{${(newsItem.tags || []).join(',')}}`)
     .order('date', { ascending: false })
     .limit(2)
 
   // Transform the newsItem to match the News interface
   const transformedNewsItem: News = {
-    ...newsItem,
-    club: Array.isArray(newsItem.club) ? newsItem.club[0] || null : newsItem.club
+    id: newsItem.id,
+    title: newsItem.title,
+    date: newsItem.date,
+    image: newsItem.image,
+    extract: newsItem.extract || '',
+    text: newsItem.text,
+    tags: newsItem.tags ?? [],
+    club_id: newsItem.club_id,
+    club: newsItem.club ? {
+      id: newsItem.club.id,
+      name: newsItem.club.name
+    } : null,
+    created_by_auth_id: newsItem.created_by_auth_id,
+    author_name: newsItem.author_name,
+    author_email: newsItem.author_email,
+    created_at: newsItem.created_at,
+    updated_at: newsItem.updated_at
   }
 
   return <NewsContentWrapper newsItem={transformedNewsItem} relatedNews={relatedNews || []} />

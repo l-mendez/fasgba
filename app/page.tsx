@@ -83,7 +83,7 @@ async function fetchNews(): Promise<NewsItem[]> {
       limit: 5, 
       orderBy: 'date', 
       order: 'desc',
-      include: ['club']
+      include: ['club', 'author']
     })
     
     return data.map(item => ({

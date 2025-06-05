@@ -29,6 +29,9 @@ interface News {
     id: number
     name: string
   } | null
+  created_by_auth_id: string | null
+  author_name?: string
+  author_email?: string
   created_at: string
   updated_at: string
 }
@@ -70,7 +73,7 @@ async function fetchNews(): Promise<News[]> {
   try {
     const { data } = await getAllNews({ 
       limit: 100, 
-      include: ['club'] 
+      include: ['club', 'author'] 
     })
     
     return data.map(item => ({
@@ -86,9 +89,11 @@ async function fetchNews(): Promise<News[]> {
         id: item.club.id,
         name: item.club.name
       } : null,
+      created_by_auth_id: item.created_by_auth_id,
+      author_name: item.author_name,
+      author_email: item.author_email,
       created_at: item.created_at,
       updated_at: item.updated_at,
-      created_by_auth_id: item.created_by_auth_id
     }))
   } catch (error) {
     console.error('Error fetching news:', error)
@@ -268,6 +273,12 @@ export default async function NoticiasPage({ searchParams }: PageProps) {
                               <span>{formatDate(item.date)}</span>
                               <span className="font-medium">{getClubDisplayName(item)}</span>
                             </div>
+                            
+                            {item.author_name && (
+                              <div className="text-xs text-muted-foreground mb-2">
+                                Por: <span className="font-medium">{item.author_name}</span>
+                              </div>
+                            )}
                             
                             <h3 className="font-semibold text-lg mb-2 line-clamp-2">
                               {item.title}

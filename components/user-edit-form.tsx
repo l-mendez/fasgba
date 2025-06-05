@@ -225,16 +225,27 @@ export function UserEditForm({ user, clubs, clubsAdmin }: UserEditFormProps) {
             <CardContent className="space-y-3 md:space-y-4">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
                 <div>
-                  <label className="text-xs md:text-sm font-medium text-muted-foreground">Email</label>
-                  <p className="text-xs md:text-sm font-mono bg-muted p-2 rounded break-all">{user.email}</p>
+                  <label className="text-xs md:text-sm font-medium text-muted-foreground">Nombre completo</label>
+                  <p className="text-xs md:text-sm bg-muted p-2 rounded">
+                    {user.nombre && user.apellido 
+                      ? `${user.nombre} ${user.apellido}`
+                      : user.nombre || user.apellido || (
+                        <span className="text-muted-foreground italic">Sin nombre registrado</span>
+                      )
+                    }
+                  </p>
                 </div>
                 <div>
-                  <label className="text-xs md:text-sm font-medium text-muted-foreground">UID</label>
-                  <p className="text-xs md:text-sm font-mono bg-muted p-2 rounded break-all">{user.id}</p>
+                  <label className="text-xs md:text-sm font-medium text-muted-foreground">Email</label>
+                  <p className="text-xs md:text-sm font-mono bg-muted p-2 rounded break-all">{user.email}</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+                <div>
+                  <label className="text-xs md:text-sm font-medium text-muted-foreground">UID</label>
+                  <p className="text-xs md:text-sm font-mono bg-muted p-2 rounded break-all">{user.id}</p>
+                </div>
                 <div>
                   <label className="text-xs md:text-sm font-medium text-muted-foreground">Email Verificado</label>
                   <div className="mt-1">
@@ -245,15 +256,17 @@ export function UserEditForm({ user, clubs, clubsAdmin }: UserEditFormProps) {
                     )}
                   </div>
                 </div>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
                 <div>
                   <label className="text-xs md:text-sm font-medium text-muted-foreground">Último acceso</label>
                   <p className="text-xs md:text-sm">{formatDate(user.lastSignIn)}</p>
                 </div>
-              </div>
-              
-              <div>
-                <label className="text-xs md:text-sm font-medium text-muted-foreground">Fecha de registro</label>
-                <p className="text-xs md:text-sm">{formatDate(user.createdAt)}</p>
+                <div>
+                  <label className="text-xs md:text-sm font-medium text-muted-foreground">Fecha de registro</label>
+                  <p className="text-xs md:text-sm">{formatDate(user.createdAt)}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
