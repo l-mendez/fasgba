@@ -35,15 +35,82 @@ export interface PaginatedPlayersResponse {
 // Cache for ranking data to avoid repeated fetches
 let rankingCache: RankingData | null = null;
 let cacheTimestamp: number = 0;
+let cachedLatestFilename: string | null = null; // Track which file is cached
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+/**
+ * Checks if the cached data is stale by comparing with latest available ranking
+ */
+async function isCacheStale(): Promise<boolean> {
+  if (!rankingCache || !cachedLatestFilename) {
+    return true; // No cache, definitely stale
+  }
+
+  try {
+    // Get available rankings to check if there's a newer one
+    const adminSupabase = createAdminClient();
+    const { data: files, error: listError } = await adminSupabase.storage
+      .from('ranking-data')
+      .list('', {
+        limit: 100,
+        sortBy: { column: 'created_at', order: 'desc' }
+      });
+
+    if (listError || !files) {
+      return false; // Can't check, assume cache is still valid
+    }
+
+    // Find the chronologically latest ranking file
+    const rankingFiles = files
+      .filter(file => 
+        file.name.endsWith('.json') && 
+        !file.name.startsWith('temp/') &&
+        file.name.match(/^ranking-\d{2}-\d{4}/)
+      )
+      .map(file => {
+        const match = file.name.match(/^ranking-(\d{2})-(\d{4}).*\.json$/)
+        if (!match) return null
+        
+        const month = parseInt(match[1])
+        const year = parseInt(match[2])
+        
+        return {
+          filename: file.name,
+          month,
+          year,
+          date: new Date(year, month - 1),
+          created_at: file.created_at
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        const dateComparison = (b?.date.getTime() || 0) - (a?.date.getTime() || 0);
+        if (dateComparison !== 0) return dateComparison;
+        return new Date(b?.created_at || 0).getTime() - new Date(a?.created_at || 0).getTime();
+      });
+
+    if (rankingFiles.length === 0) {
+      return false; // No files found, keep cache
+    }
+
+    const latestFile = rankingFiles[0];
+    return latestFile?.filename !== cachedLatestFilename; // Cache is stale if latest file changed
+  } catch (error) {
+    console.warn('Error checking cache staleness:', error);
+    return false; // Error checking, assume cache is still valid
+  }
+}
 
 /**
  * Fetches the latest ranking data - uses admin client on server, API on client
  */
 export async function fetchRankingData(): Promise<RankingData> {
-  // Check if we have valid cached data
+  // Check if we have valid cached data and it's not stale
   const now = Date.now();
-  if (rankingCache && (now - cacheTimestamp) < CACHE_DURATION) {
+  const isTimeExpired = !rankingCache || (now - cacheTimestamp) >= CACHE_DURATION;
+  const isDataStale = await isCacheStale();
+  
+  if (rankingCache && !isTimeExpired && !isDataStale) {
     return rankingCache;
   }
 
@@ -123,6 +190,9 @@ export async function fetchRankingData(): Promise<RankingData> {
       const jsonContent = await fileData.text();
       data = JSON.parse(jsonContent);
       
+      // Update cached filename
+      cachedLatestFilename = latestFile.filename;
+      
     } catch (serverError) {
       console.log('Server-side access failed, trying API endpoint...', serverError);
       
@@ -145,6 +215,9 @@ export async function fetchRankingData(): Promise<RankingData> {
       }
 
       data = result.data;
+      
+      // Update cached filename for API response
+      cachedLatestFilename = data.filename;
     }
     
     // Validate data structure
@@ -494,6 +567,7 @@ export async function updateRankingData(newData: RankingData): Promise<void> {
     // Clear cache to force refresh
     rankingCache = null;
     cacheTimestamp = 0;
+    cachedLatestFilename = null;
 
     console.log('Ranking data updated successfully');
 
@@ -509,6 +583,7 @@ export async function updateRankingData(newData: RankingData): Promise<void> {
 export function clearRankingCache(): void {
   rankingCache = null;
   cacheTimestamp = 0;
+  cachedLatestFilename = null;
 }
 
 /**
