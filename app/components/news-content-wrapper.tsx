@@ -86,13 +86,20 @@ const ContentRenderer = ({ content }: { content: any[] }) => {
           
           return (
             <figure key={index} className="my-4 sm:my-6">
-              <img 
-                src={finalImageUrl} 
-                alt={imageCaption || 'Imagen'} 
-                className="rounded-lg mx-auto max-w-full h-auto"
-                onError={(e) => console.error(`Image failed to load:`, finalImageUrl)} // Debug log
-                onLoad={() => console.log(`Image loaded successfully:`, finalImageUrl)} // Debug log
-              />
+              <div className="relative">
+                <img 
+                  src={finalImageUrl} 
+                  alt={imageCaption || 'Imagen'} 
+                  className="rounded-lg mx-auto max-w-full h-auto"
+                  onError={(e) => {
+                    // Replace broken image with placeholder
+                    const target = e.target as HTMLImageElement
+                    target.src = "/placeholder.svg"
+                    target.onerror = null // Prevent infinite loop
+                  }}
+                  onLoad={() => console.log(`Image loaded successfully:`, finalImageUrl)} // Debug log
+                />
+              </div>
               {imageCaption && <figcaption className="text-center text-xs sm:text-sm text-muted-foreground mt-2">{imageCaption}</figcaption>}
             </figure>
           )
