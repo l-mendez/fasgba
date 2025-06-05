@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Mail, MapPin, Phone } from "lucide-react"
+import { Mail, MapPin, Phone, ImageIcon } from "lucide-react"
 import { Suspense } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,7 @@ import { getClubsWithFollowStatus, type ClubWithFollowState } from "@/lib/clubUt
 import { getCurrentUserServer } from "@/lib/auth-server"
 import { ClubFollowButton } from "@/components/club-follow-button"
 import { ClubSearch } from "@/components/club-search"
+import { createClient } from "@/lib/supabase/client"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
@@ -40,62 +41,89 @@ async function ClubsList({ searchTerm }: { searchTerm?: string }) {
     )
   }
 
+  // Helper function to get image URL
+  const getClubImageUrl = (imagePath: string | null) => {
+    if (!imagePath) return null
+    const supabase = createClient()
+    const { data } = supabase.storage.from('images').getPublicUrl(imagePath)
+    return data.publicUrl
+  }
+
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 min-h-[400px] transition-opacity duration-200">
-      {clubs.map((club) => (
-        <Card key={club.id} className="flex flex-col group hover:border-amber transition-colors">
-          <CardHeader>
-            <CardTitle>
-              <Link href={`/clubes/${club.id}`} className="text-terracotta hover:underline">
-                {club.name}
-              </Link>
-            </CardTitle>
-            <CardDescription>
-              <div className="flex items-center gap-2 mt-2">
-                {/* Member count removed as it's no longer used */}
+      {clubs.map((club) => {
+        const imageUrl = getClubImageUrl(club.image)
+        
+        return (
+          <Card key={club.id} className="flex flex-col group hover:border-amber transition-colors">
+            {/* Club Image */}
+            {imageUrl ? (
+              <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+                <img
+                  src={imageUrl}
+                  alt={`Imagen de ${club.name}`}
+                  className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
+                />
               </div>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1">
-            <div className="space-y-4">
-              {club.address && (
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                  <span className="text-sm">{club.address}</span>
+            ) : (
+              <div className="aspect-video w-full bg-muted rounded-t-lg flex items-center justify-center">
+                <ImageIcon className="h-12 w-12 text-muted-foreground" />
+              </div>
+            )}
+            
+            <CardHeader>
+              <CardTitle>
+                <Link href={`/clubes/${club.id}`} className="text-terracotta hover:underline">
+                  {club.name}
+                </Link>
+              </CardTitle>
+              <CardDescription>
+                <div className="flex items-center gap-2 mt-2">
+                  {/* Member count removed as it's no longer used */}
                 </div>
-              )}
-              {club.telephone && (
-                <div className="flex items-center gap-2">
-                  <Phone className="h-5 w-5 text-muted-foreground shrink-0" />
-                  <span className="text-sm">{club.telephone}</span>
-                </div>
-              )}
-              {club.mail && (
-                <div className="flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
-                  <span className="text-sm">{club.mail}</span>
-                </div>
-              )}
-              {club.schedule && (
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Horarios de actividad:</h4>
-                  <p className="text-sm text-muted-foreground">{club.schedule}</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-          <CardFooter className="flex gap-2">
-            <Button asChild className="w-full">
-              <Link href={`/clubes/${club.id}`}>Ver Detalle</Link>
-            </Button>
-            <ClubFollowButton 
-              clubId={club.id} 
-              initialIsFollowing={club.isFollowing} 
-              isUserAuthenticated={!!user}
-            />
-          </CardFooter>
-        </Card>
-      ))}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1">
+              <div className="space-y-4">
+                {club.address && (
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <span className="text-sm">{club.address}</span>
+                  </div>
+                )}
+                {club.telephone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <span className="text-sm">{club.telephone}</span>
+                  </div>
+                )}
+                {club.mail && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <span className="text-sm">{club.mail}</span>
+                  </div>
+                )}
+                {club.schedule && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Horarios de actividad:</h4>
+                    <p className="text-sm text-muted-foreground">{club.schedule}</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+            <CardFooter className="flex gap-2">
+              <Button asChild className="w-full">
+                <Link href={`/clubes/${club.id}`}>Ver Detalle</Link>
+              </Button>
+              <ClubFollowButton 
+                clubId={club.id} 
+                initialIsFollowing={club.isFollowing} 
+                isUserAuthenticated={!!user}
+              />
+            </CardFooter>
+          </Card>
+        )
+      })}
     </div>
   )
 }

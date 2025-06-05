@@ -208,4 +208,141 @@ export async function deleteNewsImages(newsId: number): Promise<void> {
     console.error('Error in deleteNewsImages:', error)
     throw error
   }
+}
+
+/**
+ * Upload an image for a specific club
+ */
+export async function uploadClubImage(
+  clubId: number, 
+  fileBuffer: ArrayBuffer,
+  fileName: string
+): Promise<{ filePath: string; wasReused: boolean }> {
+  try {
+    // Generate hash for deduplication
+    const fileHash = await generateFileHashFromBuffer(fileBuffer)
+    
+    // Check if this image already exists for this club
+    const existingPath = await findExistingClubImage(clubId, fileHash)
+    
+    if (existingPath) {
+      return { filePath: existingPath, wasReused: true }
+    }
+
+    // File doesn't exist, upload it
+    const fileExt = fileName.split('.').pop()
+    const timestamp = Date.now()
+    const randomId = Math.random().toString(36).substring(2, 15)
+    const newFileName = `${fileHash}-${timestamp}-${randomId}.${fileExt}`
+    
+    const filePath = `clubs/${clubId}/${newFileName}`
+    
+    const { error: uploadError } = await supabase.storage
+      .from('images')
+      .upload(filePath, new Uint8Array(fileBuffer), {
+        contentType: `image/${fileExt}`
+      })
+    
+    if (uploadError) {
+      throw new Error('Failed to upload club image: ' + uploadError.message)
+    }
+
+    return { filePath, wasReused: false }
+  } catch (error) {
+    console.error('Error uploading club image:', error)
+    throw error
+  }
+}
+
+/**
+ * Check if a club image already exists in storage
+ */
+export async function findExistingClubImage(clubId: number, fileHash: string): Promise<string | null> {
+  try {
+    // List all files in the club folder
+    const { data: files, error } = await supabase.storage
+      .from('images')
+      .list(`clubs/${clubId}`, {
+        limit: 100,
+        sortBy: { column: 'name', order: 'asc' }
+      })
+
+    if (error || !files) {
+      return null
+    }
+
+    // Look for a file with the hash in its name
+    const existingFile = files.find(file => file.name.includes(fileHash))
+    
+    if (existingFile) {
+      return `clubs/${clubId}/${existingFile.name}`
+    }
+
+    return null
+  } catch (error) {
+    console.error('Error checking for existing club image:', error)
+    return null
+  }
+}
+
+/**
+ * Delete all images for a specific club
+ */
+export async function deleteClubImages(clubId: number): Promise<void> {
+  try {
+    // List all files in the club folder
+    const { data: files, error: listError } = await supabase.storage
+      .from('images')
+      .list(`clubs/${clubId}`, {
+        limit: 1000,
+        sortBy: { column: 'name', order: 'asc' }
+      })
+
+    if (listError) {
+      console.error('Error listing club images for deletion:', listError)
+      return
+    }
+
+    if (!files || files.length === 0) {
+      return // No images to delete
+    }
+
+    // Delete all files in the folder
+    const filePaths = files.map(file => `clubs/${clubId}/${file.name}`)
+    
+    const { error: deleteError } = await supabase.storage
+      .from('images')
+      .remove(filePaths)
+
+    if (deleteError) {
+      console.error('Error deleting club images:', deleteError)
+      throw new Error('Failed to delete some club images')
+    }
+
+    console.log(`Successfully deleted ${filePaths.length} images for club ${clubId}`)
+  } catch (error) {
+    console.error('Error in deleteClubImages:', error)
+    throw error
+  }
+}
+
+/**
+ * Delete a specific club image
+ */
+export async function deleteClubImage(filePath: string): Promise<void> {
+  try {
+    const { error } = await supabase.storage
+      .from('images')
+      .remove([filePath])
+
+    if (error) {
+      console.error('Error deleting club image:', error)
+      throw new Error('Failed to delete club image')
+    }
+
+    console.log(`Successfully deleted club image: ${filePath}`)
+  } catch (error) {
+    console.error('Error in deleteClubImage:', error)
+    throw error
+  }
 } 

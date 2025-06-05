@@ -1,20 +1,55 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
+import { 
+  MoreHorizontal, 
+  Trash2, 
+  Edit3, 
+  Calendar, 
+  Users, 
+  Building2, 
+  Heart, 
+  FileText, 
+  MapPin, 
+  Phone, 
+  Mail,
+  ImageIcon,
+  Eye,
+  Search,
+  ChevronDown
+} from "lucide-react"
 import Link from "next/link"
-import { ChevronDown, Edit, Eye, MoreHorizontal, Search, Trash2, User } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ClubsSearch } from "@/components/clubs-search"
+import { DeleteClubDialog } from "@/components/delete-club-dialog"
+import { Club } from "@/lib/clubUtils"
 import {
   Dialog,
   DialogContent,
@@ -23,7 +58,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { createClient } from "@/lib/supabase/client"
 
 interface Club {
   id: number
@@ -32,6 +66,7 @@ interface Club {
   telephone: string | null
   mail: string | null
   schedule: string | null
+  image: string | null
   adminCount?: number
   delegado?: string
 }

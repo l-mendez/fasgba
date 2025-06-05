@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { ChevronLeft, Mail, MapPin, Phone, Clock, Calendar, User, Heart, Loader2, Users, UserCheck, FileText, Star } from "lucide-react"
+import { ChevronLeft, Mail, MapPin, Phone, Clock, Calendar, User, Heart, Loader2, Users, UserCheck, FileText, Star, Building2, ImageIcon } from "lucide-react"
+import { notFound } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,6 +21,8 @@ import {
 } from "@/lib/clubUtils"
 import { getCurrentUserServer } from "@/lib/auth-server"
 import { ClubFollowButton } from "@/components/club-follow-button"
+import { validateClubId } from "@/lib/schemas/clubSchemas"
+import { createClient } from "@/lib/supabase/client"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
@@ -156,24 +159,45 @@ export default async function ClubDetailPage({ params }: ClubDetailPageProps) {
             {/* Club Header */}
             <div className="mb-8 lg:mb-12">
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-                <div className="flex-1">
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground mb-4 break-words">
-                    {club.name}
-                  </h1>
+                {/* Club Image */}
+                <div className="flex flex-col lg:flex-row gap-6 flex-1">
+                  {club.image ? (
+                    <div className="w-full lg:w-64 aspect-video lg:aspect-square overflow-hidden rounded-lg border">
+                      <img
+                        src={(() => {
+                          const supabase = createClient()
+                          const { data } = supabase.storage.from('images').getPublicUrl(club.image)
+                          return data.publicUrl
+                        })()}
+                        alt={`Imagen de ${club.name}`}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full lg:w-64 aspect-video lg:aspect-square bg-muted rounded-lg border flex items-center justify-center">
+                      <ImageIcon className="h-16 w-16 text-muted-foreground" />
+                    </div>
+                  )}
                   
-                  {/* Quick Stats Bar */}
-                  <div className="flex flex-wrap gap-4 sm:gap-6 mb-6">
-                    <div className="flex items-center gap-2">
-                      <UserCheck className="h-5 w-5 text-muted-foreground" />
-                      <span className="text-sm font-medium text-muted-foreground">{club.adminCount} administradores</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Heart className="h-5 w-5 text-muted-foreground" />
-                      <span className="text-sm font-medium text-muted-foreground">{followersCount} seguidores</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-muted-foreground" />
-                      <span className="text-sm font-medium text-muted-foreground">{club.newsCount} noticias</span>
+                  <div className="flex-1">
+                    <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground mb-4 break-words">
+                      {club.name}
+                    </h1>
+                    
+                    {/* Quick Stats Bar */}
+                    <div className="flex flex-wrap gap-4 sm:gap-6 mb-6">
+                      <div className="flex items-center gap-2">
+                        <UserCheck className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-sm font-medium text-muted-foreground">{club.adminCount} administradores</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Heart className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-sm font-medium text-muted-foreground">{followersCount} seguidores</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-sm font-medium text-muted-foreground">{club.newsCount} noticias</span>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createBrowserClient } from '@/lib/supabase/client'
+import { deleteClubImages } from './imageUtils.server'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -14,6 +15,7 @@ export interface Club {
   telephone: string | null
   mail: string | null
   schedule: string | null
+  image: string | null
 }
 
 // Club with additional statistics
@@ -213,6 +215,8 @@ export async function deleteClub(clubId: number): Promise<boolean> {
     console.error('Error deleting club:', error)
     throw new Error('Failed to delete club')
   }
+
+  await deleteClubImages(clubId)
 
   return true
 }

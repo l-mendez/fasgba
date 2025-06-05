@@ -8,6 +8,7 @@ export const clubSchema = z.object({
   telephone: z.string().max(50, 'Telephone too long').nullable(),
   mail: z.string().email('Invalid email format').max(255, 'Email too long').nullable(),
   schedule: z.string().max(500, 'Schedule too long').nullable(),
+  image: z.string().nullable(),
 })
 
 // Schema for creating a new club (without id)
