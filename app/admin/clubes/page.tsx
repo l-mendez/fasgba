@@ -73,31 +73,55 @@ async function fetchClubs(): Promise<Club[]> {
     const clubsWithStats = await Promise.all(
       clubsData.map(async (club) => {
         try {
-          // Get admin count for this club
-          const { count: adminCount, error: adminCountError } = await supabase
+          // Get admin count for this club using service role client
+          const { count: adminCount, error: adminCountError } = await supabaseAdmin
             .from('club_admins')
             .select('*', { count: 'exact', head: true })
             .eq('club_id', club.id)
 
           if (adminCountError) {
-            console.error(`Error fetching admin count for club ${club.id}:`, adminCountError)
+            console.warn(`Could not fetch admin count for club ${club.id}, using 0 as default:`, {
+              message: adminCountError.message || 'Unknown error',
+              code: adminCountError.code || 'No code'
+            })
+            // Don't continue processing if there's an error, just use defaults
+            return {
+              ...club,
+              adminCount: 0,
+              delegado: undefined
+            }
           }
 
-          // Get the first admin (delegado) for this club
-          const { data: clubAdminsData, error: clubAdminsError } = await supabase
+          // Get the first admin (delegado) for this club using service role client
+          const { data: clubAdminsData, error: clubAdminsError } = await supabaseAdmin
             .from('club_admins')
             .select('auth_id')
             .eq('club_id', club.id)
             .limit(1)
 
+          if (clubAdminsError) {
+            console.warn(`Could not fetch club admins for club ${club.id}, using defaults:`, {
+              message: clubAdminsError.message || 'Unknown error',
+              code: clubAdminsError.code || 'No code'
+            })
+            // Continue with what we have
+            return {
+              ...club,
+              adminCount: adminCount || 0,
+              delegado: undefined
+            }
+          }
+
           let delegado: string | undefined = undefined
 
-          if (!clubAdminsError && clubAdminsData && clubAdminsData.length > 0) {
+          if (clubAdminsData && clubAdminsData.length > 0) {
             try {
               const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(clubAdminsData[0].auth_id)
               
               if (!userError && userData.user) {
                 delegado = userData.user.email || undefined
+              } else if (userError) {
+                console.warn(`Failed to fetch user data for admin ${clubAdminsData[0].auth_id}:`, userError.message)
               }
             } catch (error) {
               console.warn(`Failed to fetch user data for admin ${clubAdminsData[0].auth_id}:`, error)
@@ -110,7 +134,7 @@ async function fetchClubs(): Promise<Club[]> {
             delegado
           }
         } catch (error) {
-          console.error(`Error processing club ${club.id}:`, error)
+          console.warn(`Error processing club ${club.id}, using defaults:`, error instanceof Error ? error.message : 'Unknown error')
           return {
             ...club,
             adminCount: 0,

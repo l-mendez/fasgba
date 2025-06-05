@@ -125,6 +125,10 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
           aValue = a.name.toLowerCase()
           bValue = b.name.toLowerCase()
           break
+        case 'address':
+          aValue = (a.address || '').toLowerCase()
+          bValue = (b.address || '').toLowerCase()
+          break
         case 'contact':
           aValue = (a.mail || a.telephone || '').toLowerCase()
           bValue = (b.mail || b.telephone || '').toLowerCase()
@@ -181,6 +185,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
     // Apply text search (only if there's a search term)
     if (search) {
       return club.name.toLowerCase().includes(search) ||
+             (club.address && club.address.toLowerCase().includes(search)) ||
              (club.mail && club.mail.toLowerCase().includes(search)) ||
              (club.telephone && club.telephone.toLowerCase().includes(search)) ||
              (club.delegado && club.delegado.toLowerCase().includes(search))
@@ -227,7 +232,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Buscar por nombre, email, teléfono o delegado..."
+            placeholder="Buscar por nombre, dirección, email, teléfono o delegado..."
             className="pl-8 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -263,6 +268,9 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleSort('name')}>
                 Nombre {getSortIcon('name')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('address')}>
+                Dirección {getSortIcon('address')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleSort('contact')}>
                 Contacto {getSortIcon('contact')}
@@ -302,6 +310,15 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('address')}
+                >
+                  <div className="flex items-center gap-1">
+                    Dirección
+                    {getSortIcon('address') && <span className="text-xs">{getSortIcon('address')}</span>}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('contact')}
                 >
                   <div className="flex items-center gap-1">
@@ -333,7 +350,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
             <TableBody>
               {sortedAndFilteredClubes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-6">
+                  <TableCell colSpan={7} className="text-center py-6">
                     No se encontraron clubes
                   </TableCell>
                 </TableRow>
@@ -341,6 +358,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                 sortedAndFilteredClubes.map((club) => (
                   <TableRow key={club.id}>
                     <TableCell className="font-medium">{club.name}</TableCell>
+                    <TableCell>{club.address || "Sin dirección"}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="text-xs">{club.mail || "Sin email"}</span>
@@ -412,6 +430,12 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                       <h3 className="font-medium text-sm leading-5 text-card-foreground mb-2 line-clamp-2">
                         {club.name}
                       </h3>
+                      
+                      {club.address && (
+                        <p className="text-xs text-muted-foreground mb-2">
+                          {club.address}
+                        </p>
+                      )}
                       
                       <div className="space-y-2">
                         <div className="flex flex-col gap-1 text-xs text-muted-foreground">
