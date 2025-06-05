@@ -625,4 +625,13 @@ export async function getPlayersWithChanges(): Promise<Player[]> {
     console.error('Error getting players with changes:', error);
     throw error;
   }
+}
+
+/**
+ * Forces cache invalidation after ranking modifications
+ * Call this after any ranking updates that might affect chronological order
+ */
+export function forceRankingCacheInvalidation(): void {
+  clearRankingCache();
+  console.log('Ranking cache forcibly invalidated due to ranking modifications');
 } 

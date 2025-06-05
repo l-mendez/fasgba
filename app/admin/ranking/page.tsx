@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Upload, FileSpreadsheet, Save, RefreshCw, AlertCircle, CheckCircle2, Trash2, Calendar, Eye } from "lucide-react"
+import { Upload, FileSpreadsheet, Save, RefreshCw, AlertCircle, CheckCircle2, Trash2, Calendar, Eye, Edit } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -27,6 +27,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import {
   Select,
   SelectContent,
@@ -80,6 +89,13 @@ export default function AdminRankingPage() {
   const currentDate = new Date()
   const [selectedMonth, setSelectedMonth] = useState((currentDate.getMonth() + 1).toString())
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString())
+
+  // Edit date dialog state
+  const [isEditDateDialogOpen, setIsEditDateDialogOpen] = useState(false)
+  const [editingRanking, setEditingRanking] = useState<PastRanking | null>(null)
+  const [editMonth, setEditMonth] = useState('')
+  const [editYear, setEditYear] = useState('')
+  const [isUpdatingDate, setIsUpdatingDate] = useState(false)
 
   // Generate filename with duplicate handling
   const generateFilename = () => {
@@ -343,6 +359,75 @@ export default function AdminRankingPage() {
     })
   }
 
+  const handleEditDate = (ranking: PastRanking) => {
+    // Extract month and year from the ranking filename
+    const match = ranking.name.match(/^ranking-(\d{2})-(\d{4})/)
+    if (match) {
+      setEditMonth(match[1])
+      setEditYear(match[2])
+    } else {
+      // Fallback to current date
+      setEditMonth((currentDate.getMonth() + 1).toString())
+      setEditYear(currentDate.getFullYear().toString())
+    }
+    
+    setEditingRanking(ranking)
+    setIsEditDateDialogOpen(true)
+    setErrorMessage('')
+  }
+
+  const handleUpdateDate = async () => {
+    if (!editingRanking || !editMonth || !editYear) return
+
+    setIsUpdatingDate(true)
+    setErrorMessage('')
+
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        throw new Error('No session found. Please log in again.')
+      }
+
+      const response = await fetch('/api/admin/ranking/update-date', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          currentFilename: editingRanking.id,
+          newMonth: editMonth,
+          newYear: editYear
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `Update failed with status ${response.status}`)
+      }
+
+      const result = await response.json()
+      
+      // Close dialog
+      setIsEditDateDialogOpen(false)
+      setEditingRanking(null)
+      
+      // Show success message
+      setErrorMessage(`Fecha del ranking actualizada exitosamente. Afectados: ${result.affectedRankings} ranking(s).`)
+      
+      // Reload rankings list
+      await loadPastRankings()
+      
+    } catch (error) {
+      console.error('Update date error:', error)
+      setErrorMessage(error instanceof Error ? error.message : 'Update failed')
+    } finally {
+      setIsUpdatingDate(false)
+    }
+  }
+
   return (
     <div className="flex-1 space-y-6">
       <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
@@ -579,6 +664,16 @@ export default function AdminRankingPage() {
                           <span className="sr-only">Ver ranking</span>
                         </Button>
                         
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleEditDate(ranking)}
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Editar fecha</span>
+                        </Button>
+                        
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button 
@@ -683,6 +778,79 @@ export default function AdminRankingPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Date Dialog */}
+      <Dialog open={isEditDateDialogOpen} onOpenChange={setIsEditDateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar fecha del ranking</DialogTitle>
+            <DialogDescription>
+              Cambiar la fecha cronológica del ranking "{editingRanking?.displayName || editingRanking?.name}".
+              Esto puede afectar el orden y las diferencias de posición de otros rankings.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-month">Mes</Label>
+              <Select value={editMonth} onValueChange={setEditMonth}>
+                <SelectTrigger id="edit-month">
+                  <SelectValue placeholder="Selecciona el mes" />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthNames.map((month, index) => (
+                    <SelectItem key={index + 1} value={(index + 1).toString().padStart(2, '0')}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-year">Año</Label>
+              <Select value={editYear} onValueChange={setEditYear}>
+                <SelectTrigger id="edit-year">
+                  <SelectValue placeholder="Selecciona el año" />
+                </SelectTrigger>
+                <SelectContent>
+                  {yearOptions.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsEditDateDialogOpen(false)}
+              disabled={isUpdatingDate}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleUpdateDate}
+              disabled={isUpdatingDate || !editMonth || !editYear}
+            >
+              {isUpdatingDate ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Actualizando...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Actualizar fecha
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 
