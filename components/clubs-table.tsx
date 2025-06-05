@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
 import { 
   MoreHorizontal, 
   Trash2, 
@@ -18,13 +16,16 @@ import {
   ImageIcon,
   Eye,
   Search,
-  ChevronDown
+  ChevronDown,
+  User,
+  Edit
 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Card,
   CardContent,
@@ -36,6 +37,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -47,8 +50,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ClubsSearch } from "@/components/clubs-search"
-import { DeleteClubDialog } from "@/components/delete-club-dialog"
 import { Club } from "@/lib/clubUtils"
 import {
   Dialog,
@@ -59,14 +60,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-interface Club {
-  id: number
-  name: string
-  address: string | null
-  telephone: string | null
-  mail: string | null
-  schedule: string | null
-  image: string | null
+// Extended Club interface for this component with admin stats
+interface ClubWithAdminInfo extends Club {
   adminCount?: number
   delegado?: string
 }
@@ -113,11 +108,11 @@ async function deleteClub(clubId: number): Promise<void> {
 }
 
 interface ClubsTableProps {
-  initialClubs: Club[]
+  initialClubs: ClubWithAdminInfo[]
 }
 
 export function ClubsTable({ initialClubs }: ClubsTableProps) {
-  const [clubes, setClubes] = useState<Club[]>(initialClubs)
+  const [clubes, setClubes] = useState<ClubWithAdminInfo[]>(initialClubs)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedDelegadoFilter, setSelectedDelegadoFilter] = useState<string>('all')
   const [clubToDelete, setClubToDelete] = useState<number | null>(null)
@@ -126,7 +121,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [sortBy, setSortBy] = useState<string | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
-  const [originalOrder, setOriginalOrder] = useState<Club[]>(initialClubs)
+  const [originalOrder, setOriginalOrder] = useState<ClubWithAdminInfo[]>(initialClubs)
 
   // Sorting functions
   const handleSort = (field: string) => {
@@ -144,7 +139,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
     }
   }
 
-  const getSortedClubes = (clubesToSort: Club[]) => {
+  const getSortedClubes = (clubesToSort: ClubWithAdminInfo[]) => {
     if (!sortBy || sortOrder === 'original') {
       return originalOrder.filter(club => 
         clubesToSort.some(filtered => filtered.id === club.id)

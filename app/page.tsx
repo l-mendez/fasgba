@@ -74,6 +74,7 @@ interface Club {
   address: string | null
   telephone: string | null
   mail: string | null
+  image: string | null
 }
 
 // Interface for processed news items (mapping API data to component props)

@@ -16,6 +16,7 @@ interface Club {
   telephone: string | null
   mail: string | null
   schedule: string | null
+  image: string | null
   adminCount?: number
   delegado?: string
 }

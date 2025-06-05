@@ -10,6 +10,7 @@ interface Club {
   website?: string
   email?: string
   phone?: string
+  image?: string | null
   created_at: string
   updated_at: string
 }
