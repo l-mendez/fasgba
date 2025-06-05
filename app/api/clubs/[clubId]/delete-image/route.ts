@@ -5,6 +5,7 @@ import { validateClubId } from '@/lib/schemas/clubSchemas'
 import { apiSuccess, handleError, notFoundError, unauthorizedError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { createClient } from '@supabase/supabase-js'
+import { hasPermission } from '@/lib/middleware/auth'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -43,10 +44,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return notFoundError(ERROR_MESSAGES.CLUB_NOT_FOUND, `No club found with ID ${clubId}`)
     }
 
-    // Check if user is admin of this club
+    // Check if user is admin of this club OR a system admin
     const isClubAdmin = await isUserClubAdmin(clubId, user.id)
-    if (!isClubAdmin) {
-      return unauthorizedError('You must be an admin of this club to delete images')
+    const isSystemAdmin = await hasPermission('isAdmin', user.id)
+    
+    if (!isClubAdmin && !isSystemAdmin) {
+      return unauthorizedError('You must be an admin of this club or a system admin to delete images')
     }
 
     // Check if club has an image to delete
