@@ -121,53 +121,124 @@ export async function POST(request: NextRequest) {
     try {
       const fileBuffer = await file.arrayBuffer()
       const workbook = XLSX.read(fileBuffer, { type: 'buffer' })
+      
+      if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+        throw new Error('El archivo Excel no contiene hojas de trabajo válidas')
+      }
+      
       const sheetName = workbook.SheetNames[0]
       const sheet = workbook.Sheets[sheetName]
+      
+      if (!sheet) {
+        throw new Error(`No se pudo acceder a la hoja de trabajo: ${sheetName}`)
+      }
+      
       const rawData = XLSX.utils.sheet_to_json<ExcelPlayer>(sheet)
+      
+      if (!rawData || rawData.length === 0) {
+        throw new Error('La hoja de Excel está vacía o no contiene datos válidos')
+      }
+
 
       // Transform data to standard format
-      rankingData = rawData
-        .map((row, index) => {
+      const transformedData: RankingPlayer[] = []
+      const errors: string[] = []
+      
+      rawData.forEach((row, index) => {
+        const rowNumber = index + 2 // +2 because index is 0-based and Excel rows start at 1, plus header row
+        
+        try {
           // Try to extract data from various possible column names
           const name = row.Nombre || row.Name || row.NOMBRE || ''
           const title = row.TIT || row.Titulo || row.TITULO || ''
           const club = row.Club || row.CLUB || ''
           const points = row.Puntos || row['Ranking Nuevo'] || row.Points || row.ELO || 0
           const matches = row.Partidos || row.Matches || row.PARTIDOS || 0
+          const position = row.Posicion || row.ID || row.__EMPTY || (index + 1)
 
-          return {
-            position: index + 1, // Position is determined by row order since Excel comes sorted by ranking
+          // Validate required fields
+          if (!name || String(name).trim() === '') {
+            if (Object.keys(row).length > 1) { // Only report if row has other data
+              errors.push(`Fila ${rowNumber}: Falta el nombre del jugador`)
+            }
+            return // Skip this row
+          }
+
+          const transformedPlayer = {
+            position: typeof position === 'number' ? position : parseInt(String(position)) || (index + 1),
             name: normalizePlayerName(String(name)),
             title: title ? String(title).trim().toUpperCase() : undefined, // Keep titles in uppercase (GM, IM, etc.)
             club: String(club).trim(),
             points: Math.round(typeof points === 'number' ? points : parseInt(String(points)) || 0),
             matches: typeof matches === 'number' ? matches : parseInt(String(matches)) || 0
           }
-        })
-        .filter(player => player.name && player.name !== '') // Filter out empty rows
 
-      if (rankingData.length === 0) {
-        throw new Error('No valid ranking data found in the Excel file')
+          // Validate transformed data
+          if (isNaN(transformedPlayer.position)) {
+            errors.push(`Fila ${rowNumber}: Posición inválida para ${transformedPlayer.name}`)
+            return
+          }
+          
+          if (isNaN(transformedPlayer.points)) {
+            errors.push(`Fila ${rowNumber}: Puntos inválidos para ${transformedPlayer.name}`)
+            return
+          }
+          
+          if (isNaN(transformedPlayer.matches)) {
+            errors.push(`Fila ${rowNumber}: Número de partidos inválido para ${transformedPlayer.name}`)
+            return
+          }
+
+          transformedData.push(transformedPlayer)
+          
+        } catch (rowError) {
+          errors.push(`Fila ${rowNumber}: Error al procesar datos - ${rowError instanceof Error ? rowError.message : 'Error desconocido'}`)
+        }
+      })
+
+      if (errors.length > 0 && transformedData.length === 0) {
+        const availableColumns = rawData.length > 0 ? Object.keys(rawData[0]) : []
+        const columnInfo = availableColumns.length > 0 ? 
+          `\n\nColumnas encontradas en el archivo: ${availableColumns.join(', ')}\n\nColumnas esperadas: Posicion/ID, Nombre/Name/NOMBRE, Club/CLUB, Puntos/Points/ELO, Partidos/Matches/PARTIDOS` : 
+          ''
+        throw new Error(`Error al procesar el archivo Excel:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? `\n... y ${errors.length - 5} errores más` : ''}${columnInfo}`)
       }
+
+      if (transformedData.length === 0) {
+        const availableColumns = rawData.length > 0 ? Object.keys(rawData[0]) : []
+        const columnInfo = availableColumns.length > 0 ? 
+          `\n\nColumnas encontradas en el archivo: ${availableColumns.join(', ')}\n\nColumnas esperadas: Posicion/ID, Nombre/Name/NOMBRE, Club/CLUB, Puntos/Points/ELO, Partidos/Matches/PARTIDOS` : 
+          ''
+        throw new Error(`No se encontraron jugadores válidos en el archivo Excel. Verifica que las columnas tengan los nombres correctos.${columnInfo}`)
+      }
+
+      if (errors.length > 0) {
+        console.warn(`Skipped ${errors.length} rows with errors:`, errors)
+      }
+
+      rankingData = transformedData.sort((a, b) => a.position - b.position) // Sort by position
 
     } catch (parseError) {
       // Clean up uploaded file
       await adminSupabase.storage.from('ranking-data').remove([tempExcelPath])
       
       console.error('Parse error:', parseError)
-      return handleError(new Error('Failed to parse Excel file. Please check the file format and data.'))
+      
+      // Provide specific error message
+      if (parseError instanceof Error) {
+        return handleError(new Error(`Error al procesar el archivo Excel: ${parseError.message}`))
+      } else {
+        return handleError(new Error('Error desconocido al procesar el archivo Excel. Verifica que sea un archivo Excel válido con las columnas correctas.'))
+      }
     }
 
     // Find previous ranking and calculate changes
-    console.log('Calculating changes from previous ranking...')
     const previousRanking = await findPreviousRanking(adminSupabase, parseInt(month), parseInt(year))
     
     let enhancedRankingData: RankingPlayer[]
     if (previousRanking) {
-      console.log(`Comparing with previous ranking: ${previousRanking.filename}`)
       enhancedRankingData = calculatePlayerChanges(rankingData, previousRanking.players)
     } else {
-      console.log('No previous ranking found - marking all players as new')
       // First ranking - mark all players as new
       enhancedRankingData = rankingData.map(player => ({
         ...player,
@@ -270,7 +341,6 @@ async function findPreviousRanking(adminSupabase: any, currentMonth: number, cur
     if (sameMonthRankings.length > 0) {
       // Use the most recent existing ranking for the same month as previous
       const sameMonthPrevious = sameMonthRankings[sameMonthRankings.length - 1]
-      console.log(`Found same-month previous ranking: ${sameMonthPrevious.filename}`)
       
       // Download and parse the same-month previous ranking
       const { data: fileData, error: downloadError } = await adminSupabase.storage
@@ -300,11 +370,8 @@ async function findPreviousRanking(adminSupabase: any, currentMonth: number, cur
     )
 
     if (!previousRanking) {
-      console.log('No previous ranking found - this might be the first ranking')
       return null
     }
-
-    console.log(`Found chronologically previous ranking: ${previousRanking.filename}`)
     
     // Download and parse the chronologically previous ranking
     const { data: fileData, error: downloadError } = await adminSupabase.storage

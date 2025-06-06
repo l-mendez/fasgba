@@ -4,6 +4,8 @@ import Link from "next/link"
 import dynamic from "next/dynamic"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { Button } from '@/components/ui/button'
+import { Copy, Check } from 'lucide-react'
 
 // Simple placeholder loader
 const ChessBoardLoader = () => (
@@ -48,10 +50,38 @@ export default function ChessGameBlock({
   const [blackPlayerDetails, setBlackPlayerDetails] = useState<UserDetails | null>(null);
   const [isLoadingWhitePlayer, setIsLoadingWhitePlayer] = useState(false);
   const [isLoadingBlackPlayer, setIsLoadingBlackPlayer] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
   
   // Handler to receive FEN updates from the ChessBoard component
   const handlePositionChange = (newFen: string) => {
     setCurrentFen(newFen);
+  };
+  
+  // Handler to copy PGN to clipboard
+  const handleCopyPGN = async () => {
+    if (!pgn) return;
+    
+    try {
+      await navigator.clipboard.writeText(pgn);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000); // Reset after 2 seconds
+    } catch (err) {
+      console.error('Failed to copy PGN:', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = pgn;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      } catch (fallbackErr) {
+        console.error('Fallback copy failed:', fallbackErr);
+      }
+      document.body.removeChild(textArea);
+    }
   };
   
   // Fetch user details if the player is a user
@@ -138,14 +168,26 @@ export default function ChessGameBlock({
       </div>
       
       {pgn && (
-        <details className="mt-3 sm:mt-4">
-          <summary className="cursor-pointer text-amber-dark hover:underline text-sm sm:text-base font-medium">
-            Ver notación PGN
-          </summary>
-          <pre className="mt-2 p-3 bg-background/50 rounded border border-amber/20 overflow-x-auto text-xs sm:text-sm font-mono">
-            {pgn}
-          </pre>
-        </details>
+        <div className="mt-3 sm:mt-4 flex justify-center">
+          <Button
+            onClick={handleCopyPGN}
+            variant="outline"
+            size="sm"
+            className="border-amber text-amber-dark hover:bg-amber/10 hover:text-amber-dark"
+          >
+            {isCopied ? (
+              <>
+                <Check className="w-4 h-4 mr-2" />
+                ¡Copiado!
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4 mr-2" />
+                Copiar PGN
+              </>
+            )}
+          </Button>
+        </div>
       )}
     </div>
   )

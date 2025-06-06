@@ -115,9 +115,7 @@ export async function fetchRankingData(): Promise<RankingData> {
     return rankingCache;
   }
 
-  try {
-    console.log('Fetching latest ranking data...');
-    
+  try {    
     // Try to use admin client directly (server-side)
     let data: RankingData;
     
@@ -177,8 +175,6 @@ export async function fetchRankingData(): Promise<RankingData> {
       if (!latestFile) {
         throw new Error('No valid ranking files found');
       }
-      console.log(`Found chronologically latest ranking: ${latestFile.filename} (${latestFile.month}/${latestFile.year})`);
-
       // Download the latest ranking file
       const { data: fileData, error: downloadError } = await adminSupabase.storage
         .from('ranking-data')
@@ -194,9 +190,7 @@ export async function fetchRankingData(): Promise<RankingData> {
       // Update cached filename
       cachedLatestFilename = latestFile.filename;
       
-    } catch (serverError) {
-      console.log('Server-side access failed, trying API endpoint...', serverError);
-      
+    } catch (serverError) {      
       // Fallback to API endpoint (client-side or when admin client fails)
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const response = await fetch(`${baseUrl}/api/ranking/latest`, {
@@ -229,8 +223,6 @@ export async function fetchRankingData(): Promise<RankingData> {
     // Update cache
     rankingCache = data;
     cacheTimestamp = now;
-
-    console.log(`Loaded ${data.totalPlayers} players from latest ranking: ${data.filename}`);
     return data;
 
   } catch (error) {
@@ -243,9 +235,7 @@ export async function fetchRankingData(): Promise<RankingData> {
  * Fetches a specific ranking by filename
  */
 export async function fetchSpecificRankingData(filename: string): Promise<RankingData> {
-  try {
-    console.log(`Fetching specific ranking data: ${filename}`);
-    
+  try {    
     // Try to use admin client directly (server-side)
     try {
       const adminSupabase = createAdminClient();
@@ -269,13 +259,9 @@ export async function fetchSpecificRankingData(filename: string): Promise<Rankin
       if (!data.players || !Array.isArray(data.players)) {
         throw new Error('Invalid ranking data structure');
       }
-
-      console.log(`Loaded ${data.totalPlayers} players from ranking: ${data.filename}`);
       return data;
       
-    } catch (serverError) {
-      console.log('Server-side access failed, trying API endpoint...', serverError);
-      
+    } catch (serverError) {      
       // Fallback to API endpoint
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const response = await fetch(`${baseUrl}/api/ranking/specific?filename=${encodeURIComponent(filename)}`, {
@@ -307,9 +293,7 @@ export async function fetchSpecificRankingData(filename: string): Promise<Rankin
  * Gets a list of available rankings for the dropdown
  */
 export async function getAvailableRankings(): Promise<Array<{filename: string, displayName: string, month: number, year: number, date: Date}>> {
-  try {
-    console.log('Fetching available rankings...');
-    
+  try {    
     // Try to use admin client directly (server-side)
     try {
       const adminSupabase = createAdminClient();
@@ -417,9 +401,7 @@ export async function getAvailableRankings(): Promise<Array<{filename: string, d
 
       return processedRankings;
       
-    } catch (serverError) {
-      console.log('Server-side access failed, trying API endpoint...', serverError);
-      
+    } catch (serverError) {      
       // Fallback to API endpoint
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const response = await fetch(`${baseUrl}/api/ranking/list`, {
@@ -540,9 +522,7 @@ export async function updateRankingData(newData: RankingData): Promise<void> {
     throw new Error('Admin access required to update ranking data');
   }
 
-  try {
-    console.log('Updating ranking data in Supabase Storage...');
-    
+  try {    
     // Add timestamp
     const dataWithTimestamp = {
       ...newData,
@@ -569,8 +549,6 @@ export async function updateRankingData(newData: RankingData): Promise<void> {
     rankingCache = null;
     cacheTimestamp = 0;
     cachedLatestFilename = null;
-
-    console.log('Ranking data updated successfully');
 
   } catch (error) {
     console.error('Error updating ranking data:', error);
@@ -634,5 +612,4 @@ export async function getPlayersWithChanges(): Promise<Player[]> {
  */
 export function forceRankingCacheInvalidation(): void {
   clearRankingCache();
-  console.log('Ranking cache forcibly invalidated due to ranking modifications');
 } 
