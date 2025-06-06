@@ -120,16 +120,21 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers, cur
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
   
-  // Update URL when search term changes
+  // Debounced search effect - wait 500ms after user stops typing
   useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (searchTerm) {
-      params.set('search', searchTerm);
-      params.set('page', '1'); // Reset to first page when searching
-    } else {
-      params.delete('search');
-    }
-    router.push(`?${params.toString()}`);
+    const timeoutId = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (searchTerm) {
+        params.set('search', searchTerm);
+        params.set('page', '1'); // Reset to first page when searching
+      } else {
+        params.delete('search');
+      }
+      router.push(`?${params.toString()}`);
+    }, 500);
+
+    // Cleanup timeout if user continues typing
+    return () => clearTimeout(timeoutId);
   }, [searchTerm, router, searchParams]);
 
   const handlePageChange = (page: number) => {
@@ -278,7 +283,6 @@ function RankingTable({ players, currentPage }: { players: Player[]; currentPage
             <TableHead>Nombre</TableHead>
             <TableHead className="hidden md:table-cell">Club</TableHead>
             <TableHead className="text-right">Puntos</TableHead>
-            <TableHead className="hidden md:table-cell text-center">Partidos</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -307,7 +311,6 @@ function RankingTable({ players, currentPage }: { players: Player[]; currentPage
                     {getPointsChangeText(player.changes)}
                   </div>
                 </TableCell>
-                <TableCell className="hidden md:table-cell text-center">{player.matches}</TableCell>
               </TableRow>
             ))
           )}
