@@ -304,9 +304,21 @@ async function recalculatePlayerDifferences(players: any[], previousRankingFilen
     
     const previousRankingData = JSON.parse(await prevFileData.text())
     
+    // Helper function to normalize names for comparison
+    const normalizeName = (name: string): string => {
+      return name
+        .trim()
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+    }
+
     // Calculate differences
     return players.map(currentPlayer => {
-      const previousPlayer = previousRankingData.players.find((p: any) => p.name === currentPlayer.name)
+      const previousPlayer = previousRankingData.players.find((p: any) => 
+        normalizeName(p.name) === normalizeName(currentPlayer.name)
+      )
       
       if (!previousPlayer) {
         // New player

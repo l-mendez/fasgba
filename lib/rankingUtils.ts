@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 export interface Player {
   position: number;
   name: string;
+  title?: string;
   club: string;
   points: number;
   matches: number;

@@ -59,6 +59,7 @@ const yearOptions = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i)
 interface RankingPlayer {
   position: number;
   name: string;
+  title?: string;
   club: string;
   points: number;
   matches: number;
@@ -280,6 +281,51 @@ export default function AdminRankingPage() {
       setErrorMessage(error instanceof Error ? error.message : 'Save failed')
     } finally {
       setIsUploading(false)
+    }
+  }
+
+  const handleCancel = async () => {
+    if (!tempJsonPath) return
+
+    setIsUploading(true)
+    setErrorMessage('')
+
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        throw new Error('No session found. Please log in again.')
+      }
+
+      const response = await fetch('/api/admin/ranking/cancel', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          tempJsonPath
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.warn('Failed to cleanup temp files:', errorData.error)
+      }
+
+      console.log('Upload cancelled and temp files cleaned up')
+      
+    } catch (error) {
+      console.warn('Error during cancel cleanup:', error)
+    } finally {
+      // Reset form regardless of cleanup success
+      setFile(null)
+      setPreviewData([])
+      setUploadStatus('idle')
+      setTempJsonPath(null)
+      setIsUploading(false)
+      setErrorMessage('')
     }
   }
 
@@ -558,47 +604,124 @@ export default function AdminRankingPage() {
           {/* Action Buttons */}
           {file && (
             <div className="flex gap-2 mt-4">
-              <Button 
-                onClick={handleUpload}
-                disabled={isUploading || uploadStatus === 'success'}
-                className="flex-1 sm:flex-none"
-              >
-                {isUploading ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Procesando...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Procesar archivo
-                  </>
-                )}
-              </Button>
-              
-              {uploadStatus === 'success' && (
+              {uploadStatus !== 'success' && (
                 <Button 
-                  onClick={handleSave}
+                  onClick={handleUpload}
                   disabled={isUploading}
                   className="flex-1 sm:flex-none"
                 >
                   {isUploading ? (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Guardando como {generateFilename()}...
+                      Procesando...
                     </>
                   ) : (
                     <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Guardar como {generateFilename()}
+                      <Upload className="mr-2 h-4 w-4" />
+                      Procesar archivo
                     </>
                   )}
                 </Button>
+              )}
+              
+              {uploadStatus === 'success' && (
+                <>
+                  <Button 
+                    onClick={handleSave}
+                    disabled={isUploading}
+                    className="flex-1 sm:flex-none"
+                  >
+                    {isUploading ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Guardando como {generateFilename()}...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Guardar como {generateFilename()}
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleCancel}
+                    disabled={isUploading}
+                    variant="outline"
+                    className="flex-1 sm:flex-none"
+                  >
+                    {isUploading ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Cancelando...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Cancelar
+                      </>
+                    )}
+                  </Button>
+                </>
               )}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Preview Section - Only show after successful file processing */}
+      {uploadStatus === 'success' && previewData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Vista previa del ranking</CardTitle>
+            <CardDescription>
+              Revisa los datos antes de guardar los cambios como "{generateFilename()}"
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableCaption>
+                  Ranking cargado - {previewData.length} jugadores (mostrando primeros 10)
+                </TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-16">Pos.</TableHead>
+                    <TableHead>Jugador</TableHead>
+                    <TableHead>Club</TableHead>
+                    <TableHead className="text-right">Puntos</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {previewData.map((player) => (
+                    <TableRow key={player.position}>
+                      <TableCell className="font-medium">
+                        #{player.position}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {player.title ? (
+                          <span>
+                            <span className="text-primary font-medium">{player.title}</span>
+                            <span> {player.name}</span>
+                          </span>
+                        ) : (
+                          <span>{player.name}</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {player.club}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {Math.round(player.points)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Past Rankings Management Section */}
       <Card>
@@ -727,57 +850,6 @@ export default function AdminRankingPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Preview Section - Only show after successful file processing */}
-      {uploadStatus === 'success' && previewData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Vista previa del ranking</CardTitle>
-            <CardDescription>
-              Revisa los datos antes de guardar los cambios como "{generateFilename()}"
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableCaption>
-                  Ranking cargado - {previewData.length} jugadores (mostrando primeros 10)
-                </TableCaption>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-16">Pos.</TableHead>
-                    <TableHead>Jugador</TableHead>
-                    <TableHead>Club</TableHead>
-                    <TableHead className="text-right">Puntos</TableHead>
-                    <TableHead className="text-right">Partidos</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {previewData.map((player) => (
-                    <TableRow key={player.position}>
-                      <TableCell className="font-medium">
-                        #{player.position}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {player.name}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {player.club}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {player.points}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {player.matches}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Edit Date Dialog */}
       <Dialog open={isEditDateDialogOpen} onOpenChange={setIsEditDateDialogOpen}>

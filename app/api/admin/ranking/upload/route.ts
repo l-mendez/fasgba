@@ -29,6 +29,7 @@ interface ExcelPlayer {
 interface RankingPlayer {
   position: number;
   name: string;
+  title?: string; // Player title if they have one
   club: string;
   points: number;
   matches: number;
@@ -105,6 +106,16 @@ export async function POST(request: NextRequest) {
       return handleError(new Error('Failed to upload file: ' + uploadError.message))
     }
 
+    // Helper function to normalize names with proper capitalization
+    const normalizePlayerName = (name: string): string => {
+      return name
+        .trim()
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+    }
+
     // Parse Excel file
     let rankingData: RankingPlayer[]
     try {
@@ -118,22 +129,22 @@ export async function POST(request: NextRequest) {
       rankingData = rawData
         .map((row, index) => {
           // Try to extract data from various possible column names
-          const position = row.Posicion || row.__EMPTY || row.ID || (index + 1)
           const name = row.Nombre || row.Name || row.NOMBRE || ''
+          const title = row.TIT || row.Titulo || row.TITULO || ''
           const club = row.Club || row.CLUB || ''
           const points = row.Puntos || row['Ranking Nuevo'] || row.Points || row.ELO || 0
           const matches = row.Partidos || row.Matches || row.PARTIDOS || 0
 
           return {
-            position: typeof position === 'number' ? position : parseInt(String(position)) || (index + 1),
-            name: String(name).trim(),
+            position: index + 1, // Position is determined by row order since Excel comes sorted by ranking
+            name: normalizePlayerName(String(name)),
+            title: title ? String(title).trim().toUpperCase() : undefined, // Keep titles in uppercase (GM, IM, etc.)
             club: String(club).trim(),
-            points: typeof points === 'number' ? points : parseInt(String(points)) || 0,
+            points: Math.round(typeof points === 'number' ? points : parseInt(String(points)) || 0),
             matches: typeof matches === 'number' ? matches : parseInt(String(matches)) || 0
           }
         })
         .filter(player => player.name && player.name !== '') // Filter out empty rows
-        .sort((a, b) => a.position - b.position) // Sort by position
 
       if (rankingData.length === 0) {
         throw new Error('No valid ranking data found in the Excel file')
@@ -320,10 +331,20 @@ async function findPreviousRanking(adminSupabase: any, currentMonth: number, cur
 
 // Helper function to calculate changes for each player
 function calculatePlayerChanges(newPlayers: RankingPlayer[], previousPlayers: PreviousPlayer[]) {
+  // Helper function to normalize names for comparison
+  const normalizeName = (name: string): string => {
+    return name
+      .trim()
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  }
+
   return newPlayers.map(player => {
-    // Find player in previous ranking (case-insensitive name matching)
+    // Find player in previous ranking (using normalized name matching)
     const previousPlayer = previousPlayers.find(p => 
-      p.name.toLowerCase().trim() === player.name.toLowerCase().trim()
+      normalizeName(p.name) === normalizeName(player.name)
     )
 
     if (!previousPlayer) {
@@ -340,7 +361,7 @@ function calculatePlayerChanges(newPlayers: RankingPlayer[], previousPlayers: Pr
 
     // Calculate changes
     const positionChange = previousPlayer.position - player.position // Positive = moved up in ranking
-    const pointsChange = player.points - previousPlayer.points
+    const pointsChange = Math.round(player.points - previousPlayer.points)
 
     return {
       ...player,

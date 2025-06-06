@@ -230,7 +230,9 @@ function RankingTable({ players, currentPage }: { players: Player[]; currentPage
     
     if (changes.isNew) {
       return (
-        <Circle className="h-3 w-3 text-blue-600 ml-1" title="Nuevo jugador" />
+        <div className="ml-1" title="Nuevo jugador">
+          <Circle className="h-3 w-3 text-blue-600" />
+        </div>
       );
     }
     
@@ -254,7 +256,9 @@ function RankingTable({ players, currentPage }: { players: Player[]; currentPage
     
     if (changes.position === 0) {
       return (
-        <Minus className="h-3 w-3 text-gray-500 ml-1" title="Sin cambio de posición" />
+        <div className="ml-1" title="Sin cambio de posición">
+          <Minus className="h-3 w-3 text-gray-500" />
+        </div>
       );
     }
     
@@ -264,12 +268,13 @@ function RankingTable({ players, currentPage }: { players: Player[]; currentPage
   const getPointsChangeText = (changes: Player['changes']) => {
     if (!changes || changes.points === 0) return null;
     
-    const sign = changes.points > 0 ? '+' : '';
-    const color = changes.points > 0 ? 'text-green-600' : 'text-red-600';
+    const roundedPoints = Math.round(changes.points);
+    const sign = roundedPoints > 0 ? '+' : '';
+    const color = roundedPoints > 0 ? 'text-green-600' : 'text-red-600';
     
     return (
       <span className={`text-xs ${color} ml-1`}>
-        {sign}{changes.points}
+        {sign}{roundedPoints}
       </span>
     );
   };
@@ -302,12 +307,19 @@ function RankingTable({ players, currentPage }: { players: Player[]; currentPage
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span>{player.name}</span>
+                  {player.title ? (
+                    <span>
+                      <span className="text-primary font-medium">{player.title}</span>
+                      <span> {player.name}</span>
+                    </span>
+                  ) : (
+                    <span>{player.name}</span>
+                  )}
                 </TableCell>
                 <TableCell className="hidden md:table-cell">{player.club}</TableCell>
                 <TableCell className="text-right font-medium">
                   <div className="flex items-center justify-end">
-                    {player.points}
+                    {Math.round(player.points)}
                     {getPointsChangeText(player.changes)}
                   </div>
                 </TableCell>

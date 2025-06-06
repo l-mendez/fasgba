@@ -493,6 +493,16 @@ async function recalculateNextRankingChanges(adminSupabase: any, deletedRankingI
       }
     }
 
+    // Helper function to normalize names for comparison
+    const normalizeName = (name: string): string => {
+      return name
+        .trim()
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+    }
+
     // Recalculate changes for each player
     const updatedPlayers = nextRankingJson.players.map((player: any) => {
       let changes = {
@@ -502,7 +512,9 @@ async function recalculateNextRankingChanges(adminSupabase: any, deletedRankingI
       }
 
       if (previousRankingJson) {
-        const previousPlayer = previousRankingJson.players.find((p: any) => p.name === player.name)
+        const previousPlayer = previousRankingJson.players.find((p: any) => 
+          normalizeName(p.name) === normalizeName(player.name)
+        )
         
         if (previousPlayer) {
           // Calculate position change

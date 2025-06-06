@@ -285,10 +285,20 @@ async function findPreviousRankingForRecalculation(adminSupabase: any, currentMo
 
 // Helper function to calculate changes (same logic as in upload route)
 function calculatePlayerChangesForRecalculation(newPlayers: any[], previousPlayers: any[]) {
+  // Helper function to normalize names for comparison
+  const normalizeName = (name: string): string => {
+    return name
+      .trim()
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  }
+
   return newPlayers.map(player => {
-    // Find player in previous ranking (case-insensitive name matching)
+    // Find player in previous ranking (using normalized name matching)
     const previousPlayer = previousPlayers.find(p => 
-      p.name.toLowerCase().trim() === player.name.toLowerCase().trim()
+      normalizeName(p.name) === normalizeName(player.name)
     )
 
     if (!previousPlayer) {
