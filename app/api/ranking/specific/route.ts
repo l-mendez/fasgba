@@ -16,9 +16,7 @@ export async function GET(request: NextRequest) {
     
     // Add .json extension if not present
     const fullFilename = filename.endsWith('.json') ? filename : `${filename}.json`
-    
-    console.log(`Fetching specific ranking: ${fullFilename}`)
-    
+        
     // Download the specific ranking file
     const { data: fileData, error: downloadError } = await adminSupabase.storage
       .from('ranking-data')
@@ -36,8 +34,6 @@ export async function GET(request: NextRequest) {
     if (!rankingData.players || !Array.isArray(rankingData.players)) {
       return handleError(new Error('Invalid ranking data structure'))
     }
-
-    console.log(`Served ${rankingData.totalPlayers} players from ranking: ${rankingData.filename}`)
     return apiSuccess(rankingData)
 
   } catch (error) {

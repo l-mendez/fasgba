@@ -61,7 +61,6 @@ export async function GET(request: NextRequest) {
     if (!latestFile) {
       return handleError(new Error('No valid ranking files found'))
     }
-    console.log(`Serving chronologically latest ranking: ${latestFile.filename} (${latestFile.month}/${latestFile.year})`)
 
     // Download the latest ranking file
     const { data: fileData, error: downloadError } = await adminSupabase.storage

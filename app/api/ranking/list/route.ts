@@ -6,9 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     // Use admin client for storage operations (has service role permissions)
     const adminSupabase = createAdminClient()
-    
-    console.log('Listing all available rankings...')
-    
+        
     // List all ranking files
     const { data: files, error: listError } = await adminSupabase.storage
       .from('ranking-data')
@@ -81,7 +79,6 @@ export async function GET(request: NextRequest) {
       };
     }).filter(Boolean);
 
-    console.log(`Found ${processedRankings.length} ranking files`)
     return apiSuccess(processedRankings)
 
   } catch (error) {

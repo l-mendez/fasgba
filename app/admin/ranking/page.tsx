@@ -277,7 +277,6 @@ export default function AdminRankingPage() {
       }
 
       const result = await response.json()
-      console.log('Ranking saved successfully:', result.filename)
       
       // Reset form
       setFile(null)

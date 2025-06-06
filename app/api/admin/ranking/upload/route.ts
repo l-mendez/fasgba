@@ -128,14 +128,6 @@ export async function POST(request: NextRequest) {
         throw new Error('La hoja de Excel está vacía o no contiene datos válidos')
       }
 
-      console.log(`Found ${rawData.length} rows in Excel file`)
-      console.log('First few rows:', JSON.stringify(rawData.slice(0, 3), null, 2))
-
-      // Show available columns for debugging
-      if (rawData.length > 0) {
-        const availableColumns = Object.keys(rawData[0])
-        console.log('Available columns in Excel file:', availableColumns)
-      }
 
       // Transform data to standard format
       const transformedData: RankingPlayer[] = []
@@ -207,7 +199,6 @@ export async function POST(request: NextRequest) {
         throw new Error(`No se encontraron jugadores válidos en el archivo Excel. Verifica que las columnas tengan los nombres correctos.${columnInfo}`)
       }
 
-      console.log(`Successfully processed ${transformedData.length} players from ${rawData.length} rows`)
       if (errors.length > 0) {
         console.warn(`Skipped ${errors.length} rows with errors:`, errors)
       }
@@ -229,15 +220,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Find previous ranking and calculate changes
-    console.log('Calculating changes from previous ranking...')
     const previousRanking = await findPreviousRanking(adminSupabase, parseInt(month), parseInt(year))
     
     let enhancedRankingData: RankingPlayer[]
     if (previousRanking) {
-      console.log(`Comparing with previous ranking: ${previousRanking.filename}`)
       enhancedRankingData = calculatePlayerChanges(rankingData, previousRanking.players)
     } else {
-      console.log('No previous ranking found - marking all players as new')
       // First ranking - mark all players as new
       enhancedRankingData = rankingData.map(player => ({
         ...player,
@@ -340,7 +328,6 @@ async function findPreviousRanking(adminSupabase: any, currentMonth: number, cur
     if (sameMonthRankings.length > 0) {
       // Use the most recent existing ranking for the same month as previous
       const sameMonthPrevious = sameMonthRankings[sameMonthRankings.length - 1]
-      console.log(`Found same-month previous ranking: ${sameMonthPrevious.filename}`)
       
       // Download and parse the same-month previous ranking
       const { data: fileData, error: downloadError } = await adminSupabase.storage
@@ -370,11 +357,8 @@ async function findPreviousRanking(adminSupabase: any, currentMonth: number, cur
     )
 
     if (!previousRanking) {
-      console.log('No previous ranking found - this might be the first ranking')
       return null
     }
-
-    console.log(`Found chronologically previous ranking: ${previousRanking.filename}`)
     
     // Download and parse the chronologically previous ranking
     const { data: fileData, error: downloadError } = await adminSupabase.storage

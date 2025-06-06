@@ -33,8 +33,6 @@ export async function DELETE(request: NextRequest) {
     // Add .json extension if not present
     const fullFilename = filename.endsWith('.json') ? filename : `${filename}.json`
     
-    console.log(`Deleting ranking: ${fullFilename}`)
-
     // Get information about the ranking being deleted
     const deletedRankingInfo = await getRankingInfo(adminSupabase, filename)
     if (!deletedRankingInfo) {
@@ -53,8 +51,6 @@ export async function DELETE(request: NextRequest) {
       console.error('Delete error:', deleteError)
       return handleError(new Error('Failed to delete ranking: ' + deleteError.message))
     }
-
-    console.log(`Successfully deleted ranking: ${fullFilename}`)
 
     // Handle renaming of same-month rankings
     await renameSameMonthRankings(adminSupabase, deletedRankingInfo.month, deletedRankingInfo.year)
@@ -196,12 +192,10 @@ async function findNewLatestRanking(adminSupabase: any): Promise<string | null> 
       }); // Sort by chronological date, most recent first
 
     if (rankingFiles.length === 0) {
-      console.log('No rankings remaining after deletion')
       return null
     }
 
     const newLatestRanking = rankingFiles[0]
-    console.log(`New latest ranking after deletion: ${newLatestRanking.filename}`)
     return newLatestRanking.filename
 
   } catch (error) {
@@ -280,9 +274,7 @@ async function getRankingInfo(adminSupabase: any, filename: string) {
 
 // Helper function to handle renaming of same-month rankings
 async function renameSameMonthRankings(adminSupabase: any, deletedMonth: number, deletedYear: number) {
-  try {
-    console.log(`Renaming same-month rankings for ${deletedMonth}/${deletedYear}`)
-    
+  try {    
     // List all ranking files
     const { data: files, error: listError } = await adminSupabase.storage
       .from('ranking-data')
@@ -324,11 +316,8 @@ async function renameSameMonthRankings(adminSupabase: any, deletedMonth: number,
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()); // Sort by creation time
 
     if (sameMonthRankings.length === 0) {
-      console.log('No same-month rankings to rename')
       return
     }
-
-    console.log(`Found ${sameMonthRankings.length} same-month rankings to potentially rename`)
 
     // Rename rankings to remove gaps in numbering
     const renamedRankings = []
@@ -345,9 +334,7 @@ async function renameSameMonthRankings(adminSupabase: any, deletedMonth: number,
         newFilename = `ranking-${String(deletedMonth).padStart(2, '0')}-${deletedYear} (${newNumber}).json`
       }
 
-      if (ranking.originalFilename !== newFilename) {
-        console.log(`Renaming ${ranking.originalFilename} to ${newFilename}`)
-        
+      if (ranking.originalFilename !== newFilename) {        
         // First, download the existing file content
         const { data: fileData, error: downloadError } = await adminSupabase.storage
           .from('ranking-data')
@@ -396,8 +383,6 @@ async function renameSameMonthRankings(adminSupabase: any, deletedMonth: number,
       }
     }
 
-    console.log(`Renamed ${renamedRankings.length} same-month rankings`)
-
   } catch (error) {
     console.warn('Error renaming same-month rankings:', error)
   }
@@ -406,7 +391,6 @@ async function renameSameMonthRankings(adminSupabase: any, deletedMonth: number,
 // Helper function to find the next ranking chronologically and recalculate its changes
 async function recalculateNextRankingChanges(adminSupabase: any, deletedRankingInfo: any) {
   try {
-    console.log(`Finding next ranking after deleted ${deletedRankingInfo.month}/${deletedRankingInfo.year}`)
     
     // List all ranking files
     const { data: files, error: listError } = await adminSupabase.storage
@@ -451,11 +435,8 @@ async function recalculateNextRankingChanges(adminSupabase: any, deletedRankingI
     const nextRanking = allRankings.find(ranking => ranking.date.getTime() > deletedDate.getTime())
     
     if (!nextRanking) {
-      console.log('No next ranking found to recalculate')
       return
     }
-
-    console.log(`Recalculating changes for ranking: ${nextRanking.baseFilename}`)
 
     // Find the new previous ranking (the one before the deleted ranking)
     const previousRanking = allRankings
@@ -547,8 +528,6 @@ async function recalculateNextRankingChanges(adminSupabase: any, deletedRankingI
 
     if (uploadError) {
       console.error('Failed to upload recalculated ranking:', uploadError)
-    } else {
-      console.log(`Successfully recalculated changes for ranking: ${nextRanking.baseFilename}`)
     }
 
   } catch (error) {
