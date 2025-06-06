@@ -2,6 +2,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createClient } from "@/lib/supabase/server"
+import { Metadata } from "next"
 import {
   type TournamentDisplay,
   getAllTournamentsForDisplay,
@@ -12,6 +13,47 @@ import TorneosClient from "./components/torneos-client"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
+
+// Generate metadata for better link previews
+export const metadata: Metadata = {
+  title: 'Torneos FASGBA - Calendario de Competencias',
+  description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur de Buenos Aires. Consulta próximos torneos, torneos en curso y resultados.',
+  keywords: ['FASGBA', 'torneos', 'ajedrez', 'competencias', 'calendario', 'federación', 'Buenos Aires', 'inscripción'],
+  openGraph: {
+    title: 'Torneos FASGBA - Calendario de Competencias',
+    description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur de Buenos Aires. Consulta próximos torneos, torneos en curso y resultados.',
+    url: 'https://fasgba.org/torneos',
+    siteName: 'FASGBA',
+    images: [
+      {
+        url: 'https://fasgba.org/images/fasgba-logo.png',
+        width: 1200,
+        height: 630,
+        alt: 'Torneos FASGBA',
+      }
+    ],
+    locale: 'es_AR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Torneos FASGBA - Calendario de Competencias',
+    description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur de Buenos Aires.',
+    images: ['https://fasgba.org/images/fasgba-logo.png'],
+    creator: '@FASGBA',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+}
 
 export default async function TorneosPage() {
   let tournaments: TournamentDisplay[] = []

@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { ChevronLeft, Mail, MapPin, Phone, Clock, Calendar, User, Heart, Loader2, Users, UserCheck, FileText, Star, Building2, ImageIcon } from "lucide-react"
 import { notFound } from "next/navigation"
+import { Metadata } from "next"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -31,6 +32,85 @@ interface ClubDetailPageProps {
   params: Promise<{
     id: string
   }>
+}
+
+// Generate metadata for better link previews
+export async function generateMetadata({ params }: ClubDetailPageProps): Promise<Metadata> {
+  const resolvedParams = await params
+  const clubId = parseInt(resolvedParams.id)
+  
+  if (isNaN(clubId)) {
+    return {
+      title: 'Club no encontrado - FASGBA',
+      description: 'El club que estás buscando no existe o ha sido eliminado.',
+    }
+  }
+
+  // Fetch the club data for metadata
+  const clubData = await getClubById(clubId, true) as ClubWithStats | null
+  
+  if (!clubData) {
+    return {
+      title: 'Club no encontrado - FASGBA',
+      description: 'El club que estás buscando no existe o ha sido eliminado.',
+    }
+  }
+
+  // Create description from club info
+  const description = `${clubData.name} - Club afiliado a FASGBA. ${clubData.address ? `Ubicado en ${clubData.address}. ` : ''}Información de contacto, horarios y actividades disponibles.`
+
+  // Build the full URL for the club
+  const url = `https://fasgba.org/clubes/${clubId}`
+  
+  // Get the club image URL
+  const imageUrl = clubData.image ? 
+    (clubData.image.startsWith('http') ? clubData.image : `https://fasgba.org${clubData.image}`) 
+    : `https://fasgba.org/images/fasgba-logo.png`
+
+  return {
+    title: `${clubData.name} - FASGBA`,
+    description,
+    keywords: ['FASGBA', 'club', 'ajedrez', clubData.name, clubData.address ? clubData.address.split(',')[0] : '', 'federación'].filter(Boolean),
+    openGraph: {
+      title: clubData.name,
+      description,
+      url,
+      siteName: 'FASGBA',
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${clubData.name} - Club FASGBA`,
+        }
+      ],
+      locale: 'es_AR',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: clubData.name,
+      description,
+      images: [imageUrl],
+      creator: '@FASGBA',
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
+    },
+    other: {
+      'business:contact_data:locality': clubData.address ? clubData.address.split(',')[0] : '',
+      'business:contact_data:phone_number': clubData.telephone || '',
+      'business:contact_data:email': clubData.mail || '',
+    },
+  }
 }
 
 interface ClubPageData {

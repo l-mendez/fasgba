@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Mail, MapPin, Phone, ImageIcon } from "lucide-react"
 import { Suspense } from "react"
+import { Metadata } from "next"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,6 +15,47 @@ import { createClient } from "@/lib/supabase/client"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
+
+// Generate metadata for better link previews
+export const metadata: Metadata = {
+  title: 'Clubes Afiliados - FASGBA',
+  description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur de Buenos Aires. Encuentra información de contacto, horarios y actividades.',
+  keywords: ['FASGBA', 'clubes', 'ajedrez', 'afiliados', 'federación', 'Buenos Aires', 'directorio'],
+  openGraph: {
+    title: 'Clubes Afiliados - FASGBA',
+    description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur de Buenos Aires. Encuentra información de contacto, horarios y actividades.',
+    url: 'https://fasgba.org/clubes',
+    siteName: 'FASGBA',
+    images: [
+      {
+        url: 'https://fasgba.org/images/fasgba-logo.png',
+        width: 1200,
+        height: 630,
+        alt: 'Clubes FASGBA',
+      }
+    ],
+    locale: 'es_AR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Clubes Afiliados - FASGBA',
+    description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur de Buenos Aires.',
+    images: ['https://fasgba.org/images/fasgba-logo.png'],
+    creator: '@FASGBA',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+}
 
 interface PageProps {
   searchParams: Promise<{ search?: string }>
