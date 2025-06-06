@@ -84,6 +84,7 @@ export default function AdminRankingPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [tempJsonPath, setTempJsonPath] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string>('')
+  const [successMessage, setSuccessMessage] = useState<string>('')
 
   // Date state - default to current month and year
   const currentDate = new Date()
@@ -126,6 +127,7 @@ export default function AdminRankingPage() {
       
       if (!session) {
         console.error('No session found')
+        setErrorMessage('Sesión no válida. Por favor, inicia sesión nuevamente.')
         return
       }
 
@@ -141,9 +143,11 @@ export default function AdminRankingPage() {
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error('Failed to load rankings. Status:', response.status, 'Error:', errorData)
+        setErrorMessage(`Error al cargar los rankings existentes (${response.status}). ${errorData.error || 'Verifica tu conexión e intenta nuevamente.'}`)
       }
     } catch (error) {
       console.error('Error loading rankings:', error)
+      setErrorMessage(`Error de conexión al cargar rankings: ${error instanceof Error ? error.message : 'Error desconocido'}`)
     }
   }
 
@@ -169,6 +173,7 @@ export default function AdminRankingPage() {
         setUploadStatus('idle')
         setPreviewData([])
         setErrorMessage('')
+        setSuccessMessage('')
       }
     }
   }
@@ -182,6 +187,9 @@ export default function AdminRankingPage() {
         setUploadStatus('idle')
         setPreviewData([])
         setErrorMessage('')
+        setSuccessMessage('')
+      } else {
+        setErrorMessage('Formato de archivo no válido. Solo se permiten archivos Excel (.xlsx, .xls)')
       }
     }
   }
@@ -191,13 +199,14 @@ export default function AdminRankingPage() {
     
     setIsUploading(true)
     setErrorMessage('')
+    setSuccessMessage('')
 
     try {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session) {
-        throw new Error('No session found. Please log in again.')
+        throw new Error('Sesión no válida. Por favor, inicia sesión nuevamente.')
       }
 
       const formData = new FormData()
@@ -215,17 +224,19 @@ export default function AdminRankingPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || `Upload failed with status ${response.status}`)
+        const errorMsg = errorData.error || `Error del servidor (${response.status})`
+        throw new Error(errorMsg)
       }
 
       const result = await response.json()
       setPreviewData(result.previewData || [])
       setTempJsonPath(result.tempJsonPath)
       setUploadStatus('success')
+      setSuccessMessage(`Archivo procesado correctamente. Se encontraron ${result.previewData?.length || 0} jugadores. Revisa la vista previa y guarda los cambios.`)
       
     } catch (error) {
       console.error('Upload error:', error)
-      setErrorMessage(error instanceof Error ? error.message : 'Upload failed')
+      setErrorMessage(error instanceof Error ? error.message : 'Error desconocido al procesar el archivo. Verifica el formato y vuelve a intentarlo.')
       setUploadStatus('error')
     } finally {
       setIsUploading(false)
@@ -237,13 +248,14 @@ export default function AdminRankingPage() {
 
     setIsUploading(true)
     setErrorMessage('')
+    setSuccessMessage('')
 
     try {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session) {
-        throw new Error('No session found. Please log in again.')
+        throw new Error('Sesión no válida. Por favor, inicia sesión nuevamente.')
       }
 
       const response = await fetch('/api/admin/ranking/confirm', {
@@ -260,7 +272,8 @@ export default function AdminRankingPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || `Save failed with status ${response.status}`)
+        const errorMsg = errorData.error || `Error del servidor (${response.status})`
+        throw new Error(errorMsg)
       }
 
       const result = await response.json()
@@ -272,12 +285,15 @@ export default function AdminRankingPage() {
       setUploadStatus('idle')
       setTempJsonPath(null)
       
+      // Show success message
+      setSuccessMessage(`¡Ranking "${generateFilename()}" guardado exitosamente! El ranking ya está disponible en el sistema.`)
+      
       // Reload rankings list
       await loadPastRankings()
       
     } catch (error) {
       console.error('Save error:', error)
-      setErrorMessage(error instanceof Error ? error.message : 'Save failed')
+      setErrorMessage(error instanceof Error ? error.message : 'Error desconocido al guardar el ranking. Intenta nuevamente.')
     } finally {
       setIsUploading(false)
     }
@@ -286,13 +302,14 @@ export default function AdminRankingPage() {
   const handleDeleteRanking = async (ranking: PastRanking) => {
     setDeletingId(ranking.id)
     setErrorMessage('')
+    setSuccessMessage('')
 
     try {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session) {
-        throw new Error('No session found. Please log in again.')
+        throw new Error('Sesión no válida. Por favor, inicia sesión nuevamente.')
       }
 
       const response = await fetch('/api/admin/ranking/delete', {
@@ -308,7 +325,8 @@ export default function AdminRankingPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || `Delete failed with status ${response.status}`)
+        const errorMsg = errorData.error || `Error del servidor (${response.status})`
+        throw new Error(errorMsg)
       }
 
       const result = await response.json()
@@ -332,12 +350,12 @@ export default function AdminRankingPage() {
       // Show success message with information about active ranking change
       if (result.wasLatestRanking) {
         if (result.newLatestRanking) {
-          setErrorMessage(`Ranking eliminado exitosamente. El ranking activo ahora es: ${result.newLatestRanking}`)
+          setSuccessMessage(`¡Ranking "${ranking.displayName || ranking.name}" eliminado exitosamente! El ranking activo ahora es: "${result.newLatestRanking}". Los cambios ya están activos en el sistema.`)
         } else {
-          setErrorMessage('Ranking eliminado exitosamente. No quedan rankings disponibles.')
+          setSuccessMessage(`¡Ranking "${ranking.displayName || ranking.name}" eliminado exitosamente! No quedan rankings disponibles en el sistema.`)
         }
       } else {
-        setErrorMessage('Ranking eliminado exitosamente.')
+        setSuccessMessage(`¡Ranking "${ranking.displayName || ranking.name}" eliminado exitosamente! El ranking actual no se ha visto afectado.`)
       }
       
       // Reload rankings list to get updated data
@@ -345,7 +363,7 @@ export default function AdminRankingPage() {
       
     } catch (error) {
       console.error('Delete error:', error)
-      setErrorMessage(error instanceof Error ? error.message : 'Delete failed')
+      setErrorMessage(error instanceof Error ? error.message : 'Error desconocido al eliminar el ranking. Intenta nuevamente.')
     } finally {
       setDeletingId(null)
     }
@@ -374,6 +392,7 @@ export default function AdminRankingPage() {
     setEditingRanking(ranking)
     setIsEditDateDialogOpen(true)
     setErrorMessage('')
+    setSuccessMessage('')
   }
 
   const handleUpdateDate = async () => {
@@ -381,13 +400,14 @@ export default function AdminRankingPage() {
 
     setIsUpdatingDate(true)
     setErrorMessage('')
+    setSuccessMessage('')
 
     try {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session) {
-        throw new Error('No session found. Please log in again.')
+        throw new Error('Sesión no válida. Por favor, inicia sesión nuevamente.')
       }
 
       const response = await fetch('/api/admin/ranking/update-date', {
@@ -405,7 +425,8 @@ export default function AdminRankingPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || `Update failed with status ${response.status}`)
+        const errorMsg = errorData.error || `Error del servidor (${response.status})`
+        throw new Error(errorMsg)
       }
 
       const result = await response.json()
@@ -415,14 +436,15 @@ export default function AdminRankingPage() {
       setEditingRanking(null)
       
       // Show success message
-      setErrorMessage(`Fecha del ranking actualizada exitosamente. Afectados: ${result.affectedRankings} ranking(s).`)
+      const monthName = monthNames[parseInt(editMonth) - 1]
+      setSuccessMessage(`¡Fecha del ranking actualizada exitosamente a ${monthName} ${editYear}! Se actualizaron ${result.affectedRankings} ranking(s) y las diferencias de posición han sido recalculadas.`)
       
       // Reload rankings list
       await loadPastRankings()
       
     } catch (error) {
       console.error('Update date error:', error)
-      setErrorMessage(error instanceof Error ? error.message : 'Update failed')
+      setErrorMessage(error instanceof Error ? error.message : 'Error desconocido al actualizar la fecha. Intenta nuevamente.')
     } finally {
       setIsUpdatingDate(false)
     }
@@ -443,6 +465,14 @@ export default function AdminRankingPage() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Success Alert */}
+      {successMessage && (
+        <Alert variant="default" className="border-green-200 bg-green-50 text-green-800">
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       )}
 
@@ -537,7 +567,7 @@ export default function AdminRankingPage() {
           </div>
 
           {/* Upload Status */}
-          {uploadStatus === 'success' && (
+          {uploadStatus === 'success' && !successMessage && (
             <Alert className="mt-4">
               <CheckCircle2 className="h-4 w-4" />
               <AlertDescription>
@@ -546,7 +576,7 @@ export default function AdminRankingPage() {
             </Alert>
           )}
 
-          {uploadStatus === 'error' && (
+          {uploadStatus === 'error' && !errorMessage && (
             <Alert variant="destructive" className="mt-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>

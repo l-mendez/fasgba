@@ -9,6 +9,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import NewsContentWrapper from "@/app/components/news-content-wrapper"
 import { getNewsById } from "@/lib/newsUtils"
+import { extractShortTextFromContentBlocks } from "@/lib/textUtils"
 
 // Define the news interface
 interface News {
@@ -45,9 +46,17 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     }
   }
 
-  // Create a description from extract or truncated text
-  const description = newsItem.extract || 
-    (newsItem.text ? newsItem.text.substring(0, 160) + '...' : 'Lee la noticia completa en FASGBA')
+  // Create a description from extract or extracted plain text
+  let description = newsItem.extract || ''
+  
+  if (!description && newsItem.text) {
+    // Extract plain text from JSON content blocks
+    description = extractShortTextFromContentBlocks(newsItem.text, 160)
+  }
+  
+  if (!description) {
+    description = 'Lee la noticia completa en FASGBA'
+  }
 
   // Create author information
   const author = newsItem.author_name || (newsItem.club?.name ? `${newsItem.club.name}` : 'FASGBA')
