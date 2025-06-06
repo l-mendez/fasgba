@@ -318,7 +318,7 @@ export default function ClubAdminTorneosPage() {
           </p>
         </div>
         <Button asChild className="w-fit">
-          <Link href="/club-admin/torneos/nuevo">
+          <Link href="/torneos/nuevo">
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Torneo
           </Link>
@@ -494,7 +494,7 @@ export default function ClubAdminTorneosPage() {
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                              <Link href={`/club-admin/torneos/${torneo.id}/editar`}>
+                              <Link href={`/torneos/${torneo.id}/editar`}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 Editar
                               </Link>
@@ -594,7 +594,7 @@ export default function ClubAdminTorneosPage() {
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link href={`/club-admin/torneos/${torneo.id}/editar`}>
+                            <Link href={`/torneos/${torneo.id}/editar`}>
                               <Edit className="mr-2 h-4 w-4" />
                               Editar
                             </Link>

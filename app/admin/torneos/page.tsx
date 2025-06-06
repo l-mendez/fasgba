@@ -189,7 +189,7 @@ export default async function AdminTorneosPage() {
           <p className="text-muted-foreground">Gestiona los torneos y competiciones de FASGBA.</p>
         </div>
         <Button asChild>
-          <Link href="/admin/torneos/nuevo">
+                      <Link href="/torneos/nuevo">
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Torneo
           </Link>

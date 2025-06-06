@@ -24,7 +24,7 @@ export function QuickActions({ selectedClub }: QuickActionsProps) {
         </Link>
       </Button>
       <Button asChild variant="outline" className="w-full justify-start">
-        <Link href="/club-admin/torneos/nuevo">
+                        <Link href="/torneos/nuevo">
           <Trophy className="mr-2 h-4 w-4" />
           Nuevo torneo
         </Link>

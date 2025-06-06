@@ -280,7 +280,7 @@ export default async function AdminDashboard() {
                 </Link>
               </Button>
               <Button asChild className="w-full justify-start" variant="outline">
-                <Link href="/admin/torneos/nuevo">
+                                  <Link href="/torneos/nuevo">
                   <Trophy className="mr-2 h-4 w-4" />
                   Nuevo torneo
                 </Link>

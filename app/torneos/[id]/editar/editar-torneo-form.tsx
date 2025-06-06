@@ -48,6 +48,7 @@ interface FormData {
 interface EditarTorneoFormProps {
   tournament: Tournament
   tournamentId: string
+  isSiteAdmin: boolean
 }
 
 // API helper function
@@ -99,7 +100,7 @@ async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any
   return response.json()
 }
 
-export function EditarTorneoForm({ tournament, tournamentId }: EditarTorneoFormProps) {
+export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: EditarTorneoFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -189,8 +190,9 @@ export function EditarTorneoForm({ tournament, tournamentId }: EditarTorneoFormP
         body: JSON.stringify(cleanData)
       })
 
-      // Redirect back to club-admin tournaments list
-      router.push("/club-admin/torneos")
+      // Redirect based on user role
+      const redirectPath = isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"
+      router.push(redirectPath)
     } catch (err) {
       console.error('Error updating tournament:', err)
       setError(err instanceof Error ? err.message : "Error al actualizar el torneo")
@@ -201,10 +203,11 @@ export function EditarTorneoForm({ tournament, tournamentId }: EditarTorneoFormP
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData(prev => ({ ...prev, [name]: value }))
+    
     // Clear validation error when user starts typing
     if (validationErrors[name]) {
-      setValidationErrors((prev) => ({ ...prev, [name]: "" }))
+      setValidationErrors(prev => ({ ...prev, [name]: "" }))
     }
   }
 
@@ -213,101 +216,72 @@ export function EditarTorneoForm({ tournament, tournamentId }: EditarTorneoFormP
     
     // Check if date already exists
     if (formData.dates.includes(newDate)) {
-      setError("Esta fecha ya está agregada")
       return
     }
     
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       dates: [...prev.dates, newDate].sort()
     }))
     setNewDate("")
-    setError(null)
     
     // Clear validation error
     if (validationErrors.dates) {
-      setValidationErrors((prev) => ({ ...prev, dates: "" }))
+      setValidationErrors(prev => ({ ...prev, dates: "" }))
     }
   }
 
   const removeDate = (dateToRemove: string) => {
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       dates: prev.dates.filter(date => date !== dateToRemove)
     }))
   }
 
   const formatDisplayDate = (dateString: string) => {
-    try {
-      // Parse as local date to avoid timezone issues
-      const [year, month, day] = dateString.split('-').map(Number)
-      const date = new Date(year, month - 1, day)
-      return date.toLocaleDateString('es-AR', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    } catch {
-      return dateString
-    }
+    const date = new Date(dateString)
+    return date.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
   }
 
   return (
-    <>
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-2xl text-terracotta">Editar Torneo</CardTitle>
+        <CardDescription>Modifica los detalles del torneo</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Información Básica</CardTitle>
-            <CardDescription>Información esencial del torneo</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title">Título del Torneo *</Label>
-              <Input
-                id="title"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                placeholder="Ej: Gran Prix FASGBA 2025"
-                className={validationErrors.title ? "border-red-500" : ""}
-              />
-              {validationErrors.title && (
-                <p className="text-sm text-red-500">{validationErrors.title}</p>
-              )}
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="description">Descripción</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="Descripción detallada del torneo..."
-                rows={3}
-              />
-            </div>
-
+          {/* Basic Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-terracotta">Información Básica</h3>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="time">Horario</Label>
+              <div className="space-y-2">
+                <Label htmlFor="title">Título *</Label>
                 <Input
-                  id="time"
-                  name="time"
-                  value={formData.time}
+                  id="title"
+                  name="title"
+                  value={formData.title}
                   onChange={handleChange}
-                  placeholder="Ej: 10:00 AM"
+                  placeholder="Nombre del torneo"
+                  className={validationErrors.title ? "border-red-500" : ""}
                 />
+                {validationErrors.title && (
+                  <p className="text-sm text-red-500">{validationErrors.title}</p>
+                )}
               </div>
 
-              <div className="grid gap-2">
+              <div className="space-y-2">
                 <Label htmlFor="rounds">Número de Rondas</Label>
                 <Input
                   id="rounds"
@@ -325,40 +299,147 @@ export function EditarTorneoForm({ tournament, tournamentId }: EditarTorneoFormP
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="pace">Ritmo de Juego</Label>
-              <Input
-                id="pace"
-                name="pace"
-                value={formData.pace}
+            <div className="space-y-2">
+              <Label htmlFor="description">Descripción</Label>
+              <Textarea
+                id="description"
+                name="description"
+                value={formData.description}
                 onChange={handleChange}
-                placeholder="Ej: 90 min + 30 seg"
+                placeholder="Descripción detallada del torneo"
+                className="min-h-[100px]"
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Fechas del Torneo</CardTitle>
-            <CardDescription>Modifica las fechas en que se realizará el torneo</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          {/* Location and Time */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-terracotta">Ubicación y Horario</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="place">Lugar</Label>
+                <Input
+                  id="place"
+                  name="place"
+                  value={formData.place}
+                  onChange={handleChange}
+                  placeholder="Nombre del club o lugar"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location">Dirección</Label>
+                <Input
+                  id="location"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  placeholder="Dirección completa"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="time">Horario</Label>
+              <Input
+                id="time"
+                name="time"
+                value={formData.time}
+                onChange={handleChange}
+                placeholder="Ej: 15:00 hs"
+              />
+            </div>
+          </div>
+
+          {/* Tournament Details */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-terracotta">Detalles del Torneo</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="pace">Ritmo de Juego</Label>
+                <Input
+                  id="pace"
+                  name="pace"
+                  value={formData.pace}
+                  onChange={handleChange}
+                  placeholder="Ej: 90 min + 30 seg/jugada"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cost">Costo de Inscripción</Label>
+                <Input
+                  id="cost"
+                  name="cost"
+                  value={formData.cost}
+                  onChange={handleChange}
+                  placeholder="Ej: $5000"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="inscription_details">Detalles de Inscripción</Label>
+              <Textarea
+                id="inscription_details"
+                name="inscription_details"
+                value={formData.inscription_details}
+                onChange={handleChange}
+                placeholder="Información sobre cómo inscribirse"
+                className="min-h-[80px]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="prizes">Premios</Label>
+              <Textarea
+                id="prizes"
+                name="prizes"
+                value={formData.prizes}
+                onChange={handleChange}
+                placeholder="Descripción de premios"
+                className="min-h-[80px]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="image">Imagen (URL)</Label>
+              <Input
+                id="image"
+                name="image"
+                type="url"
+                value={formData.image}
+                onChange={handleChange}
+                placeholder="https://ejemplo.com/imagen.jpg"
+              />
+            </div>
+          </div>
+
+          {/* Tournament Dates */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-terracotta">Fechas del Torneo</h3>
+            
             <div className="flex gap-2">
               <div className="flex-1">
                 <Input
                   type="date"
                   value={newDate}
                   onChange={(e) => setNewDate(e.target.value)}
-                  placeholder="Seleccionar fecha"
+                  className={validationErrors.dates ? "border-red-500" : ""}
                 />
               </div>
-              <Button type="button" onClick={addDate} variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar
+              <Button
+                type="button"
+                onClick={addDate}
+                disabled={!newDate}
+                className="bg-terracotta hover:bg-terracotta/90"
+              >
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
-            
+
             {validationErrors.dates && (
               <p className="text-sm text-red-500">{validationErrors.dates}</p>
             )}
@@ -367,17 +448,18 @@ export function EditarTorneoForm({ tournament, tournamentId }: EditarTorneoFormP
               <div className="space-y-2">
                 <Label>Fechas agregadas:</Label>
                 <div className="space-y-2">
-                  {formData.dates.map((date, index) => (
-                    <div key={index} className="flex items-center justify-between bg-muted p-3 rounded-md">
+                  {formData.dates.map((date) => (
+                    <div key={date} className="flex items-center justify-between bg-muted p-3 rounded-md">
                       <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{formatDisplayDate(date)}</span>
+                        <Calendar className="h-4 w-4 text-terracotta" />
+                        <span>{formatDisplayDate(date)}</span>
                       </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => removeDate(date)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -386,122 +468,33 @@ export function EditarTorneoForm({ tournament, tournamentId }: EditarTorneoFormP
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Ubicación</CardTitle>
-            <CardDescription>Información sobre el lugar del torneo</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="place">Lugar</Label>
-              <Input
-                id="place"
-                name="place"
-                value={formData.place}
-                onChange={handleChange}
-                placeholder="Ej: Club de Ajedrez Bahía Blanca"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="location">Dirección</Label>
-              <Input
-                id="location"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                placeholder="Ej: Av. Colón 123, Bahía Blanca"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Inscripción y Premios</CardTitle>
-            <CardDescription>Información sobre inscripciones, costos y premios</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="inscription_details">Detalles de Inscripción</Label>
-              <Textarea
-                id="inscription_details"
-                name="inscription_details"
-                value={formData.inscription_details}
-                onChange={handleChange}
-                placeholder="Información sobre cómo inscribirse, fechas límite, etc."
-                rows={3}
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="cost">Costo</Label>
-              <Input
-                id="cost"
-                name="cost"
-                value={formData.cost}
-                onChange={handleChange}
-                placeholder="Ej: $5000 general, $3000 sub-18"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="prizes">Premios</Label>
-              <Textarea
-                id="prizes"
-                name="prizes"
-                value={formData.prizes}
-                onChange={handleChange}
-                placeholder="Descripción de los premios..."
-                rows={2}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Imagen</CardTitle>
-            <CardDescription>Imagen representativa del torneo (opcional)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-2">
-              <Label htmlFor="image">URL de la Imagen</Label>
-              <Input
-                id="image"
-                name="image"
-                value={formData.image}
-                onChange={handleChange}
-                placeholder="https://ejemplo.com/imagen.jpg"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-end gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push("/club-admin/torneos")}
-            disabled={isLoading}
-          >
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Actualizando...
-              </>
-            ) : (
-              'Guardar Cambios'
-            )}
-          </Button>
-        </div>
-      </form>
-    </>
+          {/* Submit Button */}
+          <div className="flex gap-4 pt-6">
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="bg-terracotta hover:bg-terracotta/90"
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isLoading ? "Actualizando..." : "Actualizar Torneo"}
+            </Button>
+            
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                const redirectPath = isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"
+                router.push(redirectPath)
+              }}
+              disabled={isLoading}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   )
 } 

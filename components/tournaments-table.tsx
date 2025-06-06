@@ -505,7 +505,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link href={`/admin/torneos/${torneo.id}/editar`}>
+                            <Link href={`/torneos/${torneo.id}/editar`}>
                               <Edit className="mr-2 h-4 w-4" />
                               Editar
                             </Link>
@@ -596,7 +596,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href={`/admin/torneos/${torneo.id}/editar`}>
+                          <Link href={`/torneos/${torneo.id}/editar`}>
                             <Edit className="mr-2 h-4 w-4" />
                             Editar
                           </Link>
