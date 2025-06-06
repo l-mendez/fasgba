@@ -154,7 +154,8 @@ export async function POST(request: NextRequest) {
           const club = row.Club || row.CLUB || ''
           const points = row.Puntos || row['Ranking Nuevo'] || row.Points || row.ELO || 0
           const matches = row.Partidos || row.Matches || row.PARTIDOS || 0
-          const position = row.Posicion || row.ID || row.__EMPTY || (index + 1)
+          // Position is determined by row order (index + 1), not by Excel column values
+          const position = index + 1
 
           // Validate required fields
           if (!name || String(name).trim() === '') {
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
           }
 
           const transformedPlayer = {
-            position: typeof position === 'number' ? position : parseInt(String(position)) || (index + 1),
+            position: position,
             name: normalizePlayerName(String(name)),
             title: title ? String(title).trim().toUpperCase() : undefined, // Keep titles in uppercase (GM, IM, etc.)
             club: String(club).trim(),
@@ -173,12 +174,7 @@ export async function POST(request: NextRequest) {
             matches: typeof matches === 'number' ? matches : parseInt(String(matches)) || 0
           }
 
-          // Validate transformed data
-          if (isNaN(transformedPlayer.position)) {
-            errors.push(`Fila ${rowNumber}: Posición inválida para ${transformedPlayer.name}`)
-            return
-          }
-          
+          // Validate transformed data  
           if (isNaN(transformedPlayer.points)) {
             errors.push(`Fila ${rowNumber}: Puntos inválidos para ${transformedPlayer.name}`)
             return
@@ -199,7 +195,7 @@ export async function POST(request: NextRequest) {
       if (errors.length > 0 && transformedData.length === 0) {
         const availableColumns = rawData.length > 0 ? Object.keys(rawData[0]) : []
         const columnInfo = availableColumns.length > 0 ? 
-          `\n\nColumnas encontradas en el archivo: ${availableColumns.join(', ')}\n\nColumnas esperadas: Posicion/ID, Nombre/Name/NOMBRE, Club/CLUB, Puntos/Points/ELO, Partidos/Matches/PARTIDOS` : 
+          `\n\nColumnas encontradas en el archivo: ${availableColumns.join(', ')}\n\nColumnas esperadas: Nombre/Name/NOMBRE, Club/CLUB, Puntos/Points/ELO, Partidos/Matches/PARTIDOS (la posición se determina por el orden de las filas)` : 
           ''
         throw new Error(`Error al procesar el archivo Excel:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? `\n... y ${errors.length - 5} errores más` : ''}${columnInfo}`)
       }
@@ -207,7 +203,7 @@ export async function POST(request: NextRequest) {
       if (transformedData.length === 0) {
         const availableColumns = rawData.length > 0 ? Object.keys(rawData[0]) : []
         const columnInfo = availableColumns.length > 0 ? 
-          `\n\nColumnas encontradas en el archivo: ${availableColumns.join(', ')}\n\nColumnas esperadas: Posicion/ID, Nombre/Name/NOMBRE, Club/CLUB, Puntos/Points/ELO, Partidos/Matches/PARTIDOS` : 
+          `\n\nColumnas encontradas en el archivo: ${availableColumns.join(', ')}\n\nColumnas esperadas: Nombre/Name/NOMBRE, Club/CLUB, Puntos/Points/ELO, Partidos/Matches/PARTIDOS (la posición se determina por el orden de las filas)` : 
           ''
         throw new Error(`No se encontraron jugadores válidos en el archivo Excel. Verifica que las columnas tengan los nombres correctos.${columnInfo}`)
       }
