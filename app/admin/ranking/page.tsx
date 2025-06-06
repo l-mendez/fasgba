@@ -233,8 +233,11 @@ export default function AdminRankingPage() {
     }
   }
 
-  const handleSave = async () => {
-    if (!tempJsonPath) return
+  const handleSave = async (e?: React.MouseEvent) => {
+    e?.preventDefault()
+    e?.stopPropagation()
+    
+    if (!tempJsonPath || isUploading) return
 
     setIsUploading(true)
     setErrorMessage('')
@@ -284,8 +287,11 @@ export default function AdminRankingPage() {
     }
   }
 
-  const handleCancel = async () => {
-    if (!tempJsonPath) return
+  const handleCancel = async (e?: React.MouseEvent) => {
+    e?.preventDefault()
+    e?.stopPropagation()
+    
+    if (!tempJsonPath || isUploading) return
 
     setIsUploading(true)
     setErrorMessage('')
@@ -606,6 +612,7 @@ export default function AdminRankingPage() {
             <div className="flex gap-2 mt-4">
               {uploadStatus !== 'success' && (
                 <Button 
+                  type="button"
                   onClick={handleUpload}
                   disabled={isUploading}
                   className="flex-1 sm:flex-none"
@@ -627,7 +634,8 @@ export default function AdminRankingPage() {
               {uploadStatus === 'success' && (
                 <>
                   <Button 
-                    onClick={handleSave}
+                    type="button"
+                    onClick={(e) => handleSave(e)}
                     disabled={isUploading}
                     className="flex-1 sm:flex-none"
                   >
@@ -645,7 +653,8 @@ export default function AdminRankingPage() {
                   </Button>
                   
                   <Button 
-                    onClick={handleCancel}
+                    type="button"
+                    onClick={(e) => handleCancel(e)}
                     disabled={isUploading}
                     variant="outline"
                     className="flex-1 sm:flex-none"
