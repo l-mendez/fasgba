@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Trash2, Edit, Plus, Users, User, AlertCircle, Calendar, Loader2, Trophy, GamepadIcon } from 'lucide-react'
+import { Trash2, Edit, Plus, Users, User, AlertCircle, Calendar, Loader2, Trophy, Crown } from 'lucide-react'
 import { GameDisplay } from '@/lib/gameUtils-client'
 import { toast } from 'sonner'
 import { apiCall } from '@/lib/utils/apiClient'
@@ -736,7 +736,7 @@ export default function RoundsGamesManagement({
             {selectedRound > 0 && (
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="flex items-center gap-1">
-                  <GamepadIcon className="h-3 w-3" />
+                  <Crown className="h-3 w-3" />
                   Ronda {rounds.find(r => r.id === selectedRound)?.round_number || 'N/A'}
                 </Badge>
                 <Badge variant="secondary">
@@ -929,13 +929,13 @@ export default function RoundsGamesManagement({
         {/* Games List */}
         {selectedRound === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            <GamepadIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <Crown className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <p className="text-lg font-medium mb-2">Selecciona una ronda</p>
             <p className="text-sm">Elige una ronda para ver y gestionar sus partidas</p>
           </div>
         ) : currentRoundGames.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            <GamepadIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <Crown className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <p className="text-lg font-medium mb-2">No hay partidas en esta ronda</p>
             <p className="text-sm">Agrega la primera partida para comenzar</p>
           </div>
