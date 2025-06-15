@@ -104,6 +104,10 @@ export default function RoundsGamesManagement({
     matches: []
   })
 
+  // New state for team-specific players
+  const [teamAPlayers, setTeamAPlayers] = useState<Player[]>([])
+  const [teamBPlayers, setTeamBPlayers] = useState<Player[]>([])
+
   // Update games when initialGames prop changes
   useEffect(() => {
     setGames(initialGames)
@@ -455,6 +459,9 @@ export default function RoundsGamesManagement({
       game_time: '',
       match_id: undefined
     })
+    // Reset team players when form is reset
+    setTeamAPlayers([])
+    setTeamBPlayers([])
   }
 
   const getResultBadgeClass = (result: string) => {
@@ -495,6 +502,77 @@ export default function RoundsGamesManagement({
         i === index ? { ...match, [field]: value } : match
       ) || []
     }))
+  }
+
+  // New functions for team-based player management
+  const fetchTeamPlayers = async (clubId: number): Promise<Player[]> => {
+    try {
+      const clubPlayersData = await apiCall(`/api/clubs/${clubId}/players`)
+      const clubPlayers = clubPlayersData.players || []
+      return clubPlayers.map((player: any) => ({
+        ...player,
+        club: { id: clubId, name: clubs.find(c => c.id === clubId)?.name || 'Unknown' }
+      }))
+    } catch (error) {
+      console.error(`Error fetching players for club ${clubId}:`, error)
+      return []
+    }
+  }
+
+  const updateTeamPlayersForMatch = async (matchId: number) => {
+    const selectedMatch = matches.find(m => m.id === matchId)
+    if (!selectedMatch) {
+      setTeamAPlayers([])
+      setTeamBPlayers([])
+      return
+    }
+
+    try {
+      const [teamAPlayersData, teamBPlayersData] = await Promise.all([
+        fetchTeamPlayers(selectedMatch.club_a.id),
+        fetchTeamPlayers(selectedMatch.club_b.id)
+      ])
+      
+      setTeamAPlayers(teamAPlayersData)
+      setTeamBPlayers(teamBPlayersData)
+    } catch (error) {
+      console.error('Error fetching team players:', error)
+      setTeamAPlayers([])
+      setTeamBPlayers([])
+    }
+  }
+
+  const getWhitePlayerOptions = (): Player[] => {
+    if (tournamentType !== 'team' || !gameFormData.match_id || !gameFormData.board_number) {
+      return players
+    }
+
+    // Team A plays white on odd boards, Team B plays white on even boards
+    const isOddBoard = gameFormData.board_number % 2 === 1
+    return isOddBoard ? teamAPlayers : teamBPlayers
+  }
+
+  const getBlackPlayerOptions = (): Player[] => {
+    if (tournamentType !== 'team' || !gameFormData.match_id || !gameFormData.board_number) {
+      return players
+    }
+
+    // Team A plays black on even boards, Team B plays black on odd boards
+    const isOddBoard = gameFormData.board_number % 2 === 1
+    return isOddBoard ? teamBPlayers : teamAPlayers
+  }
+
+  const getSelectedMatchInfo = () => {
+    if (!gameFormData.match_id) return null
+    const selectedMatch = matches.find(m => m.id === gameFormData.match_id)
+    if (!selectedMatch) return null
+
+    const isOddBoard = (gameFormData.board_number || 1) % 2 === 1
+    return {
+      whiteTeam: isOddBoard ? selectedMatch.club_a.name : selectedMatch.club_b.name,
+      blackTeam: isOddBoard ? selectedMatch.club_b.name : selectedMatch.club_a.name,
+      isOddBoard
+    }
   }
 
   return (
@@ -567,7 +645,7 @@ export default function RoundsGamesManagement({
                         variant="outline"
                         size="sm"
                         onClick={addMatch}
-                        disabled={fetchingTeams || teams.length < 2}
+                        disabled={fetchingTeams}
                       >
                         <Plus className="h-4 w-4 mr-1" />
                         Agregar Enfrentamiento
@@ -579,11 +657,10 @@ export default function RoundsGamesManagement({
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                         Cargando equipos...
                       </div>
-                    ) : teams.length < 2 ? (
+                    ) : teams.length === 0 ? (
                       <div className="p-4 bg-yellow-50 dark:bg-yellow-950/50 border border-yellow-200 dark:border-yellow-800 rounded-md">
                         <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                          <strong>Importante:</strong> En torneos por equipos, crear una ronda también generará automáticamente 
-                          los enfrentamientos entre todos los equipos registrados para esa ronda.
+                          <strong>No hay equipos registrados:</strong> Para crear enfrentamientos, primero deben registrarse equipos en el torneo.
                         </p>
                       </div>
                     ) : (
@@ -754,11 +831,11 @@ export default function RoundsGamesManagement({
                   Nueva Partida
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Agregar Nueva Partida</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="space-y-4 pr-2">
                   {tournamentType === 'team' && (
                     <div className="p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg">
                       <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-2">
@@ -774,9 +851,16 @@ export default function RoundsGamesManagement({
                   {tournamentType === 'team' && (
                     <div>
                       <Label htmlFor="match">Enfrentamiento *</Label>
-                      <Select value={gameFormData.match_id?.toString() || ''} onValueChange={(value) => 
-                        setGameFormData(prev => ({ ...prev, match_id: parseInt(value) }))
-                      }>
+                      <Select value={gameFormData.match_id?.toString() || ''} onValueChange={async (value) => {
+                        const matchId = parseInt(value)
+                        setGameFormData(prev => ({ 
+                          ...prev, 
+                          match_id: matchId,
+                          white_player_id: 0,
+                          black_player_id: 0
+                        }))
+                        await updateTeamPlayersForMatch(matchId)
+                      }}>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar enfrentamiento" />
                         </SelectTrigger>
@@ -791,7 +875,7 @@ export default function RoundsGamesManagement({
                       {matches.length === 0 && (
                         <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-950/50 border border-yellow-200 dark:border-yellow-800 rounded-md">
                           <div className="flex items-start gap-2">
-                            <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                            <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
                             <div>
                               <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
                                 No hay enfrentamientos configurados
@@ -804,10 +888,25 @@ export default function RoundsGamesManagement({
                           </div>
                         </div>
                       )}
+                      {gameFormData.match_id && (
+                        <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-md">
+                          <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-1">
+                            Asignación de Colores por Mesa
+                          </p>
+                          {(() => {
+                            const matchInfo = getSelectedMatchInfo()
+                            return matchInfo ? (
+                              <p className="text-sm text-blue-700 dark:text-blue-300">
+                                Mesa {gameFormData.board_number || 1}: <strong>{matchInfo.whiteTeam}</strong> juega con blancas, <strong>{matchInfo.blackTeam}</strong> juega con negras
+                              </p>
+                            ) : null
+                          })()}
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-4">
                     <div>
                       <Label htmlFor="white_player">Jugador Blancas *</Label>
                       <Select value={gameFormData.white_player_id.toString()} onValueChange={(value) => 
@@ -817,7 +916,7 @@ export default function RoundsGamesManagement({
                           <SelectValue placeholder="Seleccionar jugador" />
                         </SelectTrigger>
                         <SelectContent>
-                          {players.map((player) => (
+                          {getWhitePlayerOptions().map((player) => (
                             <SelectItem key={player.id} value={player.id.toString()}>
                               {player.full_name} {player.rating && `(${player.rating})`}
                               {player.club && ` - ${player.club.name}`}
@@ -836,7 +935,7 @@ export default function RoundsGamesManagement({
                           <SelectValue placeholder="Seleccionar jugador" />
                         </SelectTrigger>
                         <SelectContent>
-                          {players.map((player) => (
+                          {getBlackPlayerOptions().map((player) => (
                             <SelectItem key={player.id} value={player.id.toString()}>
                               {player.full_name} {player.rating && `(${player.rating})`}
                               {player.club && ` - ${player.club.name}`}
@@ -854,10 +953,18 @@ export default function RoundsGamesManagement({
                         type="number"
                         min="1"
                         value={gameFormData.board_number || ''}
-                        onChange={(e) => setGameFormData(prev => ({ 
-                          ...prev, 
-                          board_number: parseInt(e.target.value) || 1 
-                        }))}
+                        onChange={(e) => {
+                          const boardNumber = parseInt(e.target.value) || 1
+                          setGameFormData(prev => ({ 
+                            ...prev, 
+                            board_number: boardNumber,
+                            // Reset player selections when board changes (affects color assignment)
+                            ...(tournamentType === 'team' && prev.match_id && {
+                              white_player_id: 0,
+                              black_player_id: 0
+                            })
+                          }))
+                        }}
                       />
                     </div>
 
@@ -905,21 +1012,21 @@ export default function RoundsGamesManagement({
                       placeholder="Notación de la partida..."
                       value={gameFormData.pgn || ''}
                       onChange={(e) => setGameFormData(prev => ({ ...prev, pgn: e.target.value }))}
-                      rows={4}
+                      rows={3}
                     />
                   </div>
-                </div>
 
-                <div className="flex justify-end gap-2 mt-4">
-                  <Button variant="outline" onClick={() => setIsAddGameDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button 
-                    onClick={handleAddGame} 
-                    disabled={loading || (tournamentType === 'team' && matches.length === 0)}
-                  >
-                    {loading ? 'Agregando...' : 'Agregar Partida'}
-                  </Button>
+                  <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-white dark:bg-gray-950 border-t mt-6 -mx-6 px-6 py-4">
+                    <Button variant="outline" onClick={() => setIsAddGameDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button 
+                      onClick={handleAddGame} 
+                      disabled={loading || (tournamentType === 'team' && matches.length === 0)}
+                    >
+                      {loading ? 'Agregando...' : 'Agregar Partida'}
+                    </Button>
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>
