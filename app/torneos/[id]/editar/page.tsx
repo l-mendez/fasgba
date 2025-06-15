@@ -296,15 +296,13 @@ export default async function EditarTorneoPage({ params }: PageProps) {
   const EditarTorneoForm = (await import("./editar-torneo-form")).EditarTorneoForm
 
   // Dynamic import management components
-  let GameManagement, RoundManagement, TeamManagement
+  let RoundsGamesManagement, TeamManagement
   if (tournament && isAuthorized) {
-    const [gameManagementModule, roundManagementModule, teamManagementModule] = await Promise.all([
-      import("../components/game-management"),
-      import("../components/round-management"),
+    const [roundsGamesManagementModule, teamManagementModule] = await Promise.all([
+      import("../components/rounds-games-management"),
       import("../components/team-management")
     ])
-    GameManagement = gameManagementModule.default
-    RoundManagement = roundManagementModule.default
+    RoundsGamesManagement = roundsGamesManagementModule.default
     TeamManagement = teamManagementModule.default
   }
 
@@ -361,13 +359,12 @@ export default async function EditarTorneoPage({ params }: PageProps) {
       {tournament && isAuthorized && (
         <Suspense fallback={<LoadingSpinner />}>
           <Tabs defaultValue="info" className="w-full">
-            <TabsList className={`grid w-full ${tournament.tournament_type === 'team' ? 'grid-cols-4' : 'grid-cols-3'}`}>
+            <TabsList className={`grid w-full ${tournament.tournament_type === 'team' ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <TabsTrigger value="info">Información</TabsTrigger>
               {tournament.tournament_type === 'team' && (
                 <TabsTrigger value="teams">Equipos</TabsTrigger>
               )}
-              <TabsTrigger value="games">Partidas</TabsTrigger>
-              <TabsTrigger value="rounds">Rondas</TabsTrigger>
+              <TabsTrigger value="rounds-games">Rondas y Partidas</TabsTrigger>
             </TabsList>
             
             <TabsContent value="info" className="mt-6">
@@ -387,22 +384,13 @@ export default async function EditarTorneoPage({ params }: PageProps) {
               </TabsContent>
             )}
             
-            {GameManagement && (
-              <TabsContent value="games" className="mt-6">
-                <GameManagement
+            {RoundsGamesManagement && (
+              <TabsContent value="rounds-games" className="mt-6">
+                <RoundsGamesManagement
                   tournamentId={id}
                   tournamentType={tournament.tournament_type as 'individual' | 'team' || 'individual'}
                   games={initialGames}
                   rounds={rounds}
-                />
-              </TabsContent>
-            )}
-
-            {RoundManagement && (
-              <TabsContent value="rounds" className="mt-6">
-                <RoundManagement
-                  tournamentId={id}
-                  tournamentType={tournament.tournament_type as 'individual' | 'team' || 'individual'}
                 />
               </TabsContent>
             )}
