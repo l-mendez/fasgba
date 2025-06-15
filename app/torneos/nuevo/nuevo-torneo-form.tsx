@@ -38,6 +38,11 @@ interface FormData {
   prizes: string
   image: string
   dates: string[]
+  tournament_type: 'individual' | 'team'
+  players_per_team: string
+  max_teams: string
+  registration_deadline: string
+  team_match_points: Record<string, number>
 }
 
 interface NuevoTorneoFormProps {
@@ -117,6 +122,11 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
     prizes: "",
     image: "",
     dates: [],
+    tournament_type: 'individual',
+    players_per_team: "",
+    max_teams: "",
+    registration_deadline: "",
+    team_match_points: {},
   })
   
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
@@ -135,6 +145,27 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
     // Validate rounds if provided
     if (formData.rounds && (isNaN(Number(formData.rounds)) || Number(formData.rounds) <= 0)) {
       errors.rounds = "El número de rondas debe ser un número positivo"
+    }
+
+    // Validate team tournament specific fields
+    if (formData.tournament_type === 'team') {
+      if (formData.players_per_team && (isNaN(Number(formData.players_per_team)) || Number(formData.players_per_team) <= 0)) {
+        errors.players_per_team = "El número de jugadores por equipo debe ser un número positivo"
+      }
+      
+      if (formData.max_teams && (isNaN(Number(formData.max_teams)) || Number(formData.max_teams) < 2)) {
+        errors.max_teams = "El número máximo de equipos debe ser al menos 2"
+      }
+    }
+
+    // Validate registration deadline
+    if (formData.registration_deadline && formData.dates.length > 0) {
+      const registrationDate = new Date(formData.registration_deadline)
+      const earliestTournamentDate = new Date(Math.min(...formData.dates.map(date => new Date(date).getTime())))
+      
+      if (registrationDate >= earliestTournamentDate) {
+        errors.registration_deadline = "La fecha límite de inscripción debe ser anterior al inicio del torneo"
+      }
     }
 
     // For club admins, a club must be selected
@@ -172,7 +203,11 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
         prizes: formData.prizes.trim() || undefined,
         image: formData.image.trim() || undefined,
         dates: formData.dates,
-        // Only add club if user is not site admin or if site admin selected a club
+        tournament_type: formData.tournament_type,
+        players_per_team: formData.players_per_team ? Number(formData.players_per_team) : undefined,
+        max_teams: formData.max_teams ? Number(formData.max_teams) : undefined,
+        registration_deadline: formData.registration_deadline || undefined,
+        team_match_points: Object.keys(formData.team_match_points).length > 0 ? formData.team_match_points : undefined,
         ...(selectedClubId && { created_by_club: selectedClubId })
       }
 
@@ -183,14 +218,19 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
 
       console.log('Sending tournament data:', cleanData)
 
-      await apiCall('/api/tournaments', {
+      const result = await apiCall('/api/tournaments', {
         method: 'POST',
         body: JSON.stringify(cleanData)
       })
 
-      // Redirect based on user role
-      const redirectPath = isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"
-      router.push(redirectPath)
+      // Redirect to the edit page of the newly created tournament
+      if (result && result.id) {
+        router.push(`/torneos/${result.id}/editar`)
+      } else {
+        // Fallback to admin pages if no ID returned
+        const redirectPath = isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"
+        router.push(redirectPath)
+      }
     } catch (err) {
       console.error('Error creating tournament:', err)
       setError(err instanceof Error ? err.message : "Error al crear el torneo")
@@ -205,6 +245,27 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
     // Clear validation error when user starts typing
     if (validationErrors[name]) {
       setValidationErrors((prev) => ({ ...prev, [name]: "" }))
+    }
+  }
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({ 
+      ...prev, 
+      [name]: name === 'tournament_type' ? value as 'individual' | 'team' : value 
+    }))
+    // Clear validation error when user changes selection
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => ({ ...prev, [name]: "" }))
+    }
+    
+    // Reset team-specific fields when switching to individual
+    if (name === 'tournament_type' && value === 'individual') {
+      setFormData((prev) => ({
+        ...prev,
+        players_per_team: "",
+        max_teams: "",
+        team_match_points: {}
+      }))
     }
   }
 
@@ -400,6 +461,73 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-terracotta">Detalles del Torneo</h3>
             
+            {/* Tournament Type Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="tournament_type">Tipo de Torneo *</Label>
+              <Select 
+                value={formData.tournament_type} 
+                onValueChange={(value) => handleSelectChange('tournament_type', value as 'individual' | 'team')}
+              >
+                <SelectTrigger className={validationErrors.tournament_type ? "border-red-500" : ""}>
+                  <SelectValue placeholder="Seleccionar tipo de torneo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="individual">Individual</SelectItem>
+                  <SelectItem value="team">Por Equipos</SelectItem>
+                </SelectContent>
+              </Select>
+              {validationErrors.tournament_type && (
+                <p className="text-sm text-red-500">{validationErrors.tournament_type}</p>
+              )}
+              <p className="text-sm text-muted-foreground">
+                {formData.tournament_type === 'individual' 
+                  ? 'Torneo individual donde cada jugador compite por separado'
+                  : 'Torneo por equipos donde los clubes compiten entre sí'
+                }
+              </p>
+            </div>
+
+            {/* Team-specific fields */}
+            {formData.tournament_type === 'team' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div className="space-y-2">
+                  <Label htmlFor="players_per_team">Jugadores por Equipo</Label>
+                  <Input
+                    id="players_per_team"
+                    name="players_per_team"
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={formData.players_per_team}
+                    onChange={handleChange}
+                    placeholder="Ej: 4"
+                    className={validationErrors.players_per_team ? "border-red-500" : ""}
+                  />
+                  {validationErrors.players_per_team && (
+                    <p className="text-sm text-red-500">{validationErrors.players_per_team}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="max_teams">Máximo de Equipos</Label>
+                  <Input
+                    id="max_teams"
+                    name="max_teams"
+                    type="number"
+                    min="2"
+                    max="100"
+                    value={formData.max_teams}
+                    onChange={handleChange}
+                    placeholder="Ej: 16"
+                    className={validationErrors.max_teams ? "border-red-500" : ""}
+                  />
+                  {validationErrors.max_teams && (
+                    <p className="text-sm text-red-500">{validationErrors.max_teams}</p>
+                  )}
+                </div>
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="pace">Ritmo de Juego</Label>
@@ -461,57 +589,78 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
             </div>
           </div>
 
-          {/* Tournament Dates */}
+          {/* Registration and Dates */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-terracotta">Fechas del Torneo</h3>
+            <h3 className="text-lg font-semibold text-terracotta">Inscripción y Fechas</h3>
             
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Input
-                  type="date"
-                  value={newDate}
-                  onChange={(e) => setNewDate(e.target.value)}
-                  className={validationErrors.dates ? "border-red-500" : ""}
-                />
-              </div>
-              <Button
-                type="button"
-                onClick={addDate}
-                disabled={!newDate}
-                className="bg-terracotta hover:bg-terracotta/90"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+            <div className="space-y-2">
+              <Label htmlFor="registration_deadline">Fecha Límite de Inscripción</Label>
+              <Input
+                id="registration_deadline"
+                name="registration_deadline"
+                type="date"
+                value={formData.registration_deadline}
+                onChange={handleChange}
+                className={validationErrors.registration_deadline ? "border-red-500" : ""}
+              />
+              {validationErrors.registration_deadline && (
+                <p className="text-sm text-red-500">{validationErrors.registration_deadline}</p>
+              )}
+              <p className="text-sm text-muted-foreground">
+                Fecha límite para que los participantes se inscriban al torneo
+              </p>
             </div>
-
-            {validationErrors.dates && (
-              <p className="text-sm text-red-500">{validationErrors.dates}</p>
-            )}
-
-            {formData.dates.length > 0 && (
-              <div className="space-y-2">
-                <Label>Fechas agregadas:</Label>
-                <div className="space-y-2">
-                  {formData.dates.map((date) => (
-                    <div key={date} className="flex items-center justify-between bg-muted p-3 rounded-md">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-terracotta" />
-                        <span>{formatDisplayDate(date)}</span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeDate(date)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+            
+            <div className="space-y-2">
+              <Label>Fechas del Torneo *</Label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    type="date"
+                    value={newDate}
+                    onChange={(e) => setNewDate(e.target.value)}
+                    className={validationErrors.dates ? "border-red-500" : ""}
+                  />
                 </div>
+                <Button
+                  type="button"
+                  onClick={addDate}
+                  disabled={!newDate}
+                  className="bg-terracotta hover:bg-terracotta/90"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
-            )}
+
+              {validationErrors.dates && (
+                <p className="text-sm text-red-500">{validationErrors.dates}</p>
+              )}
+
+              {formData.dates.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Fechas agregadas:</Label>
+                  <div className="space-y-2">
+                    {formData.dates.map((date) => (
+                      <div key={date} className="flex items-center justify-between bg-muted p-3 rounded-md">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-terracotta" />
+                          <span>{formatDisplayDate(date)}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeDate(date)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Submit Button */}

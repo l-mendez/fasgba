@@ -7,6 +7,7 @@ import {
   transformTournamentToDisplay,
   type TournamentDisplay 
 } from "@/lib/tournamentUtils"
+import { getGameById, type GameDisplay } from "@/lib/gameUtils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,82 +15,10 @@ import { Calendar, MapPin, Trophy, Clock, ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { Metadata } from "next"
 import ChessGameDisplay from "./components/chess-game-display"
+import { cn } from "@/lib/utils"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
-
-// Mock game data (to be replaced with real data later)
-interface GameDetails {
-  id: number
-  round: number
-  white: string
-  black: string
-  result: '1-0' | '0-1' | '1/2-1/2' | '*'
-  whiteRating?: number
-  blackRating?: number
-  board?: number
-  fen?: string
-  pgn?: string
-  date?: string
-  time?: string
-}
-
-// Mock function to get game by ID (replace with real data later)
-function getGameById(gameId: number): GameDetails | null {
-  // Mock game data
-  const mockGames: GameDetails[] = [
-    {
-      id: 1,
-      round: 1,
-      white: "García, Juan",
-      black: "Rodríguez, María",
-      result: "1-0",
-      whiteRating: 2134,
-      blackRating: 2089,
-      board: 1,
-      fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-      pgn: `[Event "Torneo FASGBA"]
-[Site "Buenos Aires"]
-[Date "2024.01.15"]
-[Round "1"]
-[White "García, Juan"]
-[Black "Rodríguez, María"]
-[Result "1-0"]
-[WhiteElo "2134"]
-[BlackElo "2089"]
-
-1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7 1-0`,
-      date: "2024-01-15",
-      time: "14:30"
-    },
-    {
-      id: 2,
-      round: 1,
-      white: "López, Carlos",
-      black: "González, Pedro",
-      result: "*",
-      whiteRating: 1987,
-      blackRating: 2156,
-      board: 2,
-      fen: "r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
-      pgn: `[Event "Torneo FASGBA"]
-[Site "Buenos Aires"]
-[Date "2024.01.15"]
-[Round "1"]
-[White "López, Carlos"]
-[Black "González, Pedro"]
-[Result "*"]
-[WhiteElo "1987"]
-[BlackElo "2156"]
-
-1. e4 e5 2. Nf3 Nc6 3. Bb5 Nf6 *`,
-      date: "2024-01-15",
-      time: "14:30"
-    }
-  ]
-  
-  return mockGames.find(game => game.id === gameId) || null
-}
 
 // Generate metadata
 export async function generateMetadata({ params }: { 
@@ -103,9 +32,17 @@ export async function generateMetadata({ params }: {
     const supabase = await createClient()
     const tournamentsWithDates = await getAllTournamentsWithDates(supabase)
     const tournament = tournamentsWithDates.find(t => t.id === tournamentId)
-    const game = getGameById(gameId)
     
-    if (!tournament || !game) {
+    if (!tournament) {
+      return {
+        title: 'Partida no encontrada - FASGBA',
+      }
+    }
+
+    const tournamentDisplay = transformTournamentToDisplay(tournament)
+    const game = await getGameById(gameId, tournamentDisplay.tournament_type || 'individual')
+    
+    if (!game) {
       return {
         title: 'Partida no encontrada - FASGBA',
       }
@@ -134,7 +71,7 @@ export default async function GamePage({ params }: {
   }
 
   let tournament: TournamentDisplay | null = null
-  let game: GameDetails | null = null
+  let game: GameDisplay | null = null
   let error: string | null = null
 
   try {
@@ -147,7 +84,7 @@ export default async function GamePage({ params }: {
     }
 
     tournament = transformTournamentToDisplay(tournamentWithDates)
-    game = getGameById(gameId)
+    game = await getGameById(gameId, tournament.tournament_type || 'individual')
     
     if (!game) {
       notFound()
@@ -180,10 +117,24 @@ export default async function GamePage({ params }: {
               
               <div className="space-y-2">
                 <h1 className="text-xl md:text-3xl font-bold tracking-tight text-terracotta">
-                  {game.white} vs {game.black}
+                  {game.whiteTeam && game.blackTeam ? (
+                    <>
+                      {game.whiteTeam} vs {game.blackTeam}
+                      <div className="text-lg md:text-xl font-medium text-muted-foreground mt-1">
+                        {game.white} vs {game.black}
+                      </div>
+                    </>
+                  ) : (
+                    `${game.white} vs ${game.black}`
+                  )}
                 </h1>
                 <p className="text-muted-foreground">
                   {tournament.title} - Ronda {game.round}
+                  {game.whiteTeam && game.blackTeam && (
+                    <span className="ml-2 text-xs bg-terracotta/10 text-terracotta px-2 py-1 rounded">
+                      Torneo por Equipos
+                    </span>
+                  )}
                 </p>
               </div>
               
@@ -200,17 +151,20 @@ export default async function GamePage({ params }: {
                     <span>{game.time}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <Trophy className="h-4 w-4 text-amber" />
-                  <span>Mesa {game.board}</span>
-                </div>
+                {game.board && (
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-amber" />
+                    <span>Mesa {game.board}</span>
+                  </div>
+                )}
                 <Badge 
                   variant={game.result === '*' ? 'default' : 'outline'}
-                  className={
-                    game.result === '*' 
-                      ? 'bg-green-100 text-green-800 border-green-200' 
-                      : 'border-amber'
-                  }
+                  className={cn(
+                    "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
+                    game.result 
+                      ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700'
+                      : 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700'
+                  )}
                 >
                   {game.result === '*' ? 'En juego' : `Resultado: ${game.result}`}
                 </Badge>

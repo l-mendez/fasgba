@@ -4,11 +4,13 @@ import { notFound, redirect } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
+import { getTournamentGames, getTournamentRounds } from "@/lib/gameUtils"
 
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 // Force dynamic rendering since we use authentication
 export const dynamic = 'force-dynamic'
@@ -52,6 +54,16 @@ interface Tournament {
   all_dates?: string[]
   formatted_all_dates?: string[]
   created_by_club_id?: number
+  tournament_type?: 'individual' | 'team' | null
+  players_per_team?: number | null
+  max_teams?: number | null
+  registration_deadline?: string | null
+  team_match_points?: Record<string, number> | null
+}
+
+interface Round {
+  id: number
+  round_number: number
 }
 
 // Check authentication early
@@ -72,6 +84,7 @@ async function getTournamentData(tournamentId: string): Promise<{
   error: string | null
   isSiteAdmin: boolean
   isClubAdmin: boolean
+  rounds: Round[]
 }> {
   try {
     // Get authenticated user
@@ -84,7 +97,8 @@ async function getTournamentData(tournamentId: string): Promise<{
         isAuthorized: false,
         error: 'Usuario no autenticado',
         isSiteAdmin: false,
-        isClubAdmin: false
+        isClubAdmin: false,
+        rounds: []
       }
     }
 
@@ -112,36 +126,52 @@ async function getTournamentData(tournamentId: string): Promise<{
         isAuthorized: false,
         error: 'Error verificando permisos de club',
         isSiteAdmin,
-        isClubAdmin: false
+        isClubAdmin: false,
+        rounds: []
       }
     }
 
     const userClubs = (adminData || []).map(item => item.club_id)
     const isClubAdmin = userClubs.length > 0
 
-    // Fetch tournament data
-    const { data: tournamentData, error: tournamentError } = await adminClient
-      .from('tournaments')
-      .select(`
-        id,
-        title,
-        description,
-        time,
-        place,
-        location,
-        rounds,
-        pace,
-        inscription_details,
-        cost,
-        prizes,
-        image,
-        created_by_club_id,
-        tournamentdates (
-          event_date
-        )
-      `)
-      .eq('id', tournamentId)
-      .single()
+    // Fetch tournament data and rounds in parallel
+    const [tournamentResult, roundsResult] = await Promise.all([
+      adminClient
+        .from('tournaments')
+        .select(`
+          id,
+          title,
+          description,
+          time,
+          place,
+          location,
+          rounds,
+          pace,
+          inscription_details,
+          cost,
+          prizes,
+          image,
+          created_by_club_id,
+          tournament_type,
+          players_per_team,
+          max_teams,
+          registration_deadline,
+          team_match_points,
+          tournamentdates (
+            event_date
+          )
+        `)
+        .eq('id', tournamentId)
+        .single(),
+      adminClient
+        .from('rounds')
+        .select('id, round_number')
+        .eq('tournament_id', tournamentId)
+        .order('round_number', { ascending: true })
+    ])
+
+    const { data: tournamentData, error: tournamentError } = tournamentResult
+    const { data: roundsData, error: roundsError } = roundsResult
 
     if (tournamentError || !tournamentData) {
       console.error('Error fetching tournament:', tournamentError)
@@ -150,7 +180,8 @@ async function getTournamentData(tournamentId: string): Promise<{
         isAuthorized: false,
         error: 'Torneo no encontrado',
         isSiteAdmin,
-        isClubAdmin
+        isClubAdmin,
+        rounds: []
       }
     }
 
@@ -169,8 +200,15 @@ async function getTournamentData(tournamentId: string): Promise<{
       prizes: tournamentData.prizes,
       image: tournamentData.image,
       created_by_club_id: tournamentData.created_by_club_id,
+      tournament_type: tournamentData.tournament_type,
+      players_per_team: tournamentData.players_per_team,
+      max_teams: tournamentData.max_teams,
+      registration_deadline: tournamentData.registration_deadline,
+      team_match_points: tournamentData.team_match_points,
       all_dates: (tournamentData.tournamentdates || []).map((date: any) => date.event_date)
     }
+
+    const rounds: Round[] = roundsData || []
 
     // Check authorization:
     // 1. Site admins can edit any tournament
@@ -196,7 +234,8 @@ async function getTournamentData(tournamentId: string): Promise<{
       isAuthorized,
       error: errorMessage,
       isSiteAdmin,
-      isClubAdmin
+      isClubAdmin,
+      rounds
     }
 
   } catch (error) {
@@ -206,7 +245,8 @@ async function getTournamentData(tournamentId: string): Promise<{
       isAuthorized: false,
       error: error instanceof Error ? error.message : 'Error desconocido',
       isSiteAdmin: false,
-      isClubAdmin: false
+      isClubAdmin: false,
+      rounds: []
     }
   }
 }
@@ -229,7 +269,23 @@ export default async function EditarTorneoPage({ params }: PageProps) {
   }
   
   // Get tournament data and authorization
-  const { tournament, isAuthorized, error, isSiteAdmin, isClubAdmin } = await getTournamentData(id)
+  const { tournament, isAuthorized, error, isSiteAdmin, isClubAdmin, rounds } = await getTournamentData(id)
+
+  // Prefetch existing games if we have a tournament and user is authorized
+  let initialGames: any[] = []
+  if (tournament && isAuthorized) {
+    try {
+      const gamesByRound = await getTournamentGames(
+        parseInt(id, 10),
+        (tournament.tournament_type as 'individual' | 'team') || 'individual'
+      )
+      // Flatten the games into a single array for the GameManagement component
+      initialGames = Object.values(gamesByRound).flat()
+    } catch (gamesError) {
+      console.error('Error prefetching tournament games:', gamesError)
+      initialGames = []
+    }
+  }
 
   // If user has no permissions at all, return not found
   if (!isSiteAdmin && !isClubAdmin) {
@@ -238,6 +294,19 @@ export default async function EditarTorneoPage({ params }: PageProps) {
 
   // Dynamic import the form component only when we need it
   const EditarTorneoForm = (await import("./editar-torneo-form")).EditarTorneoForm
+
+  // Dynamic import management components
+  let GameManagement, RoundManagement, TeamManagement
+  if (tournament && isAuthorized) {
+    const [gameManagementModule, roundManagementModule, teamManagementModule] = await Promise.all([
+      import("../components/game-management"),
+      import("../components/round-management"),
+      import("../components/team-management")
+    ])
+    GameManagement = gameManagementModule.default
+    RoundManagement = roundManagementModule.default
+    TeamManagement = teamManagementModule.default
+  }
 
   return (
     <div className="flex flex-col gap-8 p-8">
@@ -291,11 +360,53 @@ export default async function EditarTorneoPage({ params }: PageProps) {
 
       {tournament && isAuthorized && (
         <Suspense fallback={<LoadingSpinner />}>
-          <EditarTorneoForm 
-            tournament={tournament}
-            tournamentId={id}
-            isSiteAdmin={isSiteAdmin}
-          />
+          <Tabs defaultValue="info" className="w-full">
+            <TabsList className={`grid w-full ${tournament.tournament_type === 'team' ? 'grid-cols-4' : 'grid-cols-3'}`}>
+              <TabsTrigger value="info">Información</TabsTrigger>
+              {tournament.tournament_type === 'team' && (
+                <TabsTrigger value="teams">Equipos</TabsTrigger>
+              )}
+              <TabsTrigger value="games">Partidas</TabsTrigger>
+              <TabsTrigger value="rounds">Rondas</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="info" className="mt-6">
+              <EditarTorneoForm 
+                tournament={tournament}
+                tournamentId={id}
+                isSiteAdmin={isSiteAdmin}
+              />
+            </TabsContent>
+
+            {TeamManagement && tournament.tournament_type === 'team' && (
+              <TabsContent value="teams" className="mt-6">
+                <TeamManagement
+                  tournamentId={id}
+                  tournamentType={tournament.tournament_type as 'individual' | 'team' || 'individual'}
+                />
+              </TabsContent>
+            )}
+            
+            {GameManagement && (
+              <TabsContent value="games" className="mt-6">
+                <GameManagement
+                  tournamentId={id}
+                  tournamentType={tournament.tournament_type as 'individual' | 'team' || 'individual'}
+                  games={initialGames}
+                  rounds={rounds}
+                />
+              </TabsContent>
+            )}
+
+            {RoundManagement && (
+              <TabsContent value="rounds" className="mt-6">
+                <RoundManagement
+                  tournamentId={id}
+                  tournamentType={tournament.tournament_type as 'individual' | 'team' || 'individual'}
+                />
+              </TabsContent>
+            )}
+          </Tabs>
         </Suspense>
       )}
     </div>

@@ -12,38 +12,50 @@ export const tournamentIdSchema = z.object({
   }),
 })
 
-// Schema for creating a tournament
+// Schema for creating tournaments
 export const createTournamentSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255, 'Title too long'),
-  description: z.string().max(1000, 'Description too long').optional(),
-  time: z.string().max(50, 'Time too long').optional(),
+  description: z.string().max(2000, 'Description too long').optional(),
+  time: z.string().max(100, 'Time too long').optional(),
   place: z.string().max(255, 'Place too long').optional(),
-  location: z.string().max(255, 'Location too long').optional(),
-  rounds: z.number().int().positive('Rounds must be positive').optional(),
+  location: z.string().max(500, 'Location too long').optional(),
+  rounds: z.number().int().min(1, 'Rounds must be at least 1').max(20, 'Too many rounds').optional(),
   pace: z.string().max(100, 'Pace too long').optional(),
-  inscription_details: z.string().max(1000, 'Inscription details too long').optional(),
+  inscription_details: z.string().max(2000, 'Inscription details too long').optional(),
   cost: z.string().max(255, 'Cost too long').optional(),
   prizes: z.string().max(1000, 'Prizes too long').optional(),
-  image: z.string().max(255, 'Image URL too long').optional(),
-  dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')).min(1, 'At least one date is required'),
-  created_by_club: z.number().int().positive('Club ID must be positive').optional()
+  image: z.string().url('Invalid image URL').optional(),
+  dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format. Use YYYY-MM-DD')).min(1, 'At least one date is required'),
+  created_by_club: z.number().int().positive('Invalid club ID').optional(),
+  // New fields
+  tournament_type: z.enum(['individual', 'team']).default('individual'),
+  players_per_team: z.number().int().min(1, 'Players per team must be at least 1').max(20, 'Too many players per team').optional(),
+  max_teams: z.number().int().min(2, 'Max teams must be at least 2').max(100, 'Too many teams').optional(),
+  registration_deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format. Use YYYY-MM-DD').optional(),
+  team_match_points: z.record(z.string(), z.number()).optional(),
 })
 
-// Schema for updating a tournament
+// Schema for updating tournaments (all fields optional except dates array validation)
 export const updateTournamentSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255, 'Title too long').optional(),
-  description: z.string().max(1000, 'Description too long').optional(),
-  time: z.string().max(50, 'Time too long').optional(),
+  description: z.string().max(2000, 'Description too long').optional(),
+  time: z.string().max(100, 'Time too long').optional(),
   place: z.string().max(255, 'Place too long').optional(),
-  location: z.string().max(255, 'Location too long').optional(),
-  rounds: z.number().int().positive('Rounds must be positive').optional(),
+  location: z.string().max(500, 'Location too long').optional(),
+  rounds: z.number().int().min(1, 'Rounds must be at least 1').max(20, 'Too many rounds').optional(),
   pace: z.string().max(100, 'Pace too long').optional(),
-  inscription_details: z.string().max(1000, 'Inscription details too long').optional(),
+  inscription_details: z.string().max(2000, 'Inscription details too long').optional(),
   cost: z.string().max(255, 'Cost too long').optional(),
   prizes: z.string().max(1000, 'Prizes too long').optional(),
-  image: z.string().max(255, 'Image URL too long').optional(),
-  dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')).min(1, 'At least one date is required').optional(),
-  created_by_club: z.number().int().positive('Club ID must be positive').optional()
+  image: z.string().url('Invalid image URL').optional(),
+  dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format. Use YYYY-MM-DD')).min(1, 'At least one date is required').optional(),
+  created_by_club: z.number().int().positive('Invalid club ID').optional(),
+  // New fields
+  tournament_type: z.enum(['individual', 'team']).optional(),
+  players_per_team: z.number().int().min(1, 'Players per team must be at least 1').max(20, 'Too many players per team').optional(),
+  max_teams: z.number().int().min(2, 'Max teams must be at least 2').max(100, 'Too many teams').optional(),
+  registration_deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format. Use YYYY-MM-DD').optional(),
+  team_match_points: z.record(z.string(), z.number()).optional(),
 })
 
 // Schema for tournament query parameters
@@ -73,6 +85,9 @@ export const tournamentQuerySchema = z.object({
   search: z.string().max(255, 'Search term too long').optional(),
   
   format: z.enum(API_CONSTANTS.TOURNAMENT_FORMATS).optional().default('raw'),
+  
+  // New filter for tournament type
+  tournament_type: z.enum(['individual', 'team', 'all']).optional().default('all'),
 })
 
 // Schema for single tournament query parameters
@@ -81,90 +96,54 @@ export const singleTournamentQuerySchema = z.object({
 })
 
 // Validation functions
-export function validateTournamentId(id: string) {
-  try {
-    return tournamentIdSchema.parse({ id }).id
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const validationError = new Error('Invalid tournament ID parameter')
-      validationError.name = 'ValidationError'
-      throw validationError
-    }
-    throw error
+export function validateTournamentId(id: string): number {
+  const result = tournamentIdSchema.safeParse({ id })
+  if (!result.success) {
+    throw new Error(result.error.errors[0]?.message || 'Invalid tournament ID')
   }
+  return result.data.id
+}
+
+export function validateCreateTournament(data: unknown) {
+  const result = createTournamentSchema.safeParse(data)
+  if (!result.success) {
+    const errorMessage = result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
+    throw new Error(`Validation error: ${errorMessage}`)
+  }
+  return result.data
+}
+
+export function validateUpdateTournament(data: unknown) {
+  const result = updateTournamentSchema.safeParse(data)
+  if (!result.success) {
+    const errorMessage = result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
+    throw new Error(`Validation error: ${errorMessage}`)
+  }
+  return result.data
 }
 
 export function validateTournamentQuery(searchParams: URLSearchParams) {
-  try {
-    const params = {
-      page: searchParams.get('page') || undefined,
-      limit: searchParams.get('limit') || undefined,
-      orderBy: searchParams.get('orderBy') || undefined,
-      order: searchParams.get('order') || undefined,
-      status: searchParams.get('status') || undefined,
-      search: searchParams.get('search') || undefined,
-      format: searchParams.get('format') || undefined,
-    }
-    
-    // Remove undefined values to let defaults apply
-    const cleanParams = Object.fromEntries(
-      Object.entries(params).filter(([_, value]) => value !== undefined)
-    )
-    
-    return tournamentQuerySchema.parse(cleanParams)
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const validationError = new Error(`Query validation failed: ${error.errors.map(e => e.message).join(', ')}`)
-      validationError.name = 'ValidationError'
-      throw validationError
-    }
-    throw error
+  const params = Object.fromEntries(searchParams.entries())
+  const result = tournamentQuerySchema.safeParse(params)
+  if (!result.success) {
+    const errorMessage = result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
+    throw new Error(`Query validation error: ${errorMessage}`)
   }
+  return result.data
 }
 
 export function validateSingleTournamentQuery(searchParams: URLSearchParams) {
-  try {
-    const params = {
-      format: searchParams.get('format') || undefined,
-    }
-    
-    const cleanParams = Object.fromEntries(
-      Object.entries(params).filter(([_, value]) => value !== undefined)
-    )
-    
-    return singleTournamentQuerySchema.parse(cleanParams)
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const validationError = new Error(`Query validation failed: ${error.errors.map(e => e.message).join(', ')}`)
-      validationError.name = 'ValidationError'
-      throw validationError
-    }
-    throw error
+  const params = Object.fromEntries(searchParams.entries())
+  const result = singleTournamentQuerySchema.safeParse(params)
+  if (!result.success) {
+    const errorMessage = result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
+    throw new Error(`Query validation error: ${errorMessage}`)
   }
+  return result.data
 }
 
-export function validateCreateTournament(data: any) {
-  try {
-    return createTournamentSchema.parse(data)
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const validationError = new Error(`Validation failed: ${error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}`)
-      validationError.name = 'ValidationError'
-      throw validationError
-    }
-    throw error
-  }
-}
-
-export function validateUpdateTournament(data: any) {
-  try {
-    return updateTournamentSchema.parse(data)
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      const validationError = new Error(`Validation failed: ${error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}`)
-      validationError.name = 'ValidationError'
-      throw validationError
-    }
-    throw error
-  }
-} 
+// Type exports
+export type CreateTournamentData = z.infer<typeof createTournamentSchema>
+export type UpdateTournamentData = z.infer<typeof updateTournamentSchema>
+export type TournamentQueryParams = z.infer<typeof tournamentQuerySchema>
+export type SingleTournamentQueryParams = z.infer<typeof singleTournamentQuerySchema> 

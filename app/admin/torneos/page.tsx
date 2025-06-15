@@ -79,7 +79,7 @@ async function fetchTournaments(): Promise<Tournament[]> {
         prizes,
         image,
         created_by_club_id,
-        clubs(id, name),
+        clubs!tournaments_created_by_club_id_fkey(id, name),
         tournamentdates(id, tournament_id, event_date)
       `)
       .order('id', { ascending: false })

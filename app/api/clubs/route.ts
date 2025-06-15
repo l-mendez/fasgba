@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getAllClubs, createClub } from '@/lib/clubUtils'
+import { createClub } from '@/lib/clubUtils'
 import { apiSuccess, handleError, unauthorizedError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
@@ -9,19 +9,20 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+// GET /api/clubs - Get all clubs
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    
-    const options = {
-      search: searchParams.get('search') || undefined,
-      hasContact: searchParams.get('hasContact') === 'true',
-      includeStats: searchParams.get('include') === 'stats'
+    const { data: clubs, error } = await supabase
+      .from('clubs')
+      .select('id, name')
+      .order('name', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching clubs:', error)
+      throw new Error('Failed to fetch clubs')
     }
-    
-    const clubs = await getAllClubs(options)
-    
-    return apiSuccess(clubs)
+
+    return apiSuccess({ clubs: clubs || [] })
   } catch (error) {
     return handleError(error)
   }

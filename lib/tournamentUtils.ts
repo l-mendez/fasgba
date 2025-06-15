@@ -13,6 +13,12 @@ export interface Tournament {
   prizes: string | null;
   image: string | null;
   created_by_club_id?: number | null;
+  // New fields
+  tournament_type?: string | null;
+  players_per_team?: number | null;
+  max_teams?: number | null;
+  registration_deadline?: string | null;
+  team_match_points?: any | null;
 }
 
 // Tournament dates from the separate table
@@ -24,7 +30,11 @@ export interface TournamentDate {
 
 // Tournament with its associated dates
 export interface TournamentWithDates extends Tournament {
-  tournament_dates: TournamentDate[];
+  tournament_dates: Array<{
+    id: number;
+    tournament_id: number;
+    event_date: string;
+  }>;
 }
 
 // Frontend-friendly tournament type with formatted dates
@@ -55,6 +65,8 @@ export interface TournamentSummary {
   image: string | null;
   is_upcoming: boolean;
   is_ongoing: boolean;
+  is_past: boolean;
+  tournament_type?: string | null;
 }
 
 /**
@@ -149,6 +161,8 @@ export function transformTournamentToSummary(tournamentWithDates: TournamentWith
     image: tournament.image,
     is_upcoming: isUpcoming,
     is_ongoing: isOngoing,
+    is_past: isPast,
+    tournament_type: tournament.tournament_type,
   };
 }
 
@@ -629,6 +643,8 @@ export async function getTournamentSummaries(
       image: t.image,
       is_upcoming: t.is_upcoming,
       is_ongoing: t.is_ongoing,
+      is_past: t.is_past,
+      tournament_type: t.tournament_type,
     }));
     
     return limit ? summaries.slice(0, limit) : summaries;
@@ -734,6 +750,12 @@ export async function createTournament(supabase: any, tournamentData: {
   image?: string;
   dates: string[];
   created_by_club?: number;
+  // New fields
+  tournament_type?: string;
+  players_per_team?: number;
+  max_teams?: number;
+  registration_deadline?: string;
+  team_match_points?: any;
 }): Promise<Tournament> {
   try {
     // Extract dates from tournament data
@@ -800,6 +822,12 @@ export async function updateTournament(supabase: any, tournamentId: number, tour
   image?: string;
   dates?: string[];
   created_by_club?: number;
+  // New fields
+  tournament_type?: string;
+  players_per_team?: number;
+  max_teams?: number;
+  registration_deadline?: string;
+  team_match_points?: any;
 }): Promise<boolean> {
   try {
     // Extract dates from tournament data

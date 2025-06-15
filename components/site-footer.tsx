@@ -29,7 +29,7 @@ export function SiteFooter() {
               </Link>
             </Button>
             <Button variant="ghost" size="icon" asChild className="text-amber hover:text-amber-dark hover:bg-amber/10">
-              <Link href="https://instagram.com" target="_blank" rel="noopener noreferrer">
+              <Link href="https://www.instagram.com/fasgba_ok" target="_blank" rel="noopener noreferrer">
                 <Instagram className="h-5 w-5" />
                 <span className="sr-only">Instagram</span>
               </Link>

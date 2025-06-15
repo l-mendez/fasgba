@@ -94,52 +94,80 @@ async function getUserData(): Promise<{
 
     const isSiteAdmin = !siteAdminError && !!siteAdminData
 
-    // Get user's admin clubs
-    const { data: adminData, error: adminError } = await adminClient
-      .from('club_admins')
-      .select(`
-        club_id,
-        clubs (
-          id,
-          name,
-          address,
-          telephone,
-          mail,
-          schedule
-        )
-      `)
-      .eq('auth_id', user.id)
+    let clubs: Club[] = []
+    let isClubAdmin = false
+    let selectedClub: Club | null = null
 
-    if (adminError) {
-      console.error('Error fetching user clubs:', adminError)
-      return {
-        isSiteAdmin,
-        isClubAdmin: false,
-        clubs: [],
-        selectedClub: null,
-        error: 'Error verificando permisos de club'
-      }
-    }
+    if (isSiteAdmin) {
+      // Site admins can see ALL clubs to create tournaments for any club
+      const { data: allClubsData, error: allClubsError } = await adminClient
+        .from('clubs')
+        .select('id, name, address, telephone, mail, schedule')
+        .order('name')
 
-    // Properly type and filter the clubs data
-    const dbClubs: DbClub[] = (adminData || [])
-      .filter(item => item.clubs)
-      .map(item => {
-        const club = item.clubs as any
+      if (allClubsError) {
+        console.error('Error fetching all clubs:', allClubsError)
         return {
-          id: club.id,
-          name: club.name,
-          address: club.address,
-          telephone: club.telephone,
-          mail: club.mail,
-          schedule: club.schedule
+          isSiteAdmin,
+          isClubAdmin: false,
+          clubs: [],
+          selectedClub: null,
+          error: 'Error cargando clubs'
         }
-      })
+      }
 
-    // Convert to expected Club format
-    const clubs: Club[] = dbClubs.map(mapDbClubToClub)
-    const isClubAdmin = clubs.length > 0
-    const selectedClub = clubs.length > 0 ? clubs[0] : null
+      // Convert to expected Club format
+      clubs = (allClubsData || []).map(mapDbClubToClub)
+      isClubAdmin = true // Site admins have club admin privileges
+      selectedClub = null // No default selection for site admins
+    } else {
+      // Get user's admin clubs (for club admins)
+      const { data: adminData, error: adminError } = await adminClient
+        .from('club_admins')
+        .select(`
+          club_id,
+          clubs (
+            id,
+            name,
+            address,
+            telephone,
+            mail,
+            schedule
+          )
+        `)
+        .eq('auth_id', user.id)
+
+      if (adminError) {
+        console.error('Error fetching user clubs:', adminError)
+        return {
+          isSiteAdmin,
+          isClubAdmin: false,
+          clubs: [],
+          selectedClub: null,
+          error: 'Error verificando permisos de club'
+        }
+      }
+
+      // Properly type and filter the clubs data
+      const dbClubs: DbClub[] = (adminData || [])
+        .filter(item => item.clubs)
+        .map(item => {
+          const club = item.clubs as any
+          return {
+            id: club.id,
+            name: club.name,
+            address: club.address,
+            telephone: club.telephone,
+            mail: club.mail,
+            schedule: club.schedule
+          }
+        })
+
+      // Convert to expected Club format
+      clubs = dbClubs.map(mapDbClubToClub)
+      isClubAdmin = clubs.length > 0
+      selectedClub = clubs.length > 0 ? clubs[0] : null
+    }
 
     return {
       isSiteAdmin,

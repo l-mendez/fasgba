@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { createClient } from "@/lib/supabase/client"
+import { apiCall } from "@/lib/utils/apiClient"
+import { Badge } from "@/components/ui/badge"
 
 interface Tournament {
   id: string
@@ -28,6 +30,11 @@ interface Tournament {
   all_dates?: string[]
   formatted_all_dates?: string[]
   created_by_club_id?: number
+  tournament_type?: 'individual' | 'team' | null
+  players_per_team?: number | null
+  max_teams?: number | null
+  registration_deadline?: string | null
+  team_match_points?: Record<string, number> | null
 }
 
 interface FormData {
@@ -43,6 +50,11 @@ interface FormData {
   prizes: string
   image: string
   dates: string[]
+  tournament_type: 'individual' | 'team'
+  players_per_team: string
+  max_teams: string
+  registration_deadline: string
+  team_match_points: Record<string, number>
 }
 
 interface EditarTorneoFormProps {
@@ -51,60 +63,12 @@ interface EditarTorneoFormProps {
   isSiteAdmin: boolean
 }
 
-// API helper function
-async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  if (!session) {
-    throw new Error('No hay sesión autenticada')
-  }
-
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
-  const url = `${baseUrl}${endpoint}`
-  
-  const config: RequestInit = {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-      ...options.headers
-    },
-    ...options
-  }
-
-  const response = await fetch(url, config)
-  
-  if (!response.ok) {
-    let errorMessage = `Error ${response.status}: ${response.statusText}`
-    
-    try {
-      const errorData = await response.text()
-      
-      try {
-        const jsonError = JSON.parse(errorData)
-        errorMessage = jsonError.error || jsonError.message || errorMessage
-      } catch {
-        errorMessage = errorData || errorMessage
-      }
-    } catch {
-      // Use default error message
-    }
-    
-    throw new Error(errorMessage)
-  }
-  
-  if (response.status === 204) {
-    return null
-  }
-  
-  return response.json()
-}
-
 export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: EditarTorneoFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [newDate, setNewDate] = useState("")
+  const [hasTypeChanged, setHasTypeChanged] = useState(false)
   
   // Initialize form data with tournament data
   const [formData, setFormData] = useState<FormData>(() => {
@@ -126,6 +90,11 @@ export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: Edit
       prizes: tournament.prizes || "",
       image: tournament.image || "",
       dates: formattedDates,
+      tournament_type: tournament.tournament_type || 'individual',
+      players_per_team: tournament.players_per_team ? String(tournament.players_per_team) : "",
+      max_teams: tournament.max_teams ? String(tournament.max_teams) : "",
+      registration_deadline: tournament.registration_deadline || "",
+      team_match_points: tournament.team_match_points || {},
     }
   })
   
@@ -142,8 +111,30 @@ export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: Edit
       errors.dates = "Debe agregar al menos una fecha"
     }
 
+    // Validate rounds if provided
     if (formData.rounds && (isNaN(Number(formData.rounds)) || Number(formData.rounds) <= 0)) {
       errors.rounds = "El número de rondas debe ser un número positivo"
+    }
+
+    // Validate team tournament specific fields
+    if (formData.tournament_type === 'team') {
+      if (formData.players_per_team && (isNaN(Number(formData.players_per_team)) || Number(formData.players_per_team) <= 0)) {
+        errors.players_per_team = "El número de jugadores por equipo debe ser un número positivo"
+      }
+      
+      if (formData.max_teams && (isNaN(Number(formData.max_teams)) || Number(formData.max_teams) < 2)) {
+        errors.max_teams = "El número máximo de equipos debe ser al menos 2"
+      }
+    }
+
+    // Validate registration deadline
+    if (formData.registration_deadline && formData.dates.length > 0) {
+      const registrationDate = new Date(formData.registration_deadline)
+      const earliestTournamentDate = new Date(Math.min(...formData.dates.map(date => new Date(date).getTime())))
+      
+      if (registrationDate >= earliestTournamentDate) {
+        errors.registration_deadline = "La fecha límite de inscripción debe ser anterior al inicio del torneo"
+      }
     }
 
     setValidationErrors(errors)
@@ -176,6 +167,11 @@ export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: Edit
         prizes: formData.prizes.trim() || undefined,
         image: formData.image.trim() || undefined,
         dates: formData.dates,
+        tournament_type: formData.tournament_type,
+        players_per_team: formData.players_per_team ? Number(formData.players_per_team) : undefined,
+        max_teams: formData.max_teams ? Number(formData.max_teams) : undefined,
+        registration_deadline: formData.registration_deadline || undefined,
+        team_match_points: formData.team_match_points || undefined,
       }
 
       // Remove undefined values
@@ -183,12 +179,13 @@ export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: Edit
         Object.entries(tournamentData).filter(([_, value]) => value !== undefined)
       )
 
-      console.log('Updating tournament data:', cleanData)
-
       await apiCall(`/api/tournaments/${tournamentId}`, {
         method: 'PATCH',
         body: JSON.stringify(cleanData)
       })
+
+      // Reset the type changed flag since changes were saved
+      setHasTypeChanged(false)
 
       // Redirect based on user role
       const redirectPath = isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"
@@ -208,6 +205,89 @@ export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: Edit
     // Clear validation error when user starts typing
     if (validationErrors[name]) {
       setValidationErrors(prev => ({ ...prev, [name]: "" }))
+    }
+  }
+
+  const handleSelectChange = (name: string, value: string) => {
+    // Special handling for tournament type changes
+    if (name === 'tournament_type') {
+      const newType = value as 'individual' | 'team'
+      const currentType = formData.tournament_type
+      
+      // If changing tournament type, warn user about potential data loss
+      if (currentType !== newType) {
+        let confirmMessage = ''
+        let detailsMessage = ''
+        
+        if (currentType === 'team') {
+          confirmMessage = '⚠️ CAMBIO DE TIPO DE TORNEO\n\nEstás cambiando de "Por Equipos" a "Individual".'
+          detailsMessage = '\nEsto eliminará:\n• Todos los enfrentamientos entre clubes\n• Todas las partidas por equipos\n• Registros de equipos\n• Configuración de equipos\n\nLos jugadores se mantendrán en el sistema.\n\n¿Continuar con el cambio?'
+        } else {
+          confirmMessage = '⚠️ CAMBIO DE TIPO DE TORNEO\n\nEstás cambiando de "Individual" a "Por Equipos".'
+          detailsMessage = '\nEsto eliminará:\n• Todas las partidas individuales\n• Registros individuales de jugadores\n\nLos jugadores se mantendrán en el sistema.\n\n¿Continuar con el cambio?'
+        }
+        
+        if (!confirm(confirmMessage + detailsMessage)) {
+          return // User cancelled the change
+        }
+        
+        // Immediately save the tournament type change
+        setIsLoading(true)
+        setError(null)
+        
+        // Create the update data with just the tournament type change
+        const updateData = {
+          tournament_type: newType
+        }
+        
+        // Make the API call to update tournament type immediately
+        apiCall(`/api/tournaments/${tournamentId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(updateData)
+        })
+        .then(() => {
+          // Update the form state after successful API call
+          setFormData((prev) => ({
+            ...prev,
+            tournament_type: newType,
+            // Reset type-specific fields when switching
+            ...(newType === 'individual' ? {
+              players_per_team: "",
+              max_teams: "",
+              team_match_points: {}
+            } : {})
+          }))
+          setHasTypeChanged(false) // Reset since we just saved
+          
+          // Force a page refresh to reload the tournament data and update the UI
+          window.location.reload()
+        })
+        .catch((err) => {
+          console.error('Error updating tournament type:', err)
+          setError(err instanceof Error ? err.message : "Error al cambiar el tipo de torneo")
+        })
+        .finally(() => {
+          setIsLoading(false)
+        })
+        
+        return // Exit early since we're handling this asynchronously
+      }
+      
+      // If no type change, just update normally
+      setFormData((prev) => ({
+        ...prev,
+        tournament_type: newType,
+      }))
+    } else {
+      setFormData((prev) => ({ 
+        ...prev, 
+        [name]: value 
+      }))
+    }
+    
+    // Clear validation error when user changes selection
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => ({ ...prev, [name]: "" }))
     }
   }
 
@@ -356,6 +436,102 @@ export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: Edit
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-terracotta">Detalles del Torneo</h3>
             
+            {/* Tournament Type Selection */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="tournament_type">Tipo de Torneo *</Label>
+                {hasTypeChanged && (
+                  <Badge variant="outline" className="text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-600 bg-orange-50 dark:bg-orange-950/50">
+                    Cambio pendiente
+                  </Badge>
+                )}
+                {isLoading && (
+                  <Badge variant="outline" className="text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-950/50">
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    Guardando...
+                  </Badge>
+                )}
+              </div>
+              <Select 
+                value={formData.tournament_type} 
+                onValueChange={(value) => handleSelectChange('tournament_type', value as 'individual' | 'team')}
+                disabled={isLoading}
+              >
+                <SelectTrigger className={validationErrors.tournament_type ? "border-red-500" : ""}>
+                  <SelectValue placeholder="Seleccionar tipo de torneo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="individual">Individual</SelectItem>
+                  <SelectItem value="team">Por Equipos</SelectItem>
+                </SelectContent>
+              </Select>
+              {validationErrors.tournament_type && (
+                <p className="text-sm text-red-500">{validationErrors.tournament_type}</p>
+              )}
+              <p className="text-sm text-muted-foreground">
+                {formData.tournament_type === 'individual' 
+                  ? 'Torneo individual donde cada jugador compite por separado'
+                  : 'Torneo por equipos donde los clubes compiten entre sí'
+                }
+              </p>
+              {hasTypeChanged && !isLoading && (
+                <div className="p-3 bg-orange-50 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800 rounded-md">
+                  <p className="text-sm text-orange-800 dark:text-orange-200">
+                    <strong>Importante:</strong> El cambio de tipo de torneo eliminará datos existentes incompatibles. 
+                    Guarda los cambios para aplicar esta modificación.
+                  </p>
+                </div>
+              )}
+              {isLoading && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-md">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <strong>Procesando cambio de tipo de torneo...</strong> La página se recargará automáticamente al completarse.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Team-specific fields */}
+            {formData.tournament_type === 'team' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg transition-all duration-300 ease-in-out">
+                <div className="space-y-2">
+                  <Label htmlFor="players_per_team">Jugadores por Equipo</Label>
+                  <Input
+                    id="players_per_team"
+                    name="players_per_team"
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={formData.players_per_team}
+                    onChange={handleChange}
+                    placeholder="Ej: 4"
+                    className={validationErrors.players_per_team ? "border-red-500" : ""}
+                  />
+                  {validationErrors.players_per_team && (
+                    <p className="text-sm text-red-500">{validationErrors.players_per_team}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="max_teams">Máximo de Equipos</Label>
+                  <Input
+                    id="max_teams"
+                    name="max_teams"
+                    type="number"
+                    min="2"
+                    max="100"
+                    value={formData.max_teams}
+                    onChange={handleChange}
+                    placeholder="Ej: 16"
+                    className={validationErrors.max_teams ? "border-red-500" : ""}
+                  />
+                  {validationErrors.max_teams && (
+                    <p className="text-sm text-red-500">{validationErrors.max_teams}</p>
+                  )}
+                </div>
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="pace">Ritmo de Juego</Label>
@@ -419,55 +595,76 @@ export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: Edit
 
           {/* Tournament Dates */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-terracotta">Fechas del Torneo</h3>
+            <h3 className="text-lg font-semibold text-terracotta">Inscripción y Fechas</h3>
             
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Input
-                  type="date"
-                  value={newDate}
-                  onChange={(e) => setNewDate(e.target.value)}
-                  className={validationErrors.dates ? "border-red-500" : ""}
-                />
-              </div>
-              <Button
-                type="button"
-                onClick={addDate}
-                disabled={!newDate}
-                className="bg-terracotta hover:bg-terracotta/90"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+            <div className="space-y-2">
+              <Label htmlFor="registration_deadline">Fecha Límite de Inscripción</Label>
+              <Input
+                id="registration_deadline"
+                name="registration_deadline"
+                type="date"
+                value={formData.registration_deadline}
+                onChange={handleChange}
+                className={validationErrors.registration_deadline ? "border-red-500" : ""}
+              />
+              {validationErrors.registration_deadline && (
+                <p className="text-sm text-red-500">{validationErrors.registration_deadline}</p>
+              )}
+              <p className="text-sm text-muted-foreground">
+                Fecha límite para que los participantes se inscriban al torneo
+              </p>
             </div>
-
-            {validationErrors.dates && (
-              <p className="text-sm text-red-500">{validationErrors.dates}</p>
-            )}
-
-            {formData.dates.length > 0 && (
-              <div className="space-y-2">
-                <Label>Fechas agregadas:</Label>
-                <div className="space-y-2">
-                  {formData.dates.map((date) => (
-                    <div key={date} className="flex items-center justify-between bg-muted p-3 rounded-md">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-terracotta" />
-                        <span>{formatDisplayDate(date)}</span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeDate(date)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+            
+            <div className="space-y-2">
+              <Label>Fechas del Torneo *</Label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    type="date"
+                    value={newDate}
+                    onChange={(e) => setNewDate(e.target.value)}
+                    className={validationErrors.dates ? "border-red-500" : ""}
+                  />
                 </div>
+                <Button
+                  type="button"
+                  onClick={addDate}
+                  disabled={!newDate}
+                  className="bg-terracotta hover:bg-terracotta/90"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
-            )}
+
+              {validationErrors.dates && (
+                <p className="text-sm text-red-500">{validationErrors.dates}</p>
+              )}
+
+              {formData.dates.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Fechas agregadas:</Label>
+                  <div className="space-y-2">
+                    {formData.dates.map((date) => (
+                      <div key={date} className="flex items-center justify-between bg-muted p-3 rounded-md">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-terracotta" />
+                          <span>{formatDisplayDate(date)}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeDate(date)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Submit Button */}

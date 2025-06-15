@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Copy } from "lucide-react"
 import dynamic from "next/dynamic"
+import { GameDisplay } from "@/lib/gameUtils-client"
+import { cn } from "@/lib/utils"
 
 // Dynamically import the ChessBoard component
 const ChessBoard = dynamic(() => import('@/app/components/chess-board'), { 
@@ -16,23 +18,8 @@ const ChessBoard = dynamic(() => import('@/app/components/chess-board'), {
   )
 })
 
-interface GameDetails {
-  id: number
-  round: number
-  white: string
-  black: string
-  result: '1-0' | '0-1' | '1/2-1/2' | '*'
-  whiteRating?: number
-  blackRating?: number
-  board?: number
-  fen?: string
-  pgn?: string
-  date?: string
-  time?: string
-}
-
 interface ChessGameDisplayProps {
-  game: GameDetails
+  game: GameDisplay
 }
 
 export default function ChessGameDisplay({ game }: ChessGameDisplayProps) {
@@ -97,6 +84,9 @@ export default function ChessGameDisplay({ game }: ChessGameDisplayProps) {
                     {game.whiteRating && (
                       <div className="text-sm text-muted-foreground">Rating: {game.whiteRating}</div>
                     )}
+                    {game.whiteTeam && (
+                      <div className="text-sm text-terracotta font-medium">{game.whiteTeam}</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -108,6 +98,9 @@ export default function ChessGameDisplay({ game }: ChessGameDisplayProps) {
                     <div className="font-medium">{game.black}</div>
                     {game.blackRating && (
                       <div className="text-sm text-muted-foreground">Rating: {game.blackRating}</div>
+                    )}
+                    {game.blackTeam && (
+                      <div className="text-sm text-terracotta font-medium">{game.blackTeam}</div>
                     )}
                   </div>
                 </div>
@@ -125,19 +118,22 @@ export default function ChessGameDisplay({ game }: ChessGameDisplayProps) {
                 <span className="text-muted-foreground">Ronda:</span>
                 <span className="font-medium">{game.round}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Mesa:</span>
-                <span className="font-medium">{game.board}</span>
-              </div>
+              {game.board && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Mesa:</span>
+                  <span className="font-medium">{game.board}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Estado:</span>
                 <Badge 
                   variant={game.result === '*' ? 'default' : 'outline'}
-                  className={
-                    game.result === '*' 
-                      ? 'bg-green-100 text-green-800 border-green-200' 
-                      : 'border-amber'
-                  }
+                  className={cn(
+                    "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
+                    game.result 
+                      ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700'
+                      : 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700'
+                  )}
                 >
                   {game.result === '*' ? 'En juego' : 'Finalizada'}
                 </Badge>

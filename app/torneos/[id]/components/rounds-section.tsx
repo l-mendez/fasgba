@@ -5,31 +5,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Users, Play } from "lucide-react"
+import { ChevronLeft, ChevronRight, Trophy, Users, User, Play } from "lucide-react"
 import Link from "next/link"
-
-interface Game {
-  id: number
-  round: number
-  white: string
-  black: string
-  result: '1-0' | '0-1' | '1/2-1/2' | '*'
-  whiteRating?: number
-  blackRating?: number
-  board?: number
-}
+import { GameDisplay } from "@/lib/gameUtils-client"
+import { cn } from "@/lib/utils"
 
 interface RoundsSectionProps {
   totalRounds: number
-  gamesByRound: Record<number, Game[]>
+  gamesByRound: Record<number, GameDisplay[]>
   tournamentId: number
+  tournamentType: 'individual' | 'team' | string
 }
 
-export default function RoundsSection({ totalRounds, gamesByRound, tournamentId }: RoundsSectionProps) {
+export default function RoundsSection({ totalRounds, gamesByRound, tournamentId, tournamentType }: RoundsSectionProps) {
   const [selectedRound, setSelectedRound] = useState<string>("1")
   
   const roundNumber = parseInt(selectedRound)
   const roundGames = gamesByRound[roundNumber] || []
+  const isTeamTournament = tournamentType === 'team'
 
   return (
     <div className="lg:col-span-7">
@@ -37,7 +30,9 @@ export default function RoundsSection({ totalRounds, gamesByRound, tournamentId 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-terracotta" />
-            <h2 className="text-xl font-bold text-terracotta">Rondas del Torneo</h2>
+            <h2 className="text-xl font-bold text-terracotta">
+              {isTeamTournament ? 'Enfrentamientos por Equipos' : 'Rondas del Torneo'}
+            </h2>
           </div>
           
           <Select value={selectedRound} onValueChange={setSelectedRound}>
@@ -59,9 +54,9 @@ export default function RoundsSection({ totalRounds, gamesByRound, tournamentId 
             <CardTitle className="text-terracotta text-lg">Ronda {roundNumber}</CardTitle>
             <CardDescription>
               {roundGames?.some(g => g.result === '*') 
-                ? 'Partidas en curso' 
+                ? isTeamTournament ? 'Enfrentamientos en curso' : 'Partidas en curso'
                 : roundGames?.length > 0 
-                  ? 'Partidas finalizadas'
+                  ? isTeamTournament ? 'Enfrentamientos finalizados' : 'Partidas finalizadas'
                   : 'Ronda aún no programada'
               }
             </CardDescription>
@@ -75,24 +70,42 @@ export default function RoundsSection({ totalRounds, gamesByRound, tournamentId 
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <Badge variant="outline" className="text-xs flex-shrink-0">
-                      {game.board}
+                      {isTeamTournament ? `Mesa ${game.board}` : game.board}
                     </Badge>
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <div className="flex items-center gap-1 min-w-0">
-                        <span className="font-medium truncate">{game.white}</span>
-                        {game.whiteRating && (
-                          <span className="text-xs text-muted-foreground flex-shrink-0">
-                            ({game.whiteRating})
-                          </span>
+                      <div className="flex flex-col gap-1 min-w-0">
+                        {isTeamTournament && game.whiteTeam ? (
+                          <>
+                            <span className="font-medium text-sm text-terracotta truncate">{game.whiteTeam}</span>
+                            <span className="text-xs text-muted-foreground truncate">{game.white}</span>
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-1 min-w-0">
+                            <span className="font-medium truncate">{game.white}</span>
+                            {game.whiteRating && (
+                              <span className="text-xs text-muted-foreground flex-shrink-0">
+                                ({game.whiteRating})
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                       <span className="text-muted-foreground text-sm flex-shrink-0">vs</span>
-                      <div className="flex items-center gap-1 min-w-0">
-                        <span className="font-medium truncate">{game.black}</span>
-                        {game.blackRating && (
-                          <span className="text-xs text-muted-foreground flex-shrink-0">
-                            ({game.blackRating})
-                          </span>
+                      <div className="flex flex-col gap-1 min-w-0">
+                        {isTeamTournament && game.blackTeam ? (
+                          <>
+                            <span className="font-medium text-sm text-terracotta truncate">{game.blackTeam}</span>
+                            <span className="text-xs text-muted-foreground truncate">{game.black}</span>
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-1 min-w-0">
+                            <span className="font-medium truncate">{game.black}</span>
+                            {game.blackRating && (
+                              <span className="text-xs text-muted-foreground flex-shrink-0">
+                                ({game.blackRating})
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -100,11 +113,12 @@ export default function RoundsSection({ totalRounds, gamesByRound, tournamentId 
                   <div className="flex items-center gap-2">
                     <Badge 
                       variant={game.result === '*' ? 'default' : 'outline'}
-                      className={`flex-shrink-0 ${
-                        game.result === '*' 
-                          ? 'bg-green-100 text-green-800 border-green-200' 
-                          : 'border-amber'
-                      }`}
+                      className={cn(
+                        "flex-shrink-0",
+                        game.result 
+                          ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700'
+                          : 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700'
+                      )}
                     >
                       {game.result === '*' ? 'En juego' : game.result}
                     </Badge>
