@@ -7,7 +7,7 @@ import { requireAuth } from '@/lib/middleware/auth'
 
 // Configure runtime for handling file uploads
 export const runtime = 'nodejs'
-export const maxDuration = 300 // 5 minutes for file uploads
+export const maxDuration = 60 // 1 minute for file uploads (hobby plan limit)
 
 interface RouteParams {
   params: Promise<{
