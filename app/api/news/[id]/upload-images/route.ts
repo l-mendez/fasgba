@@ -5,6 +5,10 @@ import { validateNewsId } from '@/lib/schemas/newsSchemas'
 import { apiSuccess, handleError, forbiddenError, payloadTooLargeError } from '@/lib/utils/apiResponse'
 import { requireAuth } from '@/lib/middleware/auth'
 
+// Configure runtime for handling file uploads
+export const runtime = 'nodejs'
+export const maxDuration = 300 // 5 minutes for file uploads
+
 interface RouteParams {
   params: Promise<{
     id: string

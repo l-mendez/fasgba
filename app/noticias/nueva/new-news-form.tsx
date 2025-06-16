@@ -525,6 +525,11 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
   })
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<{
+    current: number
+    total: number
+    isUploading: boolean
+  }>({ current: 0, total: 0, isUploading: false })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -644,33 +649,61 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
       }
     })
 
-    // Upload all images with deduplication
+    // Upload images in chunks to prevent timeouts and large payloads
     let uploadResults: Array<{ filePath: string; wasReused: boolean; originalIndex: number }> = []
     
     if (imagesToUpload.length > 0) {
-      // Use the server-side upload utility for deduplication
-      const formData = new FormData()
-      imagesToUpload.forEach((imageInfo, index) => {
-        formData.append(`file-${index}`, imageInfo.file)
-        formData.append(`prefix-${index}`, imageInfo.prefix)
-        if (imageInfo.blockIndex !== undefined) {
-          formData.append(`blockIndex-${index}`, imageInfo.blockIndex.toString())
+      const CHUNK_SIZE = 5 // Upload 5 images at a time
+      const totalChunks = Math.ceil(imagesToUpload.length / CHUNK_SIZE)
+      
+      setUploadProgress({ current: 0, total: imagesToUpload.length, isUploading: true })
+      
+      for (let i = 0; i < imagesToUpload.length; i += CHUNK_SIZE) {
+        const chunk = imagesToUpload.slice(i, i + CHUNK_SIZE)
+        const chunkNumber = Math.floor(i / CHUNK_SIZE) + 1
+        
+        try {
+          const formData = new FormData()
+          chunk.forEach((imageInfo, chunkIndex) => {
+            const originalIndex = i + chunkIndex
+            formData.append(`file-${chunkIndex}`, imageInfo.file)
+            formData.append(`prefix-${chunkIndex}`, imageInfo.prefix)
+            if (imageInfo.blockIndex !== undefined) {
+              formData.append(`blockIndex-${chunkIndex}`, imageInfo.blockIndex.toString())
+            }
+            formData.append(`originalIndex-${chunkIndex}`, originalIndex.toString())
+          })
+
+          const uploadResponse = await fetch(`/api/news/${newsId}/upload-images`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: formData,
+          })
+
+          if (!uploadResponse.ok) {
+            throw new Error(`Error uploading chunk ${chunkNumber}/${totalChunks}: ${uploadResponse.statusText}`)
+          }
+
+          const chunkResults = await uploadResponse.json()
+          uploadResults.push(...chunkResults)
+          
+          // Update progress
+          setUploadProgress(prev => ({ ...prev, current: Math.min(i + CHUNK_SIZE, imagesToUpload.length) }))
+          
+          // Add a small delay between chunks to reduce server load
+          if (i + CHUNK_SIZE < imagesToUpload.length) {
+            await new Promise(resolve => setTimeout(resolve, 500)) // Increased delay
+          }
+          
+        } catch (error) {
+          console.error(`Failed to upload chunk ${chunkNumber}/${totalChunks}:`, error)
+          throw new Error(`Failed to upload images (chunk ${chunkNumber}/${totalChunks}). This often happens with large numbers of images. Try reducing the number of images or upload in smaller batches.`)
         }
-      })
-
-      const uploadResponse = await fetch(`/api/news/${newsId}/upload-images`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: formData,
-      })
-
-      if (!uploadResponse.ok) {
-        throw new Error('Error uploading images')
       }
-
-      uploadResults = await uploadResponse.json()
+      
+      setUploadProgress(prev => ({ ...prev, isUploading: false }))
     }
 
     // Find featured image path
@@ -929,6 +962,23 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
           {isSaving ? 'Creando...' : 'Crear Noticia'}
         </Button>
       </div>
+
+      {uploadProgress.isUploading && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Subiendo imágenes...</AlertTitle>
+          <AlertDescription>
+            Procesando {uploadProgress.current} de {uploadProgress.total} imágenes. 
+            Por favor, no cierre esta ventana.
+            <div className="mt-2 bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+              />
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="destructive">

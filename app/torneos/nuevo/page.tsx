@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server"
 
 import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 // Force dynamic rendering since we use authentication
 export const dynamic = 'force-dynamic'

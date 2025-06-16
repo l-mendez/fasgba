@@ -11,7 +11,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { createClient } from "@/lib/supabase/client"
+import { Badge } from "@/components/ui/badge"
+import { apiCall } from "@/lib/utils/apiClient"
 
 interface Club {
   id: number
@@ -49,55 +50,6 @@ interface NuevoTorneoFormProps {
   isSiteAdmin: boolean
   clubs: Club[]
   selectedClub: Club | null
-}
-
-// API helper function
-async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  if (!session) {
-    throw new Error('No hay sesión autenticada')
-  }
-
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
-  const url = `${baseUrl}${endpoint}`
-  
-  const config: RequestInit = {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-      ...options.headers
-    },
-    ...options
-  }
-
-  const response = await fetch(url, config)
-  
-  if (!response.ok) {
-    let errorMessage = `Error ${response.status}: ${response.statusText}`
-    
-    try {
-      const errorData = await response.text()
-      
-      try {
-        const jsonError = JSON.parse(errorData)
-        errorMessage = jsonError.error || jsonError.message || errorMessage
-      } catch {
-        errorMessage = errorData || errorMessage
-      }
-    } catch {
-      // Use default error message
-    }
-    
-    throw new Error(errorMessage)
-  }
-  
-  if (response.status === 204) {
-    return null
-  }
-  
-  return response.json()
 }
 
 export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorneoFormProps) {
@@ -215,8 +167,6 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
       const cleanData = Object.fromEntries(
         Object.entries(tournamentData).filter(([_, value]) => value !== undefined)
       )
-
-      console.log('Sending tournament data:', cleanData)
 
       const result = await apiCall('/api/tournaments', {
         method: 'POST',
@@ -489,7 +439,7 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
 
             {/* Team-specific fields */}
             {formData.tournament_type === 'team' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg transition-all duration-300 ease-in-out">
                 <div className="space-y-2">
                   <Label htmlFor="players_per_team">Jugadores por Equipo</Label>
                   <Input
@@ -651,7 +601,7 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
                           variant="ghost"
                           size="sm"
                           onClick={() => removeDate(date)}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50"
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -685,6 +635,22 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
             >
               Cancelar
             </Button>
+          </div>
+
+          {/* Info about next steps */}
+          <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+              Próximos pasos después de crear el torneo:
+            </h4>
+            <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+              <li>• Configurar equipos registrados (para torneos por equipos)</li>
+              <li>• Crear rondas y enfrentamientos</li>
+              <li>• Agregar partidas y resultados</li>
+              <li>• Gestionar inscripciones de jugadores</li>
+            </ul>
+            <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
+              Serás redirigido automáticamente a la página de edición donde podrás completar estos pasos.
+            </p>
           </div>
         </form>
       </CardContent>
