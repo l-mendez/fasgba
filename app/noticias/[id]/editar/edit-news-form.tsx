@@ -3,7 +3,7 @@
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { ArrowLeft, Save } from "lucide-react"
+import { ArrowLeft, Save, AlertCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -85,6 +85,11 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
   })
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<{
+    current: number
+    total: number
+    isUploading: boolean
+  }>({ current: 0, total: 0, isUploading: false })
   const [category, setCategory] = useState<string>(() => {
     // Set category from the first tag if it exists and matches our predefined categories
     const predefinedCategories = ["torneos", "resultados", "institucional", "clases", "eventos", "partidas"]
@@ -160,6 +165,126 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
       .from('images')
       .getPublicUrl(filePath)
     return publicUrl
+  }
+
+  // Function to process multiple image uploads in chunks (for bulk operations)
+  const processImageUploadsInChunks = async (imageFiles: File[], newsId: number) => {
+    const CHUNK_SIZE = 5 // Upload 5 images at a time
+    const totalChunks = Math.ceil(imageFiles.length / CHUNK_SIZE)
+    let uploadResults: Array<{ filePath: string; publicUrl: string }> = []
+    
+    if (imageFiles.length === 0) return uploadResults
+    
+    setUploadProgress({ current: 0, total: imageFiles.length, isUploading: true })
+    
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.access_token) {
+        throw new Error('No hay sesión activa')
+      }
+
+      for (let i = 0; i < imageFiles.length; i += CHUNK_SIZE) {
+        const chunk = imageFiles.slice(i, i + CHUNK_SIZE)
+        const chunkNumber = Math.floor(i / CHUNK_SIZE) + 1
+        
+        try {
+          const formData = new FormData()
+          chunk.forEach((file, chunkIndex) => {
+            formData.append(`file-${chunkIndex}`, file)
+            formData.append(`prefix-${chunkIndex}`, `block-${i + chunkIndex}`)
+          })
+
+          const uploadResponse = await fetch(`/api/news/${newsId}/upload-images`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: formData,
+          })
+
+          if (!uploadResponse.ok) {
+            throw new Error(`Error uploading chunk ${chunkNumber}/${totalChunks}: ${uploadResponse.statusText}`)
+          }
+
+          const chunkResults = await uploadResponse.json()
+          
+          // Convert results to expected format
+          const processedResults = chunkResults.map((result: any) => ({
+            filePath: result.filePath,
+            publicUrl: getPublicUrl(result.filePath) || ''
+          }))
+          
+          uploadResults.push(...processedResults)
+          
+          // Update progress
+          setUploadProgress(prev => ({ ...prev, current: Math.min(i + CHUNK_SIZE, imageFiles.length) }))
+          
+          // Add delay between chunks
+          if (i + CHUNK_SIZE < imageFiles.length) {
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+          
+        } catch (error) {
+          console.error(`Failed to upload chunk ${chunkNumber}/${totalChunks}:`, error)
+          throw new Error(`Failed to upload images (chunk ${chunkNumber}/${totalChunks}). Try reducing the number of images or upload in smaller batches.`)
+        }
+      }
+      
+      return uploadResults
+    } finally {
+      setUploadProgress(prev => ({ ...prev, isUploading: false }))
+    }
+  }
+
+  // Function to add multiple image blocks at once (for bulk operations)
+  const addMultipleImageBlocks = async (files: File[]) => {
+    if (files.length === 0) return
+    
+    // Warn users about large uploads
+    if (files.length > 20) {
+      const proceed = confirm(
+        `Estás intentando subir ${files.length} imágenes. Esto puede tomar varios minutos y podría fallar con conexiones lentas. ¿Deseas continuar?`
+      )
+      if (!proceed) return
+    }
+    
+    // Validate file sizes
+    const oversizedFiles = files.filter(file => file.size > 5 * 1024 * 1024)
+    if (oversizedFiles.length > 0) {
+      setError(`${oversizedFiles.length} archivo(s) exceden el límite de 5MB y serán omitidos.`)
+      files = files.filter(file => file.size <= 5 * 1024 * 1024)
+    }
+    
+    if (files.length === 0) {
+      setError('No hay archivos válidos para subir.')
+      return
+    }
+    
+    try {
+      setError(null) // Clear any previous errors
+      
+      // Process uploads in chunks
+      const uploadResults = await processImageUploadsInChunks(files, news.id)
+      
+      // Create new image blocks with the uploaded images
+      const newImageBlocks = uploadResults.map((result, index) => ({
+        type: 'image',
+        content: {
+          url: result.publicUrl,
+          caption: '',
+          filePath: result.filePath
+        }
+      }))
+      
+      // Add all new blocks to the content
+      setContentBlocks(prev => [...prev, ...newImageBlocks])
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error al subir las imágenes'
+      setError(errorMessage)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -324,6 +449,23 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
         <Alert variant="destructive">
           <AlertTitle>Error</AlertTitle>
           <AlertDescription className="text-sm">{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {uploadProgress.isUploading && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Subiendo imágenes...</AlertTitle>
+          <AlertDescription>
+            Procesando {uploadProgress.current} de {uploadProgress.total} imágenes. 
+            Por favor, no cierre esta ventana.
+            <div className="mt-2 bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+              />
+            </div>
+          </AlertDescription>
         </Alert>
       )}
 
@@ -499,6 +641,30 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
                 <Button type="button" variant="outline" onClick={() => addContentBlock('chess_game')} size="sm" className="text-sm w-full sm:w-auto">
                   + Partida de ajedrez
                 </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => document.getElementById('bulk-image-upload')?.click()} 
+                  size="sm" 
+                  className="text-sm w-full sm:w-auto"
+                  disabled={uploadProgress.isUploading}
+                >
+                  + Múltiples Imágenes
+                </Button>
+                <input
+                  id="bulk-image-upload"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || [])
+                    if (files.length > 0) {
+                      addMultipleImageBlocks(files)
+                      e.target.value = '' // Reset input
+                    }
+                  }}
+                />
               </div>
             </div>
           </div>
