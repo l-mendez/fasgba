@@ -19,14 +19,15 @@ export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
   const [loading, setLoading] = useState(true)
   
   useEffect(() => {
+    const supabase = createClient()
+    
     async function getUser() {
       try {
-        const supabase = createClient()
-        
         const { data: { user }, error } = await supabase.auth.getUser()
         
         if (error || !user) {
           setUser(null)
+          setLoading(false)
           return
         }
 
@@ -60,7 +61,24 @@ export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
       }
     }
 
+    // Initial user fetch
     getUser()
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT' || !session) {
+          setUser(null)
+          setLoading(false)
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          getUser()
+        }
+      }
+    )
+
+    return () => {
+      subscription?.unsubscribe()
+    }
   }, [])
   
   const isAuthenticated = !!user

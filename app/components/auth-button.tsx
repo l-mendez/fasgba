@@ -57,7 +57,7 @@ export function AuthButton({
     }
     
     // Default fallback
-    return '/admin'
+    return '/'
   }
 
   const handleClick = async () => {

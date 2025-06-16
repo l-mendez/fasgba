@@ -173,9 +173,9 @@ async function fetchUserData(userId: string): Promise<{
 export default async function EditarUsuarioPage({
   params
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const userId = params.id
+  const { id: userId } = await params
   let user: UserWithPermissions | null = null
   let clubs: Club[] = []
   let clubsAdmin: ClubAdmin[] = []

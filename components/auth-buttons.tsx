@@ -1,6 +1,7 @@
 'use client'
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Settings, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -15,9 +16,22 @@ interface AuthButtonsProps {
 
 export function AuthButtons({ isAuthenticated, isAdmin, isClubAdmin, pathname }: AuthButtonsProps) {
   const supabase = createClient()
+  const router = useRouter()
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Error signing out:', error.message)
+        return
+      }
+      
+      // Redirect to home page after successful logout
+      router.push('/')
+      router.refresh()
+    } catch (error) {
+      console.error('Unexpected error during logout:', error)
+    }
   }
 
   if (!isAuthenticated) {

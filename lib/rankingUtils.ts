@@ -611,5 +611,15 @@ export async function getPlayersWithChanges(): Promise<Player[]> {
  * Call this after any ranking updates that might affect chronological order
  */
 export function forceRankingCacheInvalidation(): void {
-  clearRankingCache();
+  rankingCache = null;
+  cacheTimestamp = 0;
+  cachedLatestFilename = null;
+}
+
+/**
+ * Gets available tournament categories/types
+ */
+export async function getCategories(): Promise<string[]> {
+  // Return the available tournament types as categories
+  return ['individual', 'team'];
 } 
