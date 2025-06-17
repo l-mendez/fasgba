@@ -20,6 +20,10 @@ export interface GameDisplay {
   // For team tournaments
   whiteTeam?: string
   blackTeam?: string
+  // Player IDs for editing
+  whitePlayerId?: number
+  blackPlayerId?: number
+  matchId?: number
 }
 
 // Raw database interfaces
@@ -105,22 +109,34 @@ export async function getTournamentGames(tournamentId: number, tournamentType: s
 
       const matchGamesArray: any[] = (matchGames || []) as any[]
 
-      let games: GameDisplay[] = matchGamesArray.map((game: any) => ({
-        id: game.id,
-        round: game.match?.round?.round_number || 1,
-        white: game.white_player?.full_name || 'Jugador desconocido',
-        black: game.black_player?.full_name || 'Jugador desconocido',
-        result: game.result as '1-0' | '0-1' | '1/2-1/2' | '*',
-        whiteRating: game.white_player?.rating,
-        blackRating: game.black_player?.rating,
-        board: game.board_number,
-        fen: game.fen,
-        pgn: game.pgn,
-        date: game.game_date,
-        time: game.game_time,
-        whiteTeam: game.match?.club_a?.name,
-        blackTeam: game.match?.club_b?.name
-      }))
+      let games: GameDisplay[] = matchGamesArray.map((game: any) => {
+        // In team tournaments, teams alternate colors:
+        // Odd boards (1,3,5): Club A plays white, Club B plays black
+        // Even boards (2,4,6): Club A plays black, Club B plays white
+        const isOddBoard = (game.board_number || 1) % 2 === 1
+        const whiteTeam = isOddBoard ? game.match?.club_a?.name : game.match?.club_b?.name
+        const blackTeam = isOddBoard ? game.match?.club_b?.name : game.match?.club_a?.name
+        
+        return {
+          id: game.id,
+          round: game.match?.round?.round_number || 1,
+          white: game.white_player?.full_name || 'Jugador desconocido',
+          black: game.black_player?.full_name || 'Jugador desconocido',
+          result: game.result as '1-0' | '0-1' | '1/2-1/2' | '*',
+          whiteRating: game.white_player?.rating,
+          blackRating: game.black_player?.rating,
+          board: game.board_number,
+          fen: game.fen,
+          pgn: game.pgn,
+          date: game.game_date,
+          time: game.game_time,
+          whiteTeam,
+          blackTeam,
+          whitePlayerId: game.white_player?.id,
+          blackPlayerId: game.black_player?.id,
+          matchId: game.match?.id
+        }
+      })
 
       // Sort games by round then board number
       games = games.sort((a, b) => {
@@ -178,7 +194,9 @@ export async function getTournamentGames(tournamentId: number, tournamentType: s
         fen: game.fen,
         pgn: game.pgn,
         date: game.game_date,
-        time: game.game_time
+        time: game.game_time,
+        whitePlayerId: game.white_player?.id,
+        blackPlayerId: game.black_player?.id
       }))
 
       // Sort games by round then board number
@@ -240,6 +258,13 @@ export async function getGameById(gameId: number, tournamentType: string = 'indi
         return null
       }
 
+      // In team tournaments, teams alternate colors:
+      // Odd boards (1,3,5): Club A plays white, Club B plays black
+      // Even boards (2,4,6): Club A plays black, Club B plays white
+      const isOddBoard = (matchGame.board_number || 1) % 2 === 1
+      const whiteTeam = isOddBoard ? matchGame.match?.club_a?.name : matchGame.match?.club_b?.name
+      const blackTeam = isOddBoard ? matchGame.match?.club_b?.name : matchGame.match?.club_a?.name
+
       return {
         id: matchGame.id,
         round: matchGame.match?.round?.round_number || 1,
@@ -253,8 +278,11 @@ export async function getGameById(gameId: number, tournamentType: string = 'indi
         pgn: matchGame.pgn,
         date: matchGame.game_date,
         time: matchGame.game_time,
-        whiteTeam: matchGame.match?.club_a?.name,
-        blackTeam: matchGame.match?.club_b?.name
+        whiteTeam,
+        blackTeam,
+        whitePlayerId: matchGame.white_player?.id,
+        blackPlayerId: matchGame.black_player?.id,
+        matchId: matchGame.match?.id
       }
 
     } else {
@@ -293,7 +321,9 @@ export async function getGameById(gameId: number, tournamentType: string = 'indi
         fen: individualGame.fen,
         pgn: individualGame.pgn,
         date: individualGame.game_date,
-        time: individualGame.game_time
+        time: individualGame.game_time,
+        whitePlayerId: individualGame.white_player?.id,
+        blackPlayerId: individualGame.black_player?.id
       }
     }
   } catch (error) {

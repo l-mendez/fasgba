@@ -19,6 +19,8 @@ const updateGameSchema = z.object({
   fen: z.string().max(200, 'FEN too long').optional(),
   game_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').optional(),
   game_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Invalid time format').optional(),
+  white_player_id: z.number().int().positive().optional(),
+  black_player_id: z.number().int().positive().optional(),
 })
 
 interface RouteParams {
@@ -241,6 +243,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const body = await request.json()
     const validatedData = updateGameSchema.parse(body)
+
+    // Additional validation for player IDs
+    if (validatedData.white_player_id && validatedData.black_player_id && 
+        validatedData.white_player_id === validatedData.black_player_id) {
+      return validationError('White and black players must be different')
+    }
 
     // First, check if the round belongs to the tournament and get tournament type
     const { data: round, error: roundError } = await serverSupabase

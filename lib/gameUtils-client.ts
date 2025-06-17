@@ -17,6 +17,10 @@ export interface GameDisplay {
   // For team tournaments
   whiteTeam?: string
   blackTeam?: string
+  // Player IDs for editing
+  whitePlayerId?: number
+  blackPlayerId?: number
+  matchId?: number
 }
 
 // Client-side function to fetch tournament games via API

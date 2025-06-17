@@ -285,9 +285,29 @@ export default function RoundsGamesManagement({
   const handleEditGame = async () => {
     if (!editingGame) return
 
+    // Validation
+    if (gameFormData.white_player_id === 0 || gameFormData.black_player_id === 0) {
+      toast.error('Debe seleccionar ambos jugadores')
+      return
+    }
+
+    if (gameFormData.white_player_id === gameFormData.black_player_id) {
+      toast.error('Los jugadores blanco y negro deben ser diferentes')
+      return
+    }
+
+    // Find the round ID from the round number
+    const roundData = rounds.find(r => r.round_number === editingGame.round)
+    if (!roundData) {
+      toast.error('No se pudo encontrar la ronda para actualizar la partida')
+      return
+    }
+
     setLoading(true)
     try {
       const updateData = {
+        white_player_id: gameFormData.white_player_id,
+        black_player_id: gameFormData.black_player_id,
         result: gameFormData.result,
         pgn: gameFormData.pgn,
         game_date: gameFormData.game_date,
@@ -295,7 +315,7 @@ export default function RoundsGamesManagement({
       }
 
       await apiCall(
-        `/api/tournaments/${tournamentId}/rounds/${editingGame.round}/games/${editingGame.id}`,
+        `/api/tournaments/${tournamentId}/rounds/${roundData.id}/games/${editingGame.id}`,
         {
           method: 'PATCH',
           body: JSON.stringify(updateData),
@@ -322,10 +342,17 @@ export default function RoundsGamesManagement({
       return
     }
 
+    // Find the round ID from the round number
+    const roundData = rounds.find(r => r.round_number === game.round)
+    if (!roundData) {
+      toast.error('No se pudo encontrar la ronda para eliminar la partida')
+      return
+    }
+
     setLoading(true)
     try {
       await apiCall(
-        `/api/tournaments/${tournamentId}/rounds/${game.round}/games/${game.id}`,
+        `/api/tournaments/${tournamentId}/rounds/${roundData.id}/games/${game.id}`,
         {
           method: 'DELETE',
         }
@@ -437,14 +464,21 @@ export default function RoundsGamesManagement({
   const openEditGameDialog = (game: GameDisplay) => {
     setEditingGame(game)
     setGameFormData({
-      white_player_id: 0,
-      black_player_id: 0,
+      white_player_id: game.whitePlayerId || 0,
+      black_player_id: game.blackPlayerId || 0,
       board_number: game.board,
       result: game.result,
       pgn: game.pgn || '',
       game_date: game.date || '',
-      game_time: game.time || ''
+      game_time: game.time || '',
+      match_id: game.matchId || undefined
     })
+    
+    // For team tournaments, update team players if we have a match
+    if (tournamentType === 'team' && game.matchId) {
+      updateTeamPlayersForMatch(game.matchId)
+    }
+    
     setIsEditGameDialogOpen(true)
   }
 
@@ -1113,14 +1147,15 @@ export default function RoundsGamesManagement({
 
         {/* Edit Game Dialog */}
         <Dialog open={isEditGameDialogOpen} onOpenChange={setIsEditGameDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Editar Partida</DialogTitle>
             </DialogHeader>
             {editingGame && (
-              <div className="space-y-4">
+              <div className="space-y-4 pr-2">
                 <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
                   <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Partida Original:</p>
                     <p className="font-medium">Blancas: {editingGame.white}</p>
                     {editingGame.whiteRating && (
                       <p className="text-sm text-gray-500">Rating: {editingGame.whiteRating}</p>
@@ -1131,6 +1166,69 @@ export default function RoundsGamesManagement({
                     {editingGame.blackRating && (
                       <p className="text-sm text-gray-500">Rating: {editingGame.blackRating}</p>
                     )}
+                  </div>
+                </div>
+
+                {tournamentType === 'team' && gameFormData.match_id && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-md">
+                    <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-1">
+                      Asignación de Colores por Mesa
+                    </p>
+                    {(() => {
+                      const matchInfo = getSelectedMatchInfo()
+                      return matchInfo ? (
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          Mesa {gameFormData.board_number || 1}: <strong>{matchInfo.whiteTeam}</strong> juega con blancas, <strong>{matchInfo.blackTeam}</strong> juega con negras
+                        </p>
+                      ) : null
+                    })()}
+                  </div>
+                )}
+
+                {/* Player Selection */}
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="edit_white_player">Jugador Blancas *</Label>
+                    <Select 
+                      value={gameFormData.white_player_id.toString()} 
+                      onValueChange={(value) => 
+                        setGameFormData(prev => ({ ...prev, white_player_id: parseInt(value) }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar jugador" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getWhitePlayerOptions().map((player) => (
+                          <SelectItem key={player.id} value={player.id.toString()}>
+                            {player.full_name} {player.rating && `(${player.rating})`}
+                            {player.club && ` - ${player.club.name}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit_black_player">Jugador Negras *</Label>
+                    <Select 
+                      value={gameFormData.black_player_id.toString()} 
+                      onValueChange={(value) => 
+                        setGameFormData(prev => ({ ...prev, black_player_id: parseInt(value) }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar jugador" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getBlackPlayerOptions().map((player) => (
+                          <SelectItem key={player.id} value={player.id.toString()}>
+                            {player.full_name} {player.rating && `(${player.rating})`}
+                            {player.club && ` - ${player.club.name}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -1181,7 +1279,7 @@ export default function RoundsGamesManagement({
                   />
                 </div>
 
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-white dark:bg-gray-950 border-t mt-6 -mx-6 px-6 py-4">
                   <Button variant="outline" onClick={() => setIsEditGameDialogOpen(false)}>
                     Cancelar
                   </Button>
