@@ -129,6 +129,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <BarChart3 className="mr-2 h-4 w-4" />
             Ranking
           </Link>
+          <Link
+            href="/admin/jugadores"
+            className={cn(
+              "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
+              pathname.startsWith("/admin/jugadores") ? "bg-amber/10 text-amber" : "text-muted-foreground"
+            )}
+            onClick={onLinkClick}
+          >
+            <Users className="mr-2 h-4 w-4" />
+            Jugadores
+          </Link>
         </div>
       </div>
     </div>

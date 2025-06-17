@@ -297,6 +297,12 @@ export default async function AdminDashboard() {
                   Gestionar ranking
                 </Link>
               </Button>
+              <Button asChild className="w-full justify-start" variant="outline">
+                <Link href="/admin/jugadores">
+                  <Users className="mr-2 h-4 w-4" />
+                  Gestionar jugadores
+                </Link>
+              </Button>
             </div>
           </CardContent>
         </Card>

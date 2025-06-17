@@ -18,6 +18,12 @@ export function QuickActions({ selectedClub }: QuickActionsProps) {
   return (
     <div className="grid gap-3 md:gap-4">
       <Button asChild variant="outline" className="w-full justify-start">
+        <Link href="/club-admin/jugadores">
+          <Users className="mr-2 h-4 w-4" />
+          Gestionar jugadores
+        </Link>
+      </Button>
+      <Button asChild variant="outline" className="w-full justify-start">
         <Link href={newNewsUrl}>
           <FileText className="mr-2 h-4 w-4" />
           Nueva noticia

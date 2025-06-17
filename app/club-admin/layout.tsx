@@ -10,6 +10,7 @@ import {
   Menu,
   Settings,
   Trophy,
+  Users,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -43,6 +44,17 @@ export default function ClubAdminLayout({ children }: ClubAdminLayoutProps) {
           >
             <BarChart3 className="mr-2 h-4 w-4" />
             Dashboard
+          </Link>
+          <Link
+            href="/club-admin/jugadores"
+            className={cn(
+              "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
+              pathname.startsWith("/club-admin/jugadores") ? "bg-amber/10 text-amber" : "text-muted-foreground"
+            )}
+            onClick={onLinkClick}
+          >
+            <Users className="mr-2 h-4 w-4" />
+            Jugadores
           </Link>
           <Link
             href="/club-admin/noticias"

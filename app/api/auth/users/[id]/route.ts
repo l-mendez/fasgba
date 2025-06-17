@@ -10,7 +10,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const userId = params.id
+    const resolvedParams = await params
+    const userId = resolvedParams.id
 
     // Get the authorization header
     const authHeader = request.headers.get('authorization')
