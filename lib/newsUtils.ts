@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createServerClient } from './supabase/server'
 import { deleteNewsImages } from './imageUtils.server'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -504,21 +505,74 @@ export async function getRelatedNews(newsId: number, limit: number = 4): Promise
  * Gets unique tags from all news
  */
 export async function getAllNewsTags(): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('news')
-    .select('tags')
+  try {
+    const { data, error } = await supabase
+      .from('news')
+      .select('tags')
 
-  if (error) {
-    console.error('Error fetching news tags:', error)
-    return []
-  }
+    if (error) {
+      console.error('Error fetching news tags with service client:', error)
+      
+      // Try with server client as fallback
+      try {
+        const serverClient = await createServerClient()
+        const { data: serverData, error: serverError } = await serverClient
+          .from('news')
+          .select('tags')
+        
+        if (serverError) {
+          console.error('Error fetching news tags with server client:', serverError)
+          return []
+        }
+        
+        const allTags = new Set<string>()
+        serverData?.forEach(item => {
+          if (item.tags && Array.isArray(item.tags)) {
+            item.tags.forEach(tag => allTags.add(tag))
+          }
+        })
 
-  const allTags = new Set<string>()
-  data?.forEach(item => {
-    if (item.tags && Array.isArray(item.tags)) {
-      item.tags.forEach(tag => allTags.add(tag))
+        return Array.from(allTags).sort()
+      } catch (serverError) {
+        console.error('Server client fallback failed:', serverError)
+        return []
+      }
     }
-  })
 
-  return Array.from(allTags).sort()
+    const allTags = new Set<string>()
+    data?.forEach(item => {
+      if (item.tags && Array.isArray(item.tags)) {
+        item.tags.forEach(tag => allTags.add(tag))
+      }
+    })
+
+    return Array.from(allTags).sort()
+  } catch (error) {
+    console.error('Error in getAllNewsTags:', error)
+    
+    // Try with server client as final fallback
+    try {
+      const serverClient = await createServerClient()
+      const { data: serverData, error: serverError } = await serverClient
+        .from('news')
+        .select('tags')
+      
+      if (serverError) {
+        console.error('Final fallback failed:', serverError)
+        return []
+      }
+      
+      const allTags = new Set<string>()
+      serverData?.forEach(item => {
+        if (item.tags && Array.isArray(item.tags)) {
+          item.tags.forEach(tag => allTags.add(tag))
+        }
+      })
+
+      return Array.from(allTags).sort()
+    } catch (finalError) {
+      console.error('All fallbacks failed:', finalError)
+      return []
+    }
+  }
 } 

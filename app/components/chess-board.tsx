@@ -31,6 +31,7 @@ interface ChessBoardProps {
   onPositionChange?: (fen: string) => void
   whitePlayer?: { type: string; value: string }
   blackPlayer?: { type: string; value: string }
+  result?: string
 }
 
 interface MoveAnnotation {
@@ -149,9 +150,9 @@ function getPlayerName(player?: { type: string; value: string }): string {
 const EvaluationBar = ({ evaluation, className = "" }: { evaluation?: number, className?: string }) => {
   if (evaluation === undefined) {
     return (
-      <div className={`w-3 bg-gray-300 rounded-sm ${className}`}>
+      <div className={`w-3 bg-gray-300 dark:bg-gray-600 rounded-sm ${className}`}>
         <div className="w-full h-full flex items-center justify-center">
-          <div className="w-1 h-4 bg-gray-500 rounded-full"></div>
+          <div className="w-1 h-4 bg-gray-500 dark:bg-gray-400 rounded-full"></div>
         </div>
       </div>
     );
@@ -163,9 +164,9 @@ const EvaluationBar = ({ evaluation, className = "" }: { evaluation?: number, cl
   // Check if conversion was successful
   if (isNaN(numericEval)) {
     return (
-      <div className={`w-3 bg-gray-300 rounded-sm ${className}`}>
+      <div className={`w-3 bg-gray-300 dark:bg-gray-600 rounded-sm ${className}`}>
         <div className="w-full h-full flex items-center justify-center">
-          <div className="w-1 h-4 bg-gray-500 rounded-full"></div>
+          <div className="w-1 h-4 bg-gray-500 dark:bg-gray-400 rounded-full"></div>
         </div>
       </div>
     );
@@ -224,24 +225,51 @@ const PlayerInfo = ({
   player, 
   color, 
   clockTime, 
-  isCurrentPlayer 
+  isCurrentPlayer,
+  result
 }: { 
   player?: { type: string; value: string }
   color: 'white' | 'black'
   clockTime?: string
-  isCurrentPlayer?: boolean 
+  isCurrentPlayer?: boolean
+  result?: string
 }) => {
   const playerName = getPlayerName(player);
   
+  // Determine what score to show for this player
+  const getPlayerScore = () => {
+    if (!result || result === '*') return null;
+    
+    if (result === '1/2-1/2') return '½';
+    
+    // For decisive results, show 1 for winner and 0 for loser
+    if (result === '1-0') {
+      return color === 'white' ? '1' : '0';
+    }
+    
+    if (result === '0-1') {
+      return color === 'black' ? '1' : '0';
+    }
+    
+    return null;
+  };
+
+  const playerScore = getPlayerScore();
+  
   return (
     <div className={`flex items-center justify-between p-2 rounded ${
-      isCurrentPlayer ? 'bg-amber/20' : 'bg-muted/50'
+      isCurrentPlayer ? 'bg-amber/20 dark:bg-amber/30' : 'bg-muted/50 dark:bg-muted/60'
     }`}>
       <div className="flex items-center gap-2">
         <div className={`w-4 h-4 rounded-full border-2 ${
-          color === 'white' ? 'bg-white border-gray-400' : 'bg-black border-gray-300'
+          color === 'white' ? 'bg-white border-gray-400 dark:border-gray-500' : 'bg-black border-gray-300 dark:border-gray-400'
         }`} />
-        <span className="font-medium text-sm">{playerName}</span>
+        <span className="font-medium text-sm text-foreground">{playerName}</span>
+        {playerScore !== null && (
+          <span className="text-sm font-semibold text-terracotta dark:text-amber-400 ml-2">
+            {playerScore}
+          </span>
+        )}
       </div>
       {clockTime && (
         <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -259,7 +287,8 @@ export default function ChessBoard({
   width = 400,
   onPositionChange,
   whitePlayer,
-  blackPlayer
+  blackPlayer,
+  result
 }: ChessBoardProps) {
   const [currentPosition, setCurrentPosition] = useState(fen)
   const [moveIndex, setMoveIndex] = useState(0)
@@ -575,6 +604,7 @@ export default function ChessBoard({
           color="black"
           clockTime={currentBlackClock}
           isCurrentPlayer={currentToMove === 'b'}
+          result={result}
         />
       </div>
       
@@ -611,6 +641,7 @@ export default function ChessBoard({
           color="white"
           clockTime={currentWhiteClock}
           isCurrentPlayer={currentToMove === 'w'}
+          result={result}
         />
       </div>
       
@@ -619,14 +650,14 @@ export default function ChessBoard({
         <div className="mt-3 flex items-center gap-2">
           <button 
             onClick={goToPrevMove}
-            className="p-2 bg-amber/20 hover:bg-amber/30 rounded text-amber-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 bg-amber/20 hover:bg-amber/30 dark:bg-amber/30 dark:hover:bg-amber/40 rounded text-amber-dark dark:text-amber-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             disabled={moveIndex === 0}
             title="Movimiento anterior"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           
-          <span className="px-3 py-2 bg-muted rounded text-sm font-medium min-w-[80px] text-center">
+          <span className="px-3 py-2 bg-muted dark:bg-muted/80 rounded text-sm font-medium min-w-[80px] text-center text-foreground">
             {moveIndex > 0 && moves[moveIndex - 1] ? (
               <>
                 {moves[moveIndex - 1].moveNumber}
@@ -640,7 +671,7 @@ export default function ChessBoard({
           
           <button 
             onClick={goToNextMove}
-            className="p-2 bg-amber/20 hover:bg-amber/30 rounded text-amber-dark disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 bg-amber/20 hover:bg-amber/30 dark:bg-amber/30 dark:hover:bg-amber/40 rounded text-amber-dark dark:text-amber-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             disabled={moveIndex === moves.length}
             title="Siguiente movimiento"
           >

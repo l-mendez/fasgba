@@ -116,6 +116,7 @@ const ContentRenderer = ({ content }: { content: any[] }) => {
                 pgn={block.pgn || block.content?.pgn} 
                 whitePlayer={block.whitePlayer || block.content?.whitePlayer}
                 blackPlayer={block.blackPlayer || block.content?.blackPlayer}
+                result={block.result || block.content?.result}
               />
             </div>
           )
@@ -173,12 +174,12 @@ export default function NewsContentWrapper({
 
           {/* Contenido principal - Optimized padding and spacing for mobile */}
           <div className="container px-3 sm:px-4 md:px-6 -mt-16 sm:-mt-20 relative z-10">
-            <div className="mx-auto max-w-3xl bg-background rounded-lg border border-amber/20 shadow-lg p-4 sm:p-6 md:p-8 lg:p-10">
+            <div className="mx-auto max-w-3xl bg-background dark:bg-background/95 rounded-lg border border-amber/20 dark:border-amber/30 shadow-lg p-4 sm:p-6 md:p-8 lg:p-10">
               <Button
                 asChild
                 variant="outline"
                 size="sm"
-                className="mb-4 sm:mb-6 border-amber text-amber-dark hover:bg-amber/10 text-xs sm:text-sm"
+                className="mb-4 sm:mb-6 border-amber text-amber-dark dark:text-amber-200 hover:bg-amber/10 dark:hover:bg-amber/20 text-xs sm:text-sm transition-colors"
               >
                 <Link href="/noticias">
                   <ChevronLeft className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
@@ -188,22 +189,22 @@ export default function NewsContentWrapper({
 
               <div className="mb-3 sm:mb-4 flex flex-wrap gap-1.5 sm:gap-2">
                 {newsItem.tags && newsItem.tags.map((tag) => (
-                  <Badge key={tag} variant="outline" className="border-amber/20 text-muted-foreground text-xs">
+                  <Badge key={tag} variant="outline" className="border-amber/20 dark:border-amber/30 text-muted-foreground dark:text-muted-foreground text-xs">
                     {tag}
                   </Badge>
                 ))}
               </div>
 
-              <h1 className="mb-3 sm:mb-4 text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-terracotta leading-tight">{newsItem.title}</h1>
+              <h1 className="mb-3 sm:mb-4 text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-terracotta dark:text-amber-400 leading-tight">{newsItem.title}</h1>
 
               {newsItem.author_name && (
-                <div className="mb-4 text-sm text-muted-foreground">
-                  Por: <span className="font-medium text-foreground">{newsItem.author_name}</span>
+                <div className="mb-4 text-sm text-muted-foreground dark:text-muted-foreground">
+                  Por: <span className="font-medium text-foreground dark:text-foreground">{newsItem.author_name}</span>
                 </div>
               )}
 
-              <div className="mb-6 sm:mb-8 flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-amber flex-shrink-0" />
+              <div className="mb-6 sm:mb-8 flex items-center gap-2 text-xs sm:text-sm text-muted-foreground dark:text-muted-foreground">
+                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-amber dark:text-amber-400 flex-shrink-0" />
                 <span>{formatDate(newsItem.date)}</span>
               </div>
 
@@ -215,11 +216,11 @@ export default function NewsContentWrapper({
           {relatedNews && relatedNews.length > 0 && (
             <div className="container px-3 sm:px-4 md:px-6 py-8 sm:py-12 md:py-16">
               <div className="mx-auto max-w-3xl">
-                <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold text-terracotta">Noticias relacionadas</h2>
+                <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-bold text-terracotta dark:text-amber-400">Noticias relacionadas</h2>
                 <div className="grid gap-4 sm:gap-6 sm:grid-cols-2">
                   {relatedNews.map((news) => (
                     <Link key={news.id} href={`/noticias/${news.id}`} className="group">
-                      <div className="overflow-hidden rounded-lg border border-amber/20 bg-background shadow-md transition-colors hover:border-amber">
+                      <div className="overflow-hidden rounded-lg border border-amber/20 dark:border-amber/30 bg-background dark:bg-background/95 shadow-md transition-colors hover:border-amber dark:hover:border-amber/50">
                         <div className="aspect-video overflow-hidden">
                           <img
                             src={getImageUrl(news.image)}
@@ -228,11 +229,11 @@ export default function NewsContentWrapper({
                           />
                         </div>
                         <div className="p-3 sm:p-4">
-                          <h3 className="mb-2 text-base sm:text-lg font-bold text-terracotta group-hover:text-amber-dark transition-colors line-clamp-2">
+                          <h3 className="mb-2 text-base sm:text-lg font-bold text-terracotta dark:text-amber-400 group-hover:text-amber-dark dark:group-hover:text-amber-300 transition-colors line-clamp-2">
                             {news.title}
                           </h3>
-                          <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-amber flex-shrink-0" />
+                          <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground dark:text-muted-foreground">
+                            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-amber dark:text-amber-400 flex-shrink-0" />
                             <span>{formatDate(news.date)}</span>
                           </div>
                         </div>

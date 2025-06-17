@@ -136,7 +136,8 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
           content: {
             pgn: '',
             whitePlayer: { type: 'user', value: '' },
-            blackPlayer: { type: 'user', value: '' }
+            blackPlayer: { type: 'user', value: '' },
+            result: '1-0'
           }
         }
         break
@@ -242,6 +243,7 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
                 <SelectItem value="clases" className="!py-1.5">Clases</SelectItem>
                 <SelectItem value="eventos" className="!py-1.5">Eventos</SelectItem>
                 <SelectItem value="partidas" className="!py-1.5">Partidas</SelectItem>
+                <SelectItem value="entrevistas" className="!py-1.5">Entrevistas</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -305,6 +307,23 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
                         value={block.content.blackPlayer?.value || ''}
                         onChange={(e) => updateContentBlock(index, { ...block, content: { ...block.content, blackPlayer: { ...block.content.blackPlayer, value: e.target.value } } })}
                       />
+                      <div className="space-y-2">
+                        <Label htmlFor={`result-${index}`}>Resultado</Label>
+                        <Select 
+                          value={block.content.result || "1-0"} 
+                          onValueChange={(value) => updateContentBlock(index, { ...block, content: { ...block.content, result: value } })}
+                        >
+                          <SelectTrigger id={`result-${index}`}>
+                            <SelectValue placeholder="Seleccionar resultado" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1-0">1-0 (Ganan las blancas)</SelectItem>
+                            <SelectItem value="0-1">0-1 (Ganan las negras)</SelectItem>
+                            <SelectItem value="1/2-1/2">1/2-1/2 (Tablas)</SelectItem>
+                            <SelectItem value="*">* (Partida en curso)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="mt-2 p-2 border rounded-md bg-muted">
                         <p className="text-sm text-muted-foreground">Vista previa del tablero no disponible en el editor</p>
                       </div>

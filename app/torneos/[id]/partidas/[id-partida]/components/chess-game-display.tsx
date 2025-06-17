@@ -62,6 +62,8 @@ export default function ChessGameDisplay({ game }: ChessGameDisplayProps) {
               pgn={game.pgn}
               whitePlayer={{ type: 'custom', value: game.white }}
               blackPlayer={{ type: 'custom', value: game.black }}
+              result={game.result}
+              width={400}
             />
           </CardContent>
         </Card>

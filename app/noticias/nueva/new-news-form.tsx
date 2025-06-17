@@ -95,6 +95,7 @@ interface ChessGameBlockContent {
     pgn: string
     whitePlayer: { type: string; value: string }
     blackPlayer: { type: string; value: string }
+    result?: string
   }
 }
 
@@ -349,6 +350,7 @@ const ChessGameBlock = ({
   onBlackPlayerChange,
   onWhitePlayerTypeChange,
   onBlackPlayerTypeChange,
+  onResultChange,
   onDelete,
   onMoveUp,
   onMoveDown,
@@ -361,6 +363,7 @@ const ChessGameBlock = ({
   onBlackPlayerChange: (value: string) => void
   onWhitePlayerTypeChange: (type: string) => void
   onBlackPlayerTypeChange: (type: string) => void
+  onResultChange: (result: string) => void
   onDelete: () => void
   onMoveUp: () => void
   onMoveDown: () => void
@@ -435,6 +438,21 @@ const ChessGameBlock = ({
               onChange={(newValue) => onBlackPlayerChange(newValue)}
               onTypeChange={(newType) => onBlackPlayerTypeChange(newType)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={`result-${index}`}>Resultado</Label>
+            <Select value={value.result || "1-0"} onValueChange={onResultChange}>
+              <SelectTrigger id={`result-${index}`}>
+                <SelectValue placeholder="Seleccionar resultado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1-0">1-0 (Ganan las blancas)</SelectItem>
+                <SelectItem value="0-1">0-1 (Ganan las negras)</SelectItem>
+                <SelectItem value="1/2-1/2">1/2-1/2 (Tablas)</SelectItem>
+                <SelectItem value="*">* (Partida en curso)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CollapsibleContent>
       </Collapsible>
@@ -744,7 +762,8 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
           content: {
             pgn: block.content.pgn,
             whitePlayer: block.content.whitePlayer,
-            blackPlayer: block.content.blackPlayer
+            blackPlayer: block.content.blackPlayer,
+            result: block.content.result
           }
         }
       }
@@ -799,6 +818,7 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
           pgn: "",
           whitePlayer: { type: "custom", value: "" },
           blackPlayer: { type: "custom", value: "" },
+          result: "1-0"
         },
       } as ChessGameBlockContent]
     }))
@@ -916,6 +936,18 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
           type: newType,
           value: "",
         },
+      }
+    }
+    setFormData(prev => ({ ...prev, contentBlocks: updatedBlocks }))
+  }
+
+  const updateChessGameResult = (index: number, newResult: string) => {
+    const updatedBlocks = [...formData.contentBlocks]
+    if (updatedBlocks[index].type === BLOCK_TYPES.CHESS_GAME) {
+      const chessBlock = updatedBlocks[index] as ChessGameBlockContent
+      chessBlock.content = {
+        ...chessBlock.content,
+        result: newResult,
       }
     }
     setFormData(prev => ({ ...prev, contentBlocks: updatedBlocks }))
@@ -1046,6 +1078,7 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
                 <SelectItem value="clases">Clases</SelectItem>
                 <SelectItem value="eventos">Eventos</SelectItem>
                 <SelectItem value="partidas">Partidas</SelectItem>
+                <SelectItem value="entrevistas">Entrevistas</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -1127,6 +1160,7 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
                       onBlackPlayerChange={(newValue) => updateChessGameBlackPlayer(index, newValue)}
                       onWhitePlayerTypeChange={(newType) => updateChessGameWhitePlayerType(index, newType)}
                       onBlackPlayerTypeChange={(newType) => updateChessGameBlackPlayerType(index, newType)}
+                      onResultChange={(newResult) => updateChessGameResult(index, newResult)}
                       onDelete={() => deleteBlock(index)}
                       onMoveUp={() => moveBlockUp(index)}
                       onMoveDown={() => moveBlockDown(index)}

@@ -37,13 +37,15 @@ interface ChessGameBlockProps {
   pgn?: string;
   whitePlayer?: PlayerInfo;
   blackPlayer?: PlayerInfo;
+  result?: string;
 }
 
 export default function ChessGameBlock({ 
   fen, 
   pgn,
   whitePlayer,
-  blackPlayer
+  blackPlayer,
+  result
 }: ChessGameBlockProps) {
   const [currentFen, setCurrentFen] = useState(fen);
   const [whitePlayerDetails, setWhitePlayerDetails] = useState<UserDetails | null>(null);
@@ -155,7 +157,7 @@ export default function ChessGameBlock({
   };
   
   return (
-    <div className="my-4 sm:my-6 p-3 sm:p-4 md:p-6 bg-muted/30 rounded-lg border border-amber/10">
+    <div className="my-4 sm:my-6 p-3 sm:p-4 md:p-6 bg-muted/30 dark:bg-muted/40 rounded-lg border border-amber/10 dark:border-amber/20">
       <div className="flex justify-center">
         <ChessBoard 
           fen={fen} 
@@ -163,6 +165,7 @@ export default function ChessGameBlock({
           onPositionChange={handlePositionChange}
           whitePlayer={whitePlayerInfo}
           blackPlayer={blackPlayerInfo}
+          result={result}
           width={400}
         />
       </div>
@@ -173,7 +176,7 @@ export default function ChessGameBlock({
             onClick={handleCopyPGN}
             variant="outline"
             size="sm"
-            className="border-amber text-amber-dark hover:bg-amber/10 hover:text-amber-dark"
+            className="border-amber text-amber-dark dark:text-amber-200 hover:bg-amber/10 dark:hover:bg-amber/20 hover:text-amber-dark dark:hover:text-amber-100 transition-colors"
           >
             {isCopied ? (
               <>
