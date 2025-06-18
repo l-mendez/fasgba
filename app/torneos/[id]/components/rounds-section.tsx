@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronLeft, ChevronRight, Trophy, Users, User, Play, Swords } from "lucide-react"
+import { ChevronLeft, ChevronRight, Trophy, Users, User, Play, Swords, ChevronDown, ChevronUp } from "lucide-react"
 import Link from "next/link"
 import { GameDisplay } from "@/lib/gameUtils-client"
 import { cn } from "@/lib/utils"
@@ -48,8 +48,8 @@ function groupGamesByMatch(games: GameDisplay[]): MatchGroup[] {
       
       // If we have an odd board game, use its white team as teamA
       // Otherwise, use alphabetical order
-      const teamA = oddBoardGame ? oddBoardGame.whiteTeam : teams[0]
-      const teamB = oddBoardGame ? oddBoardGame.blackTeam : teams[1]
+      const teamA = oddBoardGame ? oddBoardGame.whiteTeam || teams[0] : teams[0]
+      const teamB = oddBoardGame ? oddBoardGame.blackTeam || teams[1] : teams[1]
       
       matchMap.set(matchKey, {
         teamA,
@@ -109,6 +109,7 @@ function groupGamesByMatch(games: GameDisplay[]): MatchGroup[] {
 
 export default function RoundsSection({ totalRounds, gamesByRound, tournamentId, tournamentType }: RoundsSectionProps) {
   const [selectedRound, setSelectedRound] = useState<string>("1")
+  const [expandedMatches, setExpandedMatches] = useState<Set<string>>(new Set())
   
   const roundNumber = parseInt(selectedRound)
   const roundGames = gamesByRound[roundNumber] || []
@@ -122,229 +123,258 @@ export default function RoundsSection({ totalRounds, gamesByRound, tournamentId,
     return []
   }, [roundGames, isTeamTournament])
 
+  // Toggle match expansion
+  const toggleMatch = (matchKey: string) => {
+    const newExpanded = new Set(expandedMatches)
+    if (newExpanded.has(matchKey)) {
+      newExpanded.delete(matchKey)
+    } else {
+      newExpanded.add(matchKey)
+    }
+    setExpandedMatches(newExpanded)
+  }
+
   return (
-    <div className="lg:col-span-7">
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+    <div className="space-y-4 w-full max-w-full overflow-hidden">
+      {/* Header - Mobile First */}
+      <div className="bg-card dark:bg-card rounded-lg p-3 shadow-sm border border-border/50 w-full max-w-full overflow-hidden box-border">
+        <div className="flex items-center justify-between mb-3 w-full max-w-full overflow-hidden">
+          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
             {isTeamTournament ? (
-              <Swords className="h-5 w-5 text-terracotta" />
+              <Swords className="h-4 w-4 text-terracotta dark:text-terracotta-light flex-shrink-0" />
             ) : (
-              <Users className="h-5 w-5 text-terracotta" />
+              <Users className="h-4 w-4 text-terracotta dark:text-terracotta-light flex-shrink-0" />
             )}
-            <h2 className="text-xl font-bold text-terracotta">
-              {isTeamTournament ? 'Enfrentamientos por Equipos' : 'Rondas del Torneo'}
+            <h2 className="font-bold text-terracotta dark:text-terracotta-light text-xs sm:text-sm truncate">
+              {isTeamTournament ? 'Enfrentamientos' : 'Partidas'}
             </h2>
           </div>
           
           <Select value={selectedRound} onValueChange={setSelectedRound}>
-            <SelectTrigger className="w-32 border-amber/20 focus:ring-amber">
-              <SelectValue placeholder="Ronda" />
+            <SelectTrigger className="w-20 h-8 text-xs border-amber/20 dark:border-amber/30 flex-shrink-0">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {Array.from({length: totalRounds}, (_, i) => i + 1).map(roundNum => (
                 <SelectItem key={roundNum} value={roundNum.toString()}>
-                  Ronda {roundNum}
+                  R{roundNum}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         
-        <Card className="border-amber/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-terracotta text-lg">Ronda {roundNumber}</CardTitle>
-            <CardDescription>
-              {isTeamTournament ? (
-                matches.length > 0 ? (
-                  matches.some(m => m.status === 'ongoing') 
-                    ? 'Enfrentamientos en curso' 
-                    : matches.some(m => m.status === 'finished')
-                      ? 'Enfrentamientos finalizados'
-                      : 'Enfrentamientos programados'
-                ) : 'Ronda aún no programada'
-              ) : (
-                roundGames?.some(g => g.result === '*') 
-                  ? 'Partidas en curso'
-                  : roundGames?.length > 0 
-                    ? 'Partidas finalizadas'
-                    : 'Ronda aún no programada'
-              )}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4">
-              {isTeamTournament ? (
-                // Team Tournament - Show matches grouped
-                matches.length > 0 ? matches.map((match, matchIndex) => (
-                  <Card key={`${match.teamA}-${match.teamB}`} className="border-amber/10">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline" className="text-xs">
-                            Enfrentamiento {matchIndex + 1}
-                          </Badge>
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-terracotta">{match.teamA}</span>
-                            <span className="text-lg font-bold text-muted-foreground">
-                              {match.totalScore.teamA} - {match.totalScore.teamB}
-                            </span>
-                            <span className="font-semibold text-terracotta">{match.teamB}</span>
-                          </div>
-                        </div>
-                        <Badge 
-                          variant={match.status === 'ongoing' ? 'default' : 'outline'}
-                          className={cn(
-                            match.status === 'finished' 
-                              ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700'
-                              : match.status === 'ongoing'
-                                ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700'
-                                : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700'
-                          )}
-                        >
-                          {match.status === 'finished' ? 'Finalizado' : 
-                           match.status === 'ongoing' ? 'En curso' : 'Programado'}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="grid gap-2">
-                        {match.games
-                          .sort((a, b) => (a.board || 0) - (b.board || 0))
-                          .map(game => (
-                          <div 
-                            key={game.id} 
-                            className="flex items-center justify-between p-2 rounded border border-amber/5 hover:bg-amber/5 transition-colors"
-                          >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <Badge variant="secondary" className="text-xs flex-shrink-0">
-                                Mesa {game.board}
-                              </Badge>
-                              <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <div className="flex flex-col min-w-0">
-                                  <span className="text-sm font-medium truncate">{game.white}</span>
-                                  {game.whiteRating && (
-                                    <span className="text-xs text-muted-foreground">
-                                      ({game.whiteRating})
-                                    </span>
-                                  )}
-                                </div>
-                                <span className="text-muted-foreground text-sm flex-shrink-0">vs</span>
-                                <div className="flex flex-col min-w-0">
-                                  <span className="text-sm font-medium truncate">{game.black}</span>
-                                  {game.blackRating && (
-                                    <span className="text-xs text-muted-foreground">
-                                      ({game.blackRating})
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge 
-                                variant={game.result === '*' ? 'default' : 'outline'}
-                                className={cn(
-                                  "flex-shrink-0 text-xs",
-                                  game.result !== '*'
-                                    ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700'
-                                    : 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700'
-                                )}
-                              >
-                                {game.result === '*' ? 'En juego' : game.result}
-                              </Badge>
-                              <Button
-                                asChild
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-xs hover:bg-amber/10 hover:text-terracotta"
-                              >
-                                <Link href={`/torneos/${tournamentId}/partidas/${game.id}`}>
-                                  <Play className="h-3 w-3 mr-1" />
-                                  Ver
-                                </Link>
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )) : (
-                  <p className="text-muted-foreground text-center py-8">
-                    {totalRounds >= roundNumber 
-                      ? 'Ronda aún no programada' 
-                      : 'Esta ronda no existe en el torneo'
-                    }
-                  </p>
-                )
-              ) : (
-                // Individual Tournament - Show games individually  
-                roundGames?.map(game => (
-                  <div 
-                    key={game.id} 
-                    className="flex items-center justify-between p-3 rounded-lg border border-amber/10 hover:bg-amber/5 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Badge variant="outline" className="text-xs flex-shrink-0">
-                        {game.board}
-                      </Badge>
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className="flex items-center gap-1 min-w-0">
-                          <span className="font-medium truncate">{game.white}</span>
-                          {game.whiteRating && (
-                            <span className="text-xs text-muted-foreground flex-shrink-0">
-                              ({game.whiteRating})
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-muted-foreground text-sm flex-shrink-0">vs</span>
-                        <div className="flex items-center gap-1 min-w-0">
-                          <span className="font-medium truncate">{game.black}</span>
-                          {game.blackRating && (
-                            <span className="text-xs text-muted-foreground flex-shrink-0">
-                              ({game.blackRating})
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+        <div className="text-center w-full max-w-full overflow-hidden">
+          <h3 className="font-semibold text-terracotta dark:text-terracotta-light text-sm">Ronda {roundNumber}</h3>
+          <p className="text-xs text-muted-foreground mt-1 break-words hyphens-auto">
+            {isTeamTournament ? (
+              matches.length > 0 ? (
+                matches.some(m => m.status === 'ongoing') 
+                  ? 'Enfrentamientos en curso' 
+                  : matches.some(m => m.status === 'finished')
+                    ? 'Enfrentamientos finalizados'
+                    : 'Enfrentamientos programados'
+              ) : 'Ronda aún no programada'
+            ) : (
+              roundGames?.some(g => g.result === '*') 
+                ? 'Partidas en curso'
+                : roundGames?.length > 0 
+                  ? 'Partidas finalizadas'
+                  : 'Ronda aún no programada'
+            )}
+          </p>
+        </div>
+      </div>
+
+      {/* Games/Matches List - Mobile Optimized */}
+      <div className="space-y-3 w-full max-w-full overflow-hidden">
+        {isTeamTournament ? (
+          // Team Tournament - Collapsible mobile layout
+          matches.length > 0 ? matches.map((match, matchIndex) => {
+            const matchKey = `${match.teamA}-${match.teamB}`
+            const isExpanded = expandedMatches.has(matchKey)
+            
+            return (
+              <div key={matchKey} className="bg-card dark:bg-card rounded-lg shadow-sm overflow-hidden border border-border/50 w-full max-w-full box-border">
+                {/* Match Header - Clickable */}
+                <button
+                  onClick={() => toggleMatch(matchKey)}
+                  className="w-full bg-gradient-to-r from-terracotta/5 to-amber/5 dark:from-terracotta/10 dark:to-amber/10 p-3 border-b border-border/50 hover:from-terracotta/10 hover:to-amber/10 dark:hover:from-terracotta/15 dark:hover:to-amber/15 transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-2 w-full max-w-full overflow-hidden">
+                    <span className="text-xs font-medium text-muted-foreground flex-shrink-0">
+                      Enfrentamiento {matchIndex + 1}
+                    </span>
                     <div className="flex items-center gap-2">
                       <Badge 
-                        variant={game.result === '*' ? 'default' : 'outline'}
+                        variant={match.status === 'ongoing' ? 'default' : 'outline'}
                         className={cn(
-                          "flex-shrink-0",
-                          game.result !== '*'
-                            ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700'
-                            : 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700'
+                          "text-xs flex-shrink-0",
+                          match.status === 'finished' 
+                            ? 'bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
+                            : match.status === 'ongoing'
+                              ? 'bg-yellow-50 dark:bg-yellow-950/50 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800'
+                              : 'bg-gray-50 dark:bg-gray-900/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'
                         )}
                       >
-                        {game.result === '*' ? 'En juego' : game.result}
+                        {match.status === 'finished' ? '✓' : 
+                         match.status === 'ongoing' ? '⏳' : '⏸️'}
                       </Badge>
-                      <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 px-2 text-xs hover:bg-amber/10 hover:text-terracotta"
-                      >
-                        <Link href={`/torneos/${tournamentId}/partidas/${game.id}`}>
-                          <Play className="h-3 w-3 mr-1" />
-                          Ver
-                        </Link>
-                      </Button>
+                      {isExpanded ? (
+                        <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      )}
                     </div>
                   </div>
-                )) || (
-                  <p className="text-muted-foreground text-center py-8">
-                    {totalRounds >= roundNumber 
-                      ? 'Ronda aún no programada' 
-                      : 'Esta ronda no existe en el torneo'
-                    }
-                  </p>
-                )
-              )}
+                  <div className="text-center w-full max-w-full overflow-hidden">
+                    <div className="flex items-center justify-center gap-1 w-full max-w-full min-w-0">
+                      <span className="font-semibold text-terracotta dark:text-terracotta-light text-xs truncate flex-1 text-right max-w-[35%]">
+                        {match.teamA}
+                      </span>
+                      <div className="bg-background dark:bg-background rounded px-2 py-1 shadow-sm border border-border/30 flex-shrink-0">
+                        <span className="font-bold text-sm text-foreground whitespace-nowrap">
+                          {match.totalScore.teamA}-{match.totalScore.teamB}
+                        </span>
+                      </div>
+                      <span className="font-semibold text-terracotta dark:text-terracotta-light text-xs truncate flex-1 text-left max-w-[35%]">
+                        {match.teamB}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+                
+                {/* Individual Games - Collapsible */}
+                {isExpanded && (
+                  <div className="divide-y divide-border/30 w-full max-w-full">
+                    {match.games
+                      .sort((a, b) => (a.board || 0) - (b.board || 0))
+                      .map(game => (
+                      <div key={game.id} className="p-3 w-full max-w-full overflow-hidden">
+                        <div className="flex items-center justify-between mb-2 gap-1 w-full max-w-full overflow-hidden">
+                          <span className="text-xs font-medium text-muted-foreground flex-shrink-0">
+                            Mesa {game.board}
+                          </span>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <Badge 
+                              variant={game.result === '*' ? 'default' : 'outline'}
+                              className={cn(
+                                "text-xs",
+                                game.result !== '*'
+                                  ? 'bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
+                                  : 'bg-yellow-50 dark:bg-yellow-950/50 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800'
+                              )}
+                            >
+                              {game.result === '*' ? '⏳' : game.result}
+                            </Badge>
+                            <Button
+                              asChild
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-1 text-xs text-terracotta dark:text-terracotta-light hover:bg-terracotta/10 dark:hover:bg-terracotta/20"
+                            >
+                              <Link href={`/torneos/${tournamentId}/partidas/${game.id}`}>
+                                Ver
+                              </Link>
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1 text-xs w-full max-w-full min-w-0">
+                          <div className="text-center min-w-0 max-w-full overflow-hidden">
+                            <div className="font-medium truncate text-foreground">{game.white}</div>
+                            {game.whiteRating && (
+                              <div className="text-xs text-muted-foreground">({game.whiteRating})</div>
+                            )}
+                          </div>
+                          <div className="text-center text-muted-foreground text-xs flex items-center justify-center flex-shrink-0">
+                            vs
+                          </div>
+                          <div className="text-center min-w-0 max-w-full overflow-hidden">
+                            <div className="font-medium truncate text-foreground">{game.black}</div>
+                            {game.blackRating && (
+                              <div className="text-xs text-muted-foreground">({game.blackRating})</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          }) : (
+            <div className="bg-card dark:bg-card rounded-lg p-6 text-center shadow-sm border border-border/50 w-full max-w-full overflow-hidden box-border">
+              <div className="text-4xl mb-2">🏆</div>
+              <p className="text-muted-foreground text-sm break-words hyphens-auto">
+                {totalRounds >= roundNumber 
+                  ? 'Ronda aún no programada' 
+                  : 'Esta ronda no existe en el torneo'
+                }
+              </p>
             </div>
-          </CardContent>
-        </Card>
+          )
+        ) : (
+          // Individual Tournament - Simplified mobile layout
+          roundGames?.length > 0 ? roundGames.map(game => (
+            <div key={game.id} className="bg-card dark:bg-card rounded-lg p-3 shadow-sm border border-border/50 w-full max-w-full overflow-hidden box-border">
+              <div className="flex items-center justify-between mb-2 gap-1 w-full max-w-full overflow-hidden">
+                <Badge variant="outline" className="text-xs border-border flex-shrink-0">
+                  Mesa {game.board}
+                </Badge>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Badge 
+                    variant={game.result === '*' ? 'default' : 'outline'}
+                    className={cn(
+                      "text-xs",
+                      game.result !== '*'
+                        ? 'bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
+                        : 'bg-yellow-50 dark:bg-yellow-950/50 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800'
+                    )}
+                  >
+                    {game.result === '*' ? '⏳' : game.result}
+                  </Badge>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-1 text-xs text-terracotta dark:text-terracotta-light hover:bg-terracotta/10 dark:hover:bg-terracotta/20"
+                  >
+                    <Link href={`/torneos/${tournamentId}/partidas/${game.id}`}>
+                      Ver
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-1 text-xs w-full max-w-full min-w-0">
+                <div className="text-center min-w-0 max-w-full overflow-hidden">
+                  <div className="font-medium truncate text-foreground">{game.white}</div>
+                  {game.whiteRating && (
+                    <div className="text-xs text-muted-foreground">({game.whiteRating})</div>
+                  )}
+                </div>
+                <div className="text-center text-muted-foreground text-xs flex items-center justify-center flex-shrink-0">
+                  vs
+                </div>
+                <div className="text-center min-w-0 max-w-full overflow-hidden">
+                  <div className="font-medium truncate text-foreground">{game.black}</div>
+                  {game.blackRating && (
+                    <div className="text-xs text-muted-foreground">({game.blackRating})</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )) : (
+            <div className="bg-card dark:bg-card rounded-lg p-6 text-center shadow-sm border border-border/50 w-full max-w-full overflow-hidden box-border">
+              <div className="text-4xl mb-2">♟️</div>
+              <p className="text-muted-foreground text-sm break-words hyphens-auto">
+                {totalRounds >= roundNumber 
+                  ? 'Ronda aún no programada' 
+                  : 'Esta ronda no existe en el torneo'
+                }
+              </p>
+            </div>
+          )
+        )}
       </div>
     </div>
   )

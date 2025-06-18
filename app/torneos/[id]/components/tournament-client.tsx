@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, Trophy, Clock } from "lucide-react"
+import { Calendar, MapPin, Trophy, Clock, Users, DollarSign, Info } from "lucide-react"
 import { type TournamentDisplay } from "@/lib/tournamentUtils"
 import { type GameDisplay } from "@/lib/gameUtils-client"
 import RoundsSection from "./rounds-section"
@@ -27,169 +27,178 @@ export default function TournamentClient({
 
   return (
     <>
-      {/* Tournament Header */}
-      <section className="w-full py-8 md:py-12 bg-gradient-to-b from-terracotta/10 to-amber/5">
-        <div className="container px-4 md:px-6">
-          <div className="flex flex-col space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-terracotta">
-                  {tournament.title}
-                </h1>
-                {tournament.description && (
-                  <p className="text-muted-foreground mt-2 max-w-2xl">
-                    {tournament.description}
-                  </p>
-                )}
+      {/* Tournament Header - Mobile First */}
+      <section className="w-screen max-w-full py-4 sm:py-6 md:py-8 lg:py-12 bg-gradient-to-b from-terracotta/10 to-amber/5 dark:from-terracotta/5 dark:to-amber/5 overflow-hidden">
+        <div className="w-full max-w-none px-3 sm:px-4 md:px-6 mx-auto box-border">
+          <div className="space-y-3 sm:space-y-4 w-full max-w-full">
+            {/* Title and Status */}
+            <div className="text-center sm:text-left w-full max-w-full overflow-hidden">
+              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-bold text-terracotta dark:text-terracotta-light leading-tight break-words hyphens-auto">
+                {tournament.title}
+              </h1>
+              {tournament.description && (
+                <p className="text-muted-foreground mt-2 text-sm leading-relaxed break-words hyphens-auto">
+                  {tournament.description}
+                </p>
+              )}
+              <div className="mt-3 flex justify-center sm:justify-start w-full overflow-hidden">
+                <Badge 
+                  variant="outline" 
+                  className={cn(
+                    "text-xs px-2 py-1 max-w-[90%] truncate inline-block",
+                    tournament.is_upcoming ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800' :
+                    tournament.is_ongoing ? 'bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800' :
+                    'bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                  )}
+                >
+                  {tournament.is_ongoing ? '🟢 En curso' : tournament.is_upcoming ? '🔵 Próximo' : '⚫ Finalizado'}
+                </Badge>
               </div>
-              <Badge 
-                variant="outline" 
-                className={cn(
-                  "border-amber text-sm",
-                  tournament.is_upcoming ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-700' :
-                  tournament.is_ongoing ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700' :
-                  'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700'
-                )}
-              >
-                {tournament.is_ongoing ? 'En curso' : tournament.is_upcoming ? 'Próximo' : 'Finalizado'}
-              </Badge>
             </div>
             
-            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-amber" />
-                <span>{tournament.formatted_start_date}</span>
+            {/* Quick Info - Mobile Optimized */}
+            <div className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-lg p-3 space-y-2 border border-white/20 dark:border-gray-700/50 w-full max-w-full overflow-hidden box-border">
+              <div className="w-full max-w-full space-y-2 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-2 text-sm">
+                <div className="flex items-center gap-2 min-w-0 w-full max-w-full overflow-hidden">
+                  <Calendar className="h-4 w-4 text-amber dark:text-amber-400 flex-shrink-0" />
+                  <span className="font-medium text-foreground truncate">{tournament.formatted_start_date}</span>
+                </div>
                 {tournament.end_date && tournament.formatted_end_date && 
                   tournament.formatted_start_date !== tournament.formatted_end_date && (
-                  <span> - {tournament.formatted_end_date}</span>
+                  <div className="flex items-center gap-2 min-w-0 w-full max-w-full overflow-hidden">
+                    <Calendar className="h-4 w-4 text-amber dark:text-amber-400 flex-shrink-0" />
+                    <span className="text-foreground truncate">{tournament.formatted_end_date}</span>
+                  </div>
                 )}
-              </div>
-              {tournament.place && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-amber" />
-                  <span>{tournament.place}</span>
+                {tournament.place && (
+                  <div className="flex items-center gap-2 sm:col-span-2 min-w-0 w-full max-w-full overflow-hidden">
+                    <MapPin className="h-4 w-4 text-amber dark:text-amber-400 flex-shrink-0" />
+                    <span className="truncate text-foreground">{tournament.place}</span>
+                  </div>
+                )}
+                {tournament.time && (
+                  <div className="flex items-center gap-2 min-w-0 w-full max-w-full overflow-hidden">
+                    <Clock className="h-4 w-4 text-amber dark:text-amber-400 flex-shrink-0" />
+                    <span className="text-foreground truncate">{tournament.time}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 min-w-0 w-full max-w-full overflow-hidden">
+                  <Trophy className="h-4 w-4 text-amber dark:text-amber-400 flex-shrink-0" />
+                  <span className="text-foreground truncate">{totalRounds} ronda{totalRounds !== 1 ? 's' : ''}</span>
                 </div>
-              )}
-              {tournament.time && (
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-amber" />
-                  <span>{tournament.time}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                <Trophy className="h-4 w-4 text-amber" />
-                <span>{totalRounds} rondas</span>
               </div>
-              {/* Tournament Type Badge */}
-              <Badge variant="secondary" className="bg-terracotta/10 text-terracotta border-terracotta/20">
-                {tournament.tournament_type === 'team' ? 'Por Equipos' : 'Individual'}
-              </Badge>
+              <div className="pt-1 w-full max-w-full overflow-hidden">
+                <Badge variant="secondary" className="bg-terracotta/10 dark:bg-terracotta/20 text-terracotta dark:text-terracotta-light border-terracotta/20 dark:border-terracotta/30 text-xs max-w-full truncate inline-block">
+                  {tournament.tournament_type === 'team' ? '👥 Por Equipos' : '👤 Individual'}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Tournament Info Cards */}
-      <section className="w-full py-6 bg-muted/30">
-        <div className="container px-4 md:px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Tournament Type Details */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg text-terracotta">Formato del Torneo</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tipo:</span>
-                  <span className="font-medium">
-                    {tournament.tournament_type === 'team' ? 'Por Equipos' : 'Individual'}
-                  </span>
+      {/* Tournament Details - Compact Mobile Layout */}
+      <section className="w-screen max-w-full py-3 sm:py-4 bg-muted/20 dark:bg-muted/10 overflow-hidden">
+        <div className="w-full max-w-none px-3 sm:px-4 md:px-6 mx-auto box-border">
+          <div className="space-y-3 w-full max-w-full">
+            {/* Tournament Format - Inline for mobile */}
+            <div className="bg-card dark:bg-card rounded-lg p-3 shadow-sm border border-border/50 w-full max-w-full overflow-hidden box-border">
+              <div className="flex items-center gap-2 mb-2 w-full max-w-full overflow-hidden">
+                <Users className="h-4 w-4 text-terracotta dark:text-terracotta-light flex-shrink-0" />
+                <h3 className="font-semibold text-terracotta dark:text-terracotta-light text-sm truncate">Formato</h3>
+              </div>
+              <div className="space-y-1 text-sm w-full max-w-full">
+                <div className="flex justify-between items-center gap-2 min-w-0 w-full max-w-full overflow-hidden">
+                  <span className="text-muted-foreground flex-shrink-0 text-xs">Tipo:</span>
+                  <span className="font-medium text-foreground text-right truncate text-xs">{tournament.tournament_type === 'team' ? 'Por Equipos' : 'Individual'}</span>
                 </div>
                 {tournament.tournament_type === 'team' && tournament.players_per_team && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Jugadores por equipo:</span>
-                    <span className="font-medium">{tournament.players_per_team}</span>
+                  <div className="flex justify-between items-center gap-2 min-w-0 w-full max-w-full overflow-hidden">
+                    <span className="text-muted-foreground flex-shrink-0 text-xs">Jugadores/eq:</span>
+                    <span className="font-medium text-foreground text-right text-xs">{tournament.players_per_team}</span>
                   </div>
                 )}
                 {tournament.tournament_type === 'team' && tournament.max_teams && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Máximo de equipos:</span>
-                    <span className="font-medium">{tournament.max_teams}</span>
+                  <div className="flex justify-between items-center gap-2 min-w-0 w-full max-w-full overflow-hidden">
+                    <span className="text-muted-foreground flex-shrink-0 text-xs">Máx. equipos:</span>
+                    <span className="font-medium text-foreground text-right text-xs">{tournament.max_teams}</span>
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Rondas:</span>
-                  <span className="font-medium">{totalRounds}</span>
+                <div className="flex justify-between items-center gap-2 min-w-0 w-full max-w-full overflow-hidden">
+                  <span className="text-muted-foreground flex-shrink-0 text-xs">Rondas:</span>
+                  <span className="font-medium text-foreground text-right text-xs">{totalRounds}</span>
                 </div>
                 {tournament.pace && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Ritmo:</span>
-                    <span className="font-medium">{tournament.pace}</span>
+                  <div className="flex justify-between items-center gap-2 min-w-0 w-full max-w-full overflow-hidden">
+                    <span className="text-muted-foreground flex-shrink-0 text-xs">Ritmo:</span>
+                    <span className="font-medium text-right text-foreground truncate text-xs">{tournament.pace}</span>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            {/* Registration Info */}
+            {/* Registration & Cost - Combined for mobile */}
             {(tournament.registration_deadline || tournament.cost || tournament.inscription_details) && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg text-terracotta">Inscripción</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
+              <div className="bg-card dark:bg-card rounded-lg p-3 shadow-sm border border-border/50 w-full max-w-full overflow-hidden box-border">
+                <div className="flex items-center gap-2 mb-2 w-full max-w-full overflow-hidden">
+                  <DollarSign className="h-4 w-4 text-terracotta dark:text-terracotta-light flex-shrink-0" />
+                  <h3 className="font-semibold text-terracotta dark:text-terracotta-light text-sm truncate">Inscripción</h3>
+                </div>
+                <div className="space-y-1 text-sm w-full max-w-full">
                   {tournament.registration_deadline && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Fecha límite:</span>
-                      <span className="font-medium">
+                    <div className="flex justify-between items-center gap-2 min-w-0 w-full max-w-full overflow-hidden">
+                      <span className="text-muted-foreground flex-shrink-0 text-xs">Límite:</span>
+                      <span className="font-medium text-foreground text-right truncate text-xs">
                         {new Date(tournament.registration_deadline).toLocaleDateString('es-ES')}
                       </span>
                     </div>
                   )}
                   {tournament.cost && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Costo:</span>
-                      <span className="font-medium">{tournament.cost}</span>
+                    <div className="flex justify-between items-center gap-2 min-w-0 w-full max-w-full overflow-hidden">
+                      <span className="text-muted-foreground flex-shrink-0 text-xs">Costo:</span>
+                      <span className="font-medium text-foreground text-right truncate text-xs">{tournament.cost}</span>
                     </div>
                   )}
                   {tournament.inscription_details && (
-                    <div className="pt-2">
-                      <p className="text-sm text-muted-foreground mb-1">Detalles:</p>
-                      <p className="text-sm">{tournament.inscription_details}</p>
+                    <div className="pt-1 w-full max-w-full overflow-hidden">
+                      <p className="text-xs text-muted-foreground mb-1">Detalles:</p>
+                      <p className="text-xs text-foreground break-words hyphens-auto">{tournament.inscription_details}</p>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
 
-            {/* Location & Prizes */}
+            {/* Location & Prizes - Combined */}
             {(tournament.location || tournament.prizes) && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg text-terracotta">Información Adicional</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
+              <div className="bg-card dark:bg-card rounded-lg p-3 shadow-sm border border-border/50 w-full max-w-full overflow-hidden box-border">
+                <div className="flex items-center gap-2 mb-2 w-full max-w-full overflow-hidden">
+                  <Info className="h-4 w-4 text-terracotta dark:text-terracotta-light flex-shrink-0" />
+                  <h3 className="font-semibold text-terracotta dark:text-terracotta-light text-sm truncate">Información Adicional</h3>
+                </div>
+                <div className="space-y-2 text-sm w-full max-w-full">
                   {tournament.location && (
-                    <div>
-                      <span className="text-muted-foreground text-sm">Dirección:</span>
-                      <p className="font-medium">{tournament.location}</p>
+                    <div className="w-full max-w-full overflow-hidden">
+                      <span className="text-muted-foreground text-xs">Dirección:</span>
+                      <p className="font-medium text-foreground break-words hyphens-auto text-xs">{tournament.location}</p>
                     </div>
                   )}
                   {tournament.prizes && (
-                    <div>
-                      <span className="text-muted-foreground text-sm">Premios:</span>
-                      <p className="font-medium">{tournament.prizes}</p>
+                    <div className="w-full max-w-full overflow-hidden">
+                      <span className="text-muted-foreground text-xs">Premios:</span>
+                      <p className="font-medium text-foreground break-words hyphens-auto text-xs">{tournament.prizes}</p>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
           </div>
         </div>
       </section>
 
       {/* Tournament Results */}
-      <section className="w-full py-8 md:py-12">
-        <div className="container px-4 md:px-6">
+      <section className="w-screen max-w-full py-4 sm:py-6 md:py-8 overflow-hidden">
+        <div className="w-full max-w-none px-3 sm:px-4 md:px-6 mx-auto box-border">
           <RoundsSection 
             totalRounds={totalRounds} 
             gamesByRound={gamesByRound} 
