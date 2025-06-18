@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Calendar, ChevronDown, ChevronUp, Clock, MapPin, Trophy, Users } from "lucide-react"
+import { Calendar, Clock, MapPin, Trophy, Users, ExternalLink } from "lucide-react"
+import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,17 +26,13 @@ import {
   formatDateRange,
 } from "@/lib/tournamentUtils"
 
-// Componente para mostrar un torneo con expansión
+// Componente para mostrar un torneo
 function TorneoCard({
   torneo,
   tipo,
-  expanded,
-  toggleExpand,
 }: {
   torneo: TournamentDisplay
   tipo: 'upcoming' | 'ongoing' | 'past'
-  expanded: boolean
-  toggleExpand: () => void
 }) {
   const formatTime = (timeStr: string | null) => {
     if (!timeStr) return "Horario por confirmar"
@@ -48,124 +45,89 @@ function TorneoCard({
   }
 
   return (
-    <Card className={cn("border-amber/20 shadow-md transition-all duration-300", expanded ? "col-span-full" : "")}>
+    <Card className="border-amber/20 shadow-md transition-all duration-300 hover:shadow-lg">
       <CardHeader className="pb-3 border-b border-amber/10">
         <div className="flex justify-between items-start">
-          <div>
+          <div className="flex-1">
             <CardTitle className="text-terracotta">{torneo.title}</CardTitle>
             <CardDescription>{torneo.description || "Información del torneo próximamente"}</CardDescription>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleExpand}
-            className="text-amber hover:text-amber-dark hover:bg-amber/10"
-          >
-            {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-          </Button>
         </div>
       </CardHeader>
       <CardContent className="pt-4">
-        <div className={cn("grid gap-4", expanded ? "md:grid-cols-2" : "")}>
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-amber" />
-              <span className="text-sm">
-                {torneo.end_date && torneo.start_date.toDateString() !== torneo.end_date.toDateString()
-                  ? formatDateRange(torneo.start_date, torneo.end_date)
-                  : torneo.formatted_start_date}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-amber" />
-              <span className="text-sm">{formatTime(torneo.time)}</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <MapPin className="h-4 w-4 text-amber shrink-0 mt-0.5" />
-              <div>
-                {torneo.place && (
-                  <span className="text-sm block text-amber-dark">
-                    {torneo.place}
-                  </span>
-                )}
-                <span className="text-sm text-muted-foreground">
-                  {getLocationDisplay(torneo.place, torneo.location)}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-amber" />
+            <span className="text-sm">
+              {torneo.end_date && torneo.start_date.toDateString() !== torneo.end_date.toDateString()
+                ? formatDateRange(torneo.start_date, torneo.end_date)
+                : torneo.formatted_start_date}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-amber" />
+            <span className="text-sm">{formatTime(torneo.time)}</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <MapPin className="h-4 w-4 text-amber shrink-0 mt-0.5" />
+            <div>
+              {torneo.place && (
+                <span className="text-sm block text-amber-dark">
+                  {torneo.place}
                 </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-amber" />
-              <span className="text-sm">
-                {formatRounds(torneo.rounds)} - {getPaceDisplay(torneo.pace)}
-              </span>
-            </div>
-            {tipo !== "past" && (
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-amber" />
-                <div>
-                  <span className="text-sm block">
-                    {torneo.inscription_details || "Información de inscripción próximamente"}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    Costo: {getCostDisplay(torneo.cost)}
-                  </span>
-                </div>
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-amber" />
-              <span className={cn(
-                "text-sm font-medium px-2 py-1 rounded-full text-xs",
-                tipo === "upcoming" && "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200",
-                tipo === "ongoing" && "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200", 
-                tipo === "past" && "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
-              )}>
-                {getTournamentStatusText(torneo)}
+              )}
+              <span className="text-sm text-muted-foreground">
+                {getLocationDisplay(torneo.place, torneo.location)}
               </span>
             </div>
           </div>
-
-          {expanded && (
-            <div className="space-y-4">
-              {torneo.image && (
-                <img
-                  src={torneo.image}
-                  alt={`Flyer del torneo ${torneo.title}`}
-                  className="w-full rounded-lg object-cover border border-amber/20 max-h-64"
-                />
-              )}
-
-              {torneo.description && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2 text-terracotta">Descripción:</h4>
-                  <p className="text-sm text-muted-foreground">{torneo.description}</p>
-                </div>
-              )}
-
-              {torneo.prizes && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2 text-terracotta">Premios:</h4>
-                  <p className="text-sm text-muted-foreground">{torneo.prizes}</p>
-                </div>
-              )}
-
-              {torneo.duration_days && torneo.duration_days > 1 && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2 text-terracotta">Duración:</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {torneo.duration_days} día{torneo.duration_days !== 1 ? 's' : ''}
-                  </p>
-                </div>
-              )}
+          <div className="flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-amber" />
+            <span className="text-sm">
+              {formatRounds(torneo.rounds)} - {getPaceDisplay(torneo.pace)}
+            </span>
+          </div>
+          {tipo !== "past" && (
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-amber" />
+              <div>
+                <span className="text-sm block">
+                  {torneo.inscription_details || "Información de inscripción próximamente"}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  Costo: {getCostDisplay(torneo.cost)}
+                </span>
+              </div>
             </div>
           )}
+          <div className="flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-amber" />
+            <span className={cn(
+              "text-sm font-medium px-2 py-1 rounded-full text-xs",
+              tipo === "upcoming" && "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200",
+              tipo === "ongoing" && "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200", 
+              tipo === "past" && "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+            )}>
+              {getTournamentStatusText(torneo)}
+            </span>
+          </div>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex gap-2">
+        <Button
+          asChild
+          variant="outline"
+          className="flex-1 border-terracotta text-terracotta hover:bg-terracotta/10"
+        >
+          <Link href={`/torneos/${torneo.id}`}>
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Ver Torneo
+          </Link>
+        </Button>
         {tipo === "upcoming" && (
           <Dialog>
             <DialogTrigger asChild>
-              <Button className="w-full bg-terracotta hover:bg-terracotta/90 text-white">
+              <Button className="flex-1 bg-terracotta hover:bg-terracotta/90 text-white">
                 Inscripción
               </Button>
             </DialogTrigger>
@@ -261,11 +223,6 @@ export default function TorneosClient({
   ongoingTournaments, 
   pastTournaments 
 }: TorneosClientProps) {
-  // Estado para controlar qué torneo está expandido en cada categoría
-  const [expandedProximo, setExpandedProximo] = useState<number | null>(null)
-  const [expandedEnCurso, setExpandedEnCurso] = useState<number | null>(null)
-  const [expandedPasado, setExpandedPasado] = useState<number | null>(null)
-
   return (
     <Tabs defaultValue="proximos" className="w-full">
       <TabsList className="grid w-full grid-cols-3 bg-muted border border-amber/20 mb-8">
@@ -295,8 +252,6 @@ export default function TorneosClient({
                 key={torneo.id}
                 torneo={torneo}
                 tipo="upcoming"
-                expanded={expandedProximo === torneo.id}
-                toggleExpand={() => setExpandedProximo(expandedProximo === torneo.id ? null : torneo.id)}
               />
             ))}
           </div>
@@ -315,8 +270,6 @@ export default function TorneosClient({
                 key={torneo.id}
                 torneo={torneo}
                 tipo="ongoing"
-                expanded={expandedEnCurso === torneo.id}
-                toggleExpand={() => setExpandedEnCurso(expandedEnCurso === torneo.id ? null : torneo.id)}
               />
             ))}
           </div>
@@ -335,8 +288,6 @@ export default function TorneosClient({
                 key={torneo.id}
                 torneo={torneo}
                 tipo="past"
-                expanded={expandedPasado === torneo.id}
-                toggleExpand={() => setExpandedPasado(expandedPasado === torneo.id ? null : torneo.id)}
               />
             ))}
           </div>
