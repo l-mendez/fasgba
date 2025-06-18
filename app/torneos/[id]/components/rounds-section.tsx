@@ -135,38 +135,37 @@ export default function RoundsSection({ totalRounds, gamesByRound, tournamentId,
   }
 
   return (
-    <div className="space-y-4 w-full max-w-full overflow-hidden">
-      {/* Header - Mobile First */}
-      <div className="bg-card dark:bg-card rounded-lg p-3 shadow-sm border border-border/50 w-full max-w-full overflow-hidden box-border">
-        <div className="flex items-center justify-between mb-3 w-full max-w-full overflow-hidden">
-          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-            {isTeamTournament ? (
-              <Swords className="h-4 w-4 text-terracotta dark:text-terracotta-light flex-shrink-0" />
-            ) : (
-              <Users className="h-4 w-4 text-terracotta dark:text-terracotta-light flex-shrink-0" />
-            )}
-            <h2 className="font-bold text-terracotta dark:text-terracotta-light text-xs sm:text-sm truncate">
-              {isTeamTournament ? 'Enfrentamientos' : 'Partidas'}
-            </h2>
+    <div className="space-y-6 lg:space-y-8">
+      {/* Header */}
+      <Card className="shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-3 text-terracotta dark:text-terracotta-light">
+              {isTeamTournament ? (
+                <Swords className="h-6 w-6" />
+              ) : (
+                <Users className="h-6 w-6" />
+              )}
+              <span className="text-xl lg:text-2xl">{isTeamTournament ? 'Enfrentamientos' : 'Partidas'}</span>
+            </CardTitle>
+            
+            <Select value={selectedRound} onValueChange={setSelectedRound}>
+              <SelectTrigger className="w-32 lg:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({length: totalRounds}, (_, i) => i + 1).map(roundNum => (
+                  <SelectItem key={roundNum} value={roundNum.toString()}>
+                    Ronda {roundNum}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
-          <Select value={selectedRound} onValueChange={setSelectedRound}>
-            <SelectTrigger className="w-20 h-8 text-xs border-amber/20 dark:border-amber/30 flex-shrink-0">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({length: totalRounds}, (_, i) => i + 1).map(roundNum => (
-                <SelectItem key={roundNum} value={roundNum.toString()}>
-                  R{roundNum}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="text-center w-full max-w-full overflow-hidden">
-          <h3 className="font-semibold text-terracotta dark:text-terracotta-light text-sm">Ronda {roundNumber}</h3>
-          <p className="text-xs text-muted-foreground mt-1 break-words hyphens-auto">
+          <CardDescription className="text-base lg:text-lg">
+            <span className="font-semibold text-terracotta dark:text-terracotta-light">Ronda {roundNumber}</span>
+            {" • "}
             {isTeamTournament ? (
               matches.length > 0 ? (
                 matches.some(m => m.status === 'ongoing') 
@@ -182,34 +181,34 @@ export default function RoundsSection({ totalRounds, gamesByRound, tournamentId,
                   ? 'Partidas finalizadas'
                   : 'Ronda aún no programada'
             )}
-          </p>
-        </div>
-      </div>
+          </CardDescription>
+        </CardHeader>
+      </Card>
 
-      {/* Games/Matches List - Mobile Optimized */}
-      <div className="space-y-3 w-full max-w-full overflow-hidden">
+      {/* Games/Matches List */}
+      <div className="space-y-4 lg:space-y-6">
         {isTeamTournament ? (
-          // Team Tournament - Collapsible mobile layout
+          // Team Tournament Layout
           matches.length > 0 ? matches.map((match, matchIndex) => {
             const matchKey = `${match.teamA}-${match.teamB}`
             const isExpanded = expandedMatches.has(matchKey)
             
             return (
-              <div key={matchKey} className="bg-card dark:bg-card rounded-lg shadow-sm overflow-hidden border border-border/50 w-full max-w-full box-border">
+              <Card key={matchKey} className="shadow-sm overflow-hidden">
                 {/* Match Header - Clickable */}
                 <button
                   onClick={() => toggleMatch(matchKey)}
-                  className="w-full bg-gradient-to-r from-terracotta/5 to-amber/5 dark:from-terracotta/10 dark:to-amber/10 p-3 border-b border-border/50 hover:from-terracotta/10 hover:to-amber/10 dark:hover:from-terracotta/15 dark:hover:to-amber/15 transition-colors"
+                  className="w-full bg-gradient-to-r from-terracotta/5 to-amber/5 dark:from-terracotta/10 dark:to-amber/10 p-4 lg:p-6 border-b border-border/50 hover:from-terracotta/10 hover:to-amber/10 dark:hover:from-terracotta/15 dark:hover:to-amber/15 transition-colors"
                 >
-                  <div className="flex items-center justify-between mb-2 w-full max-w-full overflow-hidden">
-                    <span className="text-xs font-medium text-muted-foreground flex-shrink-0">
+                  <div className="flex items-center justify-between mb-3 lg:mb-4">
+                    <span className="text-sm lg:text-base font-medium text-muted-foreground">
                       Enfrentamiento {matchIndex + 1}
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <Badge 
                         variant={match.status === 'ongoing' ? 'default' : 'outline'}
                         className={cn(
-                          "text-xs flex-shrink-0",
+                          "text-sm px-3 py-1",
                           match.status === 'finished' 
                             ? 'bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
                             : match.status === 'ongoing'
@@ -217,27 +216,30 @@ export default function RoundsSection({ totalRounds, gamesByRound, tournamentId,
                               : 'bg-gray-50 dark:bg-gray-900/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'
                         )}
                       >
-                        {match.status === 'finished' ? '✓' : 
-                         match.status === 'ongoing' ? '⏳' : '⏸️'}
+                        {match.status === 'finished' ? 'Finalizado' : 
+                         match.status === 'ongoing' ? 'En curso' : 'Programado'}
                       </Badge>
                       {isExpanded ? (
-                        <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
                       )}
                     </div>
                   </div>
-                  <div className="text-center w-full max-w-full overflow-hidden">
-                    <div className="flex items-center justify-center gap-1 w-full max-w-full min-w-0">
-                      <span className="font-semibold text-terracotta dark:text-terracotta-light text-xs truncate flex-1 text-right max-w-[35%]">
+                  
+                  <div className="flex items-center justify-center gap-4 lg:gap-6">
+                    <div className="flex-1 text-right">
+                      <span className="font-bold text-lg lg:text-xl text-terracotta dark:text-terracotta-light">
                         {match.teamA}
                       </span>
-                      <div className="bg-background dark:bg-background rounded px-2 py-1 shadow-sm border border-border/30 flex-shrink-0">
-                        <span className="font-bold text-sm text-foreground whitespace-nowrap">
-                          {match.totalScore.teamA}-{match.totalScore.teamB}
-                        </span>
-                      </div>
-                      <span className="font-semibold text-terracotta dark:text-terracotta-light text-xs truncate flex-1 text-left max-w-[35%]">
+                    </div>
+                    <div className="bg-background dark:bg-background rounded-lg px-4 py-2 lg:px-6 lg:py-3 shadow-sm border border-border/30">
+                      <span className="font-bold text-xl lg:text-2xl text-foreground">
+                        {match.totalScore.teamA} - {match.totalScore.teamB}
+                      </span>
+                    </div>
+                    <div className="flex-1 text-left">
+                      <span className="font-bold text-lg lg:text-xl text-terracotta dark:text-terracotta-light">
                         {match.teamB}
                       </span>
                     </div>
@@ -246,53 +248,64 @@ export default function RoundsSection({ totalRounds, gamesByRound, tournamentId,
                 
                 {/* Individual Games - Collapsible */}
                 {isExpanded && (
-                  <div className="divide-y divide-border/30 w-full max-w-full">
+                  <div className="divide-y divide-border/30">
                     {match.games
                       .sort((a, b) => (a.board || 0) - (b.board || 0))
                       .map(game => (
-                      <div key={game.id} className="p-3 w-full max-w-full overflow-hidden">
-                        <div className="flex items-center justify-between mb-2 gap-1 w-full max-w-full overflow-hidden">
-                          <span className="text-xs font-medium text-muted-foreground flex-shrink-0">
+                      <div key={game.id} className="p-4 lg:p-6">
+                        <div className="flex items-center justify-between mb-4 lg:mb-6">
+                          <span className="text-sm lg:text-base font-medium text-muted-foreground">
                             Mesa {game.board}
                           </span>
-                          <div className="flex items-center gap-1 flex-shrink-0">
+                          <div className="flex items-center gap-3">
                             <Badge 
                               variant={game.result === '*' ? 'default' : 'outline'}
                               className={cn(
-                                "text-xs",
+                                "text-sm px-3 py-1",
                                 game.result !== '*'
                                   ? 'bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
                                   : 'bg-yellow-50 dark:bg-yellow-950/50 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800'
                               )}
                             >
-                              {game.result === '*' ? '⏳' : game.result}
+                              {game.result === '*' ? 'En curso' : game.result}
                             </Badge>
                             <Button
                               asChild
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              className="h-6 px-1 text-xs text-terracotta dark:text-terracotta-light hover:bg-terracotta/10 dark:hover:bg-terracotta/20"
+                              className="text-terracotta dark:text-terracotta-light hover:bg-terracotta/10 dark:hover:bg-terracotta/20"
                             >
                               <Link href={`/torneos/${tournamentId}/partidas/${game.id}`}>
-                                Ver
+                                Ver partida
                               </Link>
                             </Button>
                           </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-1 text-xs w-full max-w-full min-w-0">
-                          <div className="text-center min-w-0 max-w-full overflow-hidden">
-                            <div className="font-medium truncate text-foreground">{game.white}</div>
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 text-center">
+                          <div className="lg:text-right">
+                            <div className="font-semibold text-base lg:text-lg text-foreground mb-1">
+                              {game.white}
+                            </div>
                             {game.whiteRating && (
-                              <div className="text-xs text-muted-foreground">({game.whiteRating})</div>
+                              <div className="text-sm text-muted-foreground">
+                                Rating: {game.whiteRating}
+                              </div>
                             )}
                           </div>
-                          <div className="text-center text-muted-foreground text-xs flex items-center justify-center flex-shrink-0">
-                            vs
+                          
+                          <div className="flex items-center justify-center">
+                            <span className="text-muted-foreground text-lg font-medium">vs</span>
                           </div>
-                          <div className="text-center min-w-0 max-w-full overflow-hidden">
-                            <div className="font-medium truncate text-foreground">{game.black}</div>
+                          
+                          <div className="lg:text-left">
+                            <div className="font-semibold text-base lg:text-lg text-foreground mb-1">
+                              {game.black}
+                            </div>
                             {game.blackRating && (
-                              <div className="text-xs text-muted-foreground">({game.blackRating})</div>
+                              <div className="text-sm text-muted-foreground">
+                                Rating: {game.blackRating}
+                              </div>
                             )}
                           </div>
                         </div>
@@ -300,80 +313,101 @@ export default function RoundsSection({ totalRounds, gamesByRound, tournamentId,
                     ))}
                   </div>
                 )}
-              </div>
+              </Card>
             )
           }) : (
-            <div className="bg-card dark:bg-card rounded-lg p-6 text-center shadow-sm border border-border/50 w-full max-w-full overflow-hidden box-border">
-              <div className="text-4xl mb-2">🏆</div>
-              <p className="text-muted-foreground text-sm break-words hyphens-auto">
-                {totalRounds >= roundNumber 
-                  ? 'Ronda aún no programada' 
-                  : 'Esta ronda no existe en el torneo'
-                }
-              </p>
-            </div>
+            <Card className="shadow-sm">
+              <CardContent className="p-8 lg:p-12 text-center">
+                <Trophy className="h-12 w-12 lg:h-16 lg:w-16 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground text-base lg:text-lg">
+                  {totalRounds >= roundNumber 
+                    ? 'Esta ronda aún no ha sido programada' 
+                    : 'Esta ronda no existe en el torneo'
+                  }
+                </p>
+              </CardContent>
+            </Card>
           )
         ) : (
-          // Individual Tournament - Simplified mobile layout
-          roundGames?.length > 0 ? roundGames.map(game => (
-            <div key={game.id} className="bg-card dark:bg-card rounded-lg p-3 shadow-sm border border-border/50 w-full max-w-full overflow-hidden box-border">
-              <div className="flex items-center justify-between mb-2 gap-1 w-full max-w-full overflow-hidden">
-                <Badge variant="outline" className="text-xs border-border flex-shrink-0">
-                  Mesa {game.board}
-                </Badge>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <Badge 
-                    variant={game.result === '*' ? 'default' : 'outline'}
-                    className={cn(
-                      "text-xs",
-                      game.result !== '*'
-                        ? 'bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
-                        : 'bg-yellow-50 dark:bg-yellow-950/50 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800'
-                    )}
-                  >
-                    {game.result === '*' ? '⏳' : game.result}
-                  </Badge>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-1 text-xs text-terracotta dark:text-terracotta-light hover:bg-terracotta/10 dark:hover:bg-terracotta/20"
-                  >
-                    <Link href={`/torneos/${tournamentId}/partidas/${game.id}`}>
-                      Ver
-                    </Link>
-                  </Button>
-                </div>
+          // Individual Tournament Layout
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
+            {roundGames?.length > 0 ? roundGames.map(game => (
+              <Card key={game.id} className="shadow-sm">
+                <CardContent className="p-4 lg:p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <Badge variant="outline" className="text-sm px-3 py-1">
+                      Mesa {game.board}
+                    </Badge>
+                    <div className="flex items-center gap-3">
+                      <Badge 
+                        variant={game.result === '*' ? 'default' : 'outline'}
+                        className={cn(
+                          "text-sm px-3 py-1",
+                          game.result !== '*'
+                            ? 'bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
+                            : 'bg-yellow-50 dark:bg-yellow-950/50 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800'
+                        )}
+                      >
+                        {game.result === '*' ? 'En curso' : game.result}
+                      </Badge>
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="text-terracotta dark:text-terracotta-light hover:bg-terracotta/10 dark:hover:bg-terracotta/20"
+                      >
+                        <Link href={`/torneos/${tournamentId}/partidas/${game.id}`}>
+                          Ver
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="text-center">
+                      <div className="font-semibold text-base lg:text-lg text-foreground mb-1">
+                        {game.white}
+                      </div>
+                      {game.whiteRating && (
+                        <div className="text-sm text-muted-foreground mb-2">
+                          Rating: {game.whiteRating}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="text-center">
+                      <span className="text-muted-foreground font-medium">vs</span>
+                    </div>
+                    
+                    <div className="text-center">
+                      <div className="font-semibold text-base lg:text-lg text-foreground mb-1">
+                        {game.black}
+                      </div>
+                      {game.blackRating && (
+                        <div className="text-sm text-muted-foreground">
+                          Rating: {game.blackRating}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )) : (
+              <div className="lg:col-span-2 xl:col-span-3">
+                <Card className="shadow-sm">
+                  <CardContent className="p-8 lg:p-12 text-center">
+                    <Users className="h-12 w-12 lg:h-16 lg:w-16 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground text-base lg:text-lg">
+                      {totalRounds >= roundNumber 
+                        ? 'Esta ronda aún no ha sido programada' 
+                        : 'Esta ronda no existe en el torneo'
+                      }
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
-              <div className="grid grid-cols-3 gap-1 text-xs w-full max-w-full min-w-0">
-                <div className="text-center min-w-0 max-w-full overflow-hidden">
-                  <div className="font-medium truncate text-foreground">{game.white}</div>
-                  {game.whiteRating && (
-                    <div className="text-xs text-muted-foreground">({game.whiteRating})</div>
-                  )}
-                </div>
-                <div className="text-center text-muted-foreground text-xs flex items-center justify-center flex-shrink-0">
-                  vs
-                </div>
-                <div className="text-center min-w-0 max-w-full overflow-hidden">
-                  <div className="font-medium truncate text-foreground">{game.black}</div>
-                  {game.blackRating && (
-                    <div className="text-xs text-muted-foreground">({game.blackRating})</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )) : (
-            <div className="bg-card dark:bg-card rounded-lg p-6 text-center shadow-sm border border-border/50 w-full max-w-full overflow-hidden box-border">
-              <div className="text-4xl mb-2">♟️</div>
-              <p className="text-muted-foreground text-sm break-words hyphens-auto">
-                {totalRounds >= roundNumber 
-                  ? 'Ronda aún no programada' 
-                  : 'Esta ronda no existe en el torneo'
-                }
-              </p>
-            </div>
-          )
+            )}
+          </div>
         )}
       </div>
     </div>
