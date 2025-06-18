@@ -80,7 +80,41 @@ export async function getTournamentGames(tournamentId: number, tournamentType: s
   
   try {
     if (tournamentType === 'team') {
-      // Fetch team tournament games
+      // First, get all rounds for this tournament
+      const { data: tournamentRounds, error: roundsError } = await supabase
+        .from('rounds')
+        .select('id')
+        .eq('tournament_id', tournamentId)
+
+      if (roundsError) {
+        console.error('Error fetching tournament rounds:', roundsError)
+        return {}
+      }
+
+      const roundIds = tournamentRounds?.map(r => r.id) || []
+      
+      if (roundIds.length === 0) {
+        return {}
+      }
+
+      // Then get matches for these rounds
+      const { data: tournamentMatches, error: matchesError } = await supabase
+        .from('matches')
+        .select('id')
+        .in('round_id', roundIds)
+
+      if (matchesError) {
+        console.error('Error fetching tournament matches:', matchesError)
+        return {}
+      }
+
+      const matchIds = tournamentMatches?.map(m => m.id) || []
+      
+      if (matchIds.length === 0) {
+        return {}
+      }
+
+      // Finally, fetch team tournament games for these matches
       const { data: matchGames, error } = await supabase
         .from('match_games')
         .select(`
@@ -93,14 +127,14 @@ export async function getTournamentGames(tournamentId: number, tournamentType: s
           game_time,
           white_player:players!match_games_white_player_id_fkey(id, full_name, rating),
           black_player:players!match_games_black_player_id_fkey(id, full_name, rating),
-          match:matches(
+          match:matches!inner(
             id,
             club_a:clubs!matches_club_a_id_fkey(id, name),
             club_b:clubs!matches_club_b_id_fkey(id, name),
-            round:rounds(id, round_number)
+            round:rounds!inner(id, round_number, tournament_id)
           )
         `)
-        .eq('match.round.tournament_id', tournamentId)
+        .in('match_id', matchIds)
 
       if (error) {
         console.error('Error fetching team games:', error)
@@ -158,7 +192,24 @@ export async function getTournamentGames(tournamentId: number, tournamentType: s
       }, {} as Record<number, GameDisplay[]>)
 
     } else {
-      // Fetch individual tournament games
+      // First, get all rounds for this tournament
+      const { data: tournamentRounds, error: roundsError } = await supabase
+        .from('rounds')
+        .select('id')
+        .eq('tournament_id', tournamentId)
+
+      if (roundsError) {
+        console.error('Error fetching tournament rounds:', roundsError)
+        return {}
+      }
+
+      const roundIds = tournamentRounds?.map(r => r.id) || []
+      
+      if (roundIds.length === 0) {
+        return {}
+      }
+
+      // Fetch individual tournament games for these rounds
       const { data: individualGames, error } = await supabase
         .from('individual_games')
         .select(`
@@ -173,7 +224,7 @@ export async function getTournamentGames(tournamentId: number, tournamentType: s
           black_player:players!individual_games_black_player_id_fkey(id, full_name, rating),
           round:rounds(id, round_number)
         `)
-        .eq('round.tournament_id', tournamentId)
+        .in('round_id', roundIds)
 
       if (error) {
         console.error('Error fetching individual games:', error)

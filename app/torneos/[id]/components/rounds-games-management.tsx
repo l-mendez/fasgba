@@ -104,6 +104,17 @@ export default function RoundsGamesManagement({
     matches: []
   })
 
+  // State for match management
+  const [isEditMatchDialogOpen, setIsEditMatchDialogOpen] = useState(false)
+  const [editingMatch, setEditingMatch] = useState<Match | null>(null)
+  const [matchFormData, setMatchFormData] = useState<{
+    club_a_id: number
+    club_b_id: number
+  }>({
+    club_a_id: 0,
+    club_b_id: 0
+  })
+
   // New state for team-specific players
   const [teamAPlayers, setTeamAPlayers] = useState<Player[]>([])
   const [teamBPlayers, setTeamBPlayers] = useState<Player[]>([])
@@ -461,6 +472,94 @@ export default function RoundsGamesManagement({
     }
   }
 
+  // Match management functions
+  const handleEditMatch = async () => {
+    if (!editingMatch) return
+
+    if (matchFormData.club_a_id === 0 || matchFormData.club_b_id === 0) {
+      toast.error('Debe seleccionar ambos equipos')
+      return
+    }
+
+    if (matchFormData.club_a_id === matchFormData.club_b_id) {
+      toast.error('Los equipos deben ser diferentes')
+      return
+    }
+
+    setLoading(true)
+    try {
+      await apiCall(`/api/tournaments/${tournamentId}/rounds/${selectedRound}/matches/${editingMatch.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          club_a_id: matchFormData.club_a_id,
+          club_b_id: matchFormData.club_b_id
+        }),
+      })
+
+      toast.success('Enfrentamiento actualizado exitosamente. Todas las partidas de este enfrentamiento han sido eliminadas para mantener la coherencia.')
+      setIsEditMatchDialogOpen(false)
+      setEditingMatch(null)
+      resetMatchForm()
+      
+      // Refresh data
+      await Promise.all([
+        fetchMatches(selectedRound),
+        fetchGames(),
+        fetchRounds()
+      ])
+      onGameUpdate?.()
+    } catch (error) {
+      console.error('Error updating match:', error)
+      toast.error('Error al actualizar enfrentamiento')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteMatch = async (match: Match) => {
+    if (!confirm(`¿Estás seguro de que quieres eliminar el enfrentamiento ${match.club_a.name} vs ${match.club_b.name}? Esto eliminará todas las partidas de este enfrentamiento.`)) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      await apiCall(`/api/tournaments/${tournamentId}/rounds/${selectedRound}/matches/${match.id}`, {
+        method: 'DELETE',
+      })
+
+      toast.success('Enfrentamiento eliminado exitosamente')
+      
+      // Refresh data
+      await Promise.all([
+        fetchMatches(selectedRound),
+        fetchGames(),
+        fetchRounds()
+      ])
+      onGameUpdate?.()
+    } catch (error) {
+      console.error('Error deleting match:', error)
+      toast.error('Error al eliminar enfrentamiento')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const openEditMatchDialog = (match: Match) => {
+    setEditingMatch(match)
+    setMatchFormData({
+      club_a_id: match.club_a.id,
+      club_b_id: match.club_b.id
+    })
+    setIsEditMatchDialogOpen(true)
+  }
+
+  const resetMatchForm = () => {
+    setMatchFormData({
+      club_a_id: 0,
+      club_b_id: 0
+    })
+  }
+
   const openEditGameDialog = (game: GameDisplay) => {
     setEditingGame(game)
     setGameFormData({
@@ -508,8 +607,14 @@ export default function RoundsGamesManagement({
   }
 
   const currentRoundGames = games.filter(game => {
-    const gameRoundId = rounds.find(r => r.round_number === game.round)?.id
-    return gameRoundId === selectedRound
+    // Find the round from the current tournament that matches the selected round ID
+    const selectedRoundData = rounds.find(r => r.id === selectedRound)
+    if (!selectedRoundData) {
+      return false
+    }
+    
+    // Only show games that match the round number of the selected round from this tournament
+    return game.round === selectedRoundData.round_number
   })
 
   const sortedRounds = [...rounds].sort((a, b) => a.round_number - b.round_number)
@@ -838,6 +943,83 @@ export default function RoundsGamesManagement({
       </div>
 
       <Separator />
+
+      {/* Matches Management Section - Only for team tournaments */}
+      {tournamentType === 'team' && selectedRound > 0 && (
+        <>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <h4 className="text-lg font-medium">Enfrentamientos</h4>
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  Ronda {rounds.find(r => r.id === selectedRound)?.round_number || 'N/A'}
+                </Badge>
+                <Badge variant="secondary">
+                  {matches.length} {matches.length === 1 ? 'enfrentamiento' : 'enfrentamientos'}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Matches List */}
+            {matches.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium mb-2">No hay enfrentamientos en esta ronda</p>
+                <p className="text-sm">Los enfrentamientos se configuran al crear la ronda</p>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {matches.map((match) => (
+                  <Card key={match.id}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">
+                          {match.club_a.name} vs {match.club_b.name}
+                        </CardTitle>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditMatchDialog(match)}
+                            disabled={loading}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteMatch(match)}
+                            disabled={loading}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+                        <span>Equipo A: {match.club_a.name}</span>
+                        <span>vs</span>
+                        <span>Equipo B: {match.club_b.name}</span>
+                      </div>
+                      <div className="mt-2 text-xs text-gray-500">
+                        {(() => {
+                          const matchGames = games.filter(game => game.matchId === match.id)
+                          return `${matchGames.length} ${matchGames.length === 1 ? 'partida' : 'partidas'}`
+                        })()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <Separator />
+        </>
+      )}
 
       {/* Games Management Section */}
       <div className="space-y-4">
@@ -1284,6 +1466,101 @@ export default function RoundsGamesManagement({
                     Cancelar
                   </Button>
                   <Button onClick={handleEditGame} disabled={loading}>
+                    {loading ? 'Guardando...' : 'Guardar Cambios'}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Match Dialog */}
+        <Dialog open={isEditMatchDialogOpen} onOpenChange={setIsEditMatchDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Editar Enfrentamiento</DialogTitle>
+            </DialogHeader>
+            {editingMatch && (
+              <div className="space-y-4">
+                <div className="p-4 bg-yellow-50 dark:bg-yellow-950/50 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
+                        ⚠️ Advertencia Importante
+                      </p>
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                        Al modificar este enfrentamiento, <strong>todas las partidas</strong> asociadas 
+                        a este enfrentamiento serán eliminadas automáticamente para mantener la coherencia 
+                        de los datos.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Enfrentamiento Original:</p>
+                  <p className="font-medium">
+                    {editingMatch.club_a.name} vs {editingMatch.club_b.name}
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="edit_club_a">Equipo A *</Label>
+                    <Select 
+                      value={matchFormData.club_a_id.toString()} 
+                      onValueChange={(value) => 
+                        setMatchFormData(prev => ({ ...prev, club_a_id: parseInt(value) }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar Equipo A" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teams.map((team) => (
+                          <SelectItem key={team.id} value={team.id.toString()}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit_club_b">Equipo B *</Label>
+                    <Select 
+                      value={matchFormData.club_b_id.toString()} 
+                      onValueChange={(value) => 
+                        setMatchFormData(prev => ({ ...prev, club_b_id: parseInt(value) }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar Equipo B" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teams.map((team) => (
+                          <SelectItem key={team.id} value={team.id.toString()}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsEditMatchDialogOpen(false)
+                      setEditingMatch(null)
+                      resetMatchForm()
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleEditMatch} disabled={loading}>
                     {loading ? 'Guardando...' : 'Guardar Cambios'}
                   </Button>
                 </div>
