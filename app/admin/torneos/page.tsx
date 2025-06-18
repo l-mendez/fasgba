@@ -79,6 +79,7 @@ async function fetchTournaments(): Promise<Tournament[]> {
         prizes,
         image,
         created_by_club_id,
+        tournament_type,
         clubs!tournaments_created_by_club_id_fkey(id, name),
         tournamentdates(id, tournament_id, event_date)
       `)
@@ -95,63 +96,105 @@ async function fetchTournaments(): Promise<Tournament[]> {
 
     // Transform the tournaments data to match our Tournament interface
     const now = new Date()
-    const transformedTournaments: Tournament[] = tournamentsData.map((tournament: any) => {
-      // Get dates from tournamentdates array
-      const eventDates = tournament.tournamentdates?.map((date: any) => new Date(date.event_date)) || []
-      eventDates.sort((a: Date, b: Date) => a.getTime() - b.getTime()) // Sort dates
-      
-      const startDate = eventDates.length > 0 ? eventDates[0] : new Date()
-      const endDate = eventDates.length > 1 ? eventDates[eventDates.length - 1] : null
-      
-      // Determine status based on dates
-      let status: "upcoming" | "ongoing" | "past" = "upcoming"
-      let is_upcoming = false
-      let is_ongoing = false
-      let is_past = false
-      
-      if (eventDates.length > 0) {
-        if (endDate && endDate < now) {
-          status = "past"
-          is_past = true
-        } else if (startDate <= now && (!endDate || endDate >= now)) {
-          status = "ongoing"
-          is_ongoing = true
-        } else {
-          status = "upcoming"
-          is_upcoming = true
+    const transformedTournaments: Tournament[] = await Promise.all(
+      tournamentsData.map(async (tournament: any) => {
+        // Get dates from tournamentdates array
+        const eventDates = tournament.tournamentdates?.map((date: any) => new Date(date.event_date)) || []
+        eventDates.sort((a: Date, b: Date) => a.getTime() - b.getTime()) // Sort dates
+        
+        const startDate = eventDates.length > 0 ? eventDates[0] : new Date()
+        const endDate = eventDates.length > 1 ? eventDates[eventDates.length - 1] : null
+        
+        // Determine status based on dates
+        let status: "upcoming" | "ongoing" | "past" = "upcoming"
+        let is_upcoming = false
+        let is_ongoing = false
+        let is_past = false
+        
+        if (eventDates.length > 0) {
+          if (endDate && endDate < now) {
+            status = "past"
+            is_past = true
+          } else if (startDate <= now && (!endDate || endDate >= now)) {
+            status = "ongoing"
+            is_ongoing = true
+          } else {
+            status = "upcoming"
+            is_upcoming = true
+          }
         }
-      }
 
-      // Format dates for display
-      const formatted_start_date = startDate.toLocaleDateString('es-AR')
-      const formatted_end_date = endDate ? endDate.toLocaleDateString('es-AR') : null
-      
-      return {
-        id: tournament.id.toString(),
-        title: tournament.title || 'Sin título',
-        description: tournament.description,
-        time: tournament.time,
-        place: tournament.place,
-        location: tournament.location || 'Ubicación no especificada',
-        rounds: tournament.rounds,
-        pace: tournament.pace,
-        inscription_details: tournament.inscription_details,
-        cost: tournament.cost,
-        prizes: tournament.prizes,
-        image: tournament.image,
-        start_date: startDate,
-        end_date: endDate,
-        formatted_start_date,
-        formatted_end_date,
-        is_upcoming,
-        is_ongoing,
-        is_past,
-        status,
-        participants: 0, // We don't have participants count in this query, can be extended later
-        created_by_club_id: tournament.created_by_club_id,
-        club: tournament.clubs ? { id: tournament.clubs.id, name: tournament.clubs.name } : null
-      }
-    })
+        // Format dates for display
+        const formatted_start_date = startDate.toLocaleDateString('es-AR')
+        const formatted_end_date = endDate ? endDate.toLocaleDateString('es-AR') : null
+        
+        // Fetch participant count based on tournament type
+        let participants = 0
+        try {
+          if (tournament.tournament_type === 'team') {
+            // For team tournaments, count all players from all clubs registered for the tournament
+            // First get all clubs registered for this tournament, then count their players
+            const { data: registeredClubs, error: clubsError } = await supabase
+              .from('tournament_club_teams')
+              .select('club_id')
+              .eq('tournament_id', tournament.id)
+            
+            if (!clubsError && registeredClubs && registeredClubs.length > 0) {
+              const clubIds = registeredClubs.map(club => club.club_id)
+              
+              // Count all players from these clubs
+              const { data: clubPlayers, error: playersError } = await supabase
+                .from('players')
+                .select('id')
+                .in('club_id', clubIds)
+              
+              if (!playersError && clubPlayers) {
+                participants = clubPlayers.length
+              }
+            }
+          } else {
+            // For individual tournaments, count players registered through tournament_registrations
+            const { data: individualPlayers, error: individualPlayersError } = await supabase
+              .from('tournament_registrations')
+              .select('player_id')
+              .eq('tournament_id', tournament.id)
+            
+            if (!individualPlayersError && individualPlayers) {
+              participants = individualPlayers.length
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching participants for tournament ${tournament.id}:`, error)
+          // Keep participants as 0 if there's an error
+        }
+        
+        return {
+          id: tournament.id.toString(),
+          title: tournament.title || 'Sin título',
+          description: tournament.description,
+          time: tournament.time,
+          place: tournament.place,
+          location: tournament.location || 'Ubicación no especificada',
+          rounds: tournament.rounds,
+          pace: tournament.pace,
+          inscription_details: tournament.inscription_details,
+          cost: tournament.cost,
+          prizes: tournament.prizes,
+          image: tournament.image,
+          start_date: startDate,
+          end_date: endDate,
+          formatted_start_date,
+          formatted_end_date,
+          is_upcoming,
+          is_ongoing,
+          is_past,
+          status,
+          participants,
+          created_by_club_id: tournament.created_by_club_id,
+          club: tournament.clubs ? { id: tournament.clubs.id, name: tournament.clubs.name } : null
+        }
+      })
+    )
 
     return transformedTournaments
   } catch (error) {

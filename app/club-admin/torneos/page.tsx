@@ -48,6 +48,8 @@ interface Tournament {
     tournament_id: number
     event_date: string
   }[]
+  tournament_type: string
+  participants: number
 }
 
 // Helper function to determine tournament status
@@ -167,8 +169,61 @@ export default function ClubAdminTorneosPage() {
         
         const tournaments = await apiCall(`/clubs/${selectedClub.id}/tournaments`)
         const tournamentList = tournaments.tournaments || []
-        setTorneos(tournamentList)
-        setOriginalOrder(tournamentList)
+        
+        // Fetch participant counts for each tournament using direct database queries
+        const { createClient } = await import('@/lib/supabase/client')
+        const supabase = createClient()
+        
+        const tournamentsWithParticipants = await Promise.all(
+          tournamentList.map(async (tournament: Tournament) => {
+            let participants = 0
+            try {
+              if (tournament.tournament_type === 'team') {
+                // For team tournaments, count all players from all clubs registered for the tournament
+                // First get all clubs registered for this tournament, then count their players
+                const { data: registeredClubs, error: clubsError } = await supabase
+                  .from('tournament_club_teams')
+                  .select('club_id')
+                  .eq('tournament_id', tournament.id)
+                
+                if (!clubsError && registeredClubs && registeredClubs.length > 0) {
+                  const clubIds = registeredClubs.map(club => club.club_id)
+                  
+                  // Count all players from these clubs
+                  const { data: clubPlayers, error: playersError } = await supabase
+                    .from('players')
+                    .select('id')
+                    .in('club_id', clubIds)
+                  
+                  if (!playersError && clubPlayers) {
+                    participants = clubPlayers.length
+                  }
+                }
+              } else {
+                // For individual tournaments, count players registered through tournament_registrations
+                const { data: individualPlayers, error: individualPlayersError } = await supabase
+                  .from('tournament_registrations')
+                  .select('player_id')
+                  .eq('tournament_id', tournament.id)
+                
+                if (!individualPlayersError && individualPlayers) {
+                  participants = individualPlayers.length
+                }
+              }
+            } catch (error) {
+              console.error(`Error fetching participants for tournament ${tournament.id}:`, error)
+              // Keep participants as 0 if there's an error
+            }
+            
+            return {
+              ...tournament,
+              participants
+            }
+          })
+        )
+        
+        setTorneos(tournamentsWithParticipants)
+        setOriginalOrder(tournamentsWithParticipants)
       } catch (err) {
         console.error('Error loading tournaments:', err)
         setError(err instanceof Error ? err.message : 'Error al cargar los torneos')
@@ -223,6 +278,10 @@ export default function ClubAdminTorneosPage() {
         case 'rounds':
           aValue = a.rounds || 0
           bValue = b.rounds || 0
+          break
+        case 'participants':
+          aValue = a.participants || 0
+          bValue = b.participants || 0
           break
         default:
           return 0
@@ -383,6 +442,9 @@ export default function ClubAdminTorneosPage() {
               <DropdownMenuItem onClick={() => handleSort('rounds')}>
                 Rondas {getSortIcon('rounds')}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('participants')}>
+                Participantes {getSortIcon('participants')}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => {
                 setSortBy(null)
@@ -438,20 +500,29 @@ export default function ClubAdminTorneosPage() {
                     {getSortIcon('rounds') && <span className="text-xs">{getSortIcon('rounds')}</span>}
                   </div>
                 </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('participants')}
+                >
+                  <div className="flex items-center gap-1">
+                    Participantes
+                    {getSortIcon('participants') && <span className="text-xs">{getSortIcon('participants')}</span>}
+                  </div>
+                </TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     <p className="mt-2 text-muted-foreground">Cargando torneos...</p>
                   </TableCell>
                 </TableRow>
               ) : sortedAndFilteredTorneos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <p className="text-muted-foreground">
                       {searchTerm ? 'No se encontraron torneos que coincidan con la búsqueda.' : 'No hay torneos registrados.'}
                     </p>
@@ -476,6 +547,7 @@ export default function ClubAdminTorneosPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>{torneo.rounds || "N/A"}</TableCell>
+                      <TableCell>{torneo.participants || "N/A"}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -570,8 +642,13 @@ export default function ClubAdminTorneosPage() {
                             >
                               {getStatusText(status)}
                             </Badge>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
                               <span>Rondas: {torneo.rounds || "N/A"}</span>
+                              <span>•</span>
+                              <div className="flex items-center gap-1">
+                                <Users className="h-3 w-3" />
+                                <span>{torneo.participants || 0}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
