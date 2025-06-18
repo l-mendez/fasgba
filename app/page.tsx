@@ -80,13 +80,11 @@ interface NoticiaProps {
 async function fetchNews(): Promise<NewsItem[]> {
   try {
     const { data } = await getAllNews({ 
-      limit: 5, 
-      orderBy: 'date', 
-      order: 'desc',
+      limit: 20, // Increased limit to ensure we get enough FASGBA news after sorting
       include: ['club', 'author']
     })
     
-    return data.map(item => ({
+    const mappedNews = data.map(item => ({
       id: item.id,
       title: item.title,
       date: item.date,
@@ -99,6 +97,22 @@ async function fetchNews(): Promise<NewsItem[]> {
         name: item.club.name
       } : null
     }))
+
+    // Sort news: FASGBA news (club_id = null) first, then club news
+    // Within each group, sort by date (newest first)
+    const sortedNews = mappedNews.sort((a, b) => {
+      // First, prioritize FASGBA news (club_id = null)
+      if (a.club_id === null && b.club_id !== null) return -1
+      if (a.club_id !== null && b.club_id === null) return 1
+      
+      // If both are FASGBA news or both are club news, sort by date (newest first)
+      const dateA = new Date(a.date).getTime()
+      const dateB = new Date(b.date).getTime()
+      return dateB - dateA
+    })
+
+    // Return only the first 5 for homepage display
+    return sortedNews.slice(0, 5)
   } catch (error) {
     console.error('Error fetching news:', error)
     return []

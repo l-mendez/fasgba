@@ -76,7 +76,7 @@ async function fetchNews(): Promise<News[]> {
       include: ['club', 'author'] 
     })
     
-    return data.map(item => ({
+    const mappedNews = data.map(item => ({
       id: item.id,
       title: item.title,
       date: item.date,
@@ -95,6 +95,19 @@ async function fetchNews(): Promise<News[]> {
       created_at: item.created_at,
       updated_at: item.updated_at,
     }))
+
+    // Sort news: FASGBA news (club_id = null) first, then club news
+    // Within each group, sort by date (newest first)
+    return mappedNews.sort((a, b) => {
+      // First, prioritize FASGBA news (club_id = null)
+      if (a.club_id === null && b.club_id !== null) return -1
+      if (a.club_id !== null && b.club_id === null) return 1
+      
+      // If both are FASGBA news or both are club news, sort by date (newest first)
+      const dateA = new Date(a.date).getTime()
+      const dateB = new Date(b.date).getTime()
+      return dateB - dateA
+    })
   } catch (error) {
     console.error('Error fetching news:', error)
     return []
