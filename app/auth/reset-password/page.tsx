@@ -20,89 +20,78 @@ function ResetPasswordContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [isSessionReady, setIsSessionReady] = useState(false)
   
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
 
-  // Handle the password reset on component mount
+  // Handle auth state changes and session setup
   useEffect(() => {
-    const handlePasswordReset = async () => {
-      // Check for authorization code (modern Supabase approach)
-      const code = searchParams?.get('code')
+    console.log('Full URL:', window.location.href)
+    
+    // Check for authorization code or tokens
+    const code = searchParams?.get('code')
+    let accessToken = searchParams?.get('access_token')
+    let refreshToken = searchParams?.get('refresh_token')
+    
+    // If not found in search params, try URL hash
+    if (!accessToken && typeof window !== 'undefined') {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      accessToken = hashParams.get('access_token')
+      refreshToken = hashParams.get('refresh_token')
+    }
+    
+    console.log('URL Parameters:', { 
+      code: !!code, 
+      accessToken: !!accessToken, 
+      refreshToken: !!refreshToken
+    })
+
+    // Set up auth state listener to detect when session is ready
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', event, !!session?.user)
       
-      // Try to get direct tokens (legacy approach)
-      let accessToken = searchParams?.get('access_token')
-      let refreshToken = searchParams?.get('refresh_token')
-      let type = searchParams?.get('type')
-      
-      // If not found in search params, try to get from URL hash
-      if (!accessToken && typeof window !== 'undefined') {
-        const hashParams = new URLSearchParams(window.location.hash.substring(1))
-        accessToken = hashParams.get('access_token')
-        refreshToken = hashParams.get('refresh_token')
-        type = hashParams.get('type')
-        
-        console.log('Hash Parameters:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type })
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log('User signed in automatically, session ready')
+        setIsSessionReady(true)
+        setError(null)
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        console.log('Token refreshed, session ready')
+        setIsSessionReady(true)
+        setError(null)
       }
-      
-      console.log('URL Parameters:', { 
-        code: !!code, 
-        accessToken: !!accessToken, 
-        refreshToken: !!refreshToken, 
-        type 
-      })
-      console.log('Full URL:', window.location.href)
-      
-      // Handle authorization code flow (modern approach)
-      if (code) {
-        try {
-          console.log('Using authorization code flow')
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-          
-          console.log('Code exchange result:', { user: !!data?.user, error: error?.message })
-          
-          if (error) {
-            console.error('Code exchange error:', error)
-            setError('El enlace de restablecimiento es inválido o ha expirado')
-          } else if (data?.user) {
-            console.log('Session established successfully via code exchange')
-            // Session is now established, user can proceed to reset password
+    })
+
+    // Check current session immediately
+    const checkCurrentSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        console.log('Existing session found')
+        setIsSessionReady(true)
+      } else if (code || accessToken) {
+        console.log('Waiting for session to be established...')
+        // Give some time for automatic session establishment
+        setTimeout(async () => {
+          const { data: { session: newSession } } = await supabase.auth.getSession()
+          if (newSession?.user) {
+            console.log('Session established after waiting')
+            setIsSessionReady(true)
+          } else {
+            console.log('No session after waiting')
+            setError('El enlace de restablecimiento es inválido o ha expirado. Intenta solicitar uno nuevo.')
           }
-        } catch (err) {
-          console.error('Code exchange failed:', err)
-          setError('Error al procesar el enlace de restablecimiento')
-        }
-      }
-      // Handle direct token flow (legacy approach)
-      else if (accessToken && refreshToken) {
-        try {
-          console.log('Using direct token flow')
-          const { data, error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          })
-          
-          console.log('Session setup result:', { user: !!data?.user, error: error?.message })
-          
-          // More forgiving error handling - only show error for critical failures
-          if (error && error.message.includes('expired') && !data?.user) {
-            setError('El enlace de restablecimiento es inválido o ha expirado')
-          } else if (error && !data?.user) {
-            console.error('Session error:', error)
-            // Don't set error immediately, let user try to proceed
-          }
-        } catch (err) {
-          console.error('Session setup failed:', err)
-          setError('Error al procesar el enlace de restablecimiento')
-        }
+        }, 2000)
       } else {
-        console.log('Missing both authorization code and direct tokens')
-        setError('El enlace de restablecimiento es inválido o ha expirado')
+        setError('El enlace de restablecimiento es inválido o ha expirado. Intenta solicitar uno nuevo.')
       }
     }
 
-    handlePasswordReset()
+    checkCurrentSession()
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [searchParams, supabase.auth])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -126,41 +115,23 @@ function ResetPasswordContent() {
     setIsLoading(true)
     setError(null)
 
-    try {
-      // First, try to get the current user
+        try {
+      // Check if session is ready
+      if (!isSessionReady) {
+        setError('La sesión no está lista. Intenta nuevamente en unos segundos.')
+        return
+      }
+
+      // Verify current user
       const { data: { user }, error: getUserError } = await supabase.auth.getUser()
       console.log('Current user check:', { user: !!user, error: getUserError?.message })
       
-             // If no user, try to set session again with URL params
-       if (!user) {
-         let accessToken = searchParams?.get('access_token')
-         let refreshToken = searchParams?.get('refresh_token')
-         
-         // Also check hash parameters
-         if (!accessToken && typeof window !== 'undefined') {
-           const hashParams = new URLSearchParams(window.location.hash.substring(1))
-           accessToken = hashParams.get('access_token')
-           refreshToken = hashParams.get('refresh_token')
-         }
-         
-         if (accessToken && refreshToken) {
-           console.log('Retrying session setup before password update')
-           const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-             access_token: accessToken,
-             refresh_token: refreshToken,
-           })
-           
-           if (!sessionData?.user) {
-             setError('El enlace de restablecimiento es inválido o ha expirado')
-             return
-           }
-         } else {
-           setError('El enlace de restablecimiento es inválido o ha expirado')
-           return
-         }
-       }
+      if (!user) {
+        setError('La sesión ha expirado. Solicita un nuevo enlace de restablecimiento.')
+        return
+      }
 
-      // Now try to update the password
+      // Update the password
       const { error } = await supabase.auth.updateUser({
         password: password
       })
