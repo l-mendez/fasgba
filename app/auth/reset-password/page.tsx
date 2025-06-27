@@ -8,7 +8,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
 
@@ -204,6 +204,107 @@ function ResetPasswordContent() {
     )
   }
 
+  // Show error state if there's an error
+  if (error) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <main className="flex-1">
+          <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
+            <div className="container px-4 md:px-6">
+              <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-red-600">Enlace Inválido</h1>
+                  <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                    No se pudo verificar el enlace de restablecimiento
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section className="w-full py-12 md:py-24 lg:py-32">
+            <div className="container px-4 md:px-6">
+              <div className="mx-auto max-w-[400px]">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Error de verificación</CardTitle>
+                    <CardDescription>El enlace de restablecimiento no es válido</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4 text-center">
+                      <p className="text-sm text-red-500">{error}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Esto puede ocurrir si:
+                      </p>
+                      <ul className="text-xs text-muted-foreground text-left space-y-1">
+                        <li>• El enlace ha expirado</li>
+                        <li>• El enlace ya fue utilizado</li>
+                        <li>• El enlace es inválido</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex flex-col space-y-4">
+                    <div className="text-sm text-muted-foreground text-center">
+                      <Link href="/recuperar-contrasena" className="text-terracotta hover:underline">
+                        Solicitar nuevo enlace de restablecimiento
+                      </Link>
+                    </div>
+                    <div className="text-sm text-muted-foreground text-center">
+                      <Link href="/login" className="text-terracotta hover:underline">
+                        Volver al inicio de sesión
+                      </Link>
+                    </div>
+                  </CardFooter>
+                </Card>
+              </div>
+            </div>
+          </section>
+        </main>
+        <SiteFooter />
+      </div>
+    )
+  }
+
+  // Show loading state while session is being established
+  if (!isSessionReady) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <main className="flex-1">
+          <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
+            <div className="container px-4 md:px-6">
+              <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-terracotta">Verificando enlace</h1>
+                  <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                    Validando tu enlace de restablecimiento...
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section className="w-full py-12 md:py-24 lg:py-32">
+            <div className="container px-4 md:px-6">
+              <div className="mx-auto max-w-[400px]">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Validando enlace</CardTitle>
+                    <CardDescription>Por favor espera mientras verificamos tu enlace</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-terracotta" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </section>
+        </main>
+        <SiteFooter />
+      </div>
+    )
+  }
+
+  // Show the password reset form only when session is ready and valid
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex-1">
