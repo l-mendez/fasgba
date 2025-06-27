@@ -28,7 +28,10 @@ function ResetPasswordContent() {
   // Handle the password reset on component mount
   useEffect(() => {
     const handlePasswordReset = async () => {
-      // Try to get tokens from URL search params first
+      // Check for authorization code (modern Supabase approach)
+      const code = searchParams?.get('code')
+      
+      // Try to get direct tokens (legacy approach)
       let accessToken = searchParams?.get('access_token')
       let refreshToken = searchParams?.get('refresh_token')
       let type = searchParams?.get('type')
@@ -43,11 +46,38 @@ function ResetPasswordContent() {
         console.log('Hash Parameters:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type })
       }
       
-      console.log('URL Parameters:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type })
+      console.log('URL Parameters:', { 
+        code: !!code, 
+        accessToken: !!accessToken, 
+        refreshToken: !!refreshToken, 
+        type 
+      })
       console.log('Full URL:', window.location.href)
       
-      if (accessToken && refreshToken) {
+      // Handle authorization code flow (modern approach)
+      if (code) {
         try {
+          console.log('Using authorization code flow')
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+          
+          console.log('Code exchange result:', { user: !!data?.user, error: error?.message })
+          
+          if (error) {
+            console.error('Code exchange error:', error)
+            setError('El enlace de restablecimiento es inválido o ha expirado')
+          } else if (data?.user) {
+            console.log('Session established successfully via code exchange')
+            // Session is now established, user can proceed to reset password
+          }
+        } catch (err) {
+          console.error('Code exchange failed:', err)
+          setError('Error al procesar el enlace de restablecimiento')
+        }
+      }
+      // Handle direct token flow (legacy approach)
+      else if (accessToken && refreshToken) {
+        try {
+          console.log('Using direct token flow')
           const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
@@ -67,7 +97,7 @@ function ResetPasswordContent() {
           setError('Error al procesar el enlace de restablecimiento')
         }
       } else {
-        console.log('Missing URL parameters in both search params and hash')
+        console.log('Missing both authorization code and direct tokens')
         setError('El enlace de restablecimiento es inválido o ha expirado')
       }
     }
