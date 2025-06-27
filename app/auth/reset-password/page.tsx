@@ -32,12 +32,14 @@ function ResetPasswordContent() {
       const refreshToken = searchParams?.get('refresh_token')
       
       if (accessToken && refreshToken) {
-        const { error } = await supabase.auth.setSession({
+        const { data, error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
         })
         
-        if (error) {
+        // Only show error if session creation failed AND no user was returned
+        if (error && !data?.user) {
+          console.error('Session error:', error)
           setError('El enlace de restablecimiento es inválido o ha expirado')
         }
       } else {
@@ -70,11 +72,20 @@ function ResetPasswordContent() {
     setError(null)
 
     try {
+      // Verify user is authenticated first
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        setError('El enlace de restablecimiento es inválido o ha expirado')
+        return
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: password
       })
 
       if (error) {
+        console.error('Password update error:', error)
         setError('Error al actualizar la contraseña. Intenta nuevamente.')
       } else {
         setSuccess(true)
@@ -84,6 +95,7 @@ function ResetPasswordContent() {
         }, 3000)
       }
     } catch (error) {
+      console.error('Unexpected error:', error)
       setError('Error inesperado. Intenta nuevamente.')
     } finally {
       setIsLoading(false)
