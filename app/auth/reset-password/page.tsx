@@ -28,11 +28,23 @@ function ResetPasswordContent() {
   // Handle the password reset on component mount
   useEffect(() => {
     const handlePasswordReset = async () => {
-      const accessToken = searchParams?.get('access_token')
-      const refreshToken = searchParams?.get('refresh_token')
-      const type = searchParams?.get('type')
+      // Try to get tokens from URL search params first
+      let accessToken = searchParams?.get('access_token')
+      let refreshToken = searchParams?.get('refresh_token')
+      let type = searchParams?.get('type')
+      
+      // If not found in search params, try to get from URL hash
+      if (!accessToken && typeof window !== 'undefined') {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        accessToken = hashParams.get('access_token')
+        refreshToken = hashParams.get('refresh_token')
+        type = hashParams.get('type')
+        
+        console.log('Hash Parameters:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type })
+      }
       
       console.log('URL Parameters:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type })
+      console.log('Full URL:', window.location.href)
       
       if (accessToken && refreshToken) {
         try {
@@ -55,7 +67,7 @@ function ResetPasswordContent() {
           setError('Error al procesar el enlace de restablecimiento')
         }
       } else {
-        console.log('Missing URL parameters')
+        console.log('Missing URL parameters in both search params and hash')
         setError('El enlace de restablecimiento es inválido o ha expirado')
       }
     }
@@ -89,27 +101,34 @@ function ResetPasswordContent() {
       const { data: { user }, error: getUserError } = await supabase.auth.getUser()
       console.log('Current user check:', { user: !!user, error: getUserError?.message })
       
-      // If no user, try to set session again with URL params
-      if (!user) {
-        const accessToken = searchParams?.get('access_token')
-        const refreshToken = searchParams?.get('refresh_token')
-        
-        if (accessToken && refreshToken) {
-          console.log('Retrying session setup before password update')
-          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          })
-          
-          if (!sessionData?.user) {
-            setError('El enlace de restablecimiento es inválido o ha expirado')
-            return
-          }
-        } else {
-          setError('El enlace de restablecimiento es inválido o ha expirado')
-          return
-        }
-      }
+             // If no user, try to set session again with URL params
+       if (!user) {
+         let accessToken = searchParams?.get('access_token')
+         let refreshToken = searchParams?.get('refresh_token')
+         
+         // Also check hash parameters
+         if (!accessToken && typeof window !== 'undefined') {
+           const hashParams = new URLSearchParams(window.location.hash.substring(1))
+           accessToken = hashParams.get('access_token')
+           refreshToken = hashParams.get('refresh_token')
+         }
+         
+         if (accessToken && refreshToken) {
+           console.log('Retrying session setup before password update')
+           const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+             access_token: accessToken,
+             refresh_token: refreshToken,
+           })
+           
+           if (!sessionData?.user) {
+             setError('El enlace de restablecimiento es inválido o ha expirado')
+             return
+           }
+         } else {
+           setError('El enlace de restablecimiento es inválido o ha expirado')
+           return
+         }
+       }
 
       // Now try to update the password
       const { error } = await supabase.auth.updateUser({
