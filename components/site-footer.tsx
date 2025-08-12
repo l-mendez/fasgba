@@ -45,16 +45,16 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
-              <Link href="/torneos/proximos" className="text-muted-foreground hover:text-amber-dark">
+              <Link href="/torneos" className="text-muted-foreground hover:text-amber-dark">
                 Próximos Torneos
               </Link>
             </li>
             <li>
-              <Link href="/jugadores/ranking" className="text-muted-foreground hover:text-amber-dark">
+              <Link href="/ranking" className="text-muted-foreground hover:text-amber-dark">
                 Ranking FASGBA
               </Link>
             </li>
-            <li>
+            {/* <li>
               <Link href="/reglamentos/fide" className="text-muted-foreground hover:text-amber-dark">
                 Reglamentos
               </Link>
@@ -68,7 +68,7 @@ export function SiteFooter() {
               <Link href="/historia" className="text-muted-foreground hover:text-amber-dark">
                 Historia de FASGBA
               </Link>
-            </li>
+            </li> */}
           </ul>
         </div>
         <div>
@@ -122,7 +122,7 @@ export function SiteFooter() {
       <div className="border-t border-amber/20 py-6">
         <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
           <p className="text-center text-sm text-muted-foreground md:text-left">
-            © 2024 Federación de Ajedrez del Sur de Buenos Aires. Todos los derechos reservados.
+            © 2025 Federación de Ajedrez del Sur de Buenos Aires. Todos los derechos reservados.
           </p>
           <div className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/politica-privacidad" className="hover:text-amber-dark">

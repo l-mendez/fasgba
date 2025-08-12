@@ -119,6 +119,7 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers, cur
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
+  const activeFilter = (searchParams.get('active') || 'active') as 'active' | 'inactive' | 'all';
   
   // Debounced search effect - wait 500ms after user stops typing
   useEffect(() => {
@@ -157,6 +158,18 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers, cur
     router.replace(`?${params.toString()}`);
   };
 
+  const handleActiveChange = (value: 'active' | 'inactive' | 'all') => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === 'active') {
+      // default; we can still keep param for explicitness, but keep URL clean by removing param
+      params.delete('active');
+    } else {
+      params.set('active', value);
+    }
+    params.set('page', '1');
+    router.replace(`?${params.toString()}`);
+  };
+
   return (
     <div className="container px-4 md:px-6">
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
@@ -169,6 +182,20 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers, cur
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+        </div>
+        
+        {/* Activeness Selector */}
+        <div className="sm:w-40">
+          <Select value={activeFilter} onValueChange={(v) => handleActiveChange(v as 'active' | 'inactive' | 'all')}>
+            <SelectTrigger>
+              <SelectValue placeholder="Actividad" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Activos</SelectItem>
+              <SelectItem value="inactive">No activos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         
         {/* Ranking Selector */}

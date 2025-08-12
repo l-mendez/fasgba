@@ -69,6 +69,7 @@ export interface Player {
     points: number; // positive = gained points, negative = lost points
     isNew: boolean; // true if player wasn't in previous ranking
   };
+  active: boolean;
 }
 
 interface ApiResponse {
@@ -82,7 +83,7 @@ interface ApiResponse {
 }
 
 // Get players directly from rankingUtils instead of making HTTP call
-async function getPlayersData(page: number = 1, pageSize: number = 50, search: string = '', ranking?: string): Promise<ApiResponse> {
+async function getPlayersData(page: number = 1, pageSize: number = 50, search: string = '', ranking?: string, activeFilter: 'active' | 'inactive' | 'all' = 'active'): Promise<ApiResponse> {
   try {
     // Clear cache if a specific ranking is requested to ensure fresh data
     if (ranking) {
@@ -91,7 +92,7 @@ async function getPlayersData(page: number = 1, pageSize: number = 50, search: s
     }
     
     const [data, availableRankings]: [PaginatedPlayersResponse, Array<{filename: string, displayName: string, month: number, year: number, date: Date}>] = await Promise.all([
-      getPlayers(page, pageSize, search, ranking),
+      getPlayers(page, pageSize, search, ranking, activeFilter),
       getAvailableRankings()
     ]);
     
@@ -131,7 +132,7 @@ function ErrorState({ message }: { message: string }) {
 export default async function RankingPage({
   searchParams,
 }: {
-  searchParams: { page?: string; search?: string; ranking?: string };
+  searchParams: { page?: string; search?: string; ranking?: string; active?: string };
 }) {
   return (
     <div className="flex min-h-screen flex-col">
@@ -163,7 +164,7 @@ export default async function RankingPage({
 async function RankingContent({ 
   searchParams,
 }: { 
-  searchParams: { page?: string; search?: string; ranking?: string };
+  searchParams: { page?: string; search?: string; ranking?: string; active?: string };
 }) {
   // Await the searchParams before using them
   const params = await Promise.resolve(searchParams);
@@ -171,11 +172,14 @@ async function RankingContent({
   const pageSize = 50;
   const search = params.search || '';
   const ranking = params.ranking || '';
+  const activeParamRaw = (params.active || 'active').toLowerCase();
+  const activeFilter: 'active' | 'inactive' | 'all' =
+    activeParamRaw === 'inactive' ? 'inactive' : activeParamRaw === 'all' ? 'all' : 'active';
 
   try {
-    const data = await getPlayersData(page, pageSize, search, ranking || undefined);
+    const data = await getPlayersData(page, pageSize, search, ranking || undefined, activeFilter);
     return <PlayerList 
-      key={`${data.currentRanking || 'latest'}-${page}-${search}`}
+      key={`${data.currentRanking || 'latest'}-${page}-${search}-${activeFilter}`}
       players={data.players} 
       currentPage={data.page}
       totalPages={data.totalPages}

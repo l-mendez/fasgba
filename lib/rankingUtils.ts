@@ -13,6 +13,7 @@ export interface Player {
     points: number; // positive = gained points, negative = lost points
     isNew: boolean; // true if player wasn't in previous ranking
   };
+  active: boolean;
 }
 
 export interface RankingData {
@@ -436,7 +437,8 @@ export async function getPlayers(
   page: number = 1,
   pageSize: number = 50,
   search: string = '',
-  rankingFilename?: string
+  rankingFilename?: string,
+  activeFilter: 'active' | 'inactive' | 'all' = 'all'
 ): Promise<PaginatedPlayersResponse> {
   try {
     const rankingData = rankingFilename 
@@ -444,12 +446,19 @@ export async function getPlayers(
       : await fetchRankingData();
     
     // Filter by search term if provided
-    const filteredPlayers = search
+    const searchedPlayers = search
       ? rankingData.players.filter(player => 
           player.name.toLowerCase().includes(search.toLowerCase()) ||
           player.club.toLowerCase().includes(search.toLowerCase())
         )
       : rankingData.players;
+
+    // Filter by activeness
+    const filteredPlayers = activeFilter === 'active'
+      ? searchedPlayers.filter(p => p.active)
+      : activeFilter === 'inactive'
+        ? searchedPlayers.filter(p => !p.active)
+        : searchedPlayers;
 
     // Calculate pagination
     const startIndex = (page - 1) * pageSize;

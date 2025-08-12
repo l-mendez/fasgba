@@ -625,6 +625,26 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
         throw new Error(errorData.error || `HTTP error! status: ${updateResponse.status}`)
       }
 
+      // Send email notification (don't block on this - fire and forget)
+      try {
+        await fetch('/api/notifications/email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            type: 'news_created',
+            newsId: newsId,
+            recipientEmail: 'lolomendez985@gmail.com' // For testing
+          }),
+        })
+        console.log('Email notification sent successfully')
+      } catch (emailError) {
+        // Don't fail the entire process if email fails
+        console.error('Failed to send email notification:', emailError)
+      }
+
       // Determine redirect path based on user type
       const redirectPath = isAdmin ? '/admin/noticias' : '/club-admin/noticias'
       

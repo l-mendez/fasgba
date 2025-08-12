@@ -33,6 +33,7 @@ interface RankingPlayer {
   club: string;
   points: number;
   matches: number;
+  active: boolean;
   changes?: {
     position: number | null; // positive = moved up, negative = moved down, null = new player
     points: number; // positive = gained points, negative = lost points
@@ -148,7 +149,41 @@ export async function POST(request: NextRequest) {
         const rowNumber = index + 2 // +2 because index is 0-based and Excel rows start at 1, plus header row
         
         try {
+          // Helper to find a column by fuzzy name
+          const getFirstValueByKeys = (obj: Record<string, any>, keys: string[]): any => {
+            for (const key of keys) {
+              if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key]
+            }
+            return undefined
+          }
+
+          const findActiveRaw = (obj: Record<string, any>): any => {
+            // Try common header variants and also fuzzy match keys containing 'activo'/'active'
+            const direct = getFirstValueByKeys(obj, [
+              'Activo', 'ACTIVO', 'active', 'Active', 'ACTIVE', 'Act', 'ACT'
+            ])
+            if (direct !== undefined) return direct
+            const activeKey = Object.keys(obj).find(k => /activo|active|act/i.test(k))
+            return activeKey ? obj[activeKey] : undefined
+          }
+
+          const parseActive = (value: any): boolean => {
+            if (value === undefined || value === null) return false
+            if (typeof value === 'boolean') return value
+            if (typeof value === 'number') return value === 1 || value > 0
+            const normalized = String(value).trim().toLowerCase()
+              .normalize('NFD').replace(/\p{Diacritic}/gu, '') // remove accents
+            if (normalized === '1') return true
+            if ([
+              'si','s','sí','si ','siempre', 'true','t','y','yes','x','activo','act','activos'
+            ].includes(normalized)) return true
+            if (['no','n','false','0','inactivo','inact','inactive','non'].includes(normalized)) return false
+            // If it's any other non-empty value, be conservative and treat as false
+            return false
+          }
+
           // Try to extract data from various possible column names
+          const activeRaw = findActiveRaw(row)
           const name = row.Nombre || row.Name || row.NOMBRE || ''
           const title = row.TIT || row.Titulo || row.TITULO || ''
           const club = row.Club || row.CLUB || ''
@@ -165,13 +200,14 @@ export async function POST(request: NextRequest) {
             return // Skip this row
           }
 
-          const transformedPlayer = {
+          const transformedPlayer: RankingPlayer = {
             position: position,
             name: normalizePlayerName(String(name)),
             title: title ? String(title).trim().toUpperCase() : undefined, // Keep titles in uppercase (GM, IM, etc.)
             club: String(club).trim(),
             points: Math.round(typeof points === 'number' ? points : parseInt(String(points)) || 0),
-            matches: typeof matches === 'number' ? matches : parseInt(String(matches)) || 0
+            matches: typeof matches === 'number' ? matches : parseInt(String(matches)) || 0,
+            active: parseActive(activeRaw)
           }
 
           // Validate transformed data  
@@ -195,7 +231,7 @@ export async function POST(request: NextRequest) {
       if (errors.length > 0 && transformedData.length === 0) {
         const availableColumns = rawData.length > 0 ? Object.keys(rawData[0]) : []
         const columnInfo = availableColumns.length > 0 ? 
-          `\n\nColumnas encontradas en el archivo: ${availableColumns.join(', ')}\n\nColumnas esperadas: Nombre/Name/NOMBRE, Club/CLUB, Puntos/Points/ELO, Partidos/Matches/PARTIDOS (la posición se determina por el orden de las filas)` : 
+          `\n\nColumnas encontradas en el archivo: ${availableColumns.join(', ')}\n\nColumnas esperadas: Nombre/Name/NOMBRE, Club/CLUB, Puntos/Points/ELO, Partidos/Matches/PARTIDOS, Activo/ACTIVO (la posición se determina por el orden de las filas)` : 
           ''
         throw new Error(`Error al procesar el archivo Excel:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? `\n... y ${errors.length - 5} errores más` : ''}${columnInfo}`)
       }
@@ -203,7 +239,7 @@ export async function POST(request: NextRequest) {
       if (transformedData.length === 0) {
         const availableColumns = rawData.length > 0 ? Object.keys(rawData[0]) : []
         const columnInfo = availableColumns.length > 0 ? 
-          `\n\nColumnas encontradas en el archivo: ${availableColumns.join(', ')}\n\nColumnas esperadas: Nombre/Name/NOMBRE, Club/CLUB, Puntos/Points/ELO, Partidos/Matches/PARTIDOS (la posición se determina por el orden de las filas)` : 
+          `\n\nColumnas encontradas en el archivo: ${availableColumns.join(', ')}\n\nColumnas esperadas: Nombre/Name/NOMBRE, Club/CLUB, Puntos/Points/ELO, Partidos/Matches/PARTIDOS, Activo/ACTIVO (la posición se determina por el orden de las filas)` : 
           ''
         throw new Error(`No se encontraron jugadores válidos en el archivo Excel. Verifica que las columnas tengan los nombres correctos.${columnInfo}`)
       }
@@ -307,12 +343,12 @@ async function findPreviousRanking(adminSupabase: any, currentMonth: number, cur
 
     // Filter and sort ranking files
     const rankingFiles = files
-      .filter(file => 
+      .filter((file: any) => 
         file.name.endsWith('.json') && 
         !file.name.startsWith('temp/') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
-      .map(file => {
+      .map((file: any) => {
         const match = file.name.match(/^ranking-(\d{2})-(\d{4}).*\.json$/)
         if (!match) return null
         
@@ -331,8 +367,8 @@ async function findPreviousRanking(adminSupabase: any, currentMonth: number, cur
 
     // First, check if there's already a ranking for the same month/year
     const sameMonthRankings = rankingFiles
-      .filter(ranking => ranking.month === currentMonth && ranking.year === currentYear)
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) // Oldest first for same month
+      .filter((ranking: any) => ranking.month === currentMonth && ranking.year === currentYear)
+      .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) // Oldest first for same month
     
     if (sameMonthRankings.length > 0) {
       // Use the most recent existing ranking for the same month as previous
@@ -358,10 +394,10 @@ async function findPreviousRanking(adminSupabase: any, currentMonth: number, cur
 
     // If no same-month ranking exists, fall back to chronologically previous ranking
     const chronologicalRankings = rankingFiles
-      .sort((a, b) => b.date.getTime() - a.date.getTime()) // Most recent first
+      .sort((a: any, b: any) => b.date.getTime() - a.date.getTime()) // Most recent first
 
     const currentDate = new Date(currentYear, currentMonth - 1)
-    const previousRanking = chronologicalRankings.find(ranking => 
+    const previousRanking = chronologicalRankings.find((ranking: any) => 
       ranking.date.getTime() < currentDate.getTime()
     )
 
@@ -454,12 +490,12 @@ async function checkIfRecalculationNeeded(adminSupabase: any, currentMonth: numb
 
     // Filter and sort ranking files chronologically
     const rankingFiles = files
-      .filter(file => 
+      .filter((file: any) => 
         file.name.endsWith('.json') && 
         !file.name.startsWith('temp/') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
-      .map(file => {
+      .map((file: any) => {
         const match = file.name.match(/^ranking-(\d{2})-(\d{4}).*\.json$/)
         if (!match) return null
         
@@ -474,11 +510,11 @@ async function checkIfRecalculationNeeded(adminSupabase: any, currentMonth: numb
         }
       })
       .filter(Boolean)
-      .sort((a, b) => a.date.getTime() - b.date.getTime()) // Chronological order
+      .sort((a: any, b: any) => a.date.getTime() - b.date.getTime()) // Chronological order
 
     // Find if there are any rankings after the current one being uploaded
     const currentDate = new Date(currentYear, currentMonth - 1)
-    const subsequentRankings = rankingFiles.filter(ranking => 
+    const subsequentRankings = rankingFiles.filter((ranking: any) => 
       ranking.date.getTime() > currentDate.getTime()
     )
 

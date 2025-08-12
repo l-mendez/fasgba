@@ -10,6 +10,9 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '50');
     const search = searchParams.get('search') || '';
+    const activeParamRaw = (searchParams.get('active') || 'all').toLowerCase();
+    const activeFilter: 'active' | 'inactive' | 'all' =
+      activeParamRaw === 'inactive' ? 'inactive' : activeParamRaw === 'active' ? 'active' : 'all';
     
     // Validate pagination parameters
     if (page < 1 || pageSize < 1 || pageSize > 100) {
@@ -20,7 +23,7 @@ export async function GET(request: Request) {
     }
 
     // Get players from Supabase Storage
-    const data: PaginatedPlayersResponse = await getPlayers(page, pageSize, search);
+    const data: PaginatedPlayersResponse = await getPlayers(page, pageSize, search, undefined, activeFilter);
 
     return NextResponse.json(data);
     
