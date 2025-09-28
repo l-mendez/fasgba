@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Historia',
-  description: 'Conoce la historia y evolución de la Federación de Ajedrez del Sur de Buenos Aires desde 1985',
+  description: 'Conoce la historia y evolución de la Federación de Ajedrez del Sur de Buenos Aires desde 1975',
 }
 
 export default function HistoriaPage() {
@@ -39,7 +39,7 @@ export default function HistoriaPage() {
                   <h2 className="text-3xl font-bold tracking-tight">Nuestros Orígenes</h2>
                   <div className="mt-4 grid gap-6">
                     <p>
-                      La Federación de Ajedrez del Sur de Buenos Aires (FASGBA) fue fundada el 15 de mayo de 1985 por un
+                      La Federación de Ajedrez del Sur de Buenos Aires (FASGBA) fue fundada el 15 de mayo de 1975 por un
                       grupo de entusiastas ajedrecistas de la región, con el objetivo de unificar y organizar la
                       actividad ajedrecística en el sur de la provincia de Buenos Aires.
                     </p>
@@ -62,13 +62,13 @@ export default function HistoriaPage() {
                       <CardHeader className="pb-2">
                         <div className="flex items-center gap-2">
                           <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                          <CardDescription>1985</CardDescription>
+                          <CardDescription>1975</CardDescription>
                         </div>
                         <CardTitle>Fundación de FASGBA</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <p>
-                          El 15 de mayo de 1985 se firma el acta fundacional de la Federación de Ajedrez del Sur de
+                          El 15 de mayo de 1975 se firma el acta fundacional de la Federación de Ajedrez del Sur de
                           Buenos Aires en la ciudad de Bahía Blanca.
                         </p>
                       </CardContent>
@@ -156,7 +156,7 @@ export default function HistoriaPage() {
                     <Card>
                       <CardHeader>
                         <CardTitle>Dr. Roberto Fernández</CardTitle>
-                        <CardDescription>1985 - 1995</CardDescription>
+                        <CardDescription>1975 - 1995</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <p>
@@ -213,7 +213,7 @@ export default function HistoriaPage() {
                     <div className="overflow-hidden rounded-lg">
                       <img
                         src="/placeholder.svg?height=300&width=400"
-                        alt="Fundación de FASGBA, 1985"
+                        alt="Fundación de FASGBA, 1975"
                         className="aspect-video w-full object-cover"
                       />
                       <div className="bg-muted p-2 text-center text-sm">Fundación de FASGBA, 1985</div>

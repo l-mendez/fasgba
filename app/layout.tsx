@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     template: '%s | FASGBA',
     default: 'FASGBA - Federación de Ajedrez del Sur de Buenos Aires',
   },
-  description: 'Federación de Ajedrez del Sur de Buenos Aires - Promoviendo el ajedrez en la región sur de Buenos Aires desde 1985',
+  description: 'Federación de Ajedrez del Sur de Buenos Aires - Promoviendo el ajedrez en la región sur de Buenos Aires desde 1975',
   generator: 'FASGBA',
   icons: {
     icon: '/favicon.png',

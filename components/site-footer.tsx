@@ -69,18 +69,18 @@ export function SiteFooter() {
           <h3 className="mb-4 text-lg font-medium text-terracotta">Recursos</h3>
           <ul className="space-y-2 text-sm">
             <li>
-              <Link href="/comision-directiva" className="text-muted-foreground hover:text-amber-dark">
+              <Link href="/Fasgba - CD 2025-2027.xlsx" className="text-muted-foreground hover:text-amber-dark">
                 Comisión Directiva
               </Link>
             </li>
             <li>
-              <Link href="/torneos/calendario" className="text-muted-foreground hover:text-amber-dark">
+              <Link href="/Fasgba - Calendario 2025.xlsx" className="text-muted-foreground hover:text-amber-dark">
                 Calendario Anual
               </Link>
             </li>
             <li>
-              <Link href="/jugadores/internacionales" className="text-muted-foreground hover:text-amber-dark">
-                Torneos Internacionales
+              <Link href="/Fasgba- Estatuto.pdf" className="text-muted-foreground hover:text-amber-dark">
+                Estatuto
               </Link>
             </li>
           </ul>
