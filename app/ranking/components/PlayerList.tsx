@@ -136,13 +136,13 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers, cur
       params.delete('search');
     }
     params.set('page', '1');
-    router.replace(`?${params.toString()}`);
+    router.replace(`?${params.toString()}`,{ scroll: false });
   };
 
   const handlePageChange = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', page.toString());
-    router.push(`?${params.toString()}`);
+    router.push(`?${params.toString()}`, { scroll: false });
   };
 
   const handleRankingChange = (rankingFilename: string) => {
@@ -156,7 +156,7 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers, cur
     params.set('page', '1'); // Reset to first page when changing ranking
     
     // Use router.replace to ensure immediate navigation and data refresh
-    router.replace(`?${params.toString()}`);
+    router.replace(`?${params.toString()}`, { scroll: false });
   };
 
   const handleActiveChange = (value: 'active' | 'inactive' | 'all') => {
@@ -168,7 +168,7 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers, cur
       params.set('active', value);
     }
     params.set('page', '1');
-    router.replace(`?${params.toString()}`);
+    router.replace(`?${params.toString()}`, { scroll: false });
   };
 
   return (
