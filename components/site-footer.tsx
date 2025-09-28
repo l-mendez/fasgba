@@ -74,18 +74,8 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
-              <Link href="/arbitraje" className="text-muted-foreground hover:text-amber-dark">
-                Árbitros
-              </Link>
-            </li>
-            <li>
               <Link href="/torneos/calendario" className="text-muted-foreground hover:text-amber-dark">
                 Calendario Anual
-              </Link>
-            </li>
-            <li>
-              <Link href="/espacio-social" className="text-muted-foreground hover:text-amber-dark">
-                Espacio Social
               </Link>
             </li>
             <li>
@@ -98,13 +88,9 @@ export function SiteFooter() {
         <div>
           <h3 className="mb-4 text-lg font-medium text-terracotta">Contacto</h3>
           <ul className="space-y-3 text-sm">
-            <li className="flex items-start gap-2">
-              <MapPin className="h-5 w-5 text-amber" />
-              <span className="text-muted-foreground">Av. Colón 123, Bahía Blanca, Buenos Aires, Argentina</span>
-            </li>
             <li className="flex items-center gap-2">
               <Phone className="h-5 w-5 text-amber" />
-              <span className="text-muted-foreground">+54 291 123-4567</span>
+              <span className="text-muted-foreground">+54 911 4028 2610</span>
             </li>
             <li className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-amber" />

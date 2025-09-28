@@ -1,7 +1,7 @@
 'use client'
 
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Filter, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -43,6 +43,9 @@ export function NewsFilters({
   hasActiveFilters 
 }: NewsFiltersProps) {
   const searchParams = useSearchParams()
+  const router = useRouter()
+
+  const capitalize = (value: string) => (value ? value.charAt(0).toUpperCase() + value.slice(1) : value)
 
   // Create URL with updated search params
   const createFilterUrl = (key: string, value: string) => {
@@ -61,7 +64,7 @@ export function NewsFilters({
     <div className="space-y-6">
       {/* Clear filters */}
       {hasActiveFilters && (
-        <Link href="/noticias">
+        <Link href="/noticias" scroll={false}>
           <Button 
             variant="outline" 
             size="sm"
@@ -76,12 +79,12 @@ export function NewsFilters({
       <div>
         <h3 className="font-medium text-sm mb-3 text-foreground">Categorías</h3>
         <div className="flex flex-wrap gap-2">
-          <Link href={createFilterUrl('tag', 'all')}>
+          <Link href={createFilterUrl('tag', 'all')} scroll={false}>
             <Badge
               variant={selectedTag === 'all' ? 'default' : 'secondary'}
               className={`cursor-pointer transition-colors ${
                 selectedTag === 'all' 
-                  ? 'bg-amber hover:bg-amber/90 text-amber-dark' 
+                  ? 'bg-terracotta hover:bg-terracotta-dark text-white' 
                   : 'hover:bg-gray-200'
               }`}
             >
@@ -89,16 +92,16 @@ export function NewsFilters({
             </Badge>
           </Link>
           {tags.map((tag) => (
-            <Link key={tag} href={createFilterUrl('tag', tag)}>
+            <Link key={tag} href={createFilterUrl('tag', tag)} scroll={false}>
               <Badge
                 variant={selectedTag === tag ? 'default' : 'secondary'}
                 className={`cursor-pointer transition-colors ${
                   selectedTag === tag 
-                    ? 'bg-amber hover:bg-amber/90 text-amber-dark' 
+                    ? 'bg-terracotta hover:bg-terracotta-dark text-white' 
                     : 'hover:bg-gray-200'
                 }`}
               >
-                {tag}
+                {capitalize(tag)}
               </Badge>
             </Link>
           ))}
@@ -111,7 +114,7 @@ export function NewsFilters({
         <Select 
           value={selectedClub} 
           onValueChange={(value) => {
-            window.location.href = createFilterUrl('club', value)
+            router.replace(createFilterUrl('club', value), { scroll: false })
           }}
         >
           <SelectTrigger className="w-full">
@@ -138,12 +141,12 @@ export function NewsFilters({
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-2">Categorías</h3>
           <div className="flex flex-wrap gap-2">
-            <Link href={createFilterUrl('tag', 'all')}>
+            <Link href={createFilterUrl('tag', 'all')} scroll={false}>
               <Badge
                 variant={selectedTag === 'all' ? 'default' : 'outline'}
                 className={`cursor-pointer ${
                   selectedTag === 'all'
-                    ? 'bg-amber text-amber-dark hover:bg-amber/90'
+                    ? 'bg-terracotta text-white hover:bg-terracotta-dark'
                     : 'border-amber/20 text-muted-foreground hover:border-amber hover:text-amber-dark hover:bg-amber/10'
                 }`}
               >
@@ -151,16 +154,16 @@ export function NewsFilters({
               </Badge>
             </Link>
             {tags.map((tag) => (
-              <Link key={tag} href={createFilterUrl('tag', tag)}>
+              <Link key={tag} href={createFilterUrl('tag', tag)} scroll={false}>
                 <Badge
                   variant={selectedTag === tag ? 'default' : 'outline'}
                   className={`cursor-pointer ${
                     selectedTag === tag
-                      ? 'bg-amber text-amber-dark hover:bg-amber/90'
+                      ? 'bg-terracotta text-white hover:bg-terracotta-dark'
                       : 'border-amber/20 text-muted-foreground hover:border-amber hover:text-amber-dark hover:bg-amber/10'
                   }`}
                 >
-                  {tag}
+                  {capitalize(tag)}
                 </Badge>
               </Link>
             ))}
@@ -173,7 +176,7 @@ export function NewsFilters({
             <Select 
               value={selectedClub} 
               onValueChange={(value) => {
-                window.location.href = createFilterUrl('club', value)
+                router.replace(createFilterUrl('club', value), { scroll: false })
               }}
             >
               <SelectTrigger className="w-[250px] border-amber/20 focus:ring-amber focus:border-amber">
@@ -191,7 +194,7 @@ export function NewsFilters({
             </Select>
             
             {hasActiveFilters && (
-              <Link href="/noticias">
+              <Link href="/noticias" scroll={false}>
                 <Button
                   variant="outline"
                   size="sm"
