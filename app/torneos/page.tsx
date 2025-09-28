@@ -22,11 +22,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Torneos FASGBA - Calendario de Competencias',
     description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur de Buenos Aires. Consulta próximos torneos, torneos en curso y resultados.',
-    url: 'https://fasgba.org/torneos',
+    url: 'https://fasgba.com/torneos',
     siteName: 'FASGBA',
     images: [
       {
-        url: 'https://fasgba.org/images/fasgba-logo.png',
+        url: 'https://fasgba.com/images/fasgba-logo.png',
         width: 1200,
         height: 630,
         alt: 'Torneos FASGBA',
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Torneos FASGBA - Calendario de Competencias',
     description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur de Buenos Aires.',
-    images: ['https://fasgba.org/images/fasgba-logo.png'],
+    images: ['https://fasgba.com/images/fasgba-logo.png'],
     creator: '@FASGBA',
   },
   robots: {

@@ -108,7 +108,7 @@ export function SiteFooter() {
             </li>
             <li className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-amber" />
-              <span className="text-muted-foreground">secretaria@fasgba.org.ar</span>
+              <span className="text-muted-foreground">secretaria@fasgba.com</span>
             </li>
           </ul>
         </div>

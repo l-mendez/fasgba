@@ -60,12 +60,12 @@ export async function generateMetadata({ params }: ClubDetailPageProps): Promise
   const description = `${clubData.name} - Club afiliado a FASGBA. ${clubData.address ? `Ubicado en ${clubData.address}. ` : ''}Información de contacto, horarios y actividades disponibles.`
 
   // Build the full URL for the club
-  const url = `https://fasgba.org/clubes/${clubId}`
+  const url = `https://fasgba.com/clubes/${clubId}`
   
   // Get the club image URL
   const imageUrl = clubData.image ? 
-    (clubData.image.startsWith('http') ? clubData.image : `https://fasgba.org${clubData.image}`) 
-    : `https://fasgba.org/images/fasgba-logo.png`
+    (clubData.image.startsWith('http') ? clubData.image : `https://fasgba.com${clubData.image}`) 
+    : `https://fasgba.com/images/fasgba-logo.png`
 
   return {
     title: `${clubData.name} - FASGBA`,

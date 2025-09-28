@@ -23,11 +23,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Ranking FASGBA - Clasificación Oficial de Jugadores',
     description: 'Consulta la clasificación oficial de jugadores de la Federación de Ajedrez del Sur de Buenos Aires. Rankings actualizados con estadísticas completas.',
-    url: 'https://fasgba.org/ranking',
+    url: 'https://fasgba.com/ranking',
     siteName: 'FASGBA',
     images: [
       {
-        url: 'https://fasgba.org/images/fasgba-logo.png',
+        url: 'https://fasgba.com/images/fasgba-logo.png',
         width: 1200,
         height: 630,
         alt: 'Ranking FASGBA',
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Ranking FASGBA - Clasificación Oficial de Jugadores',
     description: 'Consulta la clasificación oficial de jugadores de la Federación de Ajedrez del Sur de Buenos Aires.',
-    images: ['https://fasgba.org/images/fasgba-logo.png'],
+    images: ['https://fasgba.com/images/fasgba-logo.png'],
     creator: '@FASGBA',
   },
   robots: {

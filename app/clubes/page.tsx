@@ -24,11 +24,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Clubes Afiliados - FASGBA',
     description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur de Buenos Aires. Encuentra información de contacto, horarios y actividades.',
-    url: 'https://fasgba.org/clubes',
+    url: 'https://fasgba.com/clubes',
     siteName: 'FASGBA',
     images: [
       {
-        url: 'https://fasgba.org/images/fasgba-logo.png',
+        url: 'https://fasgba.com/images/fasgba-logo.png',
         width: 1200,
         height: 630,
         alt: 'Clubes FASGBA',
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Clubes Afiliados - FASGBA',
     description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur de Buenos Aires.',
-    images: ['https://fasgba.org/images/fasgba-logo.png'],
+    images: ['https://fasgba.com/images/fasgba-logo.png'],
     creator: '@FASGBA',
   },
   robots: {
