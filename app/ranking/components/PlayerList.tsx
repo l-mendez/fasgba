@@ -121,22 +121,23 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers, cur
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
   const activeFilter = (searchParams.get('active') || 'active') as 'active' | 'inactive' | 'all';
   
-  // Debounced search effect - wait 500ms after user stops typing
+  // Keep input in sync with URL changes (e.g., when filters or navigation update params)
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (searchTerm) {
-        params.set('search', searchTerm);
-        params.set('page', '1'); // Reset to first page when searching
-      } else {
-        params.delete('search');
-      }
-      router.push(`?${params.toString()}`);
-    }, 500);
-
-    // Cleanup timeout if user continues typing
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm, router, searchParams]);
+    setSearchTerm(searchParams.get('search') || "");
+  }, [searchParams]);
+  
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams.toString());
+    const trimmed = searchTerm.trim();
+    if (trimmed) {
+      params.set('search', trimmed);
+    } else {
+      params.delete('search');
+    }
+    params.set('page', '1');
+    router.replace(`?${params.toString()}`);
+  };
 
   const handlePageChange = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -173,16 +174,22 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers, cur
   return (
     <div className="container px-4 md:px-6">
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Buscar jugador o club..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+        <form onSubmit={handleSearchSubmit} className="flex-1 flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar jugador o club..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button type="submit">
+            <Search className="mr-2 h-4 w-4" />
+            Buscar
+          </Button>
+        </form>
         
         {/* Activeness Selector */}
         <div className="sm:w-40">

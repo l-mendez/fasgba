@@ -17,15 +17,9 @@ export function SiteFooter() {
           </p>
           <div className="mt-4 flex gap-4">
             <Button variant="ghost" size="icon" asChild className="text-amber hover:text-amber-dark hover:bg-amber/10">
-              <Link href="https://facebook.com" target="_blank" rel="noopener noreferrer">
+              <Link href="https://facebook.com/FASGBA" target="_blank" rel="noopener noreferrer">
                 <Facebook className="h-5 w-5" />
                 <span className="sr-only">Facebook</span>
-              </Link>
-            </Button>
-            <Button variant="ghost" size="icon" asChild className="text-amber hover:text-amber-dark hover:bg-amber/10">
-              <Link href="https://twitter.com" target="_blank" rel="noopener noreferrer">
-                <Twitter className="h-5 w-5" />
-                <span className="sr-only">Twitter</span>
               </Link>
             </Button>
             <Button variant="ghost" size="icon" asChild className="text-amber hover:text-amber-dark hover:bg-amber/10">
@@ -114,7 +108,7 @@ export function SiteFooter() {
             </li>
             <li className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-amber" />
-              <span className="text-muted-foreground">info@fasgba.org.ar</span>
+              <span className="text-muted-foreground">secretaria@fasgba.org.ar</span>
             </li>
           </ul>
         </div>
