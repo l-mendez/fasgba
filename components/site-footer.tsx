@@ -69,17 +69,17 @@ export function SiteFooter() {
           <h3 className="mb-4 text-lg font-medium text-terracotta">Recursos</h3>
           <ul className="space-y-2 text-sm">
             <li>
-              <Link href="/Fasgba - CD 2025-2027.xlsx" className="text-muted-foreground hover:text-amber-dark">
+              <Link href="https://uxtfxazbikfqcnnmhufh.supabase.co/storage/v1/object/public/footer-files/cd2025-2027.xlsx" className="text-muted-foreground hover:text-amber-dark">
                 Comisión Directiva
               </Link>
             </li>
             <li>
-              <Link href="/Fasgba - Calendario 2025.xlsx" className="text-muted-foreground hover:text-amber-dark">
+              <Link href="https://uxtfxazbikfqcnnmhufh.supabase.co/storage/v1/object/public/footer-files/calendario2025.xlsx" className="text-muted-foreground hover:text-amber-dark">
                 Calendario Anual
               </Link>
             </li>
             <li>
-              <Link href="/Fasgba- Estatuto.pdf" className="text-muted-foreground hover:text-amber-dark">
+              <Link href="https://uxtfxazbikfqcnnmhufh.supabase.co/storage/v1/object/public/footer-files/estatuto.pdf" className="text-muted-foreground hover:text-amber-dark">
                 Estatuto
               </Link>
             </li>
