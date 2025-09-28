@@ -38,7 +38,7 @@ export function AuthButtons({ isAuthenticated, isAdmin, isClubAdmin, pathname }:
     return (
       <>
         <Link href="/login">
-          <Button variant="ghost" className="text-sm font-medium transition-colors hover:text-amber">
+          <Button variant="brand" className="text-sm font-medium border-terracotta/40 hover:border-terracotta">
             Iniciar Sesión
           </Button>
         </Link>
