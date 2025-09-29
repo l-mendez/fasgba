@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
-import { Bell, Moon, LogOut, Trash2 } from "lucide-react"
+import { Bell, Moon, LogOut, Trash2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
+import { useToast } from "@/hooks/use-toast"
 
 export function SettingsForm({ initial }: { initial?: { type?: string; torneos?: string; noticias?: string; ranking?: boolean } }) {
   const [notificaciones, setNotificaciones] = useState<string>(initial?.type || "todas")
@@ -16,6 +17,7 @@ export function SettingsForm({ initial }: { initial?: { type?: string; torneos?:
   const [noticias, setNoticias] = useState<string>(initial?.noticias || "todos")
   const [ranking, setRanking] = useState<boolean>(typeof initial?.ranking === 'boolean' ? !!initial?.ranking : true)
   const { theme, setTheme, resolvedTheme } = useTheme()
+  const { toast } = useToast()
 
 // Sync state if SSR initial changes (e.g., unsubscribe handler updated metadata)
 useEffect(() => {
@@ -36,7 +38,10 @@ useEffect(() => {
     console.log("Eliminar cuenta")
   }
 
+  const [isSaving, setIsSaving] = useState(false)
+
   const handleSaveNotifications = async () => {
+    setIsSaving(true)
     try {
       const supabase = (await import('@/lib/supabase/client')).createClient()
       const { data: { session } } = await supabase.auth.getSession()
@@ -56,8 +61,21 @@ useEffect(() => {
         })
       })
       if (!res.ok) throw new Error('Failed to save notifications')
+      
+      // Show success toast
+      toast({
+        title: "Cambios Guardados",
+        description: "Tus preferencias de notificaciones se han actualizado correctamente.",
+      })
     } catch (e) {
       console.log('Failed to save notification prefs')
+      toast({
+        title: "Error",
+        description: "No se pudieron guardar los cambios. Intenta nuevamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -154,13 +172,22 @@ useEffect(() => {
           <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-amber/20">
             <Button
               onClick={handleSaveNotifications}
+              disabled={isSaving}
               className="bg-terracotta hover:bg-terracotta/90 text-white"
             >
-              Guardar cambios
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                "Guardar cambios"
+              )}
             </Button>
             <Button
               variant="outline"
               onClick={handleCancelNotifications}
+              disabled={isSaving}
               className="border-amber text-amber-dark hover:bg-amber/10"
             >
               Cancelar
