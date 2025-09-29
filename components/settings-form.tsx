@@ -15,7 +15,7 @@ export function SettingsForm({ initial }: { initial?: { type?: string; torneos?:
   const [torneos, setTorneos] = useState<string>(initial?.torneos || "todos")
   const [noticias, setNoticias] = useState<string>(initial?.noticias || "todos")
   const [ranking, setRanking] = useState<boolean>(typeof initial?.ranking === 'boolean' ? !!initial?.ranking : true)
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme, resolvedTheme } = useTheme()
 
 // Sync state if SSR initial changes (e.g., unsubscribe handler updated metadata)
 useEffect(() => {
@@ -190,7 +190,7 @@ useEffect(() => {
             </div>
             <Switch
               id="modo-oscuro"
-              checked={theme === "dark"}
+              checked={resolvedTheme === "dark"}
               onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
             />
           </div>
