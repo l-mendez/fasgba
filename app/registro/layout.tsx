@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Registro',
-  description: 'Regístrate en FASGBA - Federación de Ajedrez del Sur de Buenos Aires',
+  description: 'Regístrate en FASGBA - Federación de Ajedrez del Sur del Gran Buenos Aires',
 }
 
 export default function RegistroLayout({

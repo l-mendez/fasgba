@@ -25,7 +25,7 @@ Este es un mensaje de prueba para verificar que el sistema de notificaciones fun
 Detalles de la prueba:
 - Fecha: ${new Date().toLocaleDateString('es-AR')}
 - Hora: ${new Date().toLocaleTimeString('es-AR')}
-- Sistema: Federación Argentina de Ajedrez del Sur de Buenos Aires
+- Sistema: Federación de Ajedrez del Sur del Gran Buenos Aires
 
 ---
 Sistema de notificaciones FASGBA
@@ -58,7 +58,7 @@ Sistema de notificaciones FASGBA
                 <strong>Detalles de la prueba:</strong><br>
                 <strong>Fecha:</strong> ${new Date().toLocaleDateString('es-AR')}<br>
                 <strong>Hora:</strong> ${new Date().toLocaleTimeString('es-AR')}<br>
-                <strong>Sistema:</strong> Federación Argentina de Ajedrez del Sur de Buenos Aires
+                <strong>Sistema:</strong> Federación de Ajedrez del Sur del Gran Buenos Aires
             </div>
             
             <p>Si estás recibiendo este email, significa que:</p>
@@ -69,7 +69,7 @@ Sistema de notificaciones FASGBA
             </ul>
         </div>
         <div class="footer">
-            <p>Federación Argentina de Ajedrez del Sur de Buenos Aires</p>
+            <p>Federación de Ajedrez del Sur del Gran Buenos Aires</p>
             <p>Sistema de notificaciones - Mensaje de prueba</p>
         </div>
     </div>

@@ -18,11 +18,11 @@ export const dynamic = 'force-dynamic'
 // Generate metadata for better link previews
 export const metadata: Metadata = {
   title: 'Ranking FASGBA - Clasificación Oficial de Jugadores',
-  description: 'Consulta la clasificación oficial de jugadores de la Federación de Ajedrez del Sur de Buenos Aires. Rankings actualizados con estadísticas completas.',
+  description: 'Consulta la clasificación oficial de jugadores de la Federación de Ajedrez del Sur del Gran Buenos Aires. Rankings actualizados con estadísticas completas.',
   keywords: ['FASGBA', 'ranking', 'ajedrez', 'clasificación', 'jugadores', 'federación', 'Buenos Aires'],
   openGraph: {
     title: 'Ranking FASGBA - Clasificación Oficial de Jugadores',
-    description: 'Consulta la clasificación oficial de jugadores de la Federación de Ajedrez del Sur de Buenos Aires. Rankings actualizados con estadísticas completas.',
+    description: 'Consulta la clasificación oficial de jugadores de la Federación de Ajedrez del Sur del Gran Buenos Aires. Rankings actualizados con estadísticas completas.',
     url: 'https://fasgba.com/ranking',
     siteName: 'FASGBA',
     images: [
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Ranking FASGBA - Clasificación Oficial de Jugadores',
-    description: 'Consulta la clasificación oficial de jugadores de la Federación de Ajedrez del Sur de Buenos Aires.',
+    description: 'Consulta la clasificación oficial de jugadores de la Federación de Ajedrez del Sur del Gran Buenos Aires.',
     images: ['https://fasgba.com/images/fasgba-logo.png'],
     creator: '@FASGBA',
   },
@@ -144,7 +144,7 @@ export default async function RankingPage({
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl">Ranking FASGBA</h1>
                 <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Clasificación oficial de jugadores de la Federación de Ajedrez del Sur de Buenos Aires
+                  Clasificación oficial de jugadores de la Federación de Ajedrez del Sur del Gran Buenos Aires
                 </p>
               </div>
             </div>

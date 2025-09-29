@@ -309,7 +309,7 @@ export default async function Home() {
           <div className="container px-4 md:px-6 flex flex-col items-center space-y-4 text-center relative z-10">
             <div className="space-y-2 bg-background/90 p-6 rounded-lg backdrop-blur-sm border border-amber/20 shadow-lg">
               <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-terracotta">
-                Federación de Ajedrez del Sur de Buenos Aires
+                Federación de Ajedrez del Sur del Gran Buenos Aires
               </h1>
               <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
                 Promoviendo el ajedrez en la región sur de Buenos Aires desde 1975

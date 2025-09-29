@@ -73,6 +73,29 @@ export async function POST(request: NextRequest) {
       .from('ranking-data')
       .getPublicUrl(finalPath)
 
+    // Trigger broadcast email for ranking update
+    try {
+      const authHeader = request.headers.get('authorization')
+      const notifyRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ''}/api/notifications/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader || '',
+        },
+        body: JSON.stringify({
+          type: 'ranking_updated',
+          rankingMonth: rankingData.month,
+          rankingYear: rankingData.year,
+          broadcast: true,
+        })
+      })
+      if (!notifyRes.ok) {
+        console.error('Failed to trigger ranking broadcast email:', await notifyRes.text())
+      }
+    } catch (e) {
+      console.error('Ranking broadcast email trigger error:', e)
+    }
+
     return apiSuccess({
       filename: filename,
       finalPath,

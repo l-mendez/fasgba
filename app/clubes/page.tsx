@@ -19,11 +19,11 @@ export const dynamic = 'force-dynamic'
 // Generate metadata for better link previews
 export const metadata: Metadata = {
   title: 'Clubes Afiliados - FASGBA',
-  description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur de Buenos Aires. Encuentra información de contacto, horarios y actividades.',
+  description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur del Gran Buenos Aires. Encuentra información de contacto, horarios y actividades.',
   keywords: ['FASGBA', 'clubes', 'ajedrez', 'afiliados', 'federación', 'Buenos Aires', 'directorio'],
   openGraph: {
     title: 'Clubes Afiliados - FASGBA',
-    description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur de Buenos Aires. Encuentra información de contacto, horarios y actividades.',
+    description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur del Gran Buenos Aires. Encuentra información de contacto, horarios y actividades.',
     url: 'https://fasgba.com/clubes',
     siteName: 'FASGBA',
     images: [
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Clubes Afiliados - FASGBA',
-    description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur de Buenos Aires.',
+    description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur del Gran Buenos Aires.',
     images: ['https://fasgba.com/images/fasgba-logo.png'],
     creator: '@FASGBA',
   },
@@ -184,7 +184,7 @@ export default async function ClubesPage({ searchParams }: PageProps) {
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl">Clubes Afiliados</h1>
                 <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Conoce los clubes que forman parte de la Federación de Ajedrez del Sur de Buenos Aires
+                  Conoce los clubes que forman parte de la Federación de Ajedrez del Sur del Gran Buenos Aires
                 </p>
               </div>
             </div>

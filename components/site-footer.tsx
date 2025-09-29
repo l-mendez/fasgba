@@ -13,7 +13,7 @@ export function SiteFooter() {
             <span className="font-bold text-terracotta">FASGBA</span>
           </Link>
           <p className="text-sm text-muted-foreground">
-            Federación de Ajedrez del Sur de Buenos Aires - Promoviendo el ajedrez en la región desde 1985
+            Federación de Ajedrez del Sur del Gran Buenos Aires - Promoviendo el ajedrez en la región desde 1985
           </p>
           <div className="mt-4 flex gap-4">
             <Button variant="ghost" size="icon" asChild className="text-amber hover:text-amber-dark hover:bg-amber/10">
@@ -102,7 +102,7 @@ export function SiteFooter() {
       <div className="border-t border-amber/20 py-6">
         <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
           <p className="text-center text-sm text-muted-foreground md:text-left">
-            © 2025 Federación de Ajedrez del Sur de Buenos Aires. Todos los derechos reservados.
+            © 2025 Federación de Ajedrez del Sur del Gran Buenos Aires. Todos los derechos reservados.
           </p>
           <div className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/politica-privacidad" className="hover:text-amber-dark">

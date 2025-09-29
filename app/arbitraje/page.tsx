@@ -115,7 +115,7 @@ export default function ArbitrajePage() {
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl">Arbitraje</h1>
                 <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Árbitros oficiales y cursos de formación de la Federación de Ajedrez del Sur de Buenos Aires
+                  Árbitros oficiales y cursos de formación de la Federación de Ajedrez del Sur del Gran Buenos Aires
                 </p>
               </div>
             </div>

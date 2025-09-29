@@ -17,11 +17,11 @@ export const dynamic = 'force-dynamic'
 // Generate metadata for better link previews
 export const metadata: Metadata = {
   title: 'Torneos FASGBA - Calendario de Competencias',
-  description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur de Buenos Aires. Consulta próximos torneos, torneos en curso y resultados.',
+  description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires. Consulta próximos torneos, torneos en curso y resultados.',
   keywords: ['FASGBA', 'torneos', 'ajedrez', 'competencias', 'calendario', 'federación', 'Buenos Aires', 'inscripción'],
   openGraph: {
     title: 'Torneos FASGBA - Calendario de Competencias',
-    description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur de Buenos Aires. Consulta próximos torneos, torneos en curso y resultados.',
+    description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires. Consulta próximos torneos, torneos en curso y resultados.',
     url: 'https://fasgba.com/torneos',
     siteName: 'FASGBA',
     images: [
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Torneos FASGBA - Calendario de Competencias',
-    description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur de Buenos Aires.',
+    description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires.',
     images: ['https://fasgba.com/images/fasgba-logo.png'],
     creator: '@FASGBA',
   },
@@ -84,7 +84,7 @@ export default async function TorneosPage() {
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-terracotta">Torneos FASGBA</h1>
                 <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Calendario completo de torneos organizados por la Federación de Ajedrez del Sur de Buenos Aires
+                  Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires
                 </p>
               </div>
             </div>

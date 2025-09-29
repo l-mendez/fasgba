@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { Bell, Moon, LogOut, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,12 +10,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 
-export function SettingsForm() {
-  const [notificaciones, setNotificaciones] = useState<string>("todas")
-  const [torneos, setTorneos] = useState<string>("todos")
-  const [noticias, setNoticias] = useState<string>("todos")
-  const [ranking, setRanking] = useState<boolean>(true)
+export function SettingsForm({ initial }: { initial?: { type?: string; torneos?: string; noticias?: string; ranking?: boolean } }) {
+  const [notificaciones, setNotificaciones] = useState<string>(initial?.type || "todas")
+  const [torneos, setTorneos] = useState<string>(initial?.torneos || "todos")
+  const [noticias, setNoticias] = useState<string>(initial?.noticias || "todos")
+  const [ranking, setRanking] = useState<boolean>(typeof initial?.ranking === 'boolean' ? !!initial?.ranking : true)
   const { theme, setTheme } = useTheme()
+
+// Sync state if SSR initial changes (e.g., unsubscribe handler updated metadata)
+useEffect(() => {
+  if (initial?.type && initial.type !== notificaciones) setNotificaciones(initial.type)
+  if (initial?.torneos && initial.torneos !== torneos) setTorneos(initial.torneos)
+  if (initial?.noticias && initial.noticias !== noticias) setNoticias(initial.noticias)
+  if (typeof initial?.ranking === 'boolean' && initial.ranking !== ranking) setRanking(!!initial.ranking)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [initial?.type, initial?.torneos, initial?.noticias, initial?.ranking])
 
   const handleLogout = () => {
     // TODO: Implement logout functionality
@@ -27,14 +36,29 @@ export function SettingsForm() {
     console.log("Eliminar cuenta")
   }
 
-  const handleSaveNotifications = () => {
-    // TODO: Implement save functionality
-    console.log("Guardando configuración de notificaciones:", {
-      notificaciones,
-      torneos,
-      noticias,
-      ranking
-    })
+  const handleSaveNotifications = async () => {
+    try {
+      const supabase = (await import('@/lib/supabase/client')).createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/users/me/notifications', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({
+          notifications: {
+            type: notificaciones,
+            torneos,
+            noticias,
+            ranking,
+          }
+        })
+      })
+      if (!res.ok) throw new Error('Failed to save notifications')
+    } catch (e) {
+      console.log('Failed to save notification prefs')
+    }
   }
 
   const handleCancelNotifications = () => {

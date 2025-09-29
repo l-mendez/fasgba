@@ -76,6 +76,27 @@ export async function POST(request: NextRequest) {
 
     const createdNews = await createNews(newsData)
     
+    // Trigger broadcast email for all news (FASGBA and club)
+    try {
+      const notifyRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ''}/api/notifications/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type: 'news_created',
+          newsId: createdNews.id,
+          broadcast: true,
+        })
+      })
+      if (!notifyRes.ok) {
+        console.error('Failed to trigger broadcast email:', await notifyRes.text())
+      }
+    } catch (e) {
+      console.error('Broadcast email trigger error:', e)
+    }
+
     return apiSuccess(createdNews, 201)
   } catch (error) {
     return handleError(error)

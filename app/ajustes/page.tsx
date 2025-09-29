@@ -2,11 +2,16 @@ import { Settings as SettingsIcon } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { SettingsForm } from "@/components/settings-form"
+import { createClient as createServerSupabase } from "@/lib/supabase/server"
+import UnsubscribeHandler from "@/components/unsubscribe-handler"
 
 // Mark this page as dynamic since it requires server-side authentication
 export const dynamic = 'force-dynamic'
 
-export default function AjustesPage() {
+export default async function AjustesPage() {
+  const supabase = await createServerSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  const initial = (user?.user_metadata as any)?.notifications || null
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader pathname="/ajustes" />
@@ -23,10 +28,14 @@ export default function AjustesPage() {
             </p>
           </div>
 
-          <SettingsForm />
+          {/* Auto-unsubscribe via query param notifications=off */}
+          <UnsubscribeHandler />
+          <SettingsForm initial={initial || undefined} />
         </div>
       </main>
       <SiteFooter />
     </div>
   )
 }
+
+// Unsubscribe client logic moved to components/unsubscribe-handler.tsx

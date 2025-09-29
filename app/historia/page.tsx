@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Historia',
-  description: 'Conoce la historia y evolución de la Federación de Ajedrez del Sur de Buenos Aires desde 1975',
+  description: 'Conoce la historia y evolución de la Federación de Ajedrez del Sur del Gran Buenos Aires desde 1975',
 }
 
 export default function HistoriaPage() {
@@ -25,7 +25,7 @@ export default function HistoriaPage() {
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl">Historia de FASGBA</h1>
                 <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Conoce la historia y evolución de la Federación de Ajedrez del Sur de Buenos Aires
+                  Conoce la historia y evolución de la Federación de Ajedrez del Sur del Gran Buenos Aires
                 </p>
               </div>
             </div>
@@ -39,7 +39,7 @@ export default function HistoriaPage() {
                   <h2 className="text-3xl font-bold tracking-tight">Nuestros Orígenes</h2>
                   <div className="mt-4 grid gap-6">
                     <p>
-                      La Federación de Ajedrez del Sur de Buenos Aires (FASGBA) fue fundada el 15 de mayo de 1975 por un
+                      La Federación de Ajedrez del Sur del Gran Buenos Aires (FASGBA) fue fundada el 15 de mayo de 1975 por un
                       grupo de entusiastas ajedrecistas de la región, con el objetivo de unificar y organizar la
                       actividad ajedrecística en el sur de la provincia de Buenos Aires.
                     </p>
@@ -98,7 +98,7 @@ export default function HistoriaPage() {
                       </CardHeader>
                       <CardContent>
                         <p>
-                          La Federación Argentina de Ajedrez reconoce oficialmente a FASGBA como entidad regional,
+                          La Federación de Ajedrez reconoce oficialmente a FASGBA como entidad regional,
                           permitiendo a sus jugadores participar en torneos nacionales.
                         </p>
                       </CardContent>
