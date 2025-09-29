@@ -142,7 +142,7 @@ export default async function RankingPage({
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl">Ranking FASGBA</h1>
+                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-muted-foreground">Ranking FASGBA</h1>
                 <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                   Clasificación oficial de jugadores de la Federación de Ajedrez del Sur del Gran Buenos Aires
                 </p>

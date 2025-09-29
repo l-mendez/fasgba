@@ -182,7 +182,7 @@ export default async function ClubesPage({ searchParams }: PageProps) {
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl">Clubes Afiliados</h1>
+                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-muted-foreground">Clubes Afiliados</h1>
                 <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                   Conoce los clubes que forman parte de la Federación de Ajedrez del Sur del Gran Buenos Aires
                 </p>
@@ -195,7 +195,7 @@ export default async function ClubesPage({ searchParams }: PageProps) {
             <div className="mb-10">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold tracking-tight">Directorio de Clubes</h2>
+                  <h2 className="text-2xl font-bold tracking-tight text-muted-foreground">Directorio de Clubes</h2>
                   <p className="text-muted-foreground">
                     Encuentra información detallada sobre cada club afiliado a FASGBA
                   </p>

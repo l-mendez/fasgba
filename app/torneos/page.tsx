@@ -82,7 +82,7 @@ export default async function TorneosPage() {
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-terracotta">Torneos FASGBA</h1>
+                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-muted-foreground">Torneos FASGBA</h1>
                 <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                   Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires
                 </p>

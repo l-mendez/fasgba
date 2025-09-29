@@ -54,7 +54,7 @@ export function AuthButtons({ isAuthenticated, isAdmin, isClubAdmin, pathname }:
   return (
     <>
       <Link href="/ajustes">
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-amber">
+        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-amber dark:hover:bg-amber/20">
           <Settings className="h-4 w-4" />
         </Button>
       </Link>
@@ -90,7 +90,7 @@ export function AuthButtons({ isAuthenticated, isAdmin, isClubAdmin, pathname }:
         variant="ghost"
         size="icon"
         onClick={handleLogout}
-        className="text-muted-foreground hover:text-red-500"
+        className="text-muted-foreground hover:text-red-500 dark:hover:bg-red-500/20"
       >
         <LogOut className="h-4 w-4" />
       </Button>
