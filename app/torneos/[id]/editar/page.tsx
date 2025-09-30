@@ -50,7 +50,7 @@ interface Tournament {
   inscription_details?: string | null
   cost?: string | null
   prizes?: string | null
-  image?: string | null
+  registration_link?: string | null
   all_dates?: string[]
   formatted_all_dates?: string[]
   created_by_club_id?: number
@@ -150,7 +150,7 @@ async function getTournamentData(tournamentId: string): Promise<{
           inscription_details,
           cost,
           prizes,
-          image,
+          registration_link,
           created_by_club_id,
           tournament_type,
           players_per_team,
@@ -198,7 +198,7 @@ async function getTournamentData(tournamentId: string): Promise<{
       inscription_details: tournamentData.inscription_details,
       cost: tournamentData.cost,
       prizes: tournamentData.prizes,
-      image: tournamentData.image,
+      registration_link: tournamentData.registration_link,
       created_by_club_id: tournamentData.created_by_club_id,
       tournament_type: tournamentData.tournament_type,
       players_per_team: tournamentData.players_per_team,

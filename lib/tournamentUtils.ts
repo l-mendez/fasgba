@@ -12,6 +12,7 @@ export interface Tournament {
   cost: string | null;
   prizes: string | null;
   image: string | null;
+  registration_link: string | null;
   created_by_club_id?: number | null;
   // New fields
   tournament_type?: string | null;

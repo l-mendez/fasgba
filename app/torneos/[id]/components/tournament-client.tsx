@@ -3,7 +3,8 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, MapPin, Trophy, Clock, Users, DollarSign, Info } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Calendar, MapPin, Trophy, Clock, Users, DollarSign, Info, ExternalLink } from "lucide-react"
 import { type TournamentDisplay } from "@/lib/tournamentUtils"
 import { type GameDisplay } from "@/lib/gameUtils-client"
 import RoundsSection from "./rounds-section"
@@ -170,7 +171,7 @@ export default function TournamentClient({
               </Card>
 
               {/* Registration & Cost Card */}
-              {(tournament.registration_deadline || tournament.cost || tournament.inscription_details) && (
+              {(tournament.registration_deadline || tournament.cost || tournament.inscription_details || tournament.registration_link) && (
                 <Card className="shadow-sm">
                   <CardHeader className="pb-4">
                     <CardTitle className="flex items-center gap-2 text-terracotta dark:text-terracotta-light">
@@ -200,6 +201,18 @@ export default function TournamentClient({
                         <p className="text-muted-foreground mb-2">Detalles de inscripción:</p>
                         <p className="text-sm leading-relaxed">{tournament.inscription_details}</p>
                       </div>
+                    )}
+                    
+                    {tournament.registration_link && tournament.is_upcoming && (
+                      <Button 
+                        asChild
+                        className="w-full bg-terracotta hover:bg-terracotta/90 text-white mt-4"
+                      >
+                        <a href={tournament.registration_link} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Inscribirse al Torneo
+                        </a>
+                      </Button>
                     )}
                   </CardContent>
                 </Card>

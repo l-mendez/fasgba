@@ -7,15 +7,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import {
   type TournamentDisplay,
@@ -124,88 +115,15 @@ function TorneoCard({
             Ver Torneo
           </Link>
         </Button>
-        {tipo === "upcoming" && (
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className="flex-1 bg-terracotta hover:bg-terracotta/90 text-white">
-                Inscripción
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] border-amber/20">
-              <DialogHeader>
-                <DialogTitle className="text-terracotta">Inscripción: {torneo.title}</DialogTitle>
-                <DialogDescription>Complete el formulario para inscribirse en el torneo.</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label htmlFor="nombre" className="text-right text-sm font-medium">
-                    Nombre
-                  </label>
-                  <input
-                    id="nombre"
-                    className="col-span-3 flex h-10 w-full rounded-md border border-amber/20 bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    placeholder="Nombre completo"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label htmlFor="club" className="text-right text-sm font-medium">
-                    Club
-                  </label>
-                  <input
-                    id="club"
-                    className="col-span-3 flex h-10 w-full rounded-md border border-amber/20 bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    placeholder="Club al que representa"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label htmlFor="email" className="text-right text-sm font-medium">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    className="col-span-3 flex h-10 w-full rounded-md border border-amber/20 bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    placeholder="correo@ejemplo.com"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label htmlFor="telefono" className="text-right text-sm font-medium">
-                    Teléfono
-                  </label>
-                  <input
-                    id="telefono"
-                    className="col-span-3 flex h-10 w-full rounded-md border border-amber/20 bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    placeholder="+54 291 123-4567"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label htmlFor="categoria" className="text-right text-sm font-medium">
-                    Categoría
-                  </label>
-                  <select
-                    id="categoria"
-                    className="col-span-3 flex h-10 w-full rounded-md border border-amber/20 bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="general">General</option>
-                    <option value="sub18">Sub-18</option>
-                    <option value="sub14">Sub-14</option>
-                    <option value="sub10">Sub-10</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex justify-between">
-                <DialogClose asChild>
-                  <Button
-                    variant="outline"
-                    className="border-amber text-amber-dark hover:bg-amber/10 hover:text-amber-dark"
-                  >
-                    Cancelar
-                  </Button>
-                </DialogClose>
-                <Button className="bg-terracotta hover:bg-terracotta/90 text-white">Confirmar inscripción</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+        {tipo === "upcoming" && torneo.registration_link && (
+          <Button 
+            asChild
+            className="flex-1 bg-terracotta hover:bg-terracotta/90 text-white"
+          >
+            <a href={torneo.registration_link} target="_blank" rel="noopener noreferrer">
+              Inscripción
+            </a>
+          </Button>
         )}
       </CardFooter>
     </Card>

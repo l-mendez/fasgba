@@ -26,7 +26,7 @@ interface Tournament {
   inscription_details?: string | null
   cost?: string | null
   prizes?: string | null
-  image?: string | null
+  registration_link?: string | null
   all_dates?: string[]
   formatted_all_dates?: string[]
   created_by_club_id?: number
@@ -48,7 +48,7 @@ interface FormData {
   inscription_details: string
   cost: string
   prizes: string
-  image: string
+  registration_link: string
   dates: string[]
   tournament_type: 'individual' | 'team'
   players_per_team: string
@@ -88,7 +88,7 @@ export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: Edit
       inscription_details: tournament.inscription_details || "",
       cost: tournament.cost || "",
       prizes: tournament.prizes || "",
-      image: tournament.image || "",
+      registration_link: tournament.registration_link || "",
       dates: formattedDates,
       tournament_type: tournament.tournament_type || 'individual',
       players_per_team: tournament.players_per_team ? String(tournament.players_per_team) : "",
@@ -165,7 +165,7 @@ export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: Edit
         inscription_details: formData.inscription_details.trim() || undefined,
         cost: formData.cost.trim() || undefined,
         prizes: formData.prizes.trim() || undefined,
-        image: formData.image.trim() || undefined,
+        registration_link: formData.registration_link.trim() || undefined,
         dates: formData.dates,
         tournament_type: formData.tournament_type,
         players_per_team: formData.players_per_team ? Number(formData.players_per_team) : undefined,
@@ -299,6 +299,8 @@ export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: Edit
       return
     }
     
+    // Just use the date string directly - it's already in YYYY-MM-DD format
+    // No need to convert through Date objects to avoid timezone issues
     setFormData(prev => ({
       ...prev,
       dates: [...prev.dates, newDate].sort()
@@ -319,7 +321,9 @@ export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: Edit
   }
 
   const formatDisplayDate = (dateString: string) => {
-    const date = new Date(dateString)
+    // Parse the date string as local date to avoid timezone shifts
+    const [year, month, day] = dateString.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
     return date.toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'long',
@@ -579,23 +583,30 @@ export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: Edit
                 className="min-h-[80px]"
               />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="image">Imagen (URL)</Label>
-              <Input
-                id="image"
-                name="image"
-                type="url"
-                value={formData.image}
-                onChange={handleChange}
-                placeholder="https://ejemplo.com/imagen.jpg"
-              />
-            </div>
           </div>
 
           {/* Tournament Dates */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-terracotta">Inscripción y Fechas</h3>
+            
+            <div className="space-y-2">
+              <Label htmlFor="registration_link">Link de Inscripción</Label>
+              <Input
+                id="registration_link"
+                name="registration_link"
+                type="url"
+                value={formData.registration_link}
+                onChange={handleChange}
+                placeholder="https://forms.google.com/..."
+                className={validationErrors.registration_link ? "border-red-500" : ""}
+              />
+              {validationErrors.registration_link && (
+                <p className="text-sm text-red-500">{validationErrors.registration_link}</p>
+              )}
+              <p className="text-sm text-muted-foreground">
+                Link externo para inscripción (ej: Google Forms, Typeform, etc.)
+              </p>
+            </div>
             
             <div className="space-y-2">
               <Label htmlFor="registration_deadline">Fecha Límite de Inscripción</Label>

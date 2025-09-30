@@ -24,7 +24,7 @@ export const createTournamentSchema = z.object({
   inscription_details: z.string().max(2000, 'Inscription details too long').optional(),
   cost: z.string().max(255, 'Cost too long').optional(),
   prizes: z.string().max(1000, 'Prizes too long').optional(),
-  image: z.string().url('Invalid image URL').optional(),
+  registration_link: z.string().url('Invalid registration link URL').optional(),
   dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format. Use YYYY-MM-DD')).min(1, 'At least one date is required'),
   created_by_club: z.number().int().positive('Invalid club ID').optional(),
   // New fields
@@ -47,7 +47,7 @@ export const updateTournamentSchema = z.object({
   inscription_details: z.string().max(2000, 'Inscription details too long').optional(),
   cost: z.string().max(255, 'Cost too long').optional(),
   prizes: z.string().max(1000, 'Prizes too long').optional(),
-  image: z.string().url('Invalid image URL').optional(),
+  registration_link: z.string().url('Invalid registration link URL').optional(),
   dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format. Use YYYY-MM-DD')).min(1, 'At least one date is required').optional(),
   created_by_club: z.number().int().positive('Invalid club ID').optional(),
   // New fields

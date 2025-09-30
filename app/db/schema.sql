@@ -68,6 +68,7 @@ CREATE TABLE tournaments (
     cost TEXT,
     prizes TEXT,
     image TEXT,
+    registration_link TEXT,
     created_by_club_id INT REFERENCES clubs(id) ON DELETE SET NULL,
     tournament_type TEXT DEFAULT 'individual' CHECK (tournament_type IN ('individual', 'team')),
     players_per_team INTEGER,
