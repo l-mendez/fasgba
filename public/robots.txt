@@ -1,0 +1,30 @@
+# Robots.txt for FASGBA
+# Prevents excessive crawling of dynamic/filtered pages
+
+User-agent: *
+Allow: /
+Allow: /noticias
+Allow: /noticias/
+
+# Block crawling of filtered/paginated news URLs to prevent bot loops
+Disallow: /noticias?*
+Disallow: /noticias/?*
+
+# Block admin and auth pages
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /auth
+Disallow: /auth/*
+Disallow: /api/
+Disallow: /ajustes
+Disallow: /confirmar-email
+
+# Block edit pages
+Disallow: /*/editar
+Disallow: /*/nueva
+
+# Crawl delay to prevent aggressive bots
+Crawl-delay: 1
+
+# Sitemap location (add this once you create a sitemap)
+# Sitemap: https://fasgba.com/sitemap.xml

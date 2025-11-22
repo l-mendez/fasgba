@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Calendar, Filter, X } from "lucide-react"
+import { unstable_cache } from "next/cache"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,8 +12,34 @@ import { getAllNews, getAllNewsTags } from "@/lib/newsUtils"
 import { getAllClubs } from "@/lib/clubUtils"
 import { getImageUrlNullable as getImageUrl } from "@/lib/imageUtils"
 
-// Force dynamic rendering for SSR
-export const dynamic = 'force-dynamic'
+// ISR: Revalidate every 5 minutes (300 seconds)
+// This caches the page and regenerates it in the background when stale
+export const revalidate = 300
+
+// Cached data fetchers - these cache results for 5 minutes
+const getCachedNews = unstable_cache(
+  async () => {
+    const { data } = await getAllNews({
+      limit: 100,
+      include: ['club']
+    })
+    return data
+  },
+  ['news-list'],
+  { revalidate: 300, tags: ['news'] }
+)
+
+const getCachedTags = unstable_cache(
+  async () => getAllNewsTags(),
+  ['news-tags'],
+  { revalidate: 300, tags: ['news'] }
+)
+
+const getCachedClubs = unstable_cache(
+  async () => getAllClubs(),
+  ['clubs-list'],
+  { revalidate: 300, tags: ['clubs'] }
+)
 
 // Define the news interface
 interface News {
@@ -71,11 +97,9 @@ function getClubDisplayName(newsItem: News) {
 
 async function fetchNews(): Promise<News[]> {
   try {
-    const { data } = await getAllNews({ 
-      limit: 100, 
-      include: ['club', 'author'] 
-    })
-    
+    // Uses cached query - results cached for 5 minutes
+    const data = await getCachedNews()
+
     const mappedNews = data.map(item => ({
       id: item.id,
       title: item.title,
@@ -102,7 +126,7 @@ async function fetchNews(): Promise<News[]> {
       // First, prioritize FASGBA news (club_id = null)
       if (a.club_id === null && b.club_id !== null) return -1
       if (a.club_id !== null && b.club_id === null) return 1
-      
+
       // If both are FASGBA news or both are club news, sort by date (newest first)
       const dateA = new Date(a.date).getTime()
       const dateB = new Date(b.date).getTime()
@@ -116,7 +140,8 @@ async function fetchNews(): Promise<News[]> {
 
 async function fetchTags(): Promise<string[]> {
   try {
-    return await getAllNewsTags()
+    // Uses cached query
+    return await getCachedTags()
   } catch (error) {
     console.error('Error fetching tags:', error)
     return []
@@ -125,7 +150,8 @@ async function fetchTags(): Promise<string[]> {
 
 async function fetchClubs(): Promise<Club[]> {
   try {
-    const clubs = await getAllClubs()
+    // Uses cached query
+    const clubs = await getCachedClubs()
     return clubs as Club[]
   } catch (error) {
     console.error('Error fetching clubs:', error)

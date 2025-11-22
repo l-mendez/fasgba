@@ -1,15 +1,16 @@
 import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
-import { Calendar, ChevronLeft } from "lucide-react"
 import { Metadata } from "next"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import NewsContentWrapper from "@/app/components/news-content-wrapper"
 import { getNewsById } from "@/lib/newsUtils"
 import { extractShortTextFromContentBlocks } from "@/lib/textUtils"
+
+// ISR: Revalidate individual news pages every 5 minutes
+export const revalidate = 300
 
 // Define the news interface
 interface News {

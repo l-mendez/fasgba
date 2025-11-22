@@ -10,7 +10,8 @@
     "type-check": "tsc --noEmit",
     "migrate:ranking": "npx tsx scripts/migrate-ranking-to-supabase.ts",
     "setup:storage": "npx tsx scripts/setup-storage-buckets.ts",
-    "test:email": "node scripts/test-email.js"
+    "test:email": "node scripts/test-email.js",
+    "send:admin-update": "npx tsx scripts/send-admin-update.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
