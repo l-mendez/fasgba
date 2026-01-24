@@ -7,7 +7,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 export const DOCUMENT_CATEGORIES = {
   reglamentos: 'Reglamentos',
   actas: 'Actas',
-  circulares: 'Circulares',
+  circulares: 'Minutas',
   otros: 'Otros',
 } as const
 
