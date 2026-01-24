@@ -7,7 +7,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 export const DOCUMENT_CATEGORIES = {
   reglamentos: 'Reglamentos',
   actas: 'Actas',
-  circulares: 'Minutas',
+  minutas: 'Minutas',
   otros: 'Otros',
 } as const
 
@@ -17,7 +17,7 @@ export type DocumentCategory = keyof typeof DOCUMENT_CATEGORIES
 export const CATEGORY_COLORS: Record<DocumentCategory, string> = {
   reglamentos: 'bg-blue-100 text-blue-800',
   actas: 'bg-green-100 text-green-800',
-  circulares: 'bg-amber-100 text-amber-800',
+  minutas: 'bg-amber-100 text-amber-800',
   otros: 'bg-gray-100 text-gray-800',
 }
 

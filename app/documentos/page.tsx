@@ -77,7 +77,7 @@ function groupByCategory(documentos: Documento[]): Record<DocumentCategory, Docu
   const grouped: Record<DocumentCategory, Documento[]> = {
     reglamentos: [],
     actas: [],
-    circulares: [],
+    minutas: [],
     otros: [],
   }
 
@@ -106,7 +106,7 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
     todos: allDocumentos.length,
     reglamentos: allDocumentos.filter((d) => d.category === "reglamentos").length,
     actas: allDocumentos.filter((d) => d.category === "actas").length,
-    circulares: allDocumentos.filter((d) => d.category === "circulares").length,
+    minutas: allDocumentos.filter((d) => d.category === "minutas").length,
     otros: allDocumentos.filter((d) => d.category === "otros").length,
   }
 
