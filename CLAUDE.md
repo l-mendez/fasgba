@@ -21,7 +21,7 @@ npm run test:email       # Test email configuration
 
 ## Tech Stack
 
-- **Framework**: Next.js 15 (App Router, Server Components by default)
+- **Framework**: Next.js 16 (App Router, Server Components by default, Turbopack)
 - **Database**: Supabase (PostgreSQL) with RLS policies
 - **Auth**: Supabase Auth (JWT tokens)
 - **UI**: Tailwind CSS + Shadcn/ui (Radix primitives)

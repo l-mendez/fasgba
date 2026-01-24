@@ -7,7 +7,7 @@ const CACHEABLE_PATHS = ['/noticias', '/clubes', '/ranking', '/torneos']
 // Public API routes that can be cached at CDN level
 const CACHEABLE_API_PATHS = ['/api/clubs', '/api/news', '/api/tournaments', '/api/ranking']
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Skip session middleware for cacheable public pages (allows CDN caching)
@@ -53,4 +53,4 @@ export const config = {
      */
     '/((?!_next/static|_next/image|favicon.ico|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
-} 
+}
