@@ -150,36 +150,57 @@ export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data
     tags: item.tags || []
   }))
 
-  // Fetch author information if included
+  // Fetch author information if included - BATCH fetch to avoid N+1 queries
   if (include.includes('author')) {
-    processedData = await Promise.all(
-      processedData.map(async (item) => {
-        let author_email = undefined
-        let author_name = undefined
+    // Collect unique author IDs
+    const authorIds = [...new Set(
+      processedData
+        .map(item => item.created_by_auth_id)
+        .filter((id): id is string => id !== null && id !== undefined)
+    )]
 
-        if (item.created_by_auth_id) {
-          try {
-            const { data: userData, error: userError } = await supabase.auth.admin.getUserById(item.created_by_auth_id)
-            
-            if (!userError && userData.user) {
-              author_email = userData.user.email || undefined
-              // Get nombre and apellido from user_metadata and combine them
-              const nombre = userData.user.user_metadata?.nombre || ''
-              const apellido = userData.user.user_metadata?.apellido || ''
-              author_name = nombre && apellido ? `${nombre} ${apellido}` : (nombre || apellido || undefined)
+    // Batch fetch all authors in one call (max 50 at a time to avoid limits)
+    const authorMap = new Map<string, { email?: string; name?: string }>()
+
+    if (authorIds.length > 0) {
+      try {
+        // Fetch users in batches of 50
+        const batchSize = 50
+        for (let i = 0; i < authorIds.length; i += batchSize) {
+          const batchIds = authorIds.slice(i, i + batchSize)
+          const { data: usersData } = await supabase.auth.admin.listUsers({
+            page: 1,
+            perPage: batchSize
+          })
+
+          // Filter to only our needed users and map them
+          if (usersData?.users) {
+            for (const user of usersData.users) {
+              if (batchIds.includes(user.id)) {
+                const nombre = user.user_metadata?.nombre || ''
+                const apellido = user.user_metadata?.apellido || ''
+                authorMap.set(user.id, {
+                  email: user.email,
+                  name: nombre && apellido ? `${nombre} ${apellido}` : (nombre || apellido || undefined)
+                })
+              }
             }
-          } catch (error) {
-            console.warn(`Could not fetch author info for news ${item.id}:`, error)
           }
         }
+      } catch (error) {
+        console.warn('Could not batch fetch author info:', error)
+      }
+    }
 
-        return {
-          ...item,
-          author_email,
-          author_name
-        }
-      })
-    )
+    // Map author info to news items
+    processedData = processedData.map(item => {
+      const authorInfo = item.created_by_auth_id ? authorMap.get(item.created_by_auth_id) : undefined
+      return {
+        ...item,
+        author_email: authorInfo?.email,
+        author_name: authorInfo?.name
+      }
+    })
   } else {
     // Add undefined author fields if not including author info
     processedData = processedData.map(item => ({

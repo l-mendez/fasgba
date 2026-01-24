@@ -19,8 +19,10 @@ export const revalidate = 300
 // Cached data fetchers - these cache results for 5 minutes
 const getCachedNews = unstable_cache(
   async () => {
+    // Reduced from 100 to 30 to minimize egress - pagination handles the rest
+    // Removed 'author' from include to reduce N+1 queries (not displayed in list view)
     const { data } = await getAllNews({
-      limit: 100,
+      limit: 30,
       include: ['club']
     })
     return data

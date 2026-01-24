@@ -16,11 +16,17 @@ const playerSchema = z.object({
   club_id: z.number().int().positive('Invalid club ID').optional(),
 })
 
-// GET /api/players - Get all players
+// GET /api/players - Get players with pagination and search
 export async function GET(request: NextRequest) {
   try {
-    // Get all players with their club information
-    const { data: players, error: playersError } = await serverSupabase
+    const { searchParams } = new URL(request.url)
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10))) // Max 100
+    const search = searchParams.get('search') || ''
+    const offset = (page - 1) * limit
+
+    // Build query with pagination
+    let query = serverSupabase
       .from('players')
       .select(`
         id,
@@ -31,16 +37,28 @@ export async function GET(request: NextRequest) {
           id,
           name
         )
-      `)
+      `, { count: 'exact' })
+
+    // Apply search filter if provided
+    if (search) {
+      query = query.ilike('full_name', `%${search}%`)
+    }
+
+    const { data: players, error: playersError, count } = await query
       .order('full_name', { ascending: true })
+      .range(offset, offset + limit - 1)
 
     if (playersError) {
       console.error('Error fetching players:', playersError)
       throw new Error('Failed to fetch players')
     }
 
-    return apiSuccess({ 
-      players: players || []
+    return apiSuccess({
+      players: players || [],
+      total: count || 0,
+      page,
+      limit,
+      totalPages: Math.ceil((count || 0) / limit)
     })
   } catch (error) {
     return handleError(error)

@@ -8,6 +8,7 @@ import {
   BookOpen,
   Calendar,
   FileText,
+  FolderOpen,
   GraduationCap,
   History,
   Home,
@@ -139,6 +140,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           >
             <Users className="mr-2 h-4 w-4" />
             Jugadores
+          </Link>
+          <Link
+            href="/admin/documentos"
+            className={cn(
+              "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
+              pathname.startsWith("/admin/documentos") ? "bg-amber/10 text-amber" : "text-muted-foreground"
+            )}
+            onClick={onLinkClick}
+          >
+            <FolderOpen className="mr-2 h-4 w-4" />
+            Documentos
           </Link>
         </div>
       </div>

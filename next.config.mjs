@@ -14,7 +14,14 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+      },
+    ],
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 31536000, // 1 year cache for optimized images
   },
   experimental: {
     webpackBuildWorker: true,

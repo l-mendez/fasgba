@@ -14,6 +14,9 @@ DROP POLICY IF EXISTS "avatars_delete_policy" ON storage.objects;
 DROP POLICY IF EXISTS "ranking_data_upload_policy" ON storage.objects;
 DROP POLICY IF EXISTS "ranking_data_select_policy" ON storage.objects;
 DROP POLICY IF EXISTS "ranking_data_delete_policy" ON storage.objects;
+DROP POLICY IF EXISTS "documentos_upload_policy" ON storage.objects;
+DROP POLICY IF EXISTS "documentos_select_policy" ON storage.objects;
+DROP POLICY IF EXISTS "documentos_delete_policy" ON storage.objects;
 
 -- Images bucket policies
 CREATE POLICY "images_upload_policy" ON storage.objects
@@ -69,11 +72,39 @@ CREATE POLICY "ranking_data_delete_policy" ON storage.objects
   FOR DELETE
   TO authenticated
   USING (
-    bucket_id = 'ranking-data' AND 
+    bucket_id = 'ranking-data' AND
     EXISTS (
-      SELECT 1 FROM profiles 
-      WHERE profiles.id = auth.uid() 
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
       AND profiles.role = 'admin'
+    )
+  );
+
+-- Documentos bucket policies (admin only for insert/delete, public for select)
+CREATE POLICY "documentos_upload_policy" ON storage.objects
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'documentos' AND
+    EXISTS (
+      SELECT 1 FROM admins
+      WHERE admins.auth_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "documentos_select_policy" ON storage.objects
+  FOR SELECT
+  TO public
+  USING (bucket_id = 'documentos');
+
+CREATE POLICY "documentos_delete_policy" ON storage.objects
+  FOR DELETE
+  TO authenticated
+  USING (
+    bucket_id = 'documentos' AND
+    EXISTS (
+      SELECT 1 FROM admins
+      WHERE admins.auth_id = auth.uid()
     )
   );
 

@@ -12,8 +12,9 @@ import { SiteFooter } from "@/components/site-footer"
 import { PlayerList } from "@/app/ranking/components/PlayerList"
 import { getPlayers, getAvailableRankings, type PaginatedPlayersResponse } from "@/lib/rankingUtils"
 
-// Force dynamic rendering for SSR
-export const dynamic = 'force-dynamic'
+// ISR: Revalidate every 5 minutes (300 seconds) instead of force-dynamic
+// This caches the page and regenerates it in the background when stale
+export const revalidate = 300
 
 // Generate metadata for better link previews
 export const metadata: Metadata = {

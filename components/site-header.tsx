@@ -114,6 +114,15 @@ export async function SiteHeader({ pathname }: SiteHeaderProps) {
               >
                 Noticias
               </Link>
+              <Link
+                href="/documentos"
+                className={cn(
+                  "transition-colors hover:text-amber",
+                  pathname === "/documentos" ? "text-amber" : "text-muted-foreground"
+                )}
+              >
+                Documentos
+              </Link>
             </nav>
           </div>
           

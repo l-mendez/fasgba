@@ -4,6 +4,9 @@ import { updateSession } from '@/lib/supabase/middleware'
 // Paths that should skip session middleware for better caching
 const CACHEABLE_PATHS = ['/noticias', '/clubes', '/ranking', '/torneos']
 
+// Public API routes that can be cached at CDN level
+const CACHEABLE_API_PATHS = ['/api/clubs', '/api/news', '/api/tournaments', '/api/ranking']
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -13,14 +16,26 @@ export async function middleware(request: NextRequest) {
     path => pathname === path || pathname.startsWith(`${path}/`)
   )
 
+  // Check if this is a cacheable API route (GET requests only)
+  const isCacheableApiPath = request.method === 'GET' && CACHEABLE_API_PATHS.some(
+    path => pathname === path || pathname.startsWith(`${path}/`)
+  )
+
   // For cacheable paths, only update session if there's an auth cookie
   // This allows anonymous users to get cached responses
   const hasAuthCookie = request.cookies.has('sb-access-token') ||
     request.cookies.has('sb-refresh-token') ||
     Array.from(request.cookies.getAll()).some(c => c.name.includes('supabase'))
 
-  if (isCacheablePath && !hasAuthCookie) {
-    return NextResponse.next()
+  if ((isCacheablePath || isCacheableApiPath) && !hasAuthCookie) {
+    const response = NextResponse.next()
+
+    // Add cache headers for public API responses (5 min cache, 1 hour stale-while-revalidate)
+    if (isCacheableApiPath) {
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600')
+    }
+
+    return response
   }
 
   return await updateSession(request)

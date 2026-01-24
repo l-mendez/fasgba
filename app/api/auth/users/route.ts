@@ -7,37 +7,41 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
+    const perPage = Math.min(100, Math.max(1, parseInt(searchParams.get('perPage') || '50', 10))) // Max 100
+
     // Get the authorization header
     const authHeader = request.headers.get('authorization')
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return Response.json({ error: 'Authorization header required' }, { status: 401 })
     }
-    
+
     const token = authHeader.substring(7)
-    
+
     // Verify the requesting user is authenticated and is an admin
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-    
+
     if (authError || !user) {
       return Response.json({ error: 'Invalid or expired token' }, { status: 401 })
     }
-    
+
     // Check if user is an admin
     const { data: adminData, error: adminError } = await supabaseAdmin
       .from('admins')
       .select('auth_id')
       .eq('auth_id', user.id)
       .single()
-    
+
     if (adminError || !adminData) {
       return Response.json({ error: 'Admin access required' }, { status: 403 })
     }
-    
-    // Fetch all users from Supabase Auth using admin API
+
+    // Fetch users with pagination (reduced from 1000 to configurable max 100)
     const { data: { users }, error: usersError } = await supabaseAdmin.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000 // Adjust as needed
+      page,
+      perPage
     })
     
     if (usersError) {
@@ -86,7 +90,12 @@ export async function GET(request: NextRequest) {
       adminClubs: clubAdminData[authUser.id] || []
     }))
     
-    return Response.json(transformedUsers)
+    return Response.json({
+      users: transformedUsers,
+      page,
+      perPage,
+      hasMore: transformedUsers.length === perPage
+    })
   } catch (error) {
     console.error('Error in users API:', error)
     return Response.json({

@@ -108,6 +108,38 @@ export interface Database {
           recorded_at?: string
         }
       }
+      documentos: {
+        Row: {
+          id: number
+          name: string
+          category: string
+          file_path: string
+          file_size: number | null
+          uploaded_by_auth_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          name: string
+          category: string
+          file_path: string
+          file_size?: number | null
+          uploaded_by_auth_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          name?: string
+          category?: string
+          file_path?: string
+          file_size?: number | null
+          uploaded_by_auth_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
