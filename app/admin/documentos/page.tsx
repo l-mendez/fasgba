@@ -18,6 +18,8 @@ import {
   ArrowUpDown,
   Save,
   X,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -370,7 +372,7 @@ export default function AdminDocumentosPage() {
     return <FileText className="h-4 w-4 text-red-500" />
   }
 
-  // Drag and drop reordering
+  // Drag and drop reordering (desktop)
   const handleRowDragStart = (e: React.DragEvent, id: number) => {
     setIsDragging(true)
     setDraggedId(id)
@@ -394,6 +396,22 @@ export default function AdminDocumentosPage() {
     const newDocuments = [...documents]
     const [draggedItem] = newDocuments.splice(draggedIndex, 1)
     newDocuments.splice(targetIndex, 0, draggedItem)
+
+    setDocuments(newDocuments)
+    setHasOrderChanges(true)
+  }
+
+  // Move up/down for mobile reordering
+  const moveDocument = (id: number, direction: "up" | "down") => {
+    const currentIndex = documents.findIndex((d) => d.id === id)
+    if (currentIndex === -1) return
+
+    const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1
+    if (newIndex < 0 || newIndex >= documents.length) return
+
+    const newDocuments = [...documents]
+    const [movedItem] = newDocuments.splice(currentIndex, 1)
+    newDocuments.splice(newIndex, 0, movedItem)
 
     setDocuments(newDocuments)
     setHasOrderChanges(true)
@@ -757,7 +775,8 @@ export default function AdminDocumentosPage() {
           )}
           {sortOption === "custom" && (
             <p className="text-sm text-muted-foreground mt-2">
-              Arrastra las filas para reordenar los documentos
+              <span className="hidden sm:inline">Arrastra las filas para reordenar los documentos</span>
+              <span className="sm:hidden">Usa las flechas para reordenar los documentos</span>
             </p>
           )}
         </CardHeader>
@@ -800,7 +819,31 @@ export default function AdminDocumentosPage() {
                     >
                       {sortOption === "custom" && (
                         <TableCell>
-                          <GripVertical className="h-4 w-4 text-muted-foreground" />
+                          <div className="flex items-center gap-1">
+                            {/* Desktop: drag handle */}
+                            <GripVertical className="h-4 w-4 text-muted-foreground hidden sm:block" />
+                            {/* Mobile: up/down buttons */}
+                            <div className="flex flex-col sm:hidden">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => moveDocument(documento.id, "up")}
+                                disabled={documents.findIndex((d) => d.id === documento.id) === 0}
+                              >
+                                <ChevronUp className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => moveDocument(documento.id, "down")}
+                                disabled={documents.findIndex((d) => d.id === documento.id) === documents.length - 1}
+                              >
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
                         </TableCell>
                       )}
                       <TableCell className="font-medium">
