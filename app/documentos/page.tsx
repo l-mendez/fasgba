@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { unstable_cache } from "next/cache"
-import { FileText, Download, Eye, Calendar, FolderOpen } from "lucide-react"
+import { FileText, FileSpreadsheet, Download, Eye, Calendar, FolderOpen } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -27,6 +27,8 @@ interface Documento {
   category: DocumentCategory
   file_path: string
   file_size: number | null
+  sort_order: number
+  importance_level: number
   created_at: string
 }
 
@@ -43,8 +45,8 @@ const getCachedDocumentos = unstable_cache(
 
     const { data, error } = await supabase
       .from("documentos")
-      .select("id, name, category, file_path, file_size, created_at")
-      .order("created_at", { ascending: false })
+      .select("id, name, category, file_path, file_size, sort_order, importance_level, created_at")
+      .order("sort_order", { ascending: true })
 
     if (error) {
       console.error("Error fetching documentos:", error)
@@ -234,14 +236,20 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
 
 function DocumentCard({ documento }: { documento: Documento }) {
   const documentUrl = getDocumentUrl(documento.file_path)
+  const ext = documento.file_path?.split('.').pop()?.toLowerCase()
+  const isExcel = ext === 'xls' || ext === 'xlsx'
 
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0">
-            <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-red-600" />
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isExcel ? 'bg-green-100' : 'bg-red-100'}`}>
+              {isExcel ? (
+                <FileSpreadsheet className="h-5 w-5 text-green-600" />
+              ) : (
+                <FileText className="h-5 w-5 text-red-600" />
+              )}
             </div>
           </div>
           <div className="flex-1 min-w-0">
@@ -285,7 +293,7 @@ function DocumentCard({ documento }: { documento: Documento }) {
                 size="sm"
                 className="flex-1"
               >
-                <a href={documentUrl} download={`${documento.name}.pdf`}>
+                <a href={documentUrl} download={`${documento.name}.${ext || 'pdf'}`}>
                   <Download className="mr-2 h-4 w-4" />
                   Descargar
                 </a>

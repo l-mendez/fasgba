@@ -24,8 +24,36 @@ export const CATEGORY_COLORS: Record<DocumentCategory, string> = {
 // Maximum file size: 10MB
 export const MAX_FILE_SIZE = 10 * 1024 * 1024
 
-// Allowed MIME type
+// Allowed MIME types
+export const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'application/vnd.ms-excel', // .xls
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+] as const
+
+// Legacy single type for backwards compatibility
 export const ALLOWED_MIME_TYPE = 'application/pdf'
+
+// File type info for display
+export const FILE_TYPE_INFO: Record<string, { extension: string; label: string; color: string }> = {
+  'application/pdf': { extension: 'pdf', label: 'PDF', color: 'text-red-600 bg-red-100' },
+  'application/vnd.ms-excel': { extension: 'xls', label: 'Excel', color: 'text-green-600 bg-green-100' },
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { extension: 'xlsx', label: 'Excel', color: 'text-green-600 bg-green-100' },
+}
+
+/**
+ * Get file type info from MIME type
+ */
+export function getFileTypeInfo(mimeType: string): { extension: string; label: string; color: string } {
+  return FILE_TYPE_INFO[mimeType] || { extension: 'file', label: 'Archivo', color: 'text-gray-600 bg-gray-100' }
+}
+
+/**
+ * Check if MIME type is allowed
+ */
+export function isAllowedMimeType(mimeType: string): boolean {
+  return (ALLOWED_MIME_TYPES as readonly string[]).includes(mimeType)
+}
 
 /**
  * Get public URL for a document stored in Supabase Storage
@@ -95,10 +123,18 @@ export function extractDocumentName(file: File | string): string {
 
 /**
  * Validate if a file is a valid PDF
+ * @deprecated Use isValidDocument instead
  */
 export function isValidPdf(file: File): { valid: boolean; error?: string } {
-  if (file.type !== ALLOWED_MIME_TYPE) {
-    return { valid: false, error: 'Solo se permiten archivos PDF' }
+  return isValidDocument(file)
+}
+
+/**
+ * Validate if a file is a valid document (PDF or Excel)
+ */
+export function isValidDocument(file: File): { valid: boolean; error?: string } {
+  if (!isAllowedMimeType(file.type)) {
+    return { valid: false, error: 'Solo se permiten archivos PDF y Excel (.xls, .xlsx)' }
   }
 
   if (file.size > MAX_FILE_SIZE) {

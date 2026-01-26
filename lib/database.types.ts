@@ -115,7 +115,10 @@ export interface Database {
           category: string
           file_path: string
           file_size: number | null
+          file_type: string | null
           uploaded_by_auth_id: string | null
+          sort_order: number
+          importance_level: number
           created_at: string
           updated_at: string
         }
@@ -125,7 +128,10 @@ export interface Database {
           category: string
           file_path: string
           file_size?: number | null
+          file_type?: string | null
           uploaded_by_auth_id?: string | null
+          sort_order?: number
+          importance_level?: number
           created_at?: string
           updated_at?: string
         }
@@ -135,7 +141,10 @@ export interface Database {
           category?: string
           file_path?: string
           file_size?: number | null
+          file_type?: string | null
           uploaded_by_auth_id?: string | null
+          sort_order?: number
+          importance_level?: number
           created_at?: string
           updated_at?: string
         }

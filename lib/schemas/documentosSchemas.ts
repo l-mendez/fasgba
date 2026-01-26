@@ -28,9 +28,40 @@ export const createDocumentoSchema = z.object({
   }),
 })
 
+// Schema for updating a document (partial)
+export const updateDocumentoSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'El nombre del documento es requerido')
+    .max(255, 'El nombre no puede superar los 255 caracteres')
+    .optional(),
+  category: z.enum(categoryValues, {
+    errorMap: () => ({ message: 'Categoría no válida' }),
+  }).optional(),
+  sort_order: z.number().int().min(0).optional(),
+  importance_level: z.number().int().min(0).max(100).optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+  message: 'Se requiere al menos un campo para actualizar',
+})
+
+// Sort options for documents
+export const SORT_OPTIONS = {
+  'date-desc': { column: 'created_at', ascending: false, label: 'Fecha (más reciente)' },
+  'date-asc': { column: 'created_at', ascending: true, label: 'Fecha (más antiguo)' },
+  'alpha-asc': { column: 'name', ascending: true, label: 'Alfabético (A-Z)' },
+  'alpha-desc': { column: 'name', ascending: false, label: 'Alfabético (Z-A)' },
+  'importance': { column: 'importance_level', ascending: false, label: 'Por importancia' },
+  'custom': { column: 'sort_order', ascending: true, label: 'Orden personalizado' },
+} as const
+
+export type SortOption = keyof typeof SORT_OPTIONS
+
+const sortOptionValues = Object.keys(SORT_OPTIONS) as [string, ...string[]]
+
 // Schema for query params (list documents)
 export const documentoQuerySchema = z.object({
   category: z.enum(categoryValues).optional(),
+  sort: z.enum(sortOptionValues).optional().default('custom'),
   page: z
     .string()
     .optional()
@@ -53,4 +84,5 @@ export const documentoQuerySchema = z.object({
 
 // Type exports
 export type CreateDocumentoInput = z.infer<typeof createDocumentoSchema>
+export type UpdateDocumentoInput = z.infer<typeof updateDocumentoSchema>
 export type DocumentoQueryInput = z.infer<typeof documentoQuerySchema>

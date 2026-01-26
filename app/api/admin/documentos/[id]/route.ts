@@ -7,7 +7,7 @@ import {
   notFoundError,
   validationError,
 } from '@/lib/utils/apiResponse'
-import { documentoIdSchema } from '@/lib/schemas/documentosSchemas'
+import { documentoIdSchema, updateDocumentoSchema } from '@/lib/schemas/documentosSchemas'
 
 export const dynamic = 'force-dynamic'
 
@@ -102,6 +102,64 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return apiSuccess({
       success: true,
       message: `Documento "${documento.name}" eliminado exitosamente`,
+    })
+  } catch (error) {
+    return handleError(error)
+  }
+}
+
+/**
+ * PATCH /api/admin/documentos/[id]
+ * Admin endpoint to update a document (rename, change category, etc.)
+ */
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  try {
+    await requireAdmin(request)
+
+    const { id } = await params
+    const idResult = documentoIdSchema.safeParse(id)
+
+    if (!idResult.success) {
+      return validationError('ID de documento no válido')
+    }
+
+    const body = await request.json()
+    const updateResult = updateDocumentoSchema.safeParse(body)
+
+    if (!updateResult.success) {
+      return validationError(updateResult.error.errors[0]?.message || 'Datos inválidos')
+    }
+
+    const adminSupabase = createAdminClient()
+
+    // Check if document exists
+    const { data: existing, error: fetchError } = await adminSupabase
+      .from('documentos')
+      .select('id')
+      .eq('id', idResult.data)
+      .single()
+
+    if (fetchError || !existing) {
+      return notFoundError('Documento no encontrado')
+    }
+
+    // Update the document
+    const { data: documento, error: updateError } = await adminSupabase
+      .from('documentos')
+      .update(updateResult.data)
+      .eq('id', idResult.data)
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error('Database update error:', updateError)
+      return validationError('Error al actualizar el documento: ' + updateError.message)
+    }
+
+    return apiSuccess({
+      success: true,
+      documento,
+      message: 'Documento actualizado exitosamente',
     })
   } catch (error) {
     return handleError(error)

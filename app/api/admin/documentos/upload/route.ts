@@ -9,9 +9,9 @@ import {
 } from '@/lib/utils/apiResponse'
 import {
   MAX_FILE_SIZE,
-  ALLOWED_MIME_TYPE,
   isValidCategory,
   generateStorageFilename,
+  isAllowedMimeType,
 } from '@/lib/documentosUtils'
 
 export const dynamic = 'force-dynamic'
@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    if (file.type !== ALLOWED_MIME_TYPE) {
-      return validationError('Solo se permiten archivos PDF')
+    if (!isAllowedMimeType(file.type)) {
+      return validationError('Solo se permiten archivos PDF y Excel (.xls, .xlsx)')
     }
 
     // Validate file size
@@ -85,6 +85,16 @@ export async function POST(request: NextRequest) {
       return validationError('Error al subir el archivo: ' + uploadError.message)
     }
 
+    // Get the max sort_order to place new document at the end
+    const { data: maxOrderData } = await adminSupabase
+      .from('documentos')
+      .select('sort_order')
+      .order('sort_order', { ascending: false })
+      .limit(1)
+      .single()
+
+    const nextSortOrder = (maxOrderData?.sort_order ?? 0) + 1
+
     // Insert record into documentos table
     const { data: documento, error: dbError } = await adminSupabase
       .from('documentos')
@@ -93,7 +103,9 @@ export async function POST(request: NextRequest) {
         category,
         file_path: uploadData.path,
         file_size: file.size,
+        file_type: file.type,
         uploaded_by_auth_id: user.id,
+        sort_order: nextSortOrder,
       })
       .select()
       .single()
