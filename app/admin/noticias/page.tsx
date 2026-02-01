@@ -28,6 +28,24 @@ interface News {
   updated_at: string
 }
 
+interface RawNews {
+  id: number
+  title: string
+  date: string
+  image: string | null
+  extract: string
+  text: string
+  tags: string[] | null
+  club_id: number | null
+  clubs: {
+    id: number
+    name: string
+  } | null
+  created_by_auth_id: string | null
+  created_at: string
+  updated_at: string
+}
+
 // Server-side function to fetch news data
 async function fetchNews(): Promise<News[]> {
   try {
@@ -90,8 +108,10 @@ async function fetchNews(): Promise<News[]> {
       return []
     }
 
+    const rawNews = newsData as unknown as RawNews[]
+
     // Get unique author IDs to fetch their information
-    const authorIds = [...new Set(newsData
+    const authorIds = [...new Set(rawNews
       .map(news => news.created_by_auth_id)
       .filter((id): id is string => id !== null)
     )]
@@ -119,7 +139,7 @@ async function fetchNews(): Promise<News[]> {
     }
 
     // Transform the news data to match our News interface
-    const transformedNews: News[] = newsData.map((item: any) => {
+    const transformedNews: News[] = rawNews.map((item) => {
       const author = item.created_by_auth_id ? authorMap.get(item.created_by_auth_id) : null
       
       return {
