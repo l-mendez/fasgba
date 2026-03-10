@@ -3,8 +3,6 @@ import { SiteFooter } from "@/components/site-footer"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Metadata } from "next"
 
-export const dynamic = 'force-dynamic'
-
 export const metadata: Metadata = {
   title: 'Política de Privacidad',
   description: 'Política de privacidad de la Federación de Ajedrez del Sur del Gran Buenos Aires',
