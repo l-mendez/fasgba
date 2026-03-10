@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "migrate:ranking": "npx tsx scripts/migrate-ranking-to-supabase.ts",
     "setup:storage": "npx tsx scripts/setup-storage-buckets.ts",
