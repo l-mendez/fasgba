@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+function getAdminSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 /**
  * Generate a hash for a file to identify duplicates (browser-compatible)
@@ -37,7 +39,7 @@ export async function generateFileHash(file: File): Promise<string> {
 export async function findExistingImage(newsId: number, fileHash: string): Promise<string | null> {
   try {
     // List all files in the news folder
-    const { data: files, error } = await supabase.storage
+    const { data: files, error } = await getAdminSupabase().storage
       .from('images')
       .list(`news/${newsId}`, {
         limit: 100,
@@ -91,7 +93,7 @@ export async function uploadImageWithDeduplication(
     
     const filePath = `news/${newsId}/${fileName}`
     
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await getAdminSupabase().storage
       .from('images')
       .upload(filePath, file)
     
@@ -162,7 +164,7 @@ export function extractImagePathsFromNews(image: string | null, text: string): s
 export async function deleteNewsImages(newsId: number): Promise<void> {
   try {
     // List all files in the news folder
-    const { data: files, error: listError } = await supabase.storage
+    const { data: files, error: listError } = await getAdminSupabase().storage
       .from('images')
       .list(`news/${newsId}`, {
         limit: 1000,
@@ -181,7 +183,7 @@ export async function deleteNewsImages(newsId: number): Promise<void> {
     // Delete all files in the folder
     const filePaths = files.map(file => `news/${newsId}/${file.name}`)
     
-    const { error: deleteError } = await supabase.storage
+    const { error: deleteError } = await getAdminSupabase().storage
       .from('images')
       .remove(filePaths)
 
@@ -222,7 +224,7 @@ export function getImageUrl(imagePath: string | null): string {
   const supabase = createClient(supabaseUrl, supabaseAnonKey)
   
   // Convert Supabase Storage path to public URL
-  const { data: { publicUrl } } = supabase.storage
+  const { data: { publicUrl } } = getAdminSupabase().storage
     .from('images')
     .getPublicUrl(imagePath)
   
@@ -253,7 +255,7 @@ export function getImageUrlNullable(imagePath: string | null): string | null {
   const supabase = createClient(supabaseUrl, supabaseAnonKey)
   
   // Convert Supabase Storage path to public URL
-  const { data: { publicUrl } } = supabase.storage
+  const { data: { publicUrl } } = getAdminSupabase().storage
     .from('images')
     .getPublicUrl(imagePath)
   

@@ -1,13 +1,14 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, User } from '@supabase/supabase-js'
 import { unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
-import { User } from '@supabase/supabase-js'
 
-// Create a server-side Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
+function getServerSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export interface AuthenticatedUser extends User {
   permissions?: {
@@ -83,7 +84,7 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<Authen
     }
 
     // Validate the JWT token using Supabase
-    const { data: { user }, error } = await serverSupabase.auth.getUser(token)
+    const { data: { user }, error } = await getServerSupabase().auth.getUser(token)
     
     if (error || !user) {
       console.error('Token validation error:', error)

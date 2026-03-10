@@ -2,10 +2,12 @@ import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from './supabase/server'
 import { deleteNewsImages } from './imageUtils.server'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+function getAdminSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // Types for News operations
 export interface News {
@@ -168,7 +170,7 @@ export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data
         const batchSize = 50
         for (let i = 0; i < authorIds.length; i += batchSize) {
           const batchIds = authorIds.slice(i, i + batchSize)
-          const { data: usersData } = await supabase.auth.admin.listUsers({
+          const { data: usersData } = await getAdminSupabase().auth.admin.listUsers({
             page: 1,
             perPage: batchSize
           })
@@ -270,7 +272,7 @@ export async function getNewsById(id: number, include: Array<'author' | 'club'> 
 
     if (data.created_by_auth_id) {
       try {
-        const { data: userData, error: userError } = await supabase.auth.admin.getUserById(data.created_by_auth_id)
+        const { data: userData, error: userError } = await getAdminSupabase().auth.admin.getUserById(data.created_by_auth_id)
         
         if (!userError && userData.user) {
           author_email = userData.user.email || undefined
