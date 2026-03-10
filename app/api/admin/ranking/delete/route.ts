@@ -5,6 +5,27 @@ import { requireAuth } from '@/lib/middleware/auth'
 import { apiSuccess, handleError, forbiddenError } from '@/lib/utils/apiResponse'
 import { clearRankingCache } from '@/lib/rankingUtils'
 
+interface RankingFileInfo {
+  filename: string
+  month: number
+  year: number
+  date: Date
+  created_at?: string
+}
+
+interface RankingFileInfoWithBase extends RankingFileInfo {
+  baseFilename: string
+}
+
+interface SameMonthRankingInfo {
+  originalFilename: string
+  baseFilename: string
+  month: number
+  year: number
+  suffix: string
+  created_at?: string
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const user = await requireAuth(request)
@@ -98,19 +119,19 @@ async function checkIfLatestRanking(adminSupabase: any, filenameToDelete: string
     }
 
     // Filter and find the chronologically latest ranking
-    const rankingFiles = files
-      .filter(file => 
-        file.name.endsWith('.json') && 
+    const rankingFiles = (files
+      .filter((file: { name: string }) =>
+        file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
-      .map(file => {
+      .map((file: { name: string; created_at?: string }) => {
         const match = file.name.match(/^ranking-(\d{2})-(\d{4}).*\.json$/)
         if (!match) return null
-        
+
         const month = parseInt(match[1])
         const year = parseInt(match[2])
-        
+
         return {
           filename: file.name.replace('.json', ''),
           month,
@@ -119,15 +140,15 @@ async function checkIfLatestRanking(adminSupabase: any, filenameToDelete: string
           created_at: file.created_at
         }
       })
-      .filter(Boolean)
-      .sort((a, b) => {
+      .filter(Boolean) as RankingFileInfo[])
+      .sort((a: RankingFileInfo, b: RankingFileInfo) => {
         // First sort by chronological date (most recent first)
         const dateComparison = b.date.getTime() - a.date.getTime();
         if (dateComparison !== 0) return dateComparison;
-        
+
         // For same month/year, sort by creation time (most recent first)
         // This ensures higher numbered versions (created later) come first
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime();
       }); // Sort by chronological date, most recent first
 
     if (rankingFiles.length === 0) {
@@ -159,19 +180,19 @@ async function findNewLatestRanking(adminSupabase: any): Promise<string | null> 
     }
 
     // Filter and find the chronologically latest ranking
-    const rankingFiles = files
-      .filter(file => 
-        file.name.endsWith('.json') && 
+    const rankingFiles = (files
+      .filter((file: { name: string }) =>
+        file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
-      .map(file => {
+      .map((file: { name: string; created_at?: string }) => {
         const match = file.name.match(/^ranking-(\d{2})-(\d{4}).*\.json$/)
         if (!match) return null
-        
+
         const month = parseInt(match[1])
         const year = parseInt(match[2])
-        
+
         return {
           filename: file.name.replace('.json', ''),
           month,
@@ -180,15 +201,15 @@ async function findNewLatestRanking(adminSupabase: any): Promise<string | null> 
           created_at: file.created_at
         }
       })
-      .filter(Boolean)
-      .sort((a, b) => {
+      .filter(Boolean) as RankingFileInfo[])
+      .sort((a: RankingFileInfo, b: RankingFileInfo) => {
         // First sort by chronological date (most recent first)
         const dateComparison = b.date.getTime() - a.date.getTime();
         if (dateComparison !== 0) return dateComparison;
-        
+
         // For same month/year, sort by creation time (most recent first)
         // This ensures higher numbered versions (created later) come first
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime();
       }); // Sort by chronological date, most recent first
 
     if (rankingFiles.length === 0) {
@@ -220,19 +241,19 @@ async function getRankingInfo(adminSupabase: any, filename: string) {
     }
 
     // Filter and find the ranking being deleted
-    const rankingFiles = files
-      .filter(file => 
-        file.name.endsWith('.json') && 
+    const rankingFiles = (files
+      .filter((file: { name: string }) =>
+        file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
-      .map(file => {
+      .map((file: { name: string; created_at?: string }) => {
         const match = file.name.match(/^ranking-(\d{2})-(\d{4}).*\.json$/)
         if (!match) return null
-        
+
         const month = parseInt(match[1])
         const year = parseInt(match[2])
-        
+
         return {
           filename: file.name.replace('.json', ''),
           month,
@@ -241,22 +262,22 @@ async function getRankingInfo(adminSupabase: any, filename: string) {
           created_at: file.created_at
         }
       })
-      .filter(Boolean)
-      .sort((a, b) => {
+      .filter(Boolean) as RankingFileInfo[])
+      .sort((a: RankingFileInfo, b: RankingFileInfo) => {
         // First sort by chronological date (most recent first)
         const dateComparison = b.date.getTime() - a.date.getTime();
         if (dateComparison !== 0) return dateComparison;
-        
+
         // For same month/year, sort by creation time (most recent first)
         // This ensures higher numbered versions (created later) come first
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime();
       }); // Sort by chronological date, most recent first
 
     if (rankingFiles.length === 0) {
       return null
     }
 
-    const ranking = rankingFiles.find(file => file.filename === filename)
+    const ranking = rankingFiles.find((file: RankingFileInfo) => file.filename === filename)
     if (!ranking) {
       return null
     }
@@ -288,20 +309,20 @@ async function renameSameMonthRankings(adminSupabase: any, deletedMonth: number,
     }
 
     // Filter and find same-month rankings
-    const sameMonthRankings = files
-      .filter(file => 
-        file.name.endsWith('.json') && 
+    const sameMonthRankings = (files
+      .filter((file: { name: string }) =>
+        file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
-      .map(file => {
+      .map((file: { name: string; created_at?: string }) => {
         const match = file.name.match(/^ranking-(\d{2})-(\d{4})(.*)\.json$/)
         if (!match) return null
-        
+
         const month = parseInt(match[1])
         const year = parseInt(match[2])
         const suffix = match[3] // captures " (2)", " (3)", etc.
-        
+
         return {
           originalFilename: file.name,
           baseFilename: file.name.replace('.json', ''),
@@ -311,9 +332,9 @@ async function renameSameMonthRankings(adminSupabase: any, deletedMonth: number,
           created_at: file.created_at
         }
       })
-      .filter(Boolean)
-      .filter(ranking => ranking.month === deletedMonth && ranking.year === deletedYear)
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()); // Sort by creation time
+      .filter(Boolean) as SameMonthRankingInfo[])
+      .filter((ranking: SameMonthRankingInfo) => ranking.month === deletedMonth && ranking.year === deletedYear)
+      .sort((a: SameMonthRankingInfo, b: SameMonthRankingInfo) => new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime()); // Sort by creation time
 
     if (sameMonthRankings.length === 0) {
       return
@@ -389,9 +410,9 @@ async function renameSameMonthRankings(adminSupabase: any, deletedMonth: number,
 }
 
 // Helper function to find the next ranking chronologically and recalculate its changes
-async function recalculateNextRankingChanges(adminSupabase: any, deletedRankingInfo: any) {
+async function recalculateNextRankingChanges(adminSupabase: any, deletedRankingInfo: { month: number; year: number }) {
   try {
-    
+
     // List all ranking files
     const { data: files, error: listError } = await adminSupabase.storage
       .from('ranking-data')
@@ -405,19 +426,19 @@ async function recalculateNextRankingChanges(adminSupabase: any, deletedRankingI
     }
 
     // Filter and sort all rankings chronologically
-    const allRankings = files
-      .filter(file => 
-        file.name.endsWith('.json') && 
+    const allRankings = (files
+      .filter((file: { name: string }) =>
+        file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
-      .map(file => {
+      .map((file: { name: string; created_at?: string }) => {
         const match = file.name.match(/^ranking-(\d{2})-(\d{4}).*\.json$/)
         if (!match) return null
-        
+
         const month = parseInt(match[1])
         const year = parseInt(match[2])
-        
+
         return {
           filename: file.name,
           baseFilename: file.name.replace('.json', ''),
@@ -427,25 +448,25 @@ async function recalculateNextRankingChanges(adminSupabase: any, deletedRankingI
           created_at: file.created_at
         }
       })
-      .filter(Boolean)
-      .sort((a, b) => a.date.getTime() - b.date.getTime()); // Sort chronologically (oldest first)
+      .filter(Boolean) as RankingFileInfoWithBase[])
+      .sort((a: RankingFileInfoWithBase, b: RankingFileInfoWithBase) => a.date.getTime() - b.date.getTime()); // Sort chronologically (oldest first)
 
     // Find the ranking that comes after the deleted one chronologically
     const deletedDate = new Date(deletedRankingInfo.year, deletedRankingInfo.month - 1)
-    const nextRanking = allRankings.find(ranking => ranking.date.getTime() > deletedDate.getTime())
-    
+    const nextRanking = allRankings.find((ranking: RankingFileInfoWithBase) => ranking.date.getTime() > deletedDate.getTime())
+
     if (!nextRanking) {
       return
     }
 
     // Find the new previous ranking (the one before the deleted ranking)
     const previousRanking = allRankings
-      .filter(ranking => ranking.date.getTime() < deletedDate.getTime())
-      .sort((a, b) => {
+      .filter((ranking: RankingFileInfoWithBase) => ranking.date.getTime() < deletedDate.getTime())
+      .sort((a: RankingFileInfoWithBase, b: RankingFileInfoWithBase) => {
         // First sort by chronological date (most recent first)
         const dateComparison = b.date.getTime() - a.date.getTime();
         if (dateComparison !== 0) return dateComparison;
-        
+
         // For same month/year, sort by creation time (most recent first)
         return new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime();
       })[0] // Most recent before deleted
@@ -486,7 +507,7 @@ async function recalculateNextRankingChanges(adminSupabase: any, deletedRankingI
 
     // Recalculate changes for each player
     const updatedPlayers = nextRankingJson.players.map((player: any) => {
-      let changes = {
+      let changes: { position: number | null; points: number; isNew: boolean } = {
         position: null,
         points: 0,
         isNew: false

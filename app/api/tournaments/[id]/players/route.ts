@@ -162,7 +162,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
 
       const players = registrations?.map(r => {
-        const player = r.players
+        const player = Array.isArray(r.players) ? r.players[0] : r.players
         return player ? {
           id: player.id,
           full_name: player.full_name,

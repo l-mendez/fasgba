@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "migrate:ranking": "npx tsx scripts/migrate-ranking-to-supabase.ts",
     "setup:storage": "npx tsx scripts/setup-storage-buckets.ts",
@@ -73,7 +73,6 @@
     "zod": "^3.22.0"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.2.0",
     "@types/node": "^20.17.57",
     "@types/nodemailer": "^6.4.17",
     "@types/react": "^19.2.14",
