@@ -4,6 +4,13 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/middleware/auth'
 import { apiSuccess, handleError, forbiddenError } from '@/lib/utils/apiResponse'
 
+interface RankingFileInfo {
+  filename: string
+  month: number
+  year: number
+  date: Date
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth(request)
@@ -149,19 +156,19 @@ async function checkIfRecalculationNeeded(adminSupabase: any, currentMonth: numb
     }
 
     const rankingFiles = files
-      .filter(file => 
+      .filter((file: { name: string }) =>
         file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
         !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
-      .map(file => {
+      .map((file: { name: string }) => {
         const match = file.name.match(/^ranking-(\d{2})-(\d{4}).*\.json$/)
         if (!match) return null
-        
+
         const month = parseInt(match[1])
         const year = parseInt(match[2])
-        
+
         return {
           filename: file.name,
           month,
@@ -169,10 +176,10 @@ async function checkIfRecalculationNeeded(adminSupabase: any, currentMonth: numb
           date: new Date(year, month - 1)
         }
       })
-      .filter(Boolean)
+      .filter(Boolean) as RankingFileInfo[]
 
     const currentDate = new Date(currentYear, currentMonth - 1)
-    const subsequentRankings = rankingFiles.filter(ranking => 
+    const subsequentRankings = rankingFiles.filter((ranking: RankingFileInfo) =>
       ranking.date.getTime() > currentDate.getTime()
     )
 
@@ -199,20 +206,20 @@ async function recalculateSubsequentRankings(adminSupabase: any, newRankingMonth
       return
     }
 
-    const rankingFiles = files
-      .filter(file => 
+    const rankingFiles = (files
+      .filter((file: { name: string }) =>
         file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
         !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
-      .map(file => {
+      .map((file: { name: string }) => {
         const match = file.name.match(/^ranking-(\d{2})-(\d{4}).*\.json$/)
         if (!match) return null
-        
+
         const month = parseInt(match[1])
         const year = parseInt(match[2])
-        
+
         return {
           filename: file.name,
           month,
@@ -220,13 +227,13 @@ async function recalculateSubsequentRankings(adminSupabase: any, newRankingMonth
           date: new Date(year, month - 1)
         }
       })
-      .filter(Boolean)
-      .sort((a, b) => a.date.getTime() - b.date.getTime()) // Chronological order
+      .filter(Boolean) as RankingFileInfo[])
+      .sort((a: RankingFileInfo, b: RankingFileInfo) => a.date.getTime() - b.date.getTime()) // Chronological order
 
     const newRankingDate = new Date(newRankingYear, newRankingMonth - 1)
-    
+
     // Find all rankings that come after the newly uploaded one
-    const subsequentRankings = rankingFiles.filter(ranking => 
+    const subsequentRankings = rankingFiles.filter((ranking: RankingFileInfo) =>
       ranking.date.getTime() > newRankingDate.getTime()
     )
 
@@ -261,7 +268,7 @@ async function recalculateSubsequentRankings(adminSupabase: any, newRankingMonth
         rankingData.previousRanking = previousRanking.filename
       } else {
         // No previous ranking - mark all as new
-        updatedPlayers = rankingData.players.map(player => ({
+        updatedPlayers = rankingData.players.map((player: any) => ({
           ...player,
           changes: {
             position: null,
@@ -302,8 +309,8 @@ async function findPreviousRankingForRecalculation(adminSupabase: any, currentMo
   
   // Find the most recent ranking before the current one
   const previousRanking = allRankings
-    .filter(ranking => ranking.date.getTime() < currentDate.getTime())
-    .sort((a, b) => b.date.getTime() - a.date.getTime())[0] // Most recent first
+    .filter((ranking: RankingFileInfo) => ranking.date.getTime() < currentDate.getTime())
+    .sort((a: RankingFileInfo, b: RankingFileInfo) => b.date.getTime() - a.date.getTime())[0] // Most recent first
   
   if (!previousRanking) {
     return null
