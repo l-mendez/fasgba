@@ -4,6 +4,11 @@ import { createClient } from '@supabase/supabase-js'
 import { apiSuccess, handleError, unauthorizedError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
+// Create a Supabase client for server-side operations
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
 // Configure nodemailer transporter with Zoho SMTP
 const transporter = nodemailer.createTransport({
   host: "smtp.zoho.com",
@@ -262,9 +267,6 @@ function shouldIncludeUser(notif: any, category: NotificationCategory, clubId: n
 
 export async function POST(request: NextRequest) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return unauthorizedError(ERROR_MESSAGES.UNAUTHORIZED)

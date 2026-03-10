@@ -7,6 +7,11 @@ import { validateCreateNews } from '@/lib/schemas/newsSchemas'
 import { apiSuccess, handleError, notFoundError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
+// Create a Supabase client for server-side operations
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
 interface RouteParams {
   params: Promise<{
     clubId: string
@@ -15,9 +20,6 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const { clubId: clubIdParam } = await params
     const clubId = validateClubId(clubIdParam)
     
@@ -39,9 +41,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const { clubId: clubIdParam } = await params
     const clubId = validateClubId(clubIdParam)
     

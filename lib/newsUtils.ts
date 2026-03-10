@@ -2,12 +2,10 @@ import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from './supabase/server'
 import { deleteNewsImages } from './imageUtils.server'
 
-function getAdminSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Types for News operations
 export interface News {
@@ -113,7 +111,7 @@ export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data
     `
   }
 
-  let query = getAdminSupabase()
+  let query = supabase
     .from('news')
     .select(selectFields, { count: 'exact' })
 
@@ -139,7 +137,7 @@ export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data
     .order(orderBy, { ascending: order === 'asc' })
     .range(offset, offset + limit - 1)
 
-  const { data, error, count } = (await query) as any
+  const { data, error, count } = await query
 
   if (error) {
     console.error('Error fetching news:', error)
@@ -171,7 +169,7 @@ export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data
         const batchSize = 50
         for (let i = 0; i < authorIds.length; i += batchSize) {
           const batchIds = authorIds.slice(i, i + batchSize)
-          const { data: usersData } = await getAdminSupabase().auth.admin.listUsers({
+          const { data: usersData } = await supabase.auth.admin.listUsers({
             page: 1,
             perPage: batchSize
           })
@@ -247,11 +245,11 @@ export async function getNewsById(id: number, include: Array<'author' | 'club'> 
     `
   }
 
-  const { data, error } = (await getAdminSupabase()
+  const { data, error } = await supabase
     .from('news')
     .select(selectFields)
     .eq('id', id)
-    .single()) as any
+    .single()
 
   if (error) {
     if (error.code === 'PGRST116') {
@@ -274,8 +272,7 @@ export async function getNewsById(id: number, include: Array<'author' | 'club'> 
 
     if (newsData.created_by_auth_id) {
       try {
-        const { data: userData, error: userError } = await getAdminSupabase().auth.admin.getUserById(newsData.created_by_auth_id)
-
+        const { data: userData, error: userError } = await supabase.auth.admin.getUserById(newsData.created_by_auth_id)
 
         if (!userError && userData.user) {
           author_email = userData.user.email || undefined
@@ -300,7 +297,7 @@ export async function getNewsById(id: number, include: Array<'author' | 'club'> 
  */
 export async function createNews(input: CreateNewsInput): Promise<News> {
   // Create news item first without images to get the ID
-  const { data, error } = await getAdminSupabase()
+  const { data, error } = await supabase
     .from('news')
     .insert({
       title: input.title,
@@ -342,7 +339,7 @@ export async function updateNewsWithProcessedImages(
     updateData.image = featuredImagePath
   }
 
-  const { error } = await getAdminSupabase()
+  const { error } = await supabase
     .from('news')
     .update(updateData)
     .eq('id', newsId)
@@ -364,7 +361,7 @@ export async function updateNews(id: number, input: UpdateNewsInput): Promise<bo
     updated_at: new Date().toISOString()
   }
 
-  const { error } = await getAdminSupabase()
+  const { error } = await supabase
     .from('news')
     .update(updateData)
     .eq('id', id)
@@ -383,7 +380,7 @@ export async function updateNews(id: number, input: UpdateNewsInput): Promise<bo
 export async function deleteNews(id: number): Promise<boolean> {
   try {
     // Check if news exists
-    const { data: news, error: fetchError } = await getAdminSupabase()
+    const { data: news, error: fetchError } = await supabase
       .from('news')
       .select('id')
       .eq('id', id)
@@ -402,7 +399,7 @@ export async function deleteNews(id: number): Promise<boolean> {
     await deleteNewsImages(id)
 
     // Delete the news item from database
-    const { error: deleteError } = await getAdminSupabase()
+    const { error: deleteError } = await supabase
       .from('news')
       .delete()
       .eq('id', id)
@@ -423,7 +420,7 @@ export async function deleteNews(id: number): Promise<boolean> {
  * Checks if a user can edit/delete a specific news item
  */
 export async function canUserEditNews(newsId: number, authId: string): Promise<boolean> {
-  const { data: news, error } = await getAdminSupabase()
+  const { data: news, error } = await supabase
     .from('news')
     .select('created_by_auth_id, club_id')
     .eq('id', newsId)
@@ -439,7 +436,7 @@ export async function canUserEditNews(newsId: number, authId: string): Promise<b
   }
 
   // Check if user is a site admin
-  const { data: admin, error: adminError } = await getAdminSupabase()
+  const { data: admin, error: adminError } = await supabase
     .from('admins')
     .select('auth_id')
     .eq('auth_id', authId)
@@ -451,7 +448,7 @@ export async function canUserEditNews(newsId: number, authId: string): Promise<b
 
   // Check if user is a club admin for the club associated with this news
   if (news.club_id) {
-    const { data: clubAdmin, error: clubAdminError } = await getAdminSupabase()
+    const { data: clubAdmin, error: clubAdminError } = await supabase
       .from('club_admins')
       .select('auth_id')
       .eq('auth_id', authId)
@@ -470,7 +467,7 @@ export async function canUserEditNews(newsId: number, authId: string): Promise<b
  * Gets news count for statistics
  */
 export async function getNewsCount(filters: Partial<NewsQueryOptions> = {}): Promise<number> {
-  let query = getAdminSupabase()
+  let query = supabase
     .from('news')
     .select('*', { count: 'exact', head: true })
 
@@ -521,7 +518,7 @@ export async function getRelatedNews(newsId: number, limit: number = 4): Promise
  */
 export async function getAllNewsTags(): Promise<string[]> {
   try {
-    const { data, error } = await getAdminSupabase()
+    const { data, error } = await supabase
       .from('news')
       .select('tags')
 

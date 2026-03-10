@@ -1,14 +1,13 @@
 import { NextRequest } from 'next/server'
-import { createClient, User } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 import { unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
+import { User } from '@supabase/supabase-js'
 
-function getServerSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+// Create a server-side Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export interface AuthenticatedUser extends User {
   permissions?: {
@@ -39,23 +38,11 @@ function extractToken(request: NextRequest): string | null {
 }
 
 /**
- * Checks if a user has the alumno role
- */
-export async function isAlumno(userId: string): Promise<boolean> {
-  const { data } = await getServerSupabase()
-    .from('alumnos')
-    .select('auth_id')
-    .eq('auth_id', userId)
-    .single()
-  return !!data
-}
-
-/**
  * Gets user permissions by checking the admins table
  */
 async function getUserPermissions(userId: string): Promise<AuthenticatedUser['permissions']> {
   // Check if user is admin
-  const { data: admin } = await getServerSupabase()
+  const { data: admin } = await serverSupabase
     .from('admins')
     .select('auth_id')
     .eq('auth_id', userId)
@@ -84,7 +71,7 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<Authen
     }
 
     // Validate the JWT token using Supabase
-    const { data: { user }, error } = await getServerSupabase().auth.getUser(token)
+    const { data: { user }, error } = await serverSupabase.auth.getUser(token)
     
     if (error || !user) {
       console.error('Token validation error:', error)
@@ -213,22 +200,6 @@ export async function requireUserManager(request: NextRequest): Promise<Authenti
 }
 
 /**
- * Middleware to require alumno or admin role
- */
-export async function requireAlumnoOrAdmin(request: NextRequest): Promise<AuthenticatedUser> {
-  const user = await requireAuth(request)
-
-  const alumno = await isAlumno(user.id)
-  const admin = await hasPermission('isAdmin', user.id)
-
-  if (!alumno && !admin) {
-    throw new ForbiddenError('Acceso restringido a alumnos de la escuela')
-  }
-
-  return user
-}
-
-/**
  * Optional authentication - returns user if authenticated, null otherwise
  */
 export async function optionalAuth(request: NextRequest): Promise<AuthenticatedUser | null> {
@@ -323,3 +294,30 @@ export function withAdminAuth<T extends any[]>(
     }
   }
 } 
+/**
+ * Checks if a user has the alumno role
+ */
+export async function isAlumno(userId: string): Promise<boolean> {
+  const { data } = await serverSupabase
+    .from('alumnos')
+    .select('auth_id')
+    .eq('auth_id', userId)
+    .single()
+  return !!data
+}
+
+/**
+ * Middleware to require alumno or admin role
+ */
+export async function requireAlumnoOrAdmin(request: NextRequest): Promise<AuthenticatedUser> {
+  const user = await requireAuth(request)
+
+  const alumno = await isAlumno(user.id)
+  const admin = await hasPermission('isAdmin', user.id)
+
+  if (!alumno && !admin) {
+    throw new ForbiddenError('Acceso restringido a alumnos de la escuela')
+  }
+
+  return user
+}

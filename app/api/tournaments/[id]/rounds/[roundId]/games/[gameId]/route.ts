@@ -5,6 +5,11 @@ import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { isUserClubAdmin } from '@/lib/clubUtils'
 import { z } from 'zod'
 
+// Create a Supabase client for server-side operations
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
+
 // Validation schemas
 const gameResultSchema = z.enum(['1-0', '0-1', '1/2-1/2', '*'])
 
@@ -28,9 +33,6 @@ interface RouteParams {
 
 // Helper function to authenticate and authorize user for tournament operations
 async function authenticateAndAuthorize(request: NextRequest, tournamentId: number) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-  const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
   // Get the authorization header
   const authHeader = request.headers.get('authorization')
   
@@ -94,9 +96,6 @@ async function authenticateAndAuthorize(request: NextRequest, tournamentId: numb
 // GET /api/tournaments/[id]/rounds/[roundId]/games/[gameId] - Get a specific game
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const { id: tournamentId, roundId, gameId } = await params
     const tournamentIdNum = parseInt(tournamentId, 10)
     const roundIdNum = parseInt(roundId, 10)
@@ -206,9 +205,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PATCH /api/tournaments/[id]/rounds/[roundId]/games/[gameId] - Update a game
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const { id: tournamentId, roundId, gameId } = await params
     const tournamentIdNum = parseInt(tournamentId, 10)
     const roundIdNum = parseInt(roundId, 10)
@@ -343,9 +339,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/tournaments/[id]/rounds/[roundId]/games/[gameId] - Delete a game
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const { id: tournamentId, roundId, gameId } = await params
     const tournamentIdNum = parseInt(tournamentId, 10)
     const roundIdNum = parseInt(roundId, 10)

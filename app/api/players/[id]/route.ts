@@ -3,6 +3,11 @@ import { createClient } from '@supabase/supabase-js'
 import { apiSuccess, handleError, notFoundError, validationError } from '@/lib/utils/apiResponse'
 import { z } from 'zod'
 
+// Create a Supabase client for server-side operations
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
+
 // Validation schema for player updates
 const updatePlayerSchema = z.object({
   full_name: z.string().min(1, 'Full name is required').max(255, 'Name too long').optional(),
@@ -20,9 +25,6 @@ interface RouteParams {
 // GET /api/players/[id] - Get a specific player
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const { id } = await params
     const playerId = parseInt(id, 10)
     
@@ -58,9 +60,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PATCH /api/players/[id] - Update a player
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const { id } = await params
     const playerId = parseInt(id, 10)
     
@@ -126,9 +125,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/players/[id] - Delete a player
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const { id } = await params
     const playerId = parseInt(id, 10)
     

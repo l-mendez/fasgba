@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { Calendar, ChevronLeft, ChevronRight, MapPin } from "lucide-react"
 import { ReactNode } from "react"
+import { createClient } from '@supabase/supabase-js'
+
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { SiteHeader } from "@/components/site-header"
@@ -12,6 +14,11 @@ import { getImageUrl } from "@/lib/imageUtils"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
+
+// Create Supabase client for server-side operations (tournaments only)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Types for the data structures
 interface NewsItem {

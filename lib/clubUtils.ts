@@ -2,12 +2,10 @@ import { createClient } from '@supabase/supabase-js'
 import { createClient as createBrowserClient } from '@/lib/supabase/client'
 import { deleteClubImages } from './imageUtils.server'
 
-function getAdminSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Basic club information
 export interface Club {
@@ -77,7 +75,7 @@ export async function getAllClubs(options: {
   includeStats?: boolean
 } = {}): Promise<Club[] | ClubWithStats[]> {
   try {
-    let query = getAdminSupabase().from('clubs').select('*')
+    let query = supabase.from('clubs').select('*')
     
     if (options.search) {
       query = query.ilike('name', `%${options.search}%`)
@@ -241,7 +239,7 @@ export async function getClubAdmins(clubId: number): Promise<ClubAdmin[]> {
   const admins: ClubAdmin[] = []
   
   for (const item of data || []) {
-    const { data: userData, error: userError } = await getAdminSupabase().auth.admin.getUserById(item.auth_id)
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(item.auth_id)
     
     if (!userError && userData.user) {
       admins.push({
@@ -507,7 +505,7 @@ export async function getClubNews(clubId: number, limit?: number): Promise<ClubN
 
       if (item.created_by_auth_id) {
         try {
-          const { data: userData, error: userError } = await getAdminSupabase().auth.admin.getUserById(item.created_by_auth_id)
+          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(item.created_by_auth_id)
           
           if (!userError && userData.user) {
             author_email = userData.user.email || undefined
