@@ -1,21 +1,11 @@
-import nextConfig from 'eslint-config-next'
+import { FlatCompat } from '@eslint/eslintrc'
+
+const compat = new FlatCompat({
+  baseDirectory: import.meta.dirname,
+})
 
 const eslintConfig = [
-  ...nextConfig,
-  {
-    rules: {
-      // Pre-existing issues in codebase - suppress for now
-      'react/no-unescaped-entities': 'off',
-      'react/no-children-prop': 'warn',
-      '@next/next/no-img-element': 'warn',
-      '@next/next/no-assign-module-variable': 'warn',
-      // New React 19 strict rules - existing code not yet adapted
-      'react-hooks/static-components': 'warn',
-      'react-hooks/purity': 'warn',
-      'react-hooks/error-boundaries': 'warn',
-      'react-hooks/set-state-in-effect': 'warn',
-    },
-  },
+  ...compat.extends('next/core-web-vitals', 'next/typescript'),
 ]
 
 export default eslintConfig
