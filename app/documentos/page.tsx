@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Link from "next/link"
 import { unstable_cache } from "next/cache"
 import { FileText, FileSpreadsheet, Download, Eye, Calendar, FolderOpen } from "lucide-react"
