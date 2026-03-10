@@ -528,7 +528,7 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
           {/* Featured Image Upload */}
           <ImageUpload
             newsId={news.id.toString()}
-            currentImage={news.image ? getPublicUrl(news.image) : undefined}
+            currentImage={news.image ? getPublicUrl(news.image) ?? undefined : undefined}
             currentImagePath={news.image || undefined}
             onImageUpload={handleFeaturedImageUpload}
             onImageRemove={handleFeaturedImageRemove}

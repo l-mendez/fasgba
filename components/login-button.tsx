@@ -1,6 +1,6 @@
 "use client"
 
-import { AuthButton } from "./auth-button"
+import { AuthButton } from "@/app/components/auth-button"
 import { createClient } from "@/lib/supabase/client"
 
 export interface LoginButtonProps {

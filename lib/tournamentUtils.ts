@@ -461,7 +461,7 @@ export async function getTournamentsWithPagination(
       const paginated = sorted.slice(from, from + pageSize);
       
       // Convert back to Tournament interface
-      const tournaments = paginated.map(t => ({
+      const tournaments: Tournament[] = paginated.map(t => ({
         id: t.id,
         title: t.title,
         description: t.description,
@@ -474,6 +474,7 @@ export async function getTournamentsWithPagination(
         cost: t.cost,
         prizes: t.prizes,
         image: t.image,
+        registration_link: null,
       }));
 
       const total = count || 0;
@@ -488,7 +489,7 @@ export async function getTournamentsWithPagination(
       // For other fields, we can order directly
       const { data, error } = await supabase
         .from('tournaments')
-        .select('id, title, description, time, place, location, rounds, pace, inscription_details, cost, prizes, image, created_by_club_id')
+        .select('id, title, description, time, place, location, rounds, pace, inscription_details, cost, prizes, image, registration_link, created_by_club_id')
         .order(orderBy, { ascending })
         .range(from, to);
 
@@ -501,7 +502,7 @@ export async function getTournamentsWithPagination(
       const hasMore = from + pageSize < total;
 
       return {
-        tournaments: data || [],
+        tournaments: (data || []) as Tournament[],
         total,
         hasMore,
       };
@@ -524,7 +525,7 @@ export async function getUpcomingTournaments(supabase: any, limit?: number): Pro
     const upcoming = tournamentsDisplay.filter(t => t.is_upcoming);
     
     // Convert back to Tournament interface (without display-specific fields)
-    const result = upcoming.map(t => ({
+    const result: Tournament[] = upcoming.map(t => ({
       id: t.id,
       title: t.title,
       description: t.description,
@@ -537,7 +538,8 @@ export async function getUpcomingTournaments(supabase: any, limit?: number): Pro
       cost: t.cost,
       prizes: t.prizes,
       image: t.image,
-      created_by_club_id: null, // Add this field since it's not in TournamentDisplay
+      registration_link: null,
+      created_by_club_id: null,
     }));
 
     return limit ? result.slice(0, limit) : result;
@@ -558,7 +560,7 @@ export async function getOngoingTournaments(supabase: any): Promise<Tournament[]
     const ongoing = tournamentsDisplay.filter(t => t.is_ongoing);
     
     // Convert back to Tournament interface (without display-specific fields)
-    return ongoing.map(t => ({
+    const result: Tournament[] = ongoing.map(t => ({
       id: t.id,
       title: t.title,
       description: t.description,
@@ -571,8 +573,10 @@ export async function getOngoingTournaments(supabase: any): Promise<Tournament[]
       cost: t.cost,
       prizes: t.prizes,
       image: t.image,
-      created_by_club_id: null, // Add this field since it's not in TournamentDisplay
+      registration_link: null,
+      created_by_club_id: null,
     }));
+    return result;
   } catch (error) {
     console.error('Database error:', error);
     throw error;
