@@ -677,8 +677,8 @@ export default function RoundsGamesManagement({
 
     try {
       const [teamAPlayersData, teamBPlayersData] = await Promise.all([
-        fetchTeamPlayers(selectedMatch.club_a.id),
-        fetchTeamPlayers(selectedMatch.club_b.id)
+        fetchTeamPlayers(selectedMatch.team_a.id),
+        fetchTeamPlayers(selectedMatch.team_b.id)
       ])
       
       setTeamAPlayers(teamAPlayersData)
@@ -717,8 +717,8 @@ export default function RoundsGamesManagement({
 
     const isOddBoard = (gameFormData.board_number || 1) % 2 === 1
     return {
-      whiteTeam: isOddBoard ? selectedMatch.club_a.name : selectedMatch.club_b.name,
-      blackTeam: isOddBoard ? selectedMatch.club_b.name : selectedMatch.club_a.name,
+      whiteTeam: isOddBoard ? selectedMatch.team_a.name : selectedMatch.team_b.name,
+      blackTeam: isOddBoard ? selectedMatch.team_b.name : selectedMatch.team_a.name,
       isOddBoard
     }
   }
@@ -1510,7 +1510,7 @@ export default function RoundsGamesManagement({
                 <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Enfrentamiento Original:</p>
                   <p className="font-medium">
-                    {editingMatch.club_a.name} vs {editingMatch.club_b.name}
+                    {editingMatch.team_a.name} vs {editingMatch.team_b.name}
                   </p>
                 </div>
 
