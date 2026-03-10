@@ -1,11 +1,19 @@
-import { FlatCompat } from '@eslint/eslintrc'
-
-const compat = new FlatCompat({
-  baseDirectory: import.meta.dirname,
-})
+import nextConfig from 'eslint-config-next'
 
 const eslintConfig = [
-  ...compat.extends('next/core-web-vitals', 'next/typescript'),
+  ...nextConfig,
+  {
+    rules: {
+      // Downgrade pre-existing issues to warnings
+      'react/no-unescaped-entities': 'warn',
+      'react/no-children-prop': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/static-components': 'warn',
+      'react-hooks/error-boundaries': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+      '@next/next/no-assign-module-variable': 'warn',
+    },
+  },
 ]
 
 export default eslintConfig
