@@ -3,11 +3,6 @@ import { createClient } from '@supabase/supabase-js'
 import { apiSuccess, handleError, validationError } from '@/lib/utils/apiResponse'
 import { z } from 'zod'
 
-// Create a Supabase client for server-side operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
-
 // Validation schema for player data
 const playerSchema = z.object({
   full_name: z.string().min(1, 'Full name is required').max(255, 'Name too long'),
@@ -19,6 +14,9 @@ const playerSchema = z.object({
 // GET /api/players - Get players with pagination and search
 export async function GET(request: NextRequest) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const { searchParams } = new URL(request.url)
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10))) // Max 100
@@ -68,6 +66,9 @@ export async function GET(request: NextRequest) {
 // POST /api/players - Create a new player
 export async function POST(request: NextRequest) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const body = await request.json()
     
     // Clean up empty strings to null for optional fields

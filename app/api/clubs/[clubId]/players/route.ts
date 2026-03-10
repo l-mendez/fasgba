@@ -3,11 +3,6 @@ import { createClient } from '@supabase/supabase-js'
 import { apiSuccess, handleError, notFoundError, validationError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
-// Create a Supabase client for server-side operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
-
 interface RouteParams {
   params: Promise<{
     clubId: string
@@ -17,6 +12,9 @@ interface RouteParams {
 // GET /api/clubs/[clubId]/players - Get all players from a club
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const { clubId } = await params
     const clubIdNum = parseInt(clubId, 10)
     

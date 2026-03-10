@@ -3,11 +3,6 @@ import { createClient } from '@supabase/supabase-js'
 import { apiSuccess, handleError, notFoundError, validationError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
-// Create a Supabase client for server-side operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
-
 interface RouteParams {
   params: Promise<{
     id: string
@@ -18,6 +13,9 @@ interface RouteParams {
 // DELETE /api/tournaments/[id]/registered-teams/[clubId] - Remove a team from a tournament
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const { id: tournamentId, clubId } = await params
     const tournamentIdNum = parseInt(tournamentId, 10)
     const clubIdNum = parseInt(clubId, 10)

@@ -3,12 +3,11 @@ import { createClient } from '@supabase/supabase-js'
 import { requireAdmin } from '@/lib/middleware/auth'
 import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
-
 export async function GET(request: NextRequest) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
     // Verify admin access
     const adminUser = await requireAdmin(request)
     if (adminUser instanceof Response) {
@@ -45,6 +44,9 @@ export async function GET(request: NextRequest) {
 }
 
 async function getUserStats() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
   // Get all users from Supabase Auth
   const { data: { users }, error: usersError } = await supabaseAdmin.auth.admin.listUsers({
     page: 1,
@@ -84,6 +86,9 @@ async function getUserStats() {
 }
 
 async function getNewsStats() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
   const { count: total, error: totalError } = await supabaseAdmin
     .from('news')
     .select('*', { count: 'exact', head: true })
@@ -113,6 +118,9 @@ async function getNewsStats() {
 }
 
 async function getClubStats() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
   const { data: clubs, error } = await supabaseAdmin
     .from('clubs')
     .select('*')
@@ -131,6 +139,9 @@ async function getClubStats() {
 }
 
 async function getTournamentStats() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
   // Get tournaments with their dates
   const { data: tournaments, error } = await supabaseAdmin
     .from('tournaments')

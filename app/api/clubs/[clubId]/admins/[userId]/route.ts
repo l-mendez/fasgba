@@ -5,10 +5,6 @@ import { apiSuccess, handleError, notFoundError, unauthorizedError } from '@/lib
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
 interface RouteParams {
   params: Promise<{
     clubId: string
@@ -18,6 +14,9 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const { clubId: clubIdParam, userId: userIdParam } = await params
     const clubId = validateClubId(clubIdParam)
     const userId = validateUserId(userIdParam)
@@ -37,9 +36,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
     // Get the authorization header
     const authHeader = request.headers.get('authorization')
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return unauthorizedError(ERROR_MESSAGES.UNAUTHORIZED)
     }
@@ -48,7 +50,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Verify the JWT token with Supabase
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
+
     if (authError || !user) {
       return unauthorizedError(ERROR_MESSAGES.UNAUTHORIZED)
     }
@@ -108,9 +110,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
     // Get the authorization header
     const authHeader = request.headers.get('authorization')
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return unauthorizedError(ERROR_MESSAGES.UNAUTHORIZED)
     }
@@ -119,7 +124,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     // Verify the JWT token with Supabase
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
+
     if (authError || !user) {
       return unauthorizedError(ERROR_MESSAGES.UNAUTHORIZED)
     }

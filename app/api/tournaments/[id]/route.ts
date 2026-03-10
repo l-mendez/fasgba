@@ -6,13 +6,11 @@ import { apiSuccess, handleError, notFoundError, unauthorizedError, noContent, f
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { isUserClubAdmin } from '@/lib/clubUtils'
 
-// Create a Supabase client for server-side operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
-
 // Helper function to authenticate and authorize user for tournament operations
 async function authenticateAndAuthorize(request: NextRequest, tournamentId: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
   // Get the authorization header
   const authHeader = request.headers.get('authorization')
   
@@ -71,6 +69,9 @@ async function authenticateAndAuthorize(request: NextRequest, tournamentId: stri
 
 // Helper function to check if user can edit tournament
 async function canUserEditTournament(userId: string, tournamentId: string): Promise<boolean> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
   try {
     // Check if user is site admin
     const { data: adminData, error: adminError } = await serverSupabase
@@ -105,6 +106,9 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const { id: idParam } = await params
     const tournamentId = validateTournamentId(idParam)
     const { searchParams } = new URL(request.url)
@@ -138,6 +142,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const { id: idParam } = await params
     const tournamentId = validateTournamentId(idParam)
     
@@ -185,6 +192,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const { id: idParam } = await params
     const tournamentId = validateTournamentId(idParam)
     
@@ -229,6 +239,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const { id: idParam } = await params
     const tournamentId = validateTournamentId(idParam)
     

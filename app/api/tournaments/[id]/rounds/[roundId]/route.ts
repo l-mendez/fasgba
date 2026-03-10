@@ -4,11 +4,6 @@ import { apiSuccess, handleError, notFoundError, validationError, noContent, una
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { isUserClubAdmin } from '@/lib/clubUtils'
 
-// Create a Supabase client for server-side operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
-
 interface RouteParams {
   params: Promise<{
     id: string
@@ -18,6 +13,9 @@ interface RouteParams {
 
 // Helper function to authenticate and authorize user for tournament operations
 async function authenticateAndAuthorize(request: NextRequest, tournamentId: number) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
   // Get the authorization header
   const authHeader = request.headers.get('authorization')
   
@@ -81,6 +79,9 @@ async function authenticateAndAuthorize(request: NextRequest, tournamentId: numb
 // GET /api/tournaments/[id]/rounds/[roundId] - Get a specific round
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const { id: tournamentId, roundId } = await params
     const tournamentIdNum = parseInt(tournamentId, 10)
     const roundIdNum = parseInt(roundId, 10)
@@ -131,6 +132,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/tournaments/[id]/rounds/[roundId] - Delete a specific round
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
     const { id: tournamentId, roundId } = await params
     const tournamentIdNum = parseInt(tournamentId, 10)
     const roundIdNum = parseInt(roundId, 10)
