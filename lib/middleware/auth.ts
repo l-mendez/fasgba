@@ -42,7 +42,7 @@ function extractToken(request: NextRequest): string | null {
  * Checks if a user has the alumno role
  */
 export async function isAlumno(userId: string): Promise<boolean> {
-  const { data } = await serverSupabase
+  const { data } = await getServerSupabase()
     .from('alumnos')
     .select('auth_id')
     .eq('auth_id', userId)
@@ -55,7 +55,7 @@ export async function isAlumno(userId: string): Promise<boolean> {
  */
 async function getUserPermissions(userId: string): Promise<AuthenticatedUser['permissions']> {
   // Check if user is admin
-  const { data: admin } = await serverSupabase
+  const { data: admin } = await getServerSupabase()
     .from('admins')
     .select('auth_id')
     .eq('auth_id', userId)

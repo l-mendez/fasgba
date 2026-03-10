@@ -174,7 +174,7 @@ export async function getUserAvatarUrl(): Promise<string | null> {
   const profile = await getUserProfile()
   if (!profile) return null
 
-  const { data } = await createClient
+  const { data } = await createClient()
     .storage
     .from('avatars')
     .getPublicUrl(`${profile.id}/avatar`)
@@ -189,7 +189,7 @@ export async function uploadAvatar(file: File): Promise<boolean> {
   const user = await getCurrentUser()
   if (!user) return false
 
-  const { error } = await createClient
+  const { error } = await createClient()
     .storage
     .from('avatars')
     .upload(`${user.id}/avatar`, file, {
