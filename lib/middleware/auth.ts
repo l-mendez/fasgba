@@ -101,7 +101,7 @@ export async function hasPermission(permission: keyof NonNullable<AuthenticatedU
   }
 
   const permissions = await getUserPermissions(userId)
-  return permissions[permission]
+  return permissions?.[permission] ?? false
 }
 
 /**
