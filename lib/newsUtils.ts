@@ -260,7 +260,7 @@ export async function getNewsById(id: number, include: Array<'author' | 'club'> 
   }
 
   const newsData = data as unknown as News & { club?: { id: number; name: string; address: string } }
-  let processedData: Record<string, unknown> = {
+  const processedData: Record<string, unknown> = {
     ...newsData,
     tags: newsData.tags || []
   }
