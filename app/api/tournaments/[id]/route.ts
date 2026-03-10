@@ -324,14 +324,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         // 3. Delete team registrations (but keep players - they can be re-registered individually)
         const { data: teamRegistrations, error: teamRegError } = await serverSupabase
-          .from('tournament_club_teams')
-          .select('club_id')
+          .from('tournament_teams')
+          .select('team_id')
           .eq('tournament_id', tournamentId)
 
         let teamsDeleted = 0
         if (teamRegistrations && teamRegistrations.length > 0) {
           const { error: deleteTeamsError } = await serverSupabase
-            .from('tournament_club_teams')
+            .from('tournament_teams')
             .delete()
             .eq('tournament_id', tournamentId)
 

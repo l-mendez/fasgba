@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,12 +17,24 @@ interface Club {
   name: string
 }
 
+interface TeamData {
+  id: number
+  name: string
+  club_id: number
+  clubs?: Club
+}
+
 interface RegisteredTeam {
   tournament_id: number
-  club_id: number
-  clubs: {
+  team_id: number
+  teams: {
     id: number
     name: string
+    club_id: number
+    clubs: {
+      id: number
+      name: string
+    }
   }
 }
 
@@ -33,12 +46,16 @@ interface TeamManagementProps {
 export default function TeamManagement({ tournamentId, tournamentType = 'individual' }: TeamManagementProps) {
   const [registeredTeams, setRegisteredTeams] = useState<RegisteredTeam[]>([])
   const [availableClubs, setAvailableClubs] = useState<Club[]>([])
+  const [clubTeams, setClubTeams] = useState<TeamData[]>([])
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isCreateTeamMode, setIsCreateTeamMode] = useState(false)
+  const [newTeamName, setNewTeamName] = useState('')
   const [loading, setLoading] = useState(false)
   const [fetchingTeams, setFetchingTeams] = useState(true)
   const [selectedClubId, setSelectedClubId] = useState<number | null>(null)
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null)
+  const [loadingClubTeams, setLoadingClubTeams] = useState(false)
 
-  // Fetch registered teams
   const fetchRegisteredTeams = async () => {
     try {
       setFetchingTeams(true)
@@ -52,7 +69,6 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
     }
   }
 
-  // Fetch available clubs
   const fetchAvailableClubs = async () => {
     try {
       const data = await apiCall('/api/clubs')
@@ -63,7 +79,20 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
     }
   }
 
-  // Load data on component mount
+  const fetchClubTeams = async (clubId: number) => {
+    try {
+      setLoadingClubTeams(true)
+      const data = await apiCall(`/api/clubs/${clubId}/teams`)
+      setClubTeams(data.teams || [])
+    } catch (error) {
+      console.error('Error fetching club teams:', error)
+      toast.error('Error al cargar equipos del club')
+      setClubTeams([])
+    } finally {
+      setLoadingClubTeams(false)
+    }
+  }
+
   useEffect(() => {
     if (tournamentType === 'team') {
       fetchRegisteredTeams()
@@ -71,15 +100,52 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
     }
   }, [tournamentId, tournamentType])
 
-  const handleAddTeam = async () => {
-    if (!selectedClubId) {
-      toast.error('Debe seleccionar un club')
+  useEffect(() => {
+    if (selectedClubId) {
+      fetchClubTeams(selectedClubId)
+      setSelectedTeamId(null)
+      setIsCreateTeamMode(false)
+      setNewTeamName('')
+    } else {
+      setClubTeams([])
+      setSelectedTeamId(null)
+    }
+  }, [selectedClubId])
+
+  const handleCreateTeam = async () => {
+    if (!selectedClubId || !newTeamName.trim()) {
+      toast.error('Debe ingresar un nombre para el equipo')
       return
     }
 
-    // Check if team is already registered
-    if (registeredTeams.some(team => team.club_id === selectedClubId)) {
-      toast.error('Este club ya está registrado en el torneo')
+    setLoading(true)
+    try {
+      const team = await apiCall(`/api/clubs/${selectedClubId}/teams`, {
+        method: 'POST',
+        body: JSON.stringify({ name: newTeamName.trim() }),
+      })
+
+      toast.success('Equipo creado exitosamente')
+      setNewTeamName('')
+      setIsCreateTeamMode(false)
+      await fetchClubTeams(selectedClubId)
+      setSelectedTeamId(team.id)
+    } catch (error) {
+      console.error('Error creating team:', error)
+      toast.error(error instanceof Error ? error.message : 'Error al crear equipo')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddTeam = async () => {
+    if (!selectedTeamId) {
+      toast.error('Debe seleccionar un equipo')
+      return
+    }
+
+    if (registeredTeams.some(t => t.team_id === selectedTeamId)) {
+      toast.error('Este equipo ya está registrado en el torneo')
       return
     }
 
@@ -87,16 +153,15 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
     try {
       await apiCall(`/api/tournaments/${tournamentId}/registered-teams`, {
         method: 'POST',
-        body: JSON.stringify({
-          club_id: selectedClubId
-        }),
+        body: JSON.stringify({ team_id: selectedTeamId }),
       })
 
       toast.success('Equipo registrado exitosamente')
       setIsAddDialogOpen(false)
       setSelectedClubId(null)
-      
-      // Refresh the teams list
+      setSelectedTeamId(null)
+      setClubTeams([])
+
       await fetchRegisteredTeams()
     } catch (error) {
       console.error('Error adding team:', error)
@@ -106,20 +171,18 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
     }
   }
 
-  const handleRemoveTeam = async (clubId: number, clubName: string) => {
-    if (!confirm(`¿Estás seguro de que quieres eliminar el equipo "${clubName}" del torneo?`)) {
+  const handleRemoveTeam = async (teamId: number, teamName: string) => {
+    if (!confirm(`¿Estás seguro de que quieres eliminar el equipo "${teamName}" del torneo?`)) {
       return
     }
 
     setLoading(true)
     try {
-      await apiCall(`/api/tournaments/${tournamentId}/registered-teams/${clubId}`, {
+      await apiCall(`/api/tournaments/${tournamentId}/registered-teams/${teamId}`, {
         method: 'DELETE',
       })
 
       toast.success('Equipo eliminado exitosamente')
-      
-      // Refresh the teams list
       await fetchRegisteredTeams()
     } catch (error) {
       console.error('Error removing team:', error)
@@ -129,10 +192,9 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
     }
   }
 
-  // Get available clubs that are not yet registered
-  const getAvailableClubs = () => {
-    const registeredClubIds = registeredTeams.map(team => team.club_id)
-    return availableClubs.filter(club => !registeredClubIds.includes(club.id))
+  const getAvailableTeamsForClub = () => {
+    const registeredTeamIds = registeredTeams.map(t => t.team_id)
+    return clubTeams.filter(team => !registeredTeamIds.includes(team.id))
   }
 
   if (tournamentType !== 'team') {
@@ -154,7 +216,7 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
     )
   }
 
-  const availableClubsForRegistration = getAvailableClubs()
+  const availableTeamsForClub = getAvailableTeamsForClub()
 
   return (
     <div className="space-y-6">
@@ -166,24 +228,30 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
             {registeredTeams.length} equipos
           </Badge>
         </div>
-        
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+
+        <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+          setIsAddDialogOpen(open)
+          if (!open) {
+            setSelectedClubId(null)
+            setSelectedTeamId(null)
+            setClubTeams([])
+            setIsCreateTeamMode(false)
+            setNewTeamName('')
+          }
+        }}>
           <DialogTrigger asChild>
-            <Button 
-              className="flex items-center gap-2"
-              disabled={availableClubsForRegistration.length === 0}
-            >
+            <Button className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Registrar Equipo
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Registrar Nuevo Equipo</DialogTitle>
+              <DialogTitle>Registrar Equipo en Torneo</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="club_select">Seleccionar Club</Label>
+                <Label htmlFor="club_select">1. Seleccionar Club</Label>
                 <Select
                   value={selectedClubId?.toString() || ''}
                   onValueChange={(value) => setSelectedClubId(value ? parseInt(value) : null)}
@@ -192,27 +260,92 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
                     <SelectValue placeholder="Selecciona un club" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableClubsForRegistration.map((club) => (
+                    {availableClubs.map((club) => (
                       <SelectItem key={club.id} value={club.id.toString()}>
                         {club.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {availableClubsForRegistration.length === 0 && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    Todos los clubes disponibles ya están registrados
-                  </p>
-                )}
               </div>
+
+              {selectedClubId && (
+                <div>
+                  <Label htmlFor="team_select">2. Seleccionar Equipo</Label>
+                  {loadingClubTeams ? (
+                    <div className="flex items-center gap-2 py-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-sm text-gray-500">Cargando equipos...</span>
+                    </div>
+                  ) : isCreateTeamMode ? (
+                    <div className="space-y-2">
+                      <Input
+                        placeholder="Nombre del nuevo equipo"
+                        value={newTeamName}
+                        onChange={(e) => setNewTeamName(e.target.value)}
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={handleCreateTeam}
+                          disabled={loading || !newTeamName.trim()}
+                        >
+                          {loading ? 'Creando...' : 'Crear'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setIsCreateTeamMode(false)
+                            setNewTeamName('')
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Select
+                        value={selectedTeamId?.toString() || ''}
+                        onValueChange={(value) => setSelectedTeamId(value ? parseInt(value) : null)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un equipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableTeamsForClub.map((team) => (
+                            <SelectItem key={team.id} value={team.id.toString()}>
+                              {team.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {availableTeamsForClub.length === 0 && clubTeams.length > 0 && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          Todos los equipos de este club ya están registrados
+                        </p>
+                      )}
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="mt-1 p-0 h-auto"
+                        onClick={() => setIsCreateTeamMode(true)}
+                      >
+                        + Crear nuevo equipo
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
 
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button 
-                  onClick={handleAddTeam} 
-                  disabled={loading || !selectedClubId}
+                <Button
+                  onClick={handleAddTeam}
+                  disabled={loading || !selectedTeamId}
                 >
                   {loading ? 'Registrando...' : 'Registrar Equipo'}
                 </Button>
@@ -222,7 +355,6 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
         </Dialog>
       </div>
 
-      {/* Teams List */}
       <div className="grid gap-4">
         {registeredTeams.length === 0 ? (
           <Card>
@@ -232,8 +364,8 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {registeredTeams.map((team) => (
-              <Card key={team.club_id}>
+            {registeredTeams.map((reg) => (
+              <Card key={reg.team_id}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -241,13 +373,14 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
                         <Users className="h-4 w-4 text-blue-600" />
                       </div>
                       <div>
-                        <CardTitle className="text-base">{team.clubs.name}</CardTitle>
+                        <CardTitle className="text-base">{reg.teams.name}</CardTitle>
+                        <p className="text-sm text-gray-500">{reg.teams.clubs.name}</p>
                       </div>
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleRemoveTeam(team.club_id, team.clubs.name)}
+                      onClick={() => handleRemoveTeam(reg.team_id, reg.teams.name)}
                       disabled={loading}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
@@ -257,8 +390,8 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">ID del Club:</span>
-                    <Badge variant="outline">{team.club_id}</Badge>
+                    <span className="text-sm text-gray-500">Club:</span>
+                    <Badge variant="outline">{reg.teams.clubs.name}</Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -271,16 +404,15 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
         <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/50 rounded-lg border border-blue-200 dark:border-blue-800">
           <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">Gestión de Equipos</h4>
           <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
-            Los equipos registrados en este torneo aparecerán aquí. Puedes gestionar los jugadores de cada equipo 
-            y ver su información de contacto.
+            Los equipos registrados en este torneo aparecerán aquí. Un mismo club puede tener múltiples equipos participando.
           </p>
           <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-            <li>• Los clubes se registran desde su panel de administración</li>
-            <li>• Cada club puede registrar jugadores para su equipo</li>
+            <li>• Selecciona un club y luego elige o crea un equipo</li>
+            <li>• Cada equipo puede registrar jugadores</li>
             <li>• Los enfrentamientos se generan automáticamente al crear rondas</li>
           </ul>
         </div>
       )}
     </div>
   )
-} 
+}

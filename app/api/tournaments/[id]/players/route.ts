@@ -120,9 +120,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             fide_id,
             rating
           ),
-          clubs (
+          teams (
             id,
-            name
+            name,
+            clubs (
+              id,
+              name
+            )
           )
         `)
         .eq('tournament_id', tournamentIdNum)
@@ -134,7 +138,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
       const formattedPlayers = players?.map(p => ({
         ...p.players,
-        club: p.clubs
+        team: p.teams,
+        club: p.teams?.clubs
       })) || []
 
       return apiSuccess({ players: formattedPlayers, tournament_type: 'team' })
@@ -277,16 +282,26 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
       }
     } else if (tournament.tournament_type === 'team') {
-      // For team tournaments, we need to register the player to a club team
-      // The club_id should be provided in the request for team tournaments
-      if (!validatedData.club_id) {
-        throw new Error('Club ID is required for team tournaments')
+      // For team tournaments, we need a team_id from the request body
+      const teamId = body.team_id
+      if (!teamId) {
+        throw new Error('Team ID is required for team tournaments')
       }
 
-      const clubId = validatedData.club_id
+      const teamIdNum = parseInt(teamId)
 
-      // Verify that the user has permission to add players to this club
-      // Check if user is site admin or admin of the specified club
+      // Verify that the team exists and get its club
+      const { data: team, error: teamError } = await serverSupabase
+        .from('teams')
+        .select('id, club_id')
+        .eq('id', teamIdNum)
+        .single()
+
+      if (teamError || !team) {
+        throw new Error('Team not found')
+      }
+
+      // Verify that the user has permission to add players to this team's club
       const { data: admin, error: adminError } = await serverSupabase
         .from('admins')
         .select('auth_id')
@@ -296,33 +311,31 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       const isSiteAdmin = !adminError && !!admin
 
       if (!isSiteAdmin) {
-        // Check if user is admin of the specified club
-        const isClubAdmin = await isUserClubAdmin(clubId, user.id)
+        const isClubAdmin = await isUserClubAdmin(team.club_id, user.id)
         if (!isClubAdmin) {
-          throw new Error('You do not have permission to add players to this club')
+          throw new Error('You do not have permission to add players to this team')
         }
       }
 
-      // First, ensure the club is registered for this tournament
-      const { data: existingTeam } = await serverSupabase
-        .from('tournament_club_teams')
-        .select('tournament_id, club_id')
+      // First, ensure the team is registered for this tournament
+      const { data: existingTeamReg } = await serverSupabase
+        .from('tournament_teams')
+        .select('tournament_id, team_id')
         .eq('tournament_id', tournamentIdNum)
-        .eq('club_id', clubId)
+        .eq('team_id', teamIdNum)
         .single()
 
-      if (!existingTeam) {
-        // Register the club for this tournament
+      if (!existingTeamReg) {
         const { error: teamRegistrationError } = await serverSupabase
-          .from('tournament_club_teams')
+          .from('tournament_teams')
           .insert([{
             tournament_id: tournamentIdNum,
-            club_id: clubId
+            team_id: teamIdNum
           }])
 
         if (teamRegistrationError) {
-          console.error('Error registering club team:', teamRegistrationError)
-          throw new Error('Failed to register club team for tournament')
+          console.error('Error registering team:', teamRegistrationError)
+          throw new Error('Failed to register team for tournament')
         }
       }
 
@@ -335,12 +348,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         .single()
 
       if (!existingPlayerRegistration) {
-        // Register the player to the club team for this tournament
         const { error: playerRegistrationError } = await serverSupabase
           .from('tournament_team_players')
           .insert([{
             tournament_id: tournamentIdNum,
-            club_id: clubId,
+            team_id: teamIdNum,
             player_id: player.id
           }])
 

@@ -108,6 +108,26 @@ export interface Database {
           recorded_at?: string
         }
       }
+      teams: {
+        Row: {
+          id: number
+          name: string
+          club_id: number
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          name: string
+          club_id: number
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          name?: string
+          club_id?: number
+          created_at?: string
+        }
+      }
       documentos: {
         Row: {
           id: number
