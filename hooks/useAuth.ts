@@ -19,6 +19,7 @@ interface AuthState {
   isAuthenticated: boolean
   isAdmin: boolean
   isClubAdmin: boolean
+  isAlumno: boolean
   adminClubsCount: number
   error?: string
 }
@@ -28,6 +29,7 @@ export function useAuth(): AuthState {
   const [permissions, setPermissions] = useState<UserPermissions | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isClubAdmin, setIsClubAdmin] = useState(false)
+  const [isAlumno, setIsAlumno] = useState(false)
   const [adminClubsCount, setAdminClubsCount] = useState(0)
   const [error, setError] = useState<string | undefined>(undefined)
   const supabase = createClient()
@@ -39,6 +41,7 @@ export function useAuth(): AuthState {
       if (session?.user) {
         fetchUserPermissions(session.user.id)
         fetchClubAdminStatus(session.user.id)
+        fetchAlumnoStatus(session.user.id)
       } else {
         setIsLoading(false)
       }
@@ -52,9 +55,11 @@ export function useAuth(): AuthState {
       if (session?.user) {
         fetchUserPermissions(session.user.id)
         fetchClubAdminStatus(session.user.id)
+        fetchAlumnoStatus(session.user.id)
       } else {
         setPermissions(null)
         setIsClubAdmin(false)
+        setIsAlumno(false)
         setAdminClubsCount(0)
         setError(undefined)
         setIsLoading(false)
@@ -110,6 +115,25 @@ export function useAuth(): AuthState {
     }
   }
 
+  const fetchAlumnoStatus = async (userId: string) => {
+    try {
+      const { data, error: alumnoError } = await supabase
+        .from('alumnos')
+        .select('auth_id')
+        .eq('auth_id', userId)
+        .single()
+
+      if (alumnoError && alumnoError.code !== 'PGRST116') {
+        console.warn('Alumnos table access error:', alumnoError)
+      }
+
+      setIsAlumno(!alumnoError && !!data)
+    } catch (error) {
+      console.error('Error fetching alumno status:', error)
+      setIsAlumno(false)
+    }
+  }
+
   const fetchClubAdminStatus = async (userId: string) => {
     try {
       const { count, error: clubAdminError } = await supabase
@@ -142,6 +166,7 @@ export function useAuth(): AuthState {
     isAuthenticated: !!user,
     isAdmin: permissions?.isAdmin ?? false,
     isClubAdmin,
+    isAlumno,
     adminClubsCount,
     error
   }

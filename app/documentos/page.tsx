@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Card, CardContent } from "@/components/ui/card"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { EscuelaSection } from "@/components/escuela-document-card"
 import {
   DOCUMENT_CATEGORIES,
   CATEGORY_COLORS,
@@ -80,6 +81,7 @@ function groupByCategory(documentos: Documento[]): Record<DocumentCategory, Docu
     reglamentos: [],
     actas: [],
     minutas: [],
+    escuela: [],
     otros: [],
   }
 
@@ -109,6 +111,7 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
     reglamentos: allDocumentos.filter((d) => d.category === "reglamentos").length,
     actas: allDocumentos.filter((d) => d.category === "actas").length,
     minutas: allDocumentos.filter((d) => d.category === "minutas").length,
+    escuela: allDocumentos.filter((d) => d.category === "escuela").length,
     otros: allDocumentos.filter((d) => d.category === "otros").length,
   }
 
@@ -194,6 +197,18 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
                   </Link>
                 )}
               </div>
+            ) : hasActiveFilter && selectedCategory === 'escuela' ? (
+              // Escuela category uses special auth-gated component
+              <EscuelaSection
+                documentos={filteredDocumentos.map((doc) => ({
+                  id: doc.id,
+                  name: doc.name,
+                  category: 'escuela' as const,
+                  file_size: doc.file_size,
+                  created_at: doc.created_at,
+                  file_ext: doc.file_path?.split('.').pop()?.toLowerCase(),
+                }))}
+              />
             ) : hasActiveFilter ? (
               // Show flat list when filtering by category
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -207,6 +222,19 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
                 {Object.entries(DOCUMENT_CATEGORIES).map(([categoryKey, categoryLabel]) => {
                   const categoryDocs = groupedDocumentos?.[categoryKey as DocumentCategory] || []
                   if (categoryDocs.length === 0) return null
+
+                  // Escuela section uses a special client component with auth checks
+                  if (categoryKey === 'escuela') {
+                    const escuelaDocs = categoryDocs.map((doc) => ({
+                      id: doc.id,
+                      name: doc.name,
+                      category: 'escuela' as const,
+                      file_size: doc.file_size,
+                      created_at: doc.created_at,
+                      file_ext: doc.file_path?.split('.').pop()?.toLowerCase(),
+                    }))
+                    return <EscuelaSection key={categoryKey} documentos={escuelaDocs} />
+                  }
 
                   return (
                     <div key={categoryKey}>

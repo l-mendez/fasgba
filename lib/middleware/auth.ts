@@ -38,6 +38,18 @@ function extractToken(request: NextRequest): string | null {
 }
 
 /**
+ * Checks if a user has the alumno role
+ */
+export async function isAlumno(userId: string): Promise<boolean> {
+  const { data } = await serverSupabase
+    .from('alumnos')
+    .select('auth_id')
+    .eq('auth_id', userId)
+    .single()
+  return !!data
+}
+
+/**
  * Gets user permissions by checking the admins table
  */
 async function getUserPermissions(userId: string): Promise<AuthenticatedUser['permissions']> {
@@ -194,6 +206,22 @@ export async function requireUserManager(request: NextRequest): Promise<Authenti
   
   if (!canManageUsers && !isAdmin) {
     throw new ForbiddenError('User management permission required')
+  }
+
+  return user
+}
+
+/**
+ * Middleware to require alumno or admin role
+ */
+export async function requireAlumnoOrAdmin(request: NextRequest): Promise<AuthenticatedUser> {
+  const user = await requireAuth(request)
+
+  const alumno = await isAlumno(user.id)
+  const admin = await hasPermission('isAdmin', user.id)
+
+  if (!alumno && !admin) {
+    throw new ForbiddenError('Acceso restringido a alumnos de la escuela')
   }
 
   return user
