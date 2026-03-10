@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
+  Award,
   BarChart3,
   BookOpen,
   Calendar,
@@ -118,6 +119,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           >
             <Home className="mr-2 h-4 w-4" />
             Clubes
+          </Link>
+          <Link
+            href="/admin/arbitros"
+            className={cn(
+              "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
+              pathname.startsWith("/admin/arbitros") ? "bg-amber/10 text-amber" : "text-muted-foreground"
+            )}
+            onClick={onLinkClick}
+          >
+            <Award className="mr-2 h-4 w-4" />
+            Árbitros
           </Link>
           <Link
             href="/admin/ranking"
