@@ -42,11 +42,12 @@ export async function DELETE(request: NextRequest) {
     // Check if this is the chronologically latest ranking
     const wasLatestRanking = await checkIfLatestRanking(adminSupabase, filename)
 
-    // Delete the ranking file
+    // Delete the ranking file and its companion analytics file
+    const analyticsFilename = fullFilename.replace('.json', '-analytics.json')
     const { error: deleteError } = await adminSupabase.storage
       .from('ranking-data')
-      .remove([fullFilename])
-    
+      .remove([fullFilename, analyticsFilename])
+
     if (deleteError) {
       console.error('Delete error:', deleteError)
       return handleError(new Error('Failed to delete ranking: ' + deleteError.message))
@@ -100,8 +101,9 @@ async function checkIfLatestRanking(adminSupabase: any, filenameToDelete: string
     // Filter and find the chronologically latest ranking
     const rankingFiles = files
       .filter(file => 
-        file.name.endsWith('.json') && 
+        file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
+        !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
       .map(file => {
@@ -161,8 +163,9 @@ async function findNewLatestRanking(adminSupabase: any): Promise<string | null> 
     // Filter and find the chronologically latest ranking
     const rankingFiles = files
       .filter(file => 
-        file.name.endsWith('.json') && 
+        file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
+        !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
       .map(file => {
@@ -222,8 +225,9 @@ async function getRankingInfo(adminSupabase: any, filename: string) {
     // Filter and find the ranking being deleted
     const rankingFiles = files
       .filter(file => 
-        file.name.endsWith('.json') && 
+        file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
+        !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
       .map(file => {
@@ -290,8 +294,9 @@ async function renameSameMonthRankings(adminSupabase: any, deletedMonth: number,
     // Filter and find same-month rankings
     const sameMonthRankings = files
       .filter(file => 
-        file.name.endsWith('.json') && 
+        file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
+        !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
       .map(file => {
@@ -407,8 +412,9 @@ async function recalculateNextRankingChanges(adminSupabase: any, deletedRankingI
     // Filter and sort all rankings chronologically
     const allRankings = files
       .filter(file => 
-        file.name.endsWith('.json') && 
+        file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
+        !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
       .map(file => {
@@ -486,7 +492,7 @@ async function recalculateNextRankingChanges(adminSupabase: any, deletedRankingI
 
     // Recalculate changes for each player
     const updatedPlayers = nextRankingJson.players.map((player: any) => {
-      let changes = {
+      let changes: { position: number | null; points: number; isNew: boolean } = {
         position: null,
         points: 0,
         isNew: false

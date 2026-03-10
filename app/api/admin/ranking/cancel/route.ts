@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
     // Use admin client for storage operations
     const adminSupabase = createAdminClient()
 
-    const { tempJsonPath } = await request.json()
-    
+    const { tempJsonPath, tempAnalyticsPath } = await request.json()
+
     if (!tempJsonPath) {
       return handleError(new Error('Missing temp file path'))
     }
@@ -32,9 +32,13 @@ export async function POST(request: NextRequest) {
     console.log(`Cleaning up temp file: ${tempJsonPath}`)
 
     // Delete the temp JSON file using admin client
+    const filesToRemove = [tempJsonPath]
+    if (tempAnalyticsPath) {
+      filesToRemove.push(tempAnalyticsPath)
+    }
     const { error: deleteError } = await adminSupabase.storage
       .from('ranking-data')
-      .remove([tempJsonPath])
+      .remove(filesToRemove)
     
     if (deleteError) {
       console.warn('Failed to delete temp file:', deleteError)

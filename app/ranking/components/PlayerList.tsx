@@ -2,13 +2,40 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Minus, Circle } from "lucide-react";
+import {
+  Search,
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  Circle,
+  Crown,
+  Timer,
+  Zap,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Player } from "../page";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RatingTypeSelector } from "./RatingTypeSelector";
+import { PlayerDetailSheet } from "./PlayerDetailSheet";
+import type { Player, RatingType } from "@/lib/rankingUtils";
 
 interface PlayerListProps {
   players: Player[];
@@ -16,7 +43,14 @@ interface PlayerListProps {
   totalPages: number;
   totalPlayers: number;
   currentRanking?: string;
-  availableRankings?: Array<{filename: string, displayName: string, month: number, year: number, date: Date}>;
+  availableRankings?: Array<{
+    filename: string;
+    displayName: string;
+    month: number;
+    year: number;
+    date: Date;
+  }>;
+  sortBy: RatingType;
 }
 
 interface PaginationControlsProps {
@@ -25,10 +59,13 @@ interface PaginationControlsProps {
   onPageChange: (page: number) => void;
 }
 
-function PaginationControls({ currentPage, totalPages, onPageChange }: PaginationControlsProps) {
+function PaginationControls({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: PaginationControlsProps) {
   const [pageInput, setPageInput] = useState(currentPage.toString());
 
-  // Update pageInput when currentPage changes
   useEffect(() => {
     setPageInput(currentPage.toString());
   }, [currentPage]);
@@ -39,12 +76,8 @@ function PaginationControls({ currentPage, totalPages, onPageChange }: Paginatio
     if (page >= 1 && page <= totalPages) {
       onPageChange(page);
     } else {
-      setPageInput(currentPage.toString()); // Reset to current page if invalid
+      setPageInput(currentPage.toString());
     }
-  };
-
-  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPageInput(e.target.value);
   };
 
   return (
@@ -52,9 +85,7 @@ function PaginationControls({ currentPage, totalPages, onPageChange }: Paginatio
       <div className="text-sm text-muted-foreground">
         Página {currentPage} de {totalPages}
       </div>
-      
       <div className="flex items-center space-x-2">
-        {/* Navigation buttons */}
         <Button
           variant="outline"
           size="sm"
@@ -75,21 +106,27 @@ function PaginationControls({ currentPage, totalPages, onPageChange }: Paginatio
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        
-        {/* Page input */}
-        <form onSubmit={handlePageInputSubmit} className="flex items-center space-x-1">
+        <form
+          onSubmit={handlePageInputSubmit}
+          className="flex items-center space-x-1"
+        >
           <Input
             type="text"
             value={pageInput}
-            onChange={handlePageInputChange}
+            onChange={(e) => setPageInput(e.target.value)}
             className="w-16 h-8 text-center text-sm"
             placeholder="1"
           />
-          <Button type="submit" size="sm" variant="outline" className="h-8 px-2" title="Ir a página">
+          <Button
+            type="submit"
+            size="sm"
+            variant="outline"
+            className="h-8 px-2"
+            title="Ir a página"
+          >
             <Search className="h-4 w-4" />
           </Button>
         </form>
-        
         <Button
           variant="outline"
           size="sm"
@@ -115,66 +152,90 @@ function PaginationControls({ currentPage, totalPages, onPageChange }: Paginatio
   );
 }
 
-export function PlayerList({ players, currentPage, totalPages, totalPlayers, currentRanking, availableRankings }: PlayerListProps) {
+export function PlayerList({
+  players,
+  currentPage,
+  totalPages,
+  totalPlayers,
+  currentRanking,
+  availableRankings,
+  sortBy,
+}: PlayerListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
-  const activeFilter = (searchParams.get('active') || 'active') as 'active' | 'inactive' | 'all';
-  
-  // Keep input in sync with URL changes (e.g., when filters or navigation update params)
+  const [searchTerm, setSearchTerm] = useState(
+    searchParams.get("search") || ""
+  );
+  const activeFilter = (searchParams.get("active") || "active") as
+    | "active"
+    | "inactive"
+    | "all";
+
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
   useEffect(() => {
-    setSearchTerm(searchParams.get('search') || "");
+    setSearchTerm(searchParams.get("search") || "");
   }, [searchParams]);
-  
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const params = new URLSearchParams(searchParams.toString());
     const trimmed = searchTerm.trim();
     if (trimmed) {
-      params.set('search', trimmed);
+      params.set("search", trimmed);
     } else {
-      params.delete('search');
+      params.delete("search");
     }
-    params.set('page', '1');
-    router.replace(`?${params.toString()}`,{ scroll: false });
+    params.set("page", "1");
+    router.replace(`?${params.toString()}`, { scroll: false });
   };
 
   const handlePageChange = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set('page', page.toString());
+    params.set("page", page.toString());
     router.push(`?${params.toString()}`, { scroll: false });
   };
 
   const handleRankingChange = (rankingFilename: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (rankingFilename === (availableRankings?.[0]?.filename || '')) {
-      // If selecting the latest ranking, remove the ranking parameter
-      params.delete('ranking');
+    if (rankingFilename === (availableRankings?.[0]?.filename || "")) {
+      params.delete("ranking");
     } else {
-      params.set('ranking', rankingFilename);
+      params.set("ranking", rankingFilename);
     }
-    params.set('page', '1'); // Reset to first page when changing ranking
-    
-    // Use router.replace to ensure immediate navigation and data refresh
+    params.set("page", "1");
     router.replace(`?${params.toString()}`, { scroll: false });
   };
 
-  const handleActiveChange = (value: 'active' | 'inactive' | 'all') => {
+  const handleActiveChange = (value: "active" | "inactive" | "all") => {
     const params = new URLSearchParams(searchParams.toString());
-    if (value === 'active') {
-      // default; we can still keep param for explicitness, but keep URL clean by removing param
-      params.delete('active');
+    if (value === "active") {
+      params.delete("active");
     } else {
-      params.set('active', value);
+      params.set("active", value);
     }
-    params.set('page', '1');
+    params.set("page", "1");
     router.replace(`?${params.toString()}`, { scroll: false });
+  };
+
+  const handlePlayerClick = (player: Player) => {
+    setSelectedPlayer(player);
+    setDetailOpen(true);
   };
 
   return (
     <div className="container px-4 md:px-6">
+      {/* Rating Type Selector */}
+      <div className="mb-6 flex justify-center">
+        <RatingTypeSelector currentType={sortBy} />
+      </div>
+
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <form onSubmit={handleSearchSubmit} className="flex-1 flex items-center gap-2">
+        <form
+          onSubmit={handleSearchSubmit}
+          className="flex-1 flex items-center gap-2"
+        >
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -190,10 +251,14 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers, cur
             Buscar
           </Button>
         </form>
-        
-        {/* Activeness Selector */}
+
         <div className="sm:w-40">
-          <Select value={activeFilter} onValueChange={(v) => handleActiveChange(v as 'active' | 'inactive' | 'all')}>
+          <Select
+            value={activeFilter}
+            onValueChange={(v) =>
+              handleActiveChange(v as "active" | "inactive" | "all")
+            }
+          >
             <SelectTrigger>
               <SelectValue placeholder="Actividad" />
             </SelectTrigger>
@@ -204,12 +269,13 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers, cur
             </SelectContent>
           </Select>
         </div>
-        
-        {/* Ranking Selector */}
+
         {availableRankings && availableRankings.length > 1 && (
           <div className="sm:w-48">
             <Select
-              value={currentRanking || availableRankings[0]?.filename || ''}
+              value={
+                currentRanking || availableRankings[0]?.filename || ""
+              }
               onValueChange={handleRankingChange}
             >
               <SelectTrigger>
@@ -227,41 +293,64 @@ export function PlayerList({ players, currentPage, totalPages, totalPlayers, cur
         )}
       </div>
 
-      {/* Top pagination */}
       <div className="mb-6">
-        <PaginationControls 
+        <PaginationControls
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={handlePageChange}
         />
       </div>
 
-      {/* Single ranking table without category tabs */}
       <div className="space-y-4">
-        <RankingTable players={players} currentPage={currentPage} />
+        <RankingTable
+          players={players}
+          sortBy={sortBy}
+          onPlayerClick={handlePlayerClick}
+        />
       </div>
 
-      {/* Bottom pagination */}
       <div className="mt-6">
         <div className="mb-2 text-sm text-muted-foreground text-center">
           Mostrando {players.length} de {totalPlayers} jugadores
         </div>
-        <PaginationControls 
+        <PaginationControls
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={handlePageChange}
         />
       </div>
+
+      <PlayerDetailSheet
+        player={selectedPlayer}
+        rankingFilename={currentRanking || ""}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+      />
     </div>
   );
 }
 
-function RankingTable({ players, currentPage }: { players: Player[]; currentPage: number }) {
-  const pageSize = 50; // This should match the pageSize in page.tsx
+const ratingTypeConfig: Record<
+  RatingType,
+  { icon: typeof Crown; label: string; shortLabel: string }
+> = {
+  standard: { icon: Crown, label: "Standard", shortLabel: "Std" },
+  rapid: { icon: Timer, label: "Rápido", shortLabel: "Rap" },
+  blitz: { icon: Zap, label: "Blitz", shortLabel: "Blz" },
+};
 
-  const getPositionChangeIndicator = (changes: Player['changes']) => {
+function RankingTable({
+  players,
+  sortBy,
+  onPlayerClick,
+}: {
+  players: Player[];
+  sortBy: RatingType;
+  onPlayerClick: (player: Player) => void;
+}) {
+  const getPositionChangeIndicator = (changes: Player["changes"]) => {
     if (!changes) return null;
-    
+
     if (changes.isNew) {
       return (
         <div className="ml-1" title="Nuevo jugador">
@@ -269,25 +358,33 @@ function RankingTable({ players, currentPage }: { players: Player[]; currentPage
         </div>
       );
     }
-    
+
     if (changes.position && changes.position > 0) {
       return (
-        <div className="flex items-center ml-1 text-green-600" title={`Subió ${changes.position} posiciones`}>
+        <div
+          className="flex items-center ml-1 text-green-600"
+          title={`Subió ${changes.position} posiciones`}
+        >
           <ArrowUp className="h-3 w-3" />
           <span className="text-xs font-medium">{changes.position}</span>
         </div>
       );
     }
-    
+
     if (changes.position && changes.position < 0) {
       return (
-        <div className="flex items-center ml-1 text-red-600" title={`Bajó ${Math.abs(changes.position)} posiciones`}>
+        <div
+          className="flex items-center ml-1 text-red-600"
+          title={`Bajó ${Math.abs(changes.position)} posiciones`}
+        >
           <ArrowDown className="h-3 w-3" />
-          <span className="text-xs font-medium">{Math.abs(changes.position)}</span>
+          <span className="text-xs font-medium">
+            {Math.abs(changes.position)}
+          </span>
         </div>
       );
     }
-    
+
     if (changes.position === 0) {
       return (
         <div className="ml-1" title="Sin cambio de posición">
@@ -295,45 +392,90 @@ function RankingTable({ players, currentPage }: { players: Player[]; currentPage
         </div>
       );
     }
-    
+
     return null;
   };
 
-  const getPointsChangeText = (changes: Player['changes']) => {
-    if (!changes || changes.points === 0) return null;
-    
-    const roundedPoints = Math.round(changes.points);
-    const sign = roundedPoints > 0 ? '+' : '';
-    const color = roundedPoints > 0 ? 'text-green-600' : 'text-red-600';
-    
+  const getRatingChangeText = (changes: Player["changes"], type: RatingType) => {
+    if (!changes?.ratings) return null;
+    const change = changes.ratings[type];
+    if (!change || change === 0) return null;
+
+    const rounded = Math.round(change);
+    const sign = rounded > 0 ? "+" : "";
+    const color = rounded > 0 ? "text-green-600" : "text-red-600";
+
     return (
       <span className={`text-xs ${color} ml-1`}>
-        {sign}{roundedPoints}
+        {sign}
+        {rounded}
       </span>
     );
   };
+
+  const getPointsChangeText = (changes: Player["changes"]) => {
+    if (!changes || changes.points === 0) return null;
+
+    const roundedPoints = Math.round(changes.points);
+    const sign = roundedPoints > 0 ? "+" : "";
+    const color = roundedPoints > 0 ? "text-green-600" : "text-red-600";
+
+    return (
+      <span className={`text-xs ${color} ml-1`}>
+        {sign}
+        {roundedPoints}
+      </span>
+    );
+  };
+
+  const ratingTypes: RatingType[] = ["standard", "rapid", "blitz"];
 
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[100px]">Pos.</TableHead>
+            <TableHead className="w-[80px]">Pos.</TableHead>
             <TableHead>Nombre</TableHead>
             <TableHead className="hidden md:table-cell">Club</TableHead>
-            <TableHead className="text-right">Puntos</TableHead>
+            {ratingTypes.map((type) => {
+              const config = ratingTypeConfig[type];
+              const Icon = config.icon;
+              const isActive = type === sortBy;
+              return (
+                <TableHead
+                  key={type}
+                  className={`text-right ${
+                    type !== sortBy ? "hidden md:table-cell" : ""
+                  } ${isActive ? "font-bold" : ""}`}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    <Icon className={`h-3.5 w-3.5 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className="hidden lg:inline">{config.label}</span>
+                    <span className="lg:hidden">{config.shortLabel}</span>
+                  </div>
+                </TableHead>
+              );
+            })}
           </TableRow>
         </TableHeader>
         <TableBody>
           {players.length === 0 ? (
             <TableRow key="no-players">
-              <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+              <TableCell
+                colSpan={6}
+                className="text-center py-6 text-muted-foreground"
+              >
                 No se encontraron jugadores
               </TableCell>
             </TableRow>
           ) : (
-            players.map((player, index) => (
-              <TableRow key={`player-${player.position}`}>
+            players.map((player) => (
+              <TableRow
+                key={`player-${player.id || player.position}`}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => onPlayerClick(player)}
+              >
                 <TableCell className="font-medium">
                   <div className="flex items-center">
                     <span>{player.position}</span>
@@ -343,20 +485,39 @@ function RankingTable({ players, currentPage }: { players: Player[]; currentPage
                 <TableCell>
                   {player.title ? (
                     <span>
-                      <span className="text-primary font-medium">{player.title}</span>
+                      <span className="text-primary font-medium">
+                        {player.title}
+                      </span>
                       <span> {player.name}</span>
                     </span>
                   ) : (
                     <span>{player.name}</span>
                   )}
                 </TableCell>
-                <TableCell className="hidden md:table-cell">{player.club}</TableCell>
-                <TableCell className="text-right font-medium">
-                  <div className="flex items-center justify-end">
-                    {Math.round(player.points)}
-                    {getPointsChangeText(player.changes)}
-                  </div>
+                <TableCell className="hidden md:table-cell">
+                  {player.club}
                 </TableCell>
+                {ratingTypes.map((type) => {
+                  const rating = player.ratings[type];
+                  const isActive = type === sortBy;
+                  return (
+                    <TableCell
+                      key={type}
+                      className={`text-right ${
+                        type !== sortBy ? "hidden md:table-cell" : ""
+                      } ${isActive ? "font-medium" : ""}`}
+                    >
+                      <div className="flex items-center justify-end">
+                        {rating !== null && rating !== 0
+                          ? Math.round(rating)
+                          : "--"}
+                        {isActive && player.changes?.ratings
+                          ? getRatingChangeText(player.changes, type)
+                          : isActive && getPointsChangeText(player.changes)}
+                      </div>
+                    </TableCell>
+                  );
+                })}
               </TableRow>
             ))
           )}
@@ -364,4 +525,4 @@ function RankingTable({ players, currentPage }: { players: Player[]; currentPage
       </Table>
     </div>
   );
-} 
+}

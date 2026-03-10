@@ -1,22 +1,68 @@
 import { createClient } from "@/lib/supabase/client"
 import { createAdminClient } from "@/lib/supabase/admin"
 
+export type RatingType = 'standard' | 'rapid' | 'blitz';
+
+export interface PlayerRatings {
+  standard: number | null;
+  rapid: number | null;
+  blitz: number | null;
+}
+
+export interface PlayerPositions {
+  standard: number;
+  rapid: number;
+  blitz: number;
+}
+
+export interface TournamentDetail {
+  periodo: string;
+  playerId: string;
+  playerName: string;
+  club: string;
+  eloBefore: number;
+  wins: number;
+  games: number;
+  expectedScore: number;
+  scoreDiff: number;
+  avgOpponentRating: number;
+  performanceRating: number;
+  kFactor: number;
+  eloChange: number;
+  type: RatingType;
+  tournament: string;
+}
+
+export interface AnalyticsData {
+  filename: string;
+  rankingFilename: string;
+  month: number;
+  year: number;
+  details: TournamentDetail[];
+}
+
 export interface Player {
   position: number;
+  id?: string;
   name: string;
   title?: string;
   club: string;
+  category?: string;
   points: number;
   matches: number;
+  ratings: PlayerRatings;
+  positions?: PlayerPositions;
   changes?: {
-    position: number | null; // positive = moved up, negative = moved down, null = new player
-    points: number; // positive = gained points, negative = lost points
-    isNew: boolean; // true if player wasn't in previous ranking
+    position: number | null;
+    points: number;
+    ratings?: { standard: number; rapid: number; blitz: number };
+    isNew: boolean;
   };
   active: boolean;
 }
 
 export interface RankingData {
+  version?: number;
   filename: string;
   lastUpdated: string;
   totalPlayers: number;
@@ -24,6 +70,7 @@ export interface RankingData {
   year: number;
   previousRanking: string | null;
   players: Player[];
+  analyticsFilename?: string;
 }
 
 export interface PaginatedPlayersResponse {
@@ -33,6 +80,127 @@ export interface PaginatedPlayersResponse {
   pageSize: number;
   totalPages: number;
 }
+
+/**
+ * Normalizes a player from old format (no ratings) to new format
+ */
+export function normalizePlayer(player: any): Player {
+  if (player.ratings) {
+    return player as Player;
+  }
+  return {
+    ...player,
+    ratings: {
+      standard: player.points || 0,
+      rapid: null,
+      blitz: null,
+    },
+    positions: {
+      standard: player.position,
+      rapid: 0,
+      blitz: 0,
+    },
+  };
+}
+
+/**
+ * Normalizes all players in a RankingData object
+ */
+function normalizeRankingData(data: any): RankingData {
+  return {
+    ...data,
+    players: (data.players || []).map(normalizePlayer),
+  };
+}
+
+/**
+ * Maps a numeric tipo value to a RatingType string
+ */
+export function mapTipoToRatingType(tipo: number): RatingType {
+  switch (tipo) {
+    case 1: return 'standard';
+    case 2: return 'rapid';
+    case 3: return 'blitz';
+    default: return 'standard';
+  }
+}
+
+/**
+ * Returns the display label for a rating type (Spanish)
+ */
+export function getRatingTypeLabel(type: RatingType): string {
+  switch (type) {
+    case 'standard': return 'Standard';
+    case 'rapid': return 'Rápido';
+    case 'blitz': return 'Blitz';
+  }
+}
+
+/**
+ * Computes positions for each rating type by sorting players
+ */
+export function computePositionsByRatingType(players: Player[]): Player[] {
+  const ratingTypes: RatingType[] = ['standard', 'rapid', 'blitz'];
+
+  // Initialize positions maps
+  const positionMaps: Record<RatingType, Map<string, number>> = {
+    standard: new Map(),
+    rapid: new Map(),
+    blitz: new Map(),
+  };
+
+  for (const type of ratingTypes) {
+    const sorted = [...players]
+      .filter(p => p.ratings[type] !== null && p.ratings[type] !== 0)
+      .sort((a, b) => (b.ratings[type] || 0) - (a.ratings[type] || 0));
+
+    sorted.forEach((player, index) => {
+      const key = player.id || player.name;
+      positionMaps[type].set(key, index + 1);
+    });
+  }
+
+  return players.map(player => {
+    const key = player.id || player.name;
+    return {
+      ...player,
+      positions: {
+        standard: positionMaps.standard.get(key) || 0,
+        rapid: positionMaps.rapid.get(key) || 0,
+        blitz: positionMaps.blitz.get(key) || 0,
+      },
+    };
+  });
+}
+
+/**
+ * Sorts players by a specific rating type and assigns position accordingly
+ */
+function sortPlayersByRatingType(players: Player[], sortBy: RatingType): Player[] {
+  const withRating = players.filter(p => p.ratings[sortBy] !== null && p.ratings[sortBy] !== 0);
+  const withoutRating = players.filter(p => p.ratings[sortBy] === null || p.ratings[sortBy] === 0);
+
+  withRating.sort((a, b) => (b.ratings[sortBy] || 0) - (a.ratings[sortBy] || 0));
+
+  // Assign positions based on sort order
+  const sorted = withRating.map((player, index) => ({
+    ...player,
+    position: index + 1,
+  }));
+
+  // Players without this rating go to the end
+  const rest = withoutRating.map((player, index) => ({
+    ...player,
+    position: sorted.length + index + 1,
+  }));
+
+  return [...sorted, ...rest];
+}
+
+/**
+ * Regex pattern for ranking files - excludes analytics files
+ */
+const RANKING_FILE_PATTERN = /^ranking-\d{2}-\d{4}(?:\s*\(\d+\))?\.json$/;
 
 // Cache for ranking data to avoid repeated fetches
 let rankingCache: RankingData | null = null;
@@ -65,8 +233,9 @@ async function isCacheStale(): Promise<boolean> {
     // Find the chronologically latest ranking file
     const rankingFiles = files
       .filter(file => 
-        file.name.endsWith('.json') && 
+        file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
+        !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
       .map(file => {
@@ -221,6 +390,9 @@ export async function fetchRankingData(): Promise<RankingData> {
       throw new Error('Invalid ranking data structure');
     }
 
+    // Normalize players to new format (backward compat)
+    data = normalizeRankingData(data);
+
     // Update cache
     rankingCache = data;
     cacheTimestamp = now;
@@ -260,9 +432,9 @@ export async function fetchSpecificRankingData(filename: string): Promise<Rankin
       if (!data.players || !Array.isArray(data.players)) {
         throw new Error('Invalid ranking data structure');
       }
-      return data;
-      
-    } catch (serverError) {      
+      return normalizeRankingData(data);
+
+    } catch (serverError) {
       // Fallback to API endpoint
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const response = await fetch(`${baseUrl}/api/ranking/specific?filename=${encodeURIComponent(filename)}`, {
@@ -281,7 +453,7 @@ export async function fetchSpecificRankingData(filename: string): Promise<Rankin
         throw new Error(result.error || 'Failed to fetch ranking data');
       }
 
-      return result.data;
+      return normalizeRankingData(result.data);
     }
 
   } catch (error) {
@@ -438,20 +610,24 @@ export async function getPlayers(
   pageSize: number = 50,
   search: string = '',
   rankingFilename?: string,
-  activeFilter: 'active' | 'inactive' | 'all' = 'all'
+  activeFilter: 'active' | 'inactive' | 'all' = 'all',
+  sortBy: RatingType = 'standard'
 ): Promise<PaginatedPlayersResponse> {
   try {
-    const rankingData = rankingFilename 
+    const rankingData = rankingFilename
       ? await fetchSpecificRankingData(rankingFilename)
       : await fetchRankingData();
-    
+
+    // Sort by the selected rating type
+    let players = sortPlayersByRatingType(rankingData.players, sortBy);
+
     // Filter by search term if provided
     const searchedPlayers = search
-      ? rankingData.players.filter(player => 
+      ? players.filter(player =>
           player.name.toLowerCase().includes(search.toLowerCase()) ||
           player.club.toLowerCase().includes(search.toLowerCase())
         )
-      : rankingData.players;
+      : players;
 
     // Filter by activeness
     const filteredPlayers = activeFilter === 'active'
@@ -631,4 +807,50 @@ export function forceRankingCacheInvalidation(): void {
 export async function getCategories(): Promise<string[]> {
   // Return the available tournament types as categories
   return ['individual', 'team'];
-} 
+}
+
+/**
+ * Fetches analytics data for a specific ranking
+ */
+export async function fetchAnalyticsData(rankingFilename: string): Promise<AnalyticsData | null> {
+  try {
+    const baseName = rankingFilename.replace('.json', '');
+    const analyticsFilename = `${baseName}-analytics.json`;
+
+    try {
+      const adminSupabase = createAdminClient();
+      const { data: fileData, error: downloadError } = await adminSupabase.storage
+        .from('ranking-data')
+        .download(analyticsFilename);
+
+      if (downloadError || !fileData) {
+        return null;
+      }
+
+      const jsonContent = await fileData.text();
+      return JSON.parse(jsonContent);
+    } catch {
+      // Fallback to API
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/ranking/analytics?ranking=${encodeURIComponent(baseName)}`, {
+        headers: { 'Cache-Control': 'no-cache' },
+      });
+
+      if (!response.ok) return null;
+      const result = await response.json();
+      return result.success ? result.data : null;
+    }
+  } catch (error) {
+    console.error('Error fetching analytics data:', error);
+    return null;
+  }
+}
+
+/**
+ * Gets tournament details for a specific player
+ */
+export async function getPlayerAnalytics(rankingFilename: string, playerId: string): Promise<TournamentDetail[]> {
+  const analytics = await fetchAnalyticsData(rankingFilename);
+  if (!analytics) return [];
+  return analytics.details.filter(d => d.playerId === playerId);
+}
