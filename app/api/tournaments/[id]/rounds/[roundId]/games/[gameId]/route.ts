@@ -134,7 +134,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return notFoundError('Round not found')
     }
 
-    const tournament = round.tournaments
+    const tournament = Array.isArray(round.tournaments) ? round.tournaments[0] : round.tournaments
     if (!tournament) {
       return notFoundError(ERROR_MESSAGES.TOURNAMENT_NOT_FOUND)
     }
@@ -272,7 +272,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return notFoundError('Round not found')
     }
 
-    const tournament = round.tournaments
+    const tournament = Array.isArray(round.tournaments) ? round.tournaments[0] : round.tournaments
     if (!tournament) {
       return notFoundError(ERROR_MESSAGES.TOURNAMENT_NOT_FOUND)
     }
@@ -400,7 +400,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return notFoundError('Round not found')
     }
 
-    const tournament = round.tournaments
+    const tournament = Array.isArray(round.tournaments) ? round.tournaments[0] : round.tournaments
     if (!tournament) {
       return notFoundError(ERROR_MESSAGES.TOURNAMENT_NOT_FOUND)
     }

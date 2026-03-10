@@ -66,7 +66,8 @@ export async function POST(request: NextRequest) {
       address: body.address || null,
       telephone: body.telephone || null,
       mail: body.mail || null,
-      schedule: body.schedule || null
+      schedule: body.schedule || null,
+      image: body.image || null
     }
 
     const newClub = await createClub(clubData)

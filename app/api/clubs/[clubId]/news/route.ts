@@ -86,7 +86,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const isSiteAdmin = !!siteAdminCheck
 
     if (!isClubAdmin && !isSiteAdmin) {
-      return forbiddenError(ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS, 'You must be an admin of this club or a site admin to create news for this club')
+      return forbiddenError('You must be an admin of this club or a site admin to create news for this club')
     }
 
     // Parse and validate request body
@@ -96,6 +96,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Ensure the club_id matches the route parameter
     const newsData = {
       ...validatedData,
+      image: validatedData.image ?? undefined,
       club_id: clubId,
       created_by_auth_id: user.id
     }
