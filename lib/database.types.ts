@@ -108,6 +108,20 @@ export interface Database {
           recorded_at?: string
         }
       }
+      alumnos: {
+        Row: {
+          auth_id: string
+          created_at: string
+        }
+        Insert: {
+          auth_id: string
+          created_at?: string
+        }
+        Update: {
+          auth_id?: string
+          created_at?: string
+        }
+      }
       documentos: {
         Row: {
           id: number
