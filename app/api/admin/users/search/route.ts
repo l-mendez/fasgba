@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
     const perPage = Math.min(50, Math.max(1, parseInt(searchParams.get('per_page') || '15', 10)))
 
+    const excludeIds = searchParams.get('exclude')?.split(',').filter(Boolean) || []
+
     if (query && query.length < 3) {
       return validationError('La búsqueda debe tener al menos 3 caracteres')
     }
@@ -58,10 +60,11 @@ export async function GET(request: NextRequest) {
       // Club info is optional, don't fail the whole request
     }
 
-    // Sort by creation date (newest first)
-    let filtered = [...(authUsers || [])].sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )
+    // Sort by creation date (newest first), exclude specified IDs
+    const excludeSet = new Set(excludeIds)
+    let filtered = [...(authUsers || [])]
+      .filter((u) => !excludeSet.has(u.id))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
     // Apply search filter
     if (query) {

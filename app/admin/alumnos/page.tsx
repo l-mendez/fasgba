@@ -95,12 +95,13 @@ export default function AdminAlumnosPage() {
     }
   }, [])
 
-  const fetchUsers = useCallback(async (page: number, search: string) => {
+  const fetchUsers = useCallback(async (page: number, search: string, alumnoIds: string[]) => {
     setUsersLoading(true)
     try {
       const headers = await getAuthHeaders()
       const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) })
       if (search.trim().length >= 3) params.set("q", search.trim())
+      if (alumnoIds.length > 0) params.set("exclude", alumnoIds.join(","))
       const res = await fetch(`/api/admin/users/search?${params}`, { headers })
       const json = await res.json()
       if (res.ok) {
@@ -130,8 +131,8 @@ export default function AdminAlumnosPage() {
   }, [fetchAlumnos])
 
   useEffect(() => {
-    fetchUsers(usersPage, usersSearch)
-  }, [usersPage, usersSearch, fetchUsers])
+    fetchUsers(usersPage, usersSearch, alumnos.map(a => a.auth_id))
+  }, [usersPage, usersSearch, alumnos, fetchUsers])
 
   // Reset to page 1 when search changes
   const handleSearchChange = (value: string) => {
@@ -153,8 +154,7 @@ export default function AdminAlumnosPage() {
 
       if (res.ok) {
         setMessage({ type: "success", text: "Alumno agregado correctamente" })
-        fetchAlumnos()
-        fetchUsers(usersPage, usersSearch)
+        fetchAlumnos() // useEffect on alumnos will re-fetch users
       } else {
         setMessage({ type: "error", text: json.error || "Error al agregar alumno" })
       }
@@ -186,8 +186,6 @@ export default function AdminAlumnosPage() {
     }
   }
 
-  const alumnoIds = new Set(alumnos.map((a) => a.auth_id))
-  const availableUsers = users.filter((u) => !alumnoIds.has(u.id))
   const totalPages = Math.ceil(usersTotal / PER_PAGE)
 
   return (
@@ -236,7 +234,7 @@ export default function AdminAlumnosPage() {
             <div className="flex items-center justify-center py-6">
               <Loader2 className="h-5 w-5 animate-spin text-terracotta" />
             </div>
-          ) : availableUsers.length === 0 ? (
+          ) : users.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
               {usersSearch.trim().length >= 3
                 ? "No se encontraron usuarios con esa búsqueda."
@@ -244,7 +242,7 @@ export default function AdminAlumnosPage() {
             </p>
           ) : (
             <div className="border rounded-md divide-y">
-              {availableUsers.map((user) => (
+              {users.map((user) => (
                 <div key={user.id} className="flex items-center justify-between p-2.5 hover:bg-muted/50">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">
