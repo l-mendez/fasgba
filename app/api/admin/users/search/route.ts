@@ -8,54 +8,83 @@ export async function GET(request: NextRequest) {
     await requireAdmin(request)
 
     const { searchParams } = new URL(request.url)
-    const query = searchParams.get('q')?.trim()
+    const query = searchParams.get('q')?.trim()?.toLowerCase()
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
     const perPage = Math.min(50, Math.max(1, parseInt(searchParams.get('per_page') || '15', 10)))
 
-    // When searching, require at least 3 chars
     if (query && query.length < 3) {
       return validationError('La búsqueda debe tener al menos 3 caracteres')
     }
 
     const supabase = createAdminClient()
 
-    const offset = (page - 1) * perPage
-    let dbQuery = supabase
-      .from('users')
-      .select('auth_id, name, surname, email, club_id', { count: 'exact' })
-      .not('auth_id', 'is', null)
-      .order('created_at', { ascending: false })
+    // Fetch all auth users (up to 1000)
+    const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    })
 
+    if (authError) {
+      return handleError(authError)
+    }
+
+    // Fetch public.users for club info (safe separate query)
+    let clubMap: Record<string, string> = {}
+    try {
+      const { data: publicUsers } = await supabase
+        .from('users')
+        .select('auth_id, club_id')
+        .not('auth_id', 'is', null)
+        .not('club_id', 'is', null)
+
+      if (publicUsers && publicUsers.length > 0) {
+        const clubIds = [...new Set(publicUsers.map(u => u.club_id).filter(Boolean))]
+        if (clubIds.length > 0) {
+          const { data: clubs } = await supabase
+            .from('clubs')
+            .select('id, name')
+            .in('id', clubIds)
+
+          const clubNameMap: Record<number, string> = {}
+          clubs?.forEach(c => { clubNameMap[c.id] = c.name })
+          publicUsers.forEach(u => {
+            if (u.auth_id && u.club_id && clubNameMap[u.club_id]) {
+              clubMap[u.auth_id] = clubNameMap[u.club_id]
+            }
+          })
+        }
+      }
+    } catch {
+      // Club info is optional, don't fail the whole request
+    }
+
+    // Sort by creation date (newest first)
+    let filtered = [...(authUsers || [])].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+
+    // Apply search filter
     if (query) {
-      const pattern = `%${query}%`
-      dbQuery = dbQuery.or(`name.ilike.${pattern},surname.ilike.${pattern},email.ilike.${pattern}`)
+      filtered = filtered.filter((u) => {
+        const nombre = (u.user_metadata?.nombre || '').toLowerCase()
+        const apellido = (u.user_metadata?.apellido || '').toLowerCase()
+        const email = (u.email || '').toLowerCase()
+        const club = clubMap[u.id]?.toLowerCase() || ''
+        return nombre.includes(query) || apellido.includes(query) || email.includes(query) || club.includes(query)
+      })
     }
 
-    const { data: users, error, count } = await dbQuery.range(offset, offset + perPage - 1)
+    const total = filtered.length
+    const paged = filtered.slice((page - 1) * perPage, page * perPage)
 
-    if (error) {
-      return handleError(error)
-    }
-
-    // Fetch club names for users that have a club_id
-    const clubIds = [...new Set((users || []).map(u => u.club_id).filter(Boolean))]
-    let clubMap: Record<number, string> = {}
-    if (clubIds.length > 0) {
-      const { data: clubs } = await supabase
-        .from('clubs')
-        .select('id, name')
-        .in('id', clubIds)
-      clubs?.forEach(c => { clubMap[c.id] = c.name })
-    }
-
-    const mapped = (users || []).map((u) => ({
-      id: u.auth_id,
+    const mapped = paged.map((u) => ({
+      id: u.id,
       email: u.email,
-      user_metadata: { nombre: u.name, apellido: u.surname },
-      club_name: u.club_id ? clubMap[u.club_id] || null : null,
+      user_metadata: { nombre: u.user_metadata?.nombre || '', apellido: u.user_metadata?.apellido || '' },
+      club_name: clubMap[u.id] || null,
     }))
 
-    return apiSuccess({ users: mapped, total: count || 0, page, perPage })
+    return apiSuccess({ users: mapped, total, page, perPage })
   } catch (error) {
     return handleError(error)
   }
