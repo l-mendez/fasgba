@@ -9,13 +9,14 @@ import {
   CheckCircle2,
   Search,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Table,
   TableBody,
@@ -46,14 +47,28 @@ interface Alumno {
   created_at: string
 }
 
+interface UserResult {
+  id: string
+  email: string
+  nombre: string
+  apellido: string
+  club_name?: string
+}
+
+const PER_PAGE = 8
+
 export default function AdminAlumnosPage() {
   const [alumnos, setAlumnos] = useState<Alumno[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchEmail, setSearchEmail] = useState("")
-  const [searchResults, setSearchResults] = useState<Array<{ id: string; email: string; nombre: string; apellido: string; club_name?: string }>>([])
-  const [searching, setSearching] = useState(false)
-  const [adding, setAdding] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+
+  // Users list state
+  const [users, setUsers] = useState<UserResult[]>([])
+  const [usersTotal, setUsersTotal] = useState(0)
+  const [usersPage, setUsersPage] = useState(1)
+  const [usersLoading, setUsersLoading] = useState(true)
+  const [usersSearch, setUsersSearch] = useState("")
+  const [adding, setAdding] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -80,44 +95,50 @@ export default function AdminAlumnosPage() {
     }
   }, [])
 
+  const fetchUsers = useCallback(async (page: number, search: string) => {
+    setUsersLoading(true)
+    try {
+      const headers = await getAuthHeaders()
+      const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) })
+      if (search.trim().length >= 3) params.set("q", search.trim())
+      const res = await fetch(`/api/admin/users/search?${params}`, { headers })
+      if (res.ok) {
+        const json = await res.json()
+        const rawUsers = json.data?.users || json.users || []
+        setUsers(
+          rawUsers.map((u: any) => ({
+            id: u.id,
+            email: u.email || "",
+            nombre: u.user_metadata?.nombre || "",
+            apellido: u.user_metadata?.apellido || "",
+            club_name: u.club_name || "",
+          }))
+        )
+        setUsersTotal(json.data?.total ?? json.total ?? 0)
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error)
+    } finally {
+      setUsersLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     fetchAlumnos()
   }, [fetchAlumnos])
 
-  const handleSearch = async () => {
-    if (!searchEmail.trim() || searchEmail.trim().length < 3) return
-    setSearching(true)
-    setSearchResults([])
-    try {
-      const headers = await getAuthHeaders()
-      // Use the existing users search endpoint
-      const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(searchEmail.trim())}`, { headers })
-      if (res.ok) {
-        const json = await res.json()
-        const users = json.data?.users || json.users || []
-        // Filter out users already in alumnos
-        const alumnoIds = new Set(alumnos.map((a) => a.auth_id))
-        setSearchResults(
-          users
-            .filter((u: any) => u.id && !alumnoIds.has(u.id))
-            .map((u: any) => ({
-              id: u.id,
-              email: u.email || "",
-              nombre: u.user_metadata?.nombre || "",
-              apellido: u.user_metadata?.apellido || "",
-              club_name: u.club_name || "",
-            }))
-        )
-      }
-    } catch (error) {
-      console.error("Error searching users:", error)
-    } finally {
-      setSearching(false)
-    }
+  useEffect(() => {
+    fetchUsers(usersPage, usersSearch)
+  }, [usersPage, usersSearch, fetchUsers])
+
+  // Reset to page 1 when search changes
+  const handleSearchChange = (value: string) => {
+    setUsersSearch(value)
+    setUsersPage(1)
   }
 
   const handleAddAlumno = async (authId: string) => {
-    setAdding(true)
+    setAdding(authId)
     setMessage(null)
     try {
       const headers = await getAuthHeaders()
@@ -130,16 +151,15 @@ export default function AdminAlumnosPage() {
 
       if (res.ok) {
         setMessage({ type: "success", text: "Alumno agregado correctamente" })
-        setSearchEmail("")
-        setSearchResults([])
         fetchAlumnos()
+        fetchUsers(usersPage, usersSearch)
       } else {
         setMessage({ type: "error", text: json.error || "Error al agregar alumno" })
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: "error", text: "Error al agregar alumno" })
     } finally {
-      setAdding(false)
+      setAdding(null)
     }
   }
 
@@ -159,10 +179,14 @@ export default function AdminAlumnosPage() {
         const json = await res.json()
         setMessage({ type: "error", text: json.error || "Error al eliminar alumno" })
       }
-    } catch (error) {
+    } catch {
       setMessage({ type: "error", text: "Error al eliminar alumno" })
     }
   }
+
+  const alumnoIds = new Set(alumnos.map((a) => a.auth_id))
+  const availableUsers = users.filter((u) => !alumnoIds.has(u.id))
+  const totalPages = Math.ceil(usersTotal / PER_PAGE)
 
   return (
     <div className="space-y-6">
@@ -184,51 +208,47 @@ export default function AdminAlumnosPage() {
         </Alert>
       )}
 
-      {/* Add alumno */}
+      {/* Add alumno - paginated user list */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
             Agregar alumno
           </CardTitle>
-          <CardDescription>Buscá un usuario por nombre, email o club para agregarlo como alumno</CardDescription>
+          <CardDescription>Usuarios más recientes. Buscá por nombre, email o club para filtrar.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Label htmlFor="search-email" className="sr-only">
-                Email del usuario
-              </Label>
+          <div className="flex gap-2 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                id="search-email"
-                placeholder="Buscar por nombre, email o club..."
-                value={searchEmail}
-                onChange={(e) => setSearchEmail(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                placeholder="Filtrar por nombre, email o club..."
+                value={usersSearch}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-9"
               />
             </div>
-            <Button
-              onClick={handleSearch}
-              disabled={searching || searchEmail.trim().length < 3}
-              className="bg-terracotta hover:bg-terracotta/90"
-            >
-              {searching ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4" />
-              )}
-            </Button>
           </div>
 
-          {searchResults.length > 0 && (
-            <div className="mt-4 border rounded-md divide-y">
-              {searchResults.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-3">
-                  <div>
-                    <p className="text-sm font-medium">
+          {usersLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-terracotta" />
+            </div>
+          ) : availableUsers.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              {usersSearch.trim().length >= 3
+                ? "No se encontraron usuarios con esa búsqueda."
+                : "No hay usuarios disponibles para agregar."}
+            </p>
+          ) : (
+            <div className="border rounded-md divide-y">
+              {availableUsers.map((user) => (
+                <div key={user.id} className="flex items-center justify-between p-2.5 hover:bg-muted/50">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">
                       {user.nombre} {user.apellido}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground truncate">
                       {user.email}
                       {user.club_name && <span className="ml-2 text-terracotta">({user.club_name})</span>}
                     </p>
@@ -236,10 +256,10 @@ export default function AdminAlumnosPage() {
                   <Button
                     size="sm"
                     onClick={() => handleAddAlumno(user.id)}
-                    disabled={adding}
-                    className="bg-terracotta hover:bg-terracotta/90"
+                    disabled={adding === user.id}
+                    className="bg-terracotta hover:bg-terracotta/90 ml-2 shrink-0"
                   >
-                    {adding ? (
+                    {adding === user.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <UserPlus className="h-4 w-4" />
@@ -250,10 +270,31 @@ export default function AdminAlumnosPage() {
             </div>
           )}
 
-          {searching === false && searchEmail.trim().length >= 3 && searchResults.length === 0 && (
-            <p className="mt-4 text-sm text-muted-foreground">
-              No se encontraron usuarios disponibles con esa búsqueda.
-            </p>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-3">
+              <p className="text-xs text-muted-foreground">
+                Página {usersPage} de {totalPages} ({usersTotal} usuarios)
+              </p>
+              <div className="flex gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setUsersPage((p) => Math.max(1, p - 1))}
+                  disabled={usersPage <= 1 || usersLoading}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setUsersPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={usersPage >= totalPages || usersLoading}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

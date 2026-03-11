@@ -9,35 +9,42 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const query = searchParams.get('q')?.trim()
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
+    const perPage = Math.min(50, Math.max(1, parseInt(searchParams.get('per_page') || '15', 10)))
 
-    if (!query || query.length < 3) {
+    // When searching, require at least 3 chars
+    if (query && query.length < 3) {
       return validationError('La búsqueda debe tener al menos 3 caracteres')
     }
 
     const supabase = createAdminClient()
 
-    // Search public.users table by name, surname, or email
-    const pattern = `%${query}%`
-    const { data: users, error } = await supabase
+    const offset = (page - 1) * perPage
+    let dbQuery = supabase
       .from('users')
-      .select('auth_id, name, surname, email, club:clubs!users_club_id_fkey(name)')
-      .or(`name.ilike.${pattern},surname.ilike.${pattern},email.ilike.${pattern}`)
+      .select('auth_id, name, surname, email, club:clubs!users_club_id_fkey(name)', { count: 'exact' })
       .not('auth_id', 'is', null)
       .order('created_at', { ascending: false })
-      .limit(15)
+
+    if (query) {
+      const pattern = `%${query}%`
+      dbQuery = dbQuery.or(`name.ilike.${pattern},surname.ilike.${pattern},email.ilike.${pattern}`)
+    }
+
+    const { data: users, error, count } = await dbQuery.range(offset, offset + perPage - 1)
 
     if (error) {
       return handleError(error)
     }
 
-    const filtered = (users || []).map((u) => ({
+    const mapped = (users || []).map((u) => ({
       id: u.auth_id,
       email: u.email,
       user_metadata: { nombre: u.name, apellido: u.surname },
       club_name: (u.club as any)?.name || null,
     }))
 
-    return apiSuccess({ users: filtered })
+    return apiSuccess({ users: mapped, total: count || 0, page, perPage })
   } catch (error) {
     return handleError(error)
   }
