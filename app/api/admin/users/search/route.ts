@@ -16,24 +16,26 @@ export async function GET(request: NextRequest) {
 
     const supabase = createAdminClient()
 
-    // Search users by email using Supabase Auth Admin API
-    const { data: { users }, error } = await supabase.auth.admin.listUsers({
-      perPage: 20,
-    })
+    // Search public.users table by name, surname, or email
+    const pattern = `%${query}%`
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('auth_id, name, surname, email, club:clubs!users_club_id_fkey(name)')
+      .or(`name.ilike.${pattern},surname.ilike.${pattern},email.ilike.${pattern}`)
+      .not('auth_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(15)
 
     if (error) {
       return handleError(error)
     }
 
-    // Filter by email match (case-insensitive)
-    const filtered = users
-      .filter((u) => u.email?.toLowerCase().includes(query.toLowerCase()))
-      .slice(0, 10)
-      .map((u) => ({
-        id: u.id,
-        email: u.email,
-        user_metadata: u.user_metadata,
-      }))
+    const filtered = (users || []).map((u) => ({
+      id: u.auth_id,
+      email: u.email,
+      user_metadata: { nombre: u.name, apellido: u.surname },
+      club_name: (u.club as any)?.name || null,
+    }))
 
     return apiSuccess({ users: filtered })
   } catch (error) {

@@ -50,7 +50,7 @@ export default function AdminAlumnosPage() {
   const [alumnos, setAlumnos] = useState<Alumno[]>([])
   const [loading, setLoading] = useState(true)
   const [searchEmail, setSearchEmail] = useState("")
-  const [searchResults, setSearchResults] = useState<Array<{ id: string; email: string; nombre: string; apellido: string }>>([])
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; email: string; nombre: string; apellido: string; club_name?: string }>>([])
   const [searching, setSearching] = useState(false)
   const [adding, setAdding] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
@@ -105,6 +105,7 @@ export default function AdminAlumnosPage() {
               email: u.email || "",
               nombre: u.user_metadata?.nombre || "",
               apellido: u.user_metadata?.apellido || "",
+              club_name: u.club_name || "",
             }))
         )
       }
@@ -190,7 +191,7 @@ export default function AdminAlumnosPage() {
             <UserPlus className="h-5 w-5" />
             Agregar alumno
           </CardTitle>
-          <CardDescription>Buscá un usuario por email para agregarlo como alumno</CardDescription>
+          <CardDescription>Buscá un usuario por nombre, email o club para agregarlo como alumno</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2">
@@ -200,7 +201,7 @@ export default function AdminAlumnosPage() {
               </Label>
               <Input
                 id="search-email"
-                placeholder="Buscar por email..."
+                placeholder="Buscar por nombre, email o club..."
                 value={searchEmail}
                 onChange={(e) => setSearchEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -227,7 +228,10 @@ export default function AdminAlumnosPage() {
                     <p className="text-sm font-medium">
                       {user.nombre} {user.apellido}
                     </p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {user.email}
+                      {user.club_name && <span className="ml-2 text-terracotta">({user.club_name})</span>}
+                    </p>
                   </div>
                   <Button
                     size="sm"
@@ -248,7 +252,7 @@ export default function AdminAlumnosPage() {
 
           {searching === false && searchEmail.trim().length >= 3 && searchResults.length === 0 && (
             <p className="mt-4 text-sm text-muted-foreground">
-              No se encontraron usuarios disponibles con ese email.
+              No se encontraron usuarios disponibles con esa búsqueda.
             </p>
           )}
         </CardContent>
