@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ChevronDown, Search, GraduationCap, Loader2 } from "lucide-react"
+import { ChevronDown, Search, GraduationCap, Loader2, Shield } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -447,7 +447,8 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                           <DropdownMenuItem>
-                            <Link href={`/admin/usuarios/${user.id}/editar`} className="flex w-full">
+                            <Link href={`/admin/usuarios/${user.id}/editar`} className="flex w-full items-center">
+                              <Shield className="mr-2 h-4 w-4" />
                               Editar permisos
                             </Link>
                           </DropdownMenuItem>
