@@ -102,8 +102,8 @@ export default function AdminAlumnosPage() {
       const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) })
       if (search.trim().length >= 3) params.set("q", search.trim())
       const res = await fetch(`/api/admin/users/search?${params}`, { headers })
+      const json = await res.json()
       if (res.ok) {
-        const json = await res.json()
         const rawUsers = json.data?.users || json.users || []
         setUsers(
           rawUsers.map((u: any) => ({
@@ -115,6 +115,8 @@ export default function AdminAlumnosPage() {
           }))
         )
         setUsersTotal(json.data?.total ?? json.total ?? 0)
+      } else {
+        console.error("Error fetching users:", json.error || res.statusText)
       }
     } catch (error) {
       console.error("Error fetching users:", error)

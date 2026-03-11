@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * perPage
     let dbQuery = supabase
       .from('users')
-      .select('auth_id, name, surname, email, club:clubs!users_club_id_fkey(name)', { count: 'exact' })
+      .select('auth_id, name, surname, email, club_id, club:clubs(name)', { count: 'exact' })
       .not('auth_id', 'is', null)
       .order('created_at', { ascending: false })
 
