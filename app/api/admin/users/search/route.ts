@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * perPage
     let dbQuery = supabase
       .from('users')
-      .select('auth_id, name, surname, email, club_id, club:clubs(name)', { count: 'exact' })
+      .select('auth_id, name, surname, email, club_id', { count: 'exact' })
       .not('auth_id', 'is', null)
       .order('created_at', { ascending: false })
 
@@ -37,11 +37,22 @@ export async function GET(request: NextRequest) {
       return handleError(error)
     }
 
+    // Fetch club names for users that have a club_id
+    const clubIds = [...new Set((users || []).map(u => u.club_id).filter(Boolean))]
+    let clubMap: Record<number, string> = {}
+    if (clubIds.length > 0) {
+      const { data: clubs } = await supabase
+        .from('clubs')
+        .select('id, name')
+        .in('id', clubIds)
+      clubs?.forEach(c => { clubMap[c.id] = c.name })
+    }
+
     const mapped = (users || []).map((u) => ({
       id: u.auth_id,
       email: u.email,
       user_metadata: { nombre: u.name, apellido: u.surname },
-      club_name: (u.club as any)?.name || null,
+      club_name: u.club_id ? clubMap[u.club_id] || null : null,
     }))
 
     return apiSuccess({ users: mapped, total: count || 0, page, perPage })
