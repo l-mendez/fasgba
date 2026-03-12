@@ -3,75 +3,61 @@ import { Award, BookOpen, Calendar, GraduationCap, Mail, Phone, User, Clock } fr
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { createClient } from "@/lib/supabase/server"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
 
-// Datos de ejemplo para los árbitros
-const arbitros = [
-  {
-    id: "juan-perez",
-    nombre: "Juan Pérez",
-    titulo: "Árbitro Internacional",
-    club: "Club de Ajedrez Bahía Blanca",
-    experiencia: "15 años",
-    email: "juan.perez@fasgba.com",
-    telefono: "+54 291 123-4567",
-    especialidad: "Torneos Suizos y Normas Internacionales",
-  },
-  {
-    id: "maria-rodriguez",
-    nombre: "María Rodríguez",
-    titulo: "Árbitro FIDE",
-    club: "Círculo de Ajedrez Punta Alta",
-    experiencia: "10 años",
-    email: "maria.rodriguez@fasgba.com",
-    telefono: "+54 291 234-5678",
-    especialidad: "Torneos Juveniles y Escolares",
-  },
-  {
-    id: "carlos-gomez",
-    nombre: "Carlos Gómez",
-    titulo: "Árbitro Nacional",
-    club: "Club de Ajedrez Tres Arroyos",
-    experiencia: "8 años",
-    email: "carlos.gomez@fasgba.com",
-    telefono: "+54 291 345-6789",
-    especialidad: "Torneos Rápidos y Blitz",
-  },
-  {
-    id: "laura-fernandez",
-    nombre: "Laura Fernández",
-    titulo: "Árbitro FIDE",
-    club: "Círculo de Ajedrez Coronel Suárez",
-    experiencia: "12 años",
-    email: "laura.fernandez@fasgba.com",
-    telefono: "+54 291 456-7890",
-    especialidad: "Torneos por Equipos y Round Robin",
-  },
-  {
-    id: "roberto-martinez",
-    nombre: "Roberto Martínez",
-    titulo: "Árbitro Nacional",
-    club: "Club de Ajedrez Monte Hermoso",
-    experiencia: "6 años",
-    email: "roberto.martinez@fasgba.com",
-    telefono: "+54 291 567-8901",
-    especialidad: "Torneos Escolares y Formativos",
-  },
-  {
-    id: "ana-lopez",
-    nombre: "Ana López",
-    titulo: "Árbitro Regional",
-    club: "Círculo de Ajedrez Pigüé",
-    experiencia: "4 años",
-    email: "ana.lopez@fasgba.com",
-    telefono: "+54 291 678-9012",
-    especialidad: "Torneos Infantiles",
-  },
-]
+interface ArbitroWithClub {
+  id: number
+  name: string
+  title: string
+  photo: string | null
+  club_name: string | null
+  birth_year: number | null
+  bio: string | null
+  email: string | null
+  phone: string | null
+}
+
+async function fetchArbitros(): Promise<ArbitroWithClub[]> {
+  try {
+    const supabase = await createClient()
+
+    const { data, error } = await supabase
+      .from('arbitros')
+      .select('*, clubs(name)')
+      .order('name', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching arbitros:', error)
+      return []
+    }
+
+    return (data || []).map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      title: item.title,
+      photo: item.photo,
+      club_name: item.clubs?.name || null,
+      birth_year: item.birth_year,
+      bio: item.bio,
+      email: item.email,
+      phone: item.phone,
+    }))
+  } catch (error) {
+    console.error('Error fetching arbitros:', error)
+    return []
+  }
+}
+
+function getPhotoUrl(photo: string | null): string | null {
+  if (!photo) return null
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/images/${photo}`
+}
 
 // Datos de ejemplo para los cursos de arbitraje
 const cursos = [
@@ -104,7 +90,9 @@ const cursos = [
   },
 ]
 
-export default function ArbitrajePage() {
+export default async function ArbitrajePage() {
+  const arbitros = await fetchArbitros()
+
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader pathname="/arbitraje" />
@@ -129,44 +117,69 @@ export default function ArbitrajePage() {
                 Listado de árbitros habilitados por FASGBA para dirigir torneos oficiales
               </p>
             </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {arbitros.map((arbitro) => (
-                <Card key={arbitro.id} className="flex flex-col">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <User className="h-5 w-5" />
-                      {arbitro.nombre}
-                    </CardTitle>
-                    <CardDescription>{arbitro.titulo}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-1">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Award className="h-5 w-5 text-muted-foreground" />
-                        <span className="text-sm">Experiencia: {arbitro.experiencia}</span>
+            {arbitros.length === 0 ? (
+              <p className="text-muted-foreground text-center py-12">
+                No hay árbitros registrados actualmente.
+              </p>
+            ) : (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {arbitros.map((arbitro) => (
+                  <Card key={arbitro.id} className="flex flex-col">
+                    <CardHeader>
+                      <div className="flex items-center gap-3 mb-2">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={getPhotoUrl(arbitro.photo) || undefined} alt={arbitro.name} />
+                          <AvatarFallback>
+                            <User className="h-5 w-5" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <CardTitle className="text-lg">{arbitro.name}</CardTitle>
+                          <CardDescription>{arbitro.title}</CardDescription>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="h-5 w-5 text-muted-foreground" />
-                        <span className="text-sm">Especialidad: {arbitro.especialidad}</span>
+                    </CardHeader>
+                    <CardContent className="flex-1">
+                      <div className="space-y-3">
+                        {arbitro.club_name && (
+                          <div className="flex items-center gap-2">
+                            <Award className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-sm">{arbitro.club_name}</span>
+                          </div>
+                        )}
+                        {arbitro.birth_year && (
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-sm">Año de nacimiento: {arbitro.birth_year}</span>
+                          </div>
+                        )}
+                        {arbitro.email && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <a href={`mailto:${arbitro.email}`} className="text-sm text-primary hover:underline truncate">
+                              {arbitro.email}
+                            </a>
+                          </div>
+                        )}
+                        {arbitro.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <a href={`tel:${arbitro.phone}`} className="text-sm text-primary hover:underline">
+                              {arbitro.phone}
+                            </a>
+                          </div>
+                        )}
+                        {arbitro.bio && (
+                          <p className="text-sm text-muted-foreground line-clamp-3">
+                            {arbitro.bio}
+                          </p>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-5 w-5 text-muted-foreground" />
-                        <span className="text-sm">{arbitro.email}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-5 w-5 text-muted-foreground" />
-                        <span className="text-sm">{arbitro.telefono}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button asChild variant="outline" className="w-full">
-                      <Link href={`/arbitraje/${arbitro.id}`}>Ver Perfil</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </section>
         <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
@@ -296,4 +309,3 @@ export default function ArbitrajePage() {
     </div>
   )
 }
-
