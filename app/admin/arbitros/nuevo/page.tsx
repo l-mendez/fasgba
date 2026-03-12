@@ -1,14 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Upload, X, ImageIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
   SelectContent,
@@ -17,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 
 interface FormData {
   name: string
@@ -77,6 +79,11 @@ export default function NuevoArbitroPage() {
   })
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
+  // Image state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     async function fetchClubs() {
       try {
@@ -88,6 +95,33 @@ export default function NuevoArbitroPage() {
     }
     fetchClubs()
   }, [])
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("El archivo es demasiado grande. El tamaño máximo es 5MB.")
+      return
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Tipo de archivo no válido. Solo se permiten imágenes JPG, PNG, GIF y WebP.")
+      return
+    }
+
+    setSelectedFile(file)
+    const reader = new FileReader()
+    reader.onload = (e) => setImagePreview(e.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  const handleImageRemove = () => {
+    setSelectedFile(null)
+    setImagePreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   const validateForm = () => {
     const errors: Record<string, string> = {}
@@ -127,10 +161,31 @@ export default function NuevoArbitroPage() {
         photo: null,
       }
 
-      await apiCall('/arbitros', {
+      const result = await apiCall('/arbitros', {
         method: 'POST',
         body: JSON.stringify(arbitroData)
       })
+
+      // Upload photo if one was selected
+      if (selectedFile && result?.id) {
+        try {
+          const supabase = createClient()
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session) {
+            const uploadFormData = new globalThis.FormData()
+            uploadFormData.append('image', selectedFile)
+
+            await fetch(`/api/arbitros/${result.id}/upload-image`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${session.access_token}` },
+              body: uploadFormData,
+            })
+          }
+        } catch (uploadErr) {
+          console.error('Error uploading photo:', uploadErr)
+          toast.error("Árbitro creado, pero hubo un error al subir la foto.")
+        }
+      }
 
       router.push("/admin/arbitros")
     } catch (err) {
@@ -163,6 +218,69 @@ export default function NuevoArbitroPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Photo Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Foto del Árbitro</CardTitle>
+            <CardDescription>Sube una foto del árbitro (máximo 5MB)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {imagePreview ? (
+                <div className="relative inline-block">
+                  <img
+                    src={imagePreview}
+                    alt="Vista previa"
+                    className="h-32 w-32 object-cover rounded-lg border"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                    onClick={handleImageRemove}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Haz clic para subir una foto del árbitro
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    JPG, PNG, GIF o WebP (máx. 5MB)
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {imagePreview ? 'Cambiar foto' : 'Subir foto'}
+                </Button>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="name">Nombre Completo *</Label>
