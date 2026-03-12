@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const permission = validatePermissionParam(permissionParam)
     
     // Check if user is admin
-    const { data: admin } = await createClient()
+    const { data: admin } = await (await createClient())
       .from('admins')
       .select('auth_id')
       .eq('auth_id', user.id)

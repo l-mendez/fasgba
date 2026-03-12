@@ -18,7 +18,21 @@ export async function GET(request: NextRequest) {
     // Get the authorization header
     const authHeader = request.headers.get('authorization')
 
-    const response: Record<string, any> = {
+    const response: {
+      hasAuthHeader: boolean
+      authHeader: string | null
+      timestamp: string
+      tokenValid?: boolean
+      userId?: string | null
+      userEmail?: string | null
+      authError?: string | null
+      isAdmin?: boolean
+      adminError?: string | null
+      followedClubsCount?: number
+      followError?: string | null
+      adminClubsCount?: number
+      adminClubsError?: string | null
+    } = {
       hasAuthHeader: !!authHeader,
       authHeader: authHeader ? authHeader.substring(0, 20) + '...' : null,
       timestamp: new Date().toISOString()
@@ -69,7 +83,7 @@ export async function GET(request: NextRequest) {
     return Response.json(response)
   } catch (error) {
     return Response.json({
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : String(error),
       timestamp: new Date().toISOString()
     }, { status: 500 })
   }
