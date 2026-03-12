@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Upload, ImageIcon, Loader2, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -84,6 +84,36 @@ export default function NuevoProfesorPage() {
     tarifa_horaria: "",
   })
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("El archivo es demasiado grande. El tamaño máximo es 5MB.")
+      return
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      setError("Tipo de archivo no válido. Solo se permiten imágenes JPG, PNG, GIF y WebP.")
+      return
+    }
+
+    setSelectedImage(file)
+    const reader = new FileReader()
+    reader.onload = (e) => setImagePreview(e.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  const removeImage = () => {
+    setSelectedImage(null)
+    setImagePreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   useEffect(() => {
     async function fetchClubs() {
@@ -143,10 +173,25 @@ export default function NuevoProfesorPage() {
         tarifa_horaria: formData.tarifa_horaria.trim() || null,
       }
 
-      await apiCall('/profesores', {
+      const result = await apiCall('/profesores', {
         method: 'POST',
         body: JSON.stringify(profesorData)
       })
+
+      // Upload image if selected
+      if (selectedImage && result?.id) {
+        const supabase = createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          const imageForm = new FormData()
+          imageForm.append('image', selectedImage)
+          await fetch(`/api/profesores/${result.id}/upload-image`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${session.access_token}` },
+            body: imageForm,
+          })
+        }
+      }
 
       router.push("/admin/profesores")
     } catch (err) {
@@ -179,6 +224,60 @@ export default function NuevoProfesorPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Photo Section */}
+        <div className="grid gap-2">
+          <Label>Foto del Profesor</Label>
+          <div className="space-y-3">
+            {imagePreview ? (
+              <div className="relative inline-block">
+                <img
+                  src={imagePreview}
+                  alt="Vista previa"
+                  className="h-32 w-32 object-cover rounded-lg border"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <div
+                className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors max-w-xs"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <ImageIcon className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Haz clic para subir una foto
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  JPG, PNG, GIF o WebP (máx. 5MB)
+                </p>
+              </div>
+            )}
+            {imagePreview && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Cambiar foto
+              </Button>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+          </div>
+        </div>
+
         <div className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="titulo">Nombre del Profesor *</Label>
