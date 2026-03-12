@@ -8,7 +8,7 @@ import {
   Eye,
   Search,
   ChevronDown,
-  Award,
+  Phone,
 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
@@ -47,7 +47,7 @@ interface ArbitroRow {
   photo: string | null
   club_id: number | null
   club_name: string | null
-  birth_year: number | null
+  phone: string | null
   bio: string | null
 }
 
@@ -149,7 +149,7 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
         case 'name': aVal = a.name.toLowerCase(); bVal = b.name.toLowerCase(); break
         case 'title': aVal = a.title.toLowerCase(); bVal = b.title.toLowerCase(); break
         case 'club': aVal = (a.club_name || '').toLowerCase(); bVal = (b.club_name || '').toLowerCase(); break
-        case 'birth_year': aVal = a.birth_year || 0; bVal = b.birth_year || 0; break
+        case 'phone': aVal = (a.phone || '').toLowerCase(); bVal = (b.phone || '').toLowerCase(); break
         default: return 0
       }
       if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1
@@ -213,8 +213,8 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
             <DropdownMenuItem onClick={() => handleSort('club')}>
               Club {getSortIcon('club')}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSort('birth_year')}>
-              Año Nac. {getSortIcon('birth_year')}
+            <DropdownMenuItem onClick={() => handleSort('phone')}>
+              Teléfono {getSortIcon('phone')}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => { setSortBy(null); setSortOrder('original') }}>
@@ -247,10 +247,10 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
                   {getSortIcon('club') && <span className="text-xs">{getSortIcon('club')}</span>}
                 </div>
               </TableHead>
-              <TableHead className="cursor-pointer hover:bg-muted/50 select-none" onClick={() => handleSort('birth_year')}>
+              <TableHead className="cursor-pointer hover:bg-muted/50 select-none" onClick={() => handleSort('phone')}>
                 <div className="flex items-center gap-1">
-                  Año Nac.
-                  {getSortIcon('birth_year') && <span className="text-xs">{getSortIcon('birth_year')}</span>}
+                  Teléfono
+                  {getSortIcon('phone') && <span className="text-xs">{getSortIcon('phone')}</span>}
                 </div>
               </TableHead>
               <TableHead className="text-right">Acciones</TableHead>
@@ -269,7 +269,7 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
                   <TableCell className="font-medium">{arbitro.name}</TableCell>
                   <TableCell>{arbitro.title}</TableCell>
                   <TableCell>{arbitro.club_name || "Sin club"}</TableCell>
-                  <TableCell>{arbitro.birth_year || "—"}</TableCell>
+                  <TableCell>{arbitro.phone || "—"}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -328,10 +328,10 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
                       <span className="text-xs text-muted-foreground truncate">
                         {arbitro.club_name || "Sin club"}
                       </span>
-                      {arbitro.birth_year && (
+                      {arbitro.phone && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Award className="h-3 w-3" />
-                          <span>{arbitro.birth_year}</span>
+                          <Phone className="h-3 w-3" />
+                          <span>{arbitro.phone}</span>
                         </div>
                       )}
                     </div>

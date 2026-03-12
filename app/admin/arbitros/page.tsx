@@ -15,7 +15,7 @@ interface ArbitroRow {
   photo: string | null
   club_id: number | null
   club_name: string | null
-  birth_year: number | null
+  phone: string | null
   bio: string | null
 }
 
@@ -56,7 +56,7 @@ async function fetchArbitros(): Promise<ArbitroRow[]> {
       photo: item.photo,
       club_id: item.club_id,
       club_name: item.clubs?.name || null,
-      birth_year: item.birth_year,
+      phone: item.phone || null,
       bio: item.bio,
     }))
   } catch (error) {
