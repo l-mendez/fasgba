@@ -29,6 +29,9 @@ async function getProfesores() {
     modalidad: item.modalidad,
     zona: item.zona,
     biografia: item.biografia,
+    email: item.email,
+    telefono: item.telefono,
+    tarifa_horaria: item.tarifa_horaria,
     club_name: item.clubs?.name || null,
   }))
 }

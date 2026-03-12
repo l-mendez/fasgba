@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowLeft, MapPin, GraduationCap, Calendar } from "lucide-react"
+import { ArrowLeft, MapPin, GraduationCap, Calendar, Mail, Phone, DollarSign } from "lucide-react"
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 
@@ -132,6 +132,31 @@ export default async function ProfesorDetailPage({ params }: PageProps) {
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Calendar className="h-5 w-5 shrink-0" />
                       <span>Año de nacimiento: {profesor.anio_nacimiento}</span>
+                    </div>
+                  )}
+
+                  {profesor.email && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Mail className="h-5 w-5 shrink-0" />
+                      <a href={`mailto:${profesor.email}`} className="hover:underline text-amber">
+                        {profesor.email}
+                      </a>
+                    </div>
+                  )}
+
+                  {profesor.telefono && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Phone className="h-5 w-5 shrink-0" />
+                      <a href={`tel:${profesor.telefono}`} className="hover:underline text-amber">
+                        {profesor.telefono}
+                      </a>
+                    </div>
+                  )}
+
+                  {profesor.tarifa_horaria && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <DollarSign className="h-5 w-5 shrink-0" />
+                      <span>{profesor.tarifa_horaria}</span>
                     </div>
                   )}
                 </div>

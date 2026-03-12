@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { MapPin, ImageIcon, GraduationCap } from "lucide-react"
+import { MapPin, GraduationCap, Mail, Phone } from "lucide-react"
 import { Metadata } from "next"
 
 import { Badge } from "@/components/ui/badge"
@@ -104,6 +104,24 @@ async function ProfesoresList() {
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <MapPin className="h-4 w-4 shrink-0" />
                     {profesor.zona}
+                  </div>
+                )}
+
+                {profesor.email && (
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Mail className="h-4 w-4 shrink-0" />
+                    <a href={`mailto:${profesor.email}`} className="hover:underline truncate">
+                      {profesor.email}
+                    </a>
+                  </div>
+                )}
+
+                {profesor.telefono && (
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Phone className="h-4 w-4 shrink-0" />
+                    <a href={`tel:${profesor.telefono}`} className="hover:underline">
+                      {profesor.telefono}
+                    </a>
                   </div>
                 )}
 

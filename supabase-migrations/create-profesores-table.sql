@@ -8,6 +8,9 @@ CREATE TABLE profesores (
   modalidad VARCHAR(20) NOT NULL DEFAULT 'presencial' CHECK (modalidad IN ('presencial', 'virtual', 'ambos')),
   zona VARCHAR(255),
   biografia TEXT,
+  email VARCHAR(255),
+  telefono VARCHAR(50),
+  tarifa_horaria VARCHAR(100),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

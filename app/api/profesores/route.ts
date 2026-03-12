@@ -30,6 +30,9 @@ export async function GET(request: NextRequest) {
       modalidad: item.modalidad,
       zona: item.zona,
       biografia: item.biografia,
+      email: item.email,
+      telefono: item.telefono,
+      tarifa_horaria: item.tarifa_horaria,
       club_name: item.clubs?.name || null,
     }))
 
@@ -77,6 +80,9 @@ export async function POST(request: NextRequest) {
       modalidad: body.modalidad || 'presencial',
       zona: body.zona || null,
       biografia: body.biografia || null,
+      email: body.email || null,
+      telefono: body.telefono || null,
+      tarifa_horaria: body.tarifa_horaria || null,
     }
 
     const newProfesor = await createProfesor(profesorData)

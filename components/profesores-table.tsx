@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal, Pencil, Trash2, Search, MapPin, Monitor, Users2 } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Search, MapPin, Monitor, Users2, Mail, Phone } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -51,6 +51,9 @@ interface Profesor {
   modalidad: string
   zona: string | null
   biografia: string | null
+  email: string | null
+  telefono: string | null
+  tarifa_horaria: string | null
   club_name: string | null
 }
 
@@ -255,6 +258,18 @@ export function ProfesoresTable({ profesores: initialProfesores }: ProfesoresTab
                   <span className="flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
                     {profesor.zona}
+                  </span>
+                )}
+                {profesor.email && (
+                  <span className="flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    {profesor.email}
+                  </span>
+                )}
+                {profesor.telefono && (
+                  <span className="flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    {profesor.telefono}
                   </span>
                 )}
               </div>

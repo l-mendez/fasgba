@@ -30,6 +30,9 @@ interface FormData {
   modalidad: string
   zona: string
   biografia: string
+  email: string
+  telefono: string
+  tarifa_horaria: string
 }
 
 async function apiCall(endpoint: string, options: RequestInit = {}) {
@@ -76,6 +79,9 @@ export default function NuevoProfesorPage() {
     modalidad: "presencial",
     zona: "",
     biografia: "",
+    email: "",
+    telefono: "",
+    tarifa_horaria: "",
   })
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
@@ -105,6 +111,10 @@ export default function NuevoProfesorPage() {
       }
     }
 
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = "Email no válido"
+    }
+
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -128,6 +138,9 @@ export default function NuevoProfesorPage() {
         modalidad: formData.modalidad,
         zona: formData.zona.trim() || null,
         biografia: formData.biografia.trim() || null,
+        email: formData.email.trim() || null,
+        telefono: formData.telefono.trim() || null,
+        tarifa_horaria: formData.tarifa_horaria.trim() || null,
       }
 
       await apiCall('/profesores', {
@@ -245,6 +258,47 @@ export default function NuevoProfesorPage() {
               value={formData.zona}
               onChange={handleChange}
               placeholder="Ej: Zona Sur, Lomas de Zamora"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="email">Correo Electrónico</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Ej: profesor@email.com"
+                className={validationErrors.email ? "border-red-500" : ""}
+              />
+              {validationErrors.email && (
+                <p className="text-sm text-red-500">{validationErrors.email}</p>
+              )}
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="telefono">Teléfono</Label>
+              <Input
+                id="telefono"
+                name="telefono"
+                type="tel"
+                value={formData.telefono}
+                onChange={handleChange}
+                placeholder="Ej: +54 11 1234-5678"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="tarifa_horaria">Tarifa Horaria</Label>
+            <Input
+              id="tarifa_horaria"
+              name="tarifa_horaria"
+              value={formData.tarifa_horaria}
+              onChange={handleChange}
+              placeholder="Ej: $5000/hora, Consultar"
             />
           </div>
 

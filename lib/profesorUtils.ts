@@ -14,6 +14,9 @@ export interface Profesor {
   modalidad: 'presencial' | 'virtual' | 'ambos'
   zona: string | null
   biografia: string | null
+  email: string | null
+  telefono: string | null
+  tarifa_horaria: string | null
 }
 
 export interface ProfesorWithClub extends Profesor {
@@ -57,6 +60,9 @@ export async function getAllProfesores(options: {
       modalidad: item.modalidad,
       zona: item.zona,
       biografia: item.biografia,
+      email: item.email,
+      telefono: item.telefono,
+      tarifa_horaria: item.tarifa_horaria,
       club_name: item.clubs?.name || null,
     }))
   } catch (error) {
@@ -92,6 +98,9 @@ export async function getProfesorById(id: number): Promise<ProfesorWithClub | nu
     modalidad: data.modalidad,
     zona: data.zona,
     biografia: data.biografia,
+    email: data.email,
+    telefono: data.telefono,
+    tarifa_horaria: data.tarifa_horaria,
     club_name: (data as any).clubs?.name || null,
   }
 }

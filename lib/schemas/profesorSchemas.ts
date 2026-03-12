@@ -9,6 +9,9 @@ export const profesorSchema = z.object({
   modalidad: z.enum(['presencial', 'virtual', 'ambos']),
   zona: z.string().max(255, 'Zona demasiado larga').nullable(),
   biografia: z.string().nullable(),
+  email: z.string().email('Email no válido').max(255).nullable().or(z.literal('')).transform(v => v || null),
+  telefono: z.string().max(50, 'Teléfono demasiado largo').nullable().or(z.literal('')).transform(v => v || null),
+  tarifa_horaria: z.string().max(100, 'Tarifa demasiado larga').nullable().or(z.literal('')).transform(v => v || null),
 })
 
 export const createProfesorSchema = profesorSchema.omit({ id: true })
