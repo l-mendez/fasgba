@@ -41,7 +41,7 @@ export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
           return
         }
 
-        const { data } = await res.json()
+        const data = await res.json()
 
         setUser({
           id: session.user.id,
