@@ -90,6 +90,7 @@ Zod schemas for clubs, users, news, tournaments. Used for request body validatio
 
 ## Key Conventions
 
+- **UX is the priority on all features** — minimize steps, avoid requiring users to copy/paste between pages, provide search by multiple fields (name, email, club), and keep workflows intuitive
 - Server Components by default; use `'use client'` only for interactivity
 - Spanish localization in UI and email templates
 - Custom theme colors: amber (#daa056), terracotta (#8f3f12)

@@ -56,6 +56,41 @@ export interface Database {
           updated_at?: string
         }
       }
+      arbitros: {
+        Row: {
+          id: number
+          name: string
+          title: string
+          photo: string | null
+          club_id: number | null
+          birth_year: number | null
+          bio: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          name: string
+          title: string
+          photo?: string | null
+          club_id?: number | null
+          birth_year?: number | null
+          bio?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          name?: string
+          title?: string
+          photo?: string | null
+          club_id?: number | null
+          birth_year?: number | null
+          bio?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       clubs: {
         Row: {
           id: number
@@ -106,6 +141,20 @@ export interface Database {
           user_id?: number
           elo?: number
           recorded_at?: string
+        }
+      }
+      alumnos: {
+        Row: {
+          auth_id: string
+          created_at: string
+        }
+        Insert: {
+          auth_id: string
+          created_at?: string
+        }
+        Update: {
+          auth_id?: string
+          created_at?: string
         }
       }
       documentos: {

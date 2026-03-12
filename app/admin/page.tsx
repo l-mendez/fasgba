@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { FileText, FolderOpen, Home, Plus, Trophy, Users, AlertCircle } from "lucide-react"
+import { Award, FileText, FolderOpen, GraduationCap, Home, Plus, Trophy, Users, AlertCircle } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -301,6 +301,18 @@ export default async function AdminDashboard() {
                 <Link href="/admin/jugadores">
                   <Users className="mr-2 h-4 w-4" />
                   Gestionar jugadores
+                </Link>
+              </Button>
+              <Button asChild className="w-full justify-start" variant="outline">
+                <Link href="/admin/arbitros">
+                  <Award className="mr-2 h-4 w-4" />
+                  Gestionar árbitros
+                </Link>
+              </Button>
+              <Button asChild className="w-full justify-start" variant="outline">
+                <Link href="/admin/alumnos">
+                  <GraduationCap className="mr-2 h-4 w-4" />
+                  Gestionar alumnos
                 </Link>
               </Button>
               <Button asChild className="w-full justify-start" variant="outline">
