@@ -31,6 +31,8 @@ export async function POST(request: NextRequest) {
       club_id: validatedData.club_id || null,
       birth_year: validatedData.birth_year || null,
       bio: validatedData.bio || null,
+      email: validatedData.email || null,
+      phone: validatedData.phone || null,
     })
 
     return apiSuccess(newArbitro, 201)
