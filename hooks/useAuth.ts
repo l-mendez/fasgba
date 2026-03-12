@@ -35,27 +35,21 @@ export function useAuth(): AuthState {
   const supabase = createClient()
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       if (session?.user) {
-        fetchUserPermissions(session.user.id)
-        fetchClubAdminStatus(session.user.id)
-        fetchAlumnoStatus(session.user.id)
+        fetchPermissionsFromAPI(session.access_token)
       } else {
         setIsLoading(false)
       }
     })
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) {
-        fetchUserPermissions(session.user.id)
-        fetchClubAdminStatus(session.user.id)
-        fetchAlumnoStatus(session.user.id)
+        fetchPermissionsFromAPI(session.access_token)
       } else {
         setPermissions(null)
         setIsClubAdmin(false)
@@ -69,93 +63,42 @@ export function useAuth(): AuthState {
     return () => subscription.unsubscribe()
   }, [])
 
-  const fetchUserPermissions = async (userId: string) => {
+  const fetchPermissionsFromAPI = async (token: string) => {
     try {
       setError(undefined)
-      
-      // Check if user is admin
-      const { data: adminData, error: adminError } = await supabase
-        .from('admins')
-        .select('auth_id')
-        .eq('auth_id', userId)
-        .single()
 
-      // Handle case where table might not exist or user is not an admin
-      const isAdmin = !adminError && !!adminData
+      const res = await fetch('/api/users/me/permissions', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
 
-      // If error is not "No rows returned", it might be a table access issue
-      if (adminError && adminError.code !== 'PGRST116') {
-        console.warn('Admin table access error:', adminError)
-        setError(`Database access issue: ${adminError.message}`)
+      if (!res.ok) {
+        throw new Error('Error al obtener permisos')
       }
 
-      const userPermissions: UserPermissions = {
-        canEditProfile: true,
-        canViewAdmin: isAdmin,
-        canManageUsers: isAdmin,
-        canManageContent: isAdmin,
-        isAdmin: isAdmin
-      }
+      const { data } = await res.json()
 
-      setPermissions(userPermissions)
-    } catch (error) {
-      console.error('Error fetching user permissions:', error)
-      setError(error instanceof Error ? error.message : 'Unknown error')
-      
-      // Set default permissions on error
+      setPermissions({
+        canEditProfile: data.canEditProfile,
+        canViewAdmin: data.canViewAdmin,
+        canManageUsers: data.canManageUsers,
+        canManageContent: data.canManageContent,
+        isAdmin: data.isAdmin,
+      })
+      setIsClubAdmin(data.isClubAdmin)
+      setIsAlumno(data.isAlumno)
+      setAdminClubsCount(data.adminClubsCount)
+    } catch (err) {
+      console.error('Error fetching permissions:', err)
+      setError(err instanceof Error ? err.message : 'Unknown error')
       setPermissions({
         canEditProfile: true,
         canViewAdmin: false,
         canManageUsers: false,
         canManageContent: false,
-        isAdmin: false
+        isAdmin: false,
       })
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const fetchAlumnoStatus = async (userId: string) => {
-    try {
-      const { data, error: alumnoError } = await supabase
-        .from('alumnos')
-        .select('auth_id')
-        .eq('auth_id', userId)
-        .single()
-
-      if (alumnoError && alumnoError.code !== 'PGRST116') {
-        console.warn('Alumnos table access error:', alumnoError)
-      }
-
-      setIsAlumno(!alumnoError && !!data)
-    } catch (error) {
-      console.error('Error fetching alumno status:', error)
-      setIsAlumno(false)
-    }
-  }
-
-  const fetchClubAdminStatus = async (userId: string) => {
-    try {
-      const { count, error: clubAdminError } = await supabase
-        .from('club_admins')
-        .select('*', { count: 'exact', head: true })
-        .eq('auth_id', userId)
-
-      if (clubAdminError) {
-        console.warn('Club admins table access error:', clubAdminError)
-        if (clubAdminError.code !== 'PGRST116') {
-          setError(`Club admin table access issue: ${clubAdminError.message}`)
-        }
-        setIsClubAdmin(false)
-        setAdminClubsCount(0)
-      } else {
-        setAdminClubsCount(count || 0)
-        setIsClubAdmin((count || 0) > 0)
-      }
-    } catch (error) {
-      console.error('Error fetching club admin status:', error)
-      setIsClubAdmin(false)
-      setAdminClubsCount(0)
     }
   }
 
@@ -170,4 +113,4 @@ export function useAuth(): AuthState {
     adminClubsCount,
     error
   }
-} 
+}
