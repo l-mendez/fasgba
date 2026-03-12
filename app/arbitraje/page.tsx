@@ -19,6 +19,8 @@ interface ArbitroWithClub {
   club_name: string | null
   birth_year: number | null
   bio: string | null
+  email: string | null
+  phone: string | null
 }
 
 async function fetchArbitros(): Promise<ArbitroWithClub[]> {
@@ -43,6 +45,8 @@ async function fetchArbitros(): Promise<ArbitroWithClub[]> {
       club_name: item.clubs?.name || null,
       birth_year: item.birth_year,
       bio: item.bio,
+      email: item.email,
+      phone: item.phone,
     }))
   } catch (error) {
     console.error('Error fetching arbitros:', error)
@@ -147,6 +151,22 @@ export default async function ArbitrajePage() {
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             <span className="text-sm">Año de nacimiento: {arbitro.birth_year}</span>
+                          </div>
+                        )}
+                        {arbitro.email && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <a href={`mailto:${arbitro.email}`} className="text-sm text-primary hover:underline truncate">
+                              {arbitro.email}
+                            </a>
+                          </div>
+                        )}
+                        {arbitro.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <a href={`tel:${arbitro.phone}`} className="text-sm text-primary hover:underline">
+                              {arbitro.phone}
+                            </a>
                           </div>
                         )}
                         {arbitro.bio && (

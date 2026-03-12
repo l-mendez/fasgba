@@ -8,6 +8,8 @@ export const arbitroSchema = z.object({
   club_id: z.number().int().positive().nullable(),
   birth_year: z.number().int().min(1900).max(new Date().getFullYear()).nullable(),
   bio: z.string().max(2000, 'La reseña es demasiado larga').nullable(),
+  email: z.string().email('Email inválido').max(255).nullable().optional().or(z.literal('')).transform(v => v || null),
+  phone: z.string().max(50, 'Teléfono demasiado largo').nullable().optional().or(z.literal('')).transform(v => v || null),
 })
 
 export const createArbitroSchema = arbitroSchema.omit({ id: true })

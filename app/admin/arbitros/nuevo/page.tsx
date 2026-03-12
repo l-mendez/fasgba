@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Upload, X, ImageIcon } from "lucide-react"
+import { ArrowLeft, Upload, X, ImageIcon, Mail, Phone } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,6 +26,8 @@ interface FormData {
   club_id: string
   birth_year: string
   bio: string
+  email: string
+  phone: string
 }
 
 interface ClubOption {
@@ -76,6 +78,8 @@ export default function NuevoArbitroPage() {
     club_id: "",
     birth_year: "",
     bio: "",
+    email: "",
+    phone: "",
   })
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
@@ -135,6 +139,9 @@ export default function NuevoArbitroPage() {
     if (formData.birth_year && (isNaN(Number(formData.birth_year)) || Number(formData.birth_year) < 1900 || Number(formData.birth_year) > new Date().getFullYear())) {
       errors.birth_year = "Año de nacimiento inválido"
     }
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = "Email inválido"
+    }
 
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
@@ -158,6 +165,8 @@ export default function NuevoArbitroPage() {
         club_id: formData.club_id ? Number(formData.club_id) : null,
         birth_year: formData.birth_year ? Number(formData.birth_year) : null,
         bio: formData.bio.trim() || null,
+        email: formData.email.trim() || null,
+        phone: formData.phone.trim() || null,
         photo: null,
       }
 
@@ -347,6 +356,42 @@ export default function NuevoArbitroPage() {
             {validationErrors.birth_year && (
               <p className="text-sm text-red-500">{validationErrors.birth_year}</p>
             )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="email">Correo Electrónico</Label>
+              <div className="relative">
+                <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="Ej: arbitro@email.com"
+                  className={`pl-8 ${validationErrors.email ? "border-red-500" : ""}`}
+                />
+              </div>
+              {validationErrors.email && (
+                <p className="text-sm text-red-500">{validationErrors.email}</p>
+              )}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="phone">Teléfono</Label>
+              <div className="relative">
+                <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="Ej: +54 11 1234-5678"
+                  className="pl-8"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="grid gap-2">

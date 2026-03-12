@@ -14,6 +14,8 @@ export interface Arbitro {
   club_id: number | null
   birth_year: number | null
   bio: string | null
+  email: string | null
+  phone: string | null
   created_at: string
   updated_at: string
 }
@@ -53,6 +55,8 @@ export async function getAllArbitros(options: {
       club_id: item.club_id,
       birth_year: item.birth_year,
       bio: item.bio,
+      email: item.email,
+      phone: item.phone,
       created_at: item.created_at,
       updated_at: item.updated_at,
       club_name: item.clubs?.name || null,
@@ -89,6 +93,8 @@ export async function getArbitroById(arbitroId: number): Promise<ArbitroWithClub
     club_id: data.club_id,
     birth_year: data.birth_year,
     bio: data.bio,
+    email: data.email,
+    phone: data.phone,
     created_at: data.created_at,
     updated_at: data.updated_at,
     club_name: (data as any).clubs?.name || null,
