@@ -75,7 +75,7 @@ export function useAuth(): AuthState {
         throw new Error('Error al obtener permisos')
       }
 
-      const { data } = await res.json()
+      const data = await res.json()
 
       setPermissions({
         canEditProfile: data.canEditProfile,
