@@ -57,17 +57,6 @@ export default function ClubAdminLayout({ children }: ClubAdminLayoutProps) {
             Jugadores
           </Link>
           <Link
-            href="/club-admin/noticias"
-            className={cn(
-              "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
-              pathname.startsWith("/club-admin/noticias") ? "bg-amber/10 text-amber" : "text-muted-foreground"
-            )}
-            onClick={onLinkClick}
-          >
-            <FileText className="mr-2 h-4 w-4" />
-            Noticias
-          </Link>
-          <Link
             href="/club-admin/torneos"
             className={cn(
               "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
@@ -77,6 +66,17 @@ export default function ClubAdminLayout({ children }: ClubAdminLayoutProps) {
           >
             <Trophy className="mr-2 h-4 w-4" />
             Torneos
+          </Link>
+          <Link
+            href="/club-admin/noticias"
+            className={cn(
+              "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
+              pathname.startsWith("/club-admin/noticias") ? "bg-amber/10 text-amber" : "text-muted-foreground"
+            )}
+            onClick={onLinkClick}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Noticias
           </Link>
           <Link
             href="/club-admin/settings"

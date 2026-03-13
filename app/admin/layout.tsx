@@ -88,17 +88,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             Usuarios
           </Link>
           <Link
-            href="/admin/noticias"
-            className={cn(
-              "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
-              pathname.startsWith("/admin/noticias") ? "bg-amber/10 text-amber" : "text-muted-foreground"
-            )}
-            onClick={onLinkClick}
-          >
-            <FileText className="mr-2 h-4 w-4" />
-            Noticias
-          </Link>
-          <Link
             href="/admin/torneos"
             className={cn(
               "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
@@ -121,17 +110,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             Clubes
           </Link>
           <Link
-            href="/admin/arbitros"
-            className={cn(
-              "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
-              pathname.startsWith("/admin/arbitros") ? "bg-amber/10 text-amber" : "text-muted-foreground"
-            )}
-            onClick={onLinkClick}
-          >
-            <Award className="mr-2 h-4 w-4" />
-            Árbitros
-          </Link>
-          <Link
             href="/admin/ranking"
             className={cn(
               "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
@@ -141,6 +119,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           >
             <BarChart3 className="mr-2 h-4 w-4" />
             Ranking
+          </Link>
+          <Link
+            href="/admin/noticias"
+            className={cn(
+              "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
+              pathname.startsWith("/admin/noticias") ? "bg-amber/10 text-amber" : "text-muted-foreground"
+            )}
+            onClick={onLinkClick}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Noticias
           </Link>
           <Link
             href="/admin/jugadores"
@@ -185,6 +174,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           >
             <GraduationCap className="mr-2 h-4 w-4" />
             Alumnos
+          </Link>
+          <Link
+            href="/admin/arbitros"
+            className={cn(
+              "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
+              pathname.startsWith("/admin/arbitros") ? "bg-amber/10 text-amber" : "text-muted-foreground"
+            )}
+            onClick={onLinkClick}
+          >
+            <Award className="mr-2 h-4 w-4" />
+            Árbitros
           </Link>
         </div>
       </div>
