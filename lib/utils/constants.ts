@@ -59,6 +59,7 @@ export const ERROR_MESSAGES = {
   FILE_TOO_LARGE: 'File size exceeds limit',
   
   // Resources
+  ARBITRO_NOT_FOUND: 'Arbitro not found',
   CLUB_NOT_FOUND: 'Club not found',
   TOURNAMENT_NOT_FOUND: 'Tournament not found',
   USER_NOT_FOUND: 'User not found',

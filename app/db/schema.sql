@@ -25,6 +25,12 @@ CREATE TABLE elohistory (
     recorded_at TIMESTAMP DEFAULT NOW()
 );
 
+-- 3️⃣b Alumnos Table (School students with access to escuela documents)
+CREATE TABLE alumnos (
+    auth_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- 4️⃣ Table for Club Admins (Many-to-Many Relationship) - Now uses auth_id
 CREATE TABLE club_admins (
     auth_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
