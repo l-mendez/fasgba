@@ -274,13 +274,7 @@ export default async function AdminDashboard() {
           <CardContent>
             <div className="grid gap-2 md:gap-3">
               <Button asChild className="w-full justify-start" variant="outline">
-                <Link href="/noticias/nueva?source=admin">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Nueva noticia
-                </Link>
-              </Button>
-              <Button asChild className="w-full justify-start" variant="outline">
-                                  <Link href="/torneos/nuevo">
+                <Link href="/torneos/nuevo">
                   <Trophy className="mr-2 h-4 w-4" />
                   Nuevo torneo
                 </Link>
@@ -298,6 +292,12 @@ export default async function AdminDashboard() {
                 </Link>
               </Button>
               <Button asChild className="w-full justify-start" variant="outline">
+                <Link href="/noticias/nueva?source=admin">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Nueva noticia
+                </Link>
+              </Button>
+              <Button asChild className="w-full justify-start" variant="outline">
                 <Link href="/admin/jugadores">
                   <Users className="mr-2 h-4 w-4" />
                   Gestionar jugadores
@@ -310,9 +310,9 @@ export default async function AdminDashboard() {
                 </Link>
               </Button>
               <Button asChild className="w-full justify-start" variant="outline">
-                <Link href="/admin/arbitros">
-                  <Award className="mr-2 h-4 w-4" />
-                  Gestionar árbitros
+                <Link href="/admin/documentos">
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  Agregar documento nuevo
                 </Link>
               </Button>
               <Button asChild className="w-full justify-start" variant="outline">
@@ -322,9 +322,9 @@ export default async function AdminDashboard() {
                 </Link>
               </Button>
               <Button asChild className="w-full justify-start" variant="outline">
-                <Link href="/admin/documentos">
-                  <FolderOpen className="mr-2 h-4 w-4" />
-                  Agregar documento nuevo
+                <Link href="/admin/arbitros">
+                  <Award className="mr-2 h-4 w-4" />
+                  Gestionar árbitros
                 </Link>
               </Button>
             </div>

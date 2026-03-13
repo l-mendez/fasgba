@@ -1,13 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { FileText, FileSpreadsheet, Download, Eye, Calendar, Lock, Loader2 } from "lucide-react"
+import { FileText, FileSpreadsheet, Download, Eye, Calendar, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { useAuth } from "@/hooks/useAuth"
 import {
   DOCUMENT_CATEGORIES,
   CATEGORY_COLORS,
@@ -26,13 +24,10 @@ interface EscuelaDocumento {
 }
 
 function EscuelaDocumentCard({ documento }: { documento: EscuelaDocumento }) {
-  const { isAuthenticated, isAlumno, isAdmin, isLoading: authLoading } = useAuth()
   const [loading, setLoading] = useState(false)
-  const hasAccess = isAuthenticated && (isAlumno || isAdmin)
   const isExcel = documento.file_ext === 'xls' || documento.file_ext === 'xlsx'
 
   const handleAction = async (action: 'view' | 'download') => {
-    if (!hasAccess) return
     setLoading(true)
     try {
       const supabase = createClient()
@@ -44,12 +39,12 @@ function EscuelaDocumentCard({ documento }: { documento: EscuelaDocumento }) {
       })
       const json = await res.json()
 
-      if (res.ok && json.data?.url) {
+      if (res.ok && json.url) {
         if (action === 'view') {
-          window.open(json.data.url, '_blank')
+          window.open(json.url, '_blank')
         } else {
           const a = document.createElement('a')
-          a.href = json.data.url
+          a.href = json.url
           a.download = `${documento.name}.${documento.file_ext || 'pdf'}`
           document.body.appendChild(a)
           a.click()
@@ -97,58 +92,35 @@ function EscuelaDocumentCard({ documento }: { documento: EscuelaDocumento }) {
           </div>
         </div>
 
-        <div className="mt-4">
-          {authLoading ? (
-            <div className="flex items-center justify-center py-2 text-muted-foreground text-sm">
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Verificando acceso...
-            </div>
-          ) : hasAccess ? (
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => handleAction('view')}
-                disabled={loading}
-              >
-                {loading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Eye className="mr-2 h-4 w-4" />
-                )}
-                Ver
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => handleAction('download')}
-                disabled={loading}
-              >
-                {loading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="mr-2 h-4 w-4" />
-                )}
-                Descargar
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 py-2 text-muted-foreground text-sm">
-              <Lock className="h-4 w-4" />
-              {!isAuthenticated ? (
-                <span>
-                  <Link href="/login" className="text-terracotta hover:underline">
-                    Iniciá sesión
-                  </Link>
-                  {" "}para acceder
-                </span>
-              ) : (
-                <span>Acceso restringido a alumnos de la escuela</span>
-              )}
-            </div>
-          )}
+        <div className="flex gap-2 mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={() => handleAction('view')}
+            disabled={loading}
+          >
+            {loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Eye className="mr-2 h-4 w-4" />
+            )}
+            Ver
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={() => handleAction('download')}
+            disabled={loading}
+          >
+            {loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Descargar
+          </Button>
         </div>
       </CardContent>
     </Card>
