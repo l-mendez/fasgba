@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { FileText, FileSpreadsheet, Download, Eye, Calendar, Loader2 } from "lucide-react"
+import { FileText, FileSpreadsheet, Download, Eye, Calendar, Lock, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -24,11 +24,11 @@ interface EscuelaDocumento {
 }
 
 function EscuelaDocumentCard({ documento }: { documento: EscuelaDocumento }) {
-  const [loading, setLoading] = useState(false)
+  const [loadingAction, setLoadingAction] = useState<'view' | 'download' | null>(null)
   const isExcel = documento.file_ext === 'xls' || documento.file_ext === 'xlsx'
 
   const handleAction = async (action: 'view' | 'download') => {
-    setLoading(true)
+    setLoadingAction(action)
     try {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
@@ -54,7 +54,7 @@ function EscuelaDocumentCard({ documento }: { documento: EscuelaDocumento }) {
     } catch (error) {
       console.error('Error fetching document URL:', error)
     } finally {
-      setLoading(false)
+      setLoadingAction(null)
     }
   }
 
@@ -98,9 +98,9 @@ function EscuelaDocumentCard({ documento }: { documento: EscuelaDocumento }) {
             size="sm"
             className="flex-1"
             onClick={() => handleAction('view')}
-            disabled={loading}
+            disabled={loadingAction !== null}
           >
-            {loading ? (
+            {loadingAction === 'view' ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Eye className="mr-2 h-4 w-4" />
@@ -112,9 +112,9 @@ function EscuelaDocumentCard({ documento }: { documento: EscuelaDocumento }) {
             size="sm"
             className="flex-1"
             onClick={() => handleAction('download')}
-            disabled={loading}
+            disabled={loadingAction !== null}
           >
-            {loading ? (
+            {loadingAction === 'download' ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Download className="mr-2 h-4 w-4" />
@@ -133,6 +133,7 @@ export function EscuelaSection({ documentos }: { documentos: EscuelaDocumento[] 
   return (
     <div>
       <div className="flex items-center gap-2 mb-4">
+        <Lock className="h-5 w-5 text-terracotta" />
         <h2 className="text-xl font-semibold text-terracotta">Escuela</h2>
         <Badge variant="secondary" className="text-xs">
           {documentos.length}
