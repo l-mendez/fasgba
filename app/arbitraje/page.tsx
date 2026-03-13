@@ -8,8 +8,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { createClient } from "@/lib/supabase/server"
 
-// Force dynamic rendering for SSR
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 interface ArbitroWithClub {
   id: number
