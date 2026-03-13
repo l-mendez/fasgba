@@ -29,20 +29,13 @@ export default function AdminEquiposPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
   const [editingTeam, setEditingTeam] = useState<Team | null>(null)
   const [teamName, setTeamName] = useState('')
+  const [editClubId, setEditClubId] = useState<string>('')
   const [selectedClubId, setSelectedClubId] = useState<string>('')
   const [newTeamClubId, setNewTeamClubId] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
-
-  const fetchClubs = async () => {
-    try {
-      const data = await apiCall('/api/clubs')
-      setClubs(data.clubs || [])
-    } catch {
-      toast.error('Error al cargar clubes')
-    }
-  }
 
   const fetchAllTeams = async (clubList: Club[]) => {
     try {
@@ -98,19 +91,23 @@ export default function AdminEquiposPage() {
   }
 
   const handleUpdate = async () => {
-    if (!editingTeam || !teamName.trim()) {
-      toast.error('El nombre del equipo es requerido')
+    if (!editingTeam || !teamName.trim() || !editClubId) {
+      toast.error('Complete todos los campos')
       return
     }
     setSaving(true)
     try {
+      const newClubId = parseInt(editClubId, 10)
+      const body: Record<string, unknown> = { name: teamName.trim() }
+      if (newClubId !== editingTeam.club_id) {
+        body.club_id = newClubId
+      }
       await apiCall(`/api/clubs/${editingTeam.club_id}/teams/${editingTeam.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ name: teamName.trim() }),
+        body: JSON.stringify(body),
       })
       toast.success('Equipo actualizado exitosamente')
-      setTeamName('')
-      setEditingTeam(null)
+      closeEditDialog()
       await fetchAllTeams(clubs)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Error al actualizar equipo')
@@ -130,15 +127,21 @@ export default function AdminEquiposPage() {
     }
   }
 
-  const startEdit = (team: Team) => {
+  const openEditDialog = (team: Team) => {
     setEditingTeam(team)
     setTeamName(team.name)
+    setEditClubId(team.club_id.toString())
+    setIsEditOpen(true)
   }
 
-  const cancelEdit = () => {
+  const closeEditDialog = () => {
+    setIsEditOpen(false)
     setEditingTeam(null)
     setTeamName('')
+    setEditClubId('')
   }
+
+  const getClubName = (clubId: number) => clubs.find(c => c.id === clubId)?.name || ''
 
   // Filter clubs and teams
   const filteredClubs = clubs.filter((club) => {
@@ -146,9 +149,7 @@ export default function AdminEquiposPage() {
     const clubTeams = teamsByClub[club.id] || []
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
-      const clubMatch = club.name.toLowerCase().includes(q)
-      const teamMatch = clubTeams.some(t => t.name.toLowerCase().includes(q))
-      return clubMatch || teamMatch
+      return club.name.toLowerCase().includes(q) || clubTeams.some(t => t.name.toLowerCase().includes(q))
     }
     return clubTeams.length > 0 || selectedClubId === club.id.toString()
   })
@@ -195,9 +196,9 @@ export default function AdminEquiposPage() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="team_name">Nombre del equipo</Label>
+                <Label htmlFor="new_team_name">Nombre del equipo</Label>
                 <Input
-                  id="team_name"
+                  id="new_team_name"
                   placeholder="Ej: Equipo A"
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
@@ -214,6 +215,50 @@ export default function AdminEquiposPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={(open) => { if (!open) closeEditDialog() }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Equipo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit_team_name">Nombre del equipo</Label>
+              <Input
+                id="edit_team_name"
+                value={teamName}
+                onChange={(e) => setTeamName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleUpdate()}
+              />
+            </div>
+            <div>
+              <Label>Club</Label>
+              <Select value={editClubId} onValueChange={setEditClubId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un club" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clubs.map((club) => (
+                    <SelectItem key={club.id} value={club.id.toString()}>{club.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {editingTeam && editClubId && parseInt(editClubId, 10) !== editingTeam.club_id && (
+                <p className="text-sm text-amber-600 mt-1">
+                  Se moverá de &quot;{getClubName(editingTeam.club_id)}&quot; a &quot;{getClubName(parseInt(editClubId, 10))}&quot;
+                </p>
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={closeEditDialog}>Cancelar</Button>
+              <Button onClick={handleUpdate} disabled={saving || !teamName.trim() || !editClubId}>
+                {saving ? 'Guardando...' : 'Guardar'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -272,45 +317,25 @@ export default function AdminEquiposPage() {
                     {clubTeams.map((team) => (
                       <Card key={team.id}>
                         <CardContent className="flex items-center justify-between p-4">
-                          {editingTeam?.id === team.id ? (
-                            <div className="flex items-center gap-2 flex-1">
-                              <Input
-                                value={teamName}
-                                onChange={(e) => setTeamName(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleUpdate()
-                                  if (e.key === 'Escape') cancelEdit()
-                                }}
-                                autoFocus
-                              />
-                              <Button size="sm" onClick={handleUpdate} disabled={saving || !teamName.trim()}>
-                                {saving ? 'Guardando...' : 'Guardar'}
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={cancelEdit}>Cancelar</Button>
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full">
+                              <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                             </div>
-                          ) : (
-                            <>
-                              <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full">
-                                  <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                </div>
-                                <span className="font-medium">{team.name}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="sm" onClick={() => startEdit(team)}>
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDelete(team)}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </>
-                          )}
+                            <span className="font-medium">{team.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => openEditDialog(team)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(team)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     ))}

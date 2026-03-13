@@ -33,12 +33,12 @@ async function authenticateAndAuthorizeClub(request: NextRequest, clubId: number
     .eq('auth_id', user.id)
     .single()
 
-  if (admin) return user
+  if (admin) return { user, isSiteAdmin: true }
 
   const isClubAdmin = await isUserClubAdmin(clubId, user.id)
   if (!isClubAdmin) throw new Error('FORBIDDEN')
 
-  return user
+  return { user, isSiteAdmin: false }
 }
 
 // GET /api/clubs/[clubId]/teams/[teamId]
@@ -78,8 +78,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (isNaN(clubIdNum) || clubIdNum <= 0) return validationError('Invalid club ID')
     if (isNaN(teamIdNum) || teamIdNum <= 0) return validationError('Invalid team ID')
 
+    let authResult
     try {
-      await authenticateAndAuthorizeClub(request, clubIdNum)
+      authResult = await authenticateAndAuthorizeClub(request, clubIdNum)
     } catch (authError) {
       if (authError instanceof Error) {
         if (authError.message === 'UNAUTHORIZED') return unauthorizedError('Authentication required')
@@ -100,9 +101,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       throw err
     }
 
+    // Only site admins can change club_id
+    if (validated.club_id && !authResult.isSiteAdmin) {
+      return forbiddenError('Solo los administradores del sitio pueden cambiar el club de un equipo')
+    }
+
+    const updateData: Record<string, unknown> = {}
+    if (validated.name) updateData.name = validated.name
+    if (validated.club_id) updateData.club_id = validated.club_id
+
     const { data: team, error } = await serverSupabase
       .from('teams')
-      .update({ name: validated.name })
+      .update(updateData)
       .eq('id', teamIdNum)
       .eq('club_id', clubIdNum)
       .select('id, name, club_id, created_at')
