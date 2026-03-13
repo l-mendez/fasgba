@@ -9,7 +9,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { getAllProfesores, type ProfesorWithClub } from "@/lib/profesorUtils"
 import { createClient } from "@/lib/supabase/client"
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 export const metadata: Metadata = {
   title: 'Profesores de Ajedrez - FASGBA',

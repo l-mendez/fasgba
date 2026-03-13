@@ -10,7 +10,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { getProfesorById } from "@/lib/profesorUtils"
 import { createClient } from "@/lib/supabase/client"
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 interface PageProps {
   params: Promise<{
