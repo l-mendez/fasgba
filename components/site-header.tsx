@@ -123,6 +123,24 @@ export async function SiteHeader({ pathname }: SiteHeaderProps) {
               >
                 Documentos
               </Link>
+              <Link
+                href="/profesores"
+                className={cn(
+                  "transition-colors hover:text-amber",
+                  pathname === "/profesores" ? "text-amber" : "text-muted-foreground"
+                )}
+              >
+                Profesores
+              </Link>
+              <Link
+                href="/arbitraje"
+                className={cn(
+                  "transition-colors hover:text-amber",
+                  pathname === "/arbitraje" ? "text-amber" : "text-muted-foreground"
+                )}
+              >
+                Arbitraje
+              </Link>
             </nav>
           </div>
           

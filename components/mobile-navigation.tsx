@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { CastleIcon as ChessKnight, Menu, User, Settings, Trophy, Home, FileText, FolderOpen, Shield, LogOut, BarChart3 } from "lucide-react"
+import { CastleIcon as ChessKnight, Menu, User, Settings, Trophy, Home, FileText, FolderOpen, GraduationCap, Shield, LogOut, BarChart3, Award } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -102,6 +102,22 @@ export function MobileNavigation({ isAuthenticated, isAdmin, isClubAdmin, pathna
           >
             <FolderOpen className="mr-2 h-5 w-5 text-amber" />
             <span>Documentos</span>
+          </Link>
+          <Link
+            href="/profesores"
+            className="flex items-center text-muted-foreground hover:text-amber"
+            onClick={() => setIsOpen(false)}
+          >
+            <GraduationCap className="mr-2 h-5 w-5 text-amber" />
+            <span>Profesores</span>
+          </Link>
+          <Link
+            href="/arbitraje"
+            className="flex items-center text-muted-foreground hover:text-amber"
+            onClick={() => setIsOpen(false)}
+          >
+            <Award className="mr-2 h-5 w-5 text-amber" />
+            <span>Arbitraje</span>
           </Link>
 
           <div className="my-2 border-t border-amber/20" />

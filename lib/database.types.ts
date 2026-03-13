@@ -198,6 +198,44 @@ export interface Database {
           updated_at?: string
         }
       }
+      profesores: {
+        Row: {
+          id: number
+          titulo: string
+          foto: string | null
+          club_id: number | null
+          anio_nacimiento: number | null
+          modalidad: string
+          zona: string | null
+          biografia: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          titulo: string
+          foto?: string | null
+          club_id?: number | null
+          anio_nacimiento?: number | null
+          modalidad?: string
+          zona?: string | null
+          biografia?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          titulo?: string
+          foto?: string | null
+          club_id?: number | null
+          anio_nacimiento?: number | null
+          modalidad?: string
+          zona?: string | null
+          biografia?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
