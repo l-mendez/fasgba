@@ -41,9 +41,10 @@ interface RegisteredTeam {
 interface TeamManagementProps {
   tournamentId: string
   tournamentType?: 'individual' | 'team'
+  restrictToClubIds?: number[]
 }
 
-export default function TeamManagement({ tournamentId, tournamentType = 'individual' }: TeamManagementProps) {
+export default function TeamManagement({ tournamentId, tournamentType = 'individual', restrictToClubIds }: TeamManagementProps) {
   const [registeredTeams, setRegisteredTeams] = useState<RegisteredTeam[]>([])
   const [availableClubs, setAvailableClubs] = useState<Club[]>([])
   const [clubTeams, setClubTeams] = useState<TeamData[]>([])
@@ -72,7 +73,15 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
   const fetchAvailableClubs = async () => {
     try {
       const data = await apiCall('/api/clubs')
-      setAvailableClubs(data.clubs || [])
+      let clubs = data.clubs || []
+      if (restrictToClubIds) {
+        clubs = clubs.filter((c: Club) => restrictToClubIds.includes(c.id))
+      }
+      setAvailableClubs(clubs)
+      // Auto-select if only one club available
+      if (clubs.length === 1) {
+        setSelectedClubId(clubs[0].id)
+      }
     } catch (error) {
       console.error('Error fetching clubs:', error)
       toast.error('Error al cargar clubes')

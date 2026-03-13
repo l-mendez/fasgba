@@ -71,11 +71,23 @@ export default async function TournamentPage({ params }: PageProps) {
 
     const tournament = transformTournamentToDisplay(tournamentWithDates)
     
-    // Fetch game data and rounds count in parallel
-    const [gamesByRound, totalRounds] = await Promise.all([
+    // Fetch game data, rounds count, and registered teams in parallel
+    const [gamesByRound, totalRounds, registeredTeamsResult] = await Promise.all([
       getTournamentGames(tournamentId, tournament.tournament_type || 'individual'),
-      getTournamentRounds(tournamentId)
+      getTournamentRounds(tournamentId),
+      tournament.tournament_type === 'team'
+        ? supabase
+            .from('tournament_teams')
+            .select('team_id, teams(id, name, club_id, clubs(id, name))')
+            .eq('tournament_id', tournamentId)
+        : Promise.resolve({ data: [] })
     ])
+
+    const registeredTeams = (registeredTeamsResult.data || []).map((t: any) => ({
+      team_id: t.team_id,
+      name: t.teams?.name || '',
+      club_name: t.teams?.clubs?.name || '',
+    }))
 
     return (
       <div className="min-h-screen bg-background">
@@ -85,6 +97,7 @@ export default async function TournamentPage({ params }: PageProps) {
             initialGamesByRound={gamesByRound}
             initialTotalRounds={totalRounds}
             tournamentId={tournamentId}
+            registeredTeams={registeredTeams}
           />
         </Suspense>
       </div>
