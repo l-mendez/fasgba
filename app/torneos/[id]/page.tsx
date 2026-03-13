@@ -71,8 +71,8 @@ export default async function TournamentPage({ params }: PageProps) {
 
     const tournament = transformTournamentToDisplay(tournamentWithDates)
     
-    // Fetch game data, rounds count, and registered teams in parallel
-    const [gamesByRound, totalRounds, registeredTeamsResult] = await Promise.all([
+    // Fetch game data, rounds count, registered teams, and team players in parallel
+    const [gamesByRound, totalRounds, registeredTeamsResult, teamPlayersResult] = await Promise.all([
       getTournamentGames(tournamentId, tournament.tournament_type || 'individual'),
       getTournamentRounds(tournamentId),
       tournament.tournament_type === 'team'
@@ -80,13 +80,30 @@ export default async function TournamentPage({ params }: PageProps) {
             .from('tournament_teams')
             .select('team_id, teams(id, name, club_id, clubs(id, name))')
             .eq('tournament_id', tournamentId)
+        : Promise.resolve({ data: [] }),
+      tournament.tournament_type === 'team'
+        ? supabase
+            .from('tournament_team_players')
+            .select('team_id, players(id, full_name, fide_id, rating)')
+            .eq('tournament_id', tournamentId)
         : Promise.resolve({ data: [] })
     ])
+
+    // Group players by team
+    const playersByTeam: Record<number, { id: number; full_name: string; fide_id?: string; rating?: number }[]> = {}
+    for (const entry of (teamPlayersResult.data || []) as any[]) {
+      const teamId = entry.team_id
+      if (!playersByTeam[teamId]) playersByTeam[teamId] = []
+      if (entry.players) {
+        playersByTeam[teamId].push(entry.players)
+      }
+    }
 
     const registeredTeams = (registeredTeamsResult.data || []).map((t: any) => ({
       team_id: t.team_id,
       name: t.teams?.name || '',
       club_name: t.teams?.clubs?.name || '',
+      players: playersByTeam[t.team_id] || [],
     }))
 
     return (

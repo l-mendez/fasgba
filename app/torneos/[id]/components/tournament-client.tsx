@@ -10,10 +10,18 @@ import { type GameDisplay } from "@/lib/gameUtils-client"
 import RoundsSection from "./rounds-section"
 import { cn } from "@/lib/utils"
 
+interface TeamPlayerDisplay {
+  id: number
+  full_name: string
+  fide_id?: string
+  rating?: number
+}
+
 interface RegisteredTeamDisplay {
   team_id: number
   name: string
   club_name: string
+  players?: TeamPlayerDisplay[]
 }
 
 interface TournamentClientProps {
@@ -274,14 +282,36 @@ export default function TournamentClient({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {registeredTeams.map((team) => (
                   <Card key={team.team_id} className="shadow-sm">
-                    <CardContent className="p-4 flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full">
-                        <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full shrink-0">
+                          <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{team.name}</p>
+                          <p className="text-sm text-muted-foreground">{team.club_name}</p>
+                        </div>
+                        {team.players && team.players.length > 0 && (
+                          <Badge variant="secondary" className="ml-auto shrink-0">
+                            {team.players.length}
+                          </Badge>
+                        )}
                       </div>
-                      <div>
-                        <p className="font-medium text-foreground">{team.name}</p>
-                        <p className="text-sm text-muted-foreground">{team.club_name}</p>
-                      </div>
+                      {team.players && team.players.length > 0 && (
+                        <div className="border-t pt-2 space-y-1">
+                          {team.players.map((player, idx) => (
+                            <div key={player.id} className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">
+                                <span className="inline-block w-5 text-right mr-2">{idx + 1}.</span>
+                                {player.full_name}
+                              </span>
+                              {player.rating && (
+                                <span className="text-xs text-muted-foreground">{player.rating}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
