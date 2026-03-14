@@ -11,9 +11,9 @@ const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 // Validation schema for player updates
 const updatePlayerSchema = z.object({
   full_name: z.string().min(1, 'Full name is required').max(255, 'Name too long').optional(),
-  fide_id: z.string().max(20, 'FIDE ID too long').optional().or(z.literal('')),
-  rating: z.number().int().min(0, 'Rating must be positive').max(4000, 'Rating too high').optional(),
-  club_id: z.number().int().positive('Invalid club ID').optional(),
+  fide_id: z.string().max(20, 'FIDE ID too long').nullish().or(z.literal('')),
+  rating: z.number().int().min(0, 'Rating must be positive').max(4000, 'Rating too high').nullish(),
+  club_id: z.number().int().positive('Invalid club ID').nullish(),
 })
 
 interface RouteParams {
