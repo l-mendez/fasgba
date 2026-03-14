@@ -9,6 +9,7 @@ import {
   Home,
   Menu,
   Settings,
+  Shield,
   Trophy,
   Users,
 } from "lucide-react"
@@ -77,6 +78,17 @@ export default function ClubAdminLayout({ children }: ClubAdminLayoutProps) {
           >
             <FileText className="mr-2 h-4 w-4" />
             Noticias
+          </Link>
+          <Link
+            href="/club-admin/equipos"
+            className={cn(
+              "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
+              pathname.startsWith("/club-admin/equipos") ? "bg-amber/10 text-amber" : "text-muted-foreground"
+            )}
+            onClick={onLinkClick}
+          >
+            <Shield className="mr-2 h-4 w-4" />
+            Equipos
           </Link>
           <Link
             href="/club-admin/settings"
