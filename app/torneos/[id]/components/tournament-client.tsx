@@ -10,18 +10,34 @@ import { type GameDisplay } from "@/lib/gameUtils-client"
 import RoundsSection from "./rounds-section"
 import { cn } from "@/lib/utils"
 
+interface TeamPlayerDisplay {
+  id: number
+  full_name: string
+  fide_id?: string
+  rating?: number
+}
+
+interface RegisteredTeamDisplay {
+  team_id: number
+  name: string
+  club_name: string
+  players?: TeamPlayerDisplay[]
+}
+
 interface TournamentClientProps {
   tournament: TournamentDisplay
   initialGamesByRound: Record<number, GameDisplay[]>
   initialTotalRounds: number
   tournamentId: number
+  registeredTeams?: RegisteredTeamDisplay[]
 }
 
 export default function TournamentClient({
   tournament,
   initialGamesByRound,
   initialTotalRounds,
-  tournamentId
+  tournamentId,
+  registeredTeams = []
 }: TournamentClientProps) {
   const [gamesByRound, setGamesBytournamentTypeRound] = useState(initialGamesByRound)
   const [totalRounds, setTotalRounds] = useState(initialTotalRounds)
@@ -248,6 +264,62 @@ export default function TournamentClient({
           </div>
         </div>
       </section>
+
+      {/* Registered Teams (team tournaments only) */}
+      {tournament.tournament_type === 'team' && registeredTeams.length > 0 && (
+        <section className="py-8 lg:py-12 bg-muted/30 dark:bg-muted/20 border-t border-border/30">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="max-w-6xl mx-auto">
+              <div className="flex items-center gap-3 mb-6">
+                <Users className="h-5 w-5 text-terracotta dark:text-terracotta-light" />
+                <h2 className="text-xl lg:text-2xl font-bold text-terracotta dark:text-terracotta-light">
+                  Equipos Participantes
+                </h2>
+                <Badge variant="outline" className="text-sm">
+                  {registeredTeams.length} equipo{registeredTeams.length !== 1 ? 's' : ''}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {registeredTeams.map((team) => (
+                  <Card key={team.team_id} className="shadow-sm">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full shrink-0">
+                          <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{team.name}</p>
+                          <p className="text-sm text-muted-foreground">{team.club_name}</p>
+                        </div>
+                        {team.players && team.players.length > 0 && (
+                          <Badge variant="secondary" className="ml-auto shrink-0">
+                            {team.players.length}
+                          </Badge>
+                        )}
+                      </div>
+                      {team.players && team.players.length > 0 && (
+                        <div className="border-t pt-2 space-y-1">
+                          {team.players.map((player, idx) => (
+                            <div key={player.id} className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">
+                                <span className="inline-block w-5 text-right mr-2">{idx + 1}.</span>
+                                {player.full_name}
+                              </span>
+                              {player.rating && (
+                                <span className="text-xs text-muted-foreground">{player.rating}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Tournament Results */}
       <section className="py-8 lg:py-12">

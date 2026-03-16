@@ -51,9 +51,9 @@ export interface UpdateNewsInput {
   title?: string
   extract?: string
   text?: string
-  image?: string
+  image?: string | null
   tags?: string[]
-  club_id?: number
+  club_id?: number | null
 }
 
 export interface NewsQueryOptions {
@@ -145,7 +145,8 @@ export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data
   }
 
   // Process the data and fetch author information if needed
-  let processedData = (data || []).map(item => ({
+  const newsData = (data || []) as unknown as Array<News & { club?: { id: number; name: string; address: string } }>
+  let processedData = newsData.map(item => ({
     ...item,
     tags: item.tags || []
   }))
@@ -258,47 +259,37 @@ export async function getNewsById(id: number, include: Array<'author' | 'club'> 
     throw new Error('Failed to fetch news')
   }
 
-  let processedData = {
-    ...data,
-    tags: data.tags || []
+  const newsData = data as unknown as News & { club?: { id: number; name: string; address: string } }
+  const processedData: Record<string, unknown> = {
+    ...newsData,
+    tags: newsData.tags || []
   }
 
   // Fetch author information if included
   if (include.includes('author')) {
-    let author_email = undefined
-    let author_name = undefined
+    let author_email: string | undefined = undefined
+    let author_name: string | undefined = undefined
 
-    if (data.created_by_auth_id) {
+    if (newsData.created_by_auth_id) {
       try {
-        const { data: userData, error: userError } = await supabase.auth.admin.getUserById(data.created_by_auth_id)
-        
+        const { data: userData, error: userError } = await supabase.auth.admin.getUserById(newsData.created_by_auth_id)
+
         if (!userError && userData.user) {
           author_email = userData.user.email || undefined
-          // Get nombre and apellido from user_metadata and combine them
           const nombre = userData.user.user_metadata?.nombre || ''
           const apellido = userData.user.user_metadata?.apellido || ''
           author_name = nombre && apellido ? `${nombre} ${apellido}` : (nombre || apellido || undefined)
         }
       } catch (error) {
-        console.warn(`Could not fetch author info for news ${data.id}:`, error)
+        console.warn(`Could not fetch author info for news ${newsData.id}:`, error)
       }
     }
 
-    processedData = {
-      ...processedData,
-      author_email,
-      author_name
-    }
-  } else {
-    // Add undefined author fields if not including author info
-    processedData = {
-      ...processedData,
-      author_email: undefined,
-      author_name: undefined
-    }
+    processedData.author_email = author_email
+    processedData.author_name = author_name
   }
 
-  return processedData
+  return processedData as unknown as NewsDisplay
 }
 
 /**

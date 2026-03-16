@@ -1,9 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Plus, Pencil, Trash2, Search, Users, Home } from "lucide-react"
+import { useState, useEffect, useRef, useCallback } from "react"
+import { Plus, Pencil, Trash2, Search, Users, Home, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -22,12 +29,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
 import { apiCall } from "@/lib/utils/apiClient"
 import Link from "next/link"
 
 export const dynamic = 'force-dynamic'
+
+const PAGE_SIZE = 50
 
 interface Player {
   id: number
@@ -40,57 +49,106 @@ interface Player {
   } | null
 }
 
+interface Club {
+  id: number
+  name: string
+}
+
+interface Stats {
+  total: number
+  withFideId: number
+  withClub: number
+}
+
 export default function PlayersManagement() {
   const [players, setPlayers] = useState<Player[]>([])
   const [searchTerm, setSearchTerm] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+  const [clubs, setClubs] = useState<Club[]>([])
+  const [selectedClubId, setSelectedClubId] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [page, setPage] = useState(1)
+  const [totalResults, setTotalResults] = useState(0)
+  const [stats, setStats] = useState<Stats | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [playerToDelete, setPlayerToDelete] = useState<Player | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Fetch data
-  const fetchPlayers = async () => {
-    try {
-      const data = await apiCall('/api/players')
-      setPlayers(data.players || [])
-    } catch (error) {
-      console.error('Error fetching players:', error)
-      toast.error('Error al cargar jugadores')
-    }
-  }
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
+  // Debounce search input
   useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true)
-      await fetchPlayers()
-      setIsLoading(false)
-    }
-    loadData()
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // Fetch stats and clubs once on mount
+  useEffect(() => {
+    apiCall('/api/players?stats=true').then(setStats).catch(() => {})
+    apiCall('/api/clubs').then(data => setClubs(data.clubs || [])).catch(() => {})
   }, [])
 
-  // Filter players based on search term
-  const filteredPlayers = players.filter(player =>
-    player.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (player.fide_id && player.fide_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (player.club?.name && player.club.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
+  // Fetch players (resets on search/filter change)
+  const fetchPlayers = useCallback(async (pageNum: number, search: string, clubId: string, append: boolean) => {
+    try {
+      const params = new URLSearchParams({ page: String(pageNum), limit: String(PAGE_SIZE) })
+      if (search) params.set('search', search)
+      if (clubId) params.set('club_id', clubId)
+
+      const data = await apiCall(`/api/players?${params}`)
+      const fetched: Player[] = data.players || []
+
+      setPlayers(prev => append ? [...prev, ...fetched] : fetched)
+      setTotalResults(data.total || 0)
+      setHasMore(pageNum < data.totalPages)
+      setPage(pageNum)
+    } catch {
+      toast.error('Error al cargar jugadores')
+    }
+  }, [])
+
+  // Reset and fetch when search or club filter changes
+  useEffect(() => {
+    setIsLoading(true)
+    setHasMore(true)
+    fetchPlayers(1, debouncedSearch, selectedClubId, false).finally(() => setIsLoading(false))
+  }, [debouncedSearch, selectedClubId, fetchPlayers])
+
+  // Infinite scroll observer
+  useEffect(() => {
+    if (!sentinelRef.current) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingMore) {
+          setIsLoadingMore(true)
+          fetchPlayers(page + 1, debouncedSearch, selectedClubId, true).finally(() => setIsLoadingMore(false))
+        }
+      },
+      { rootMargin: '200px' }
+    )
+
+    observer.observe(sentinelRef.current)
+    return () => observer.disconnect()
+  }, [hasMore, isLoading, isLoadingMore, page, debouncedSearch, selectedClubId, fetchPlayers])
 
   const handleDelete = async () => {
     if (!playerToDelete) return
 
     try {
       setIsDeleting(true)
-      await apiCall(`/api/players/${playerToDelete.id}`, {
-        method: 'DELETE',
-      })
+      await apiCall(`/api/players/${playerToDelete.id}`, { method: 'DELETE' })
       toast.success('Jugador eliminado exitosamente')
       setIsDeleteDialogOpen(false)
       setPlayerToDelete(null)
-      fetchPlayers()
+      // Refresh current data
+      fetchPlayers(1, debouncedSearch, selectedClubId, false)
+      // Refresh stats
+      apiCall('/api/players?stats=true').then(setStats).catch(() => {})
     } catch (error: any) {
-      console.error('Error deleting player:', error)
-      const errorMessage = error.message || 'Error al eliminar jugador'
-      toast.error(errorMessage)
+      toast.error(error.message || 'Error al eliminar jugador')
     } finally {
       setIsDeleting(false)
     }
@@ -99,17 +157,6 @@ export default function PlayersManagement() {
   const openDeleteDialog = (player: Player) => {
     setPlayerToDelete(player)
     setIsDeleteDialogOpen(true)
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-terracotta mx-auto mb-4"></div>
-          <p>Cargando jugadores...</p>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -137,7 +184,7 @@ export default function PlayersManagement() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{players.length}</div>
+            <div className="text-2xl font-bold">{stats?.total ?? "—"}</div>
           </CardContent>
         </Card>
         <Card>
@@ -146,9 +193,7 @@ export default function PlayersManagement() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {players.filter(p => p.fide_id).length}
-            </div>
+            <div className="text-2xl font-bold">{stats?.withFideId ?? "—"}</div>
           </CardContent>
         </Card>
         <Card>
@@ -157,75 +202,122 @@ export default function PlayersManagement() {
             <Home className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {players.filter(p => p.club).length}
-            </div>
+            <div className="text-2xl font-bold">{stats?.withClub ?? "—"}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center space-x-2">
-        <Search className="h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nombre, FIDE ID o club..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
+      {/* Search and Filters */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex items-center space-x-2 flex-1">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Input
+            placeholder="Buscar por nombre, FIDE ID o club..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+        <Select value={selectedClubId} onValueChange={(v) => setSelectedClubId(v === "all" ? "" : v)}>
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue placeholder="Todos los clubes" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los clubes</SelectItem>
+            {clubs.map((club) => (
+              <SelectItem key={club.id} value={club.id.toString()}>
+                {club.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {(debouncedSearch || selectedClubId) && (
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            {totalResults} resultado{totalResults !== 1 ? 's' : ''}
+          </span>
+        )}
       </div>
 
       {/* Players Table */}
       <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>FIDE ID</TableHead>
-              <TableHead>Rating</TableHead>
-              <TableHead>Club</TableHead>
-              <TableHead>Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredPlayers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
-                  No se encontraron jugadores
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredPlayers.map((player) => (
-                <TableRow key={player.id}>
-                  <TableCell className="font-medium">{player.full_name}</TableCell>
-                  <TableCell>{player.fide_id || "-"}</TableCell>
-                  <TableCell>{player.rating || "-"}</TableCell>
-                  <TableCell>{player.club?.name || "-"}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Link href={`/jugadores/${player.id}/editar`}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openDeleteDialog(player)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-terracotta" />
+            <span className="ml-2 text-muted-foreground">Cargando jugadores...</span>
+          </div>
+        ) : (
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead className="hidden sm:table-cell">FIDE ID</TableHead>
+                  <TableHead className="hidden sm:table-cell">Rating</TableHead>
+                  <TableHead className="hidden md:table-cell">Club</TableHead>
+                  <TableHead>Acciones</TableHead>
                 </TableRow>
-              ))
+              </TableHeader>
+              <TableBody>
+                {players.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      No se encontraron jugadores
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  players.map((player) => (
+                    <TableRow key={player.id}>
+                      <TableCell>
+                        <div>
+                          <span className="font-medium">{player.full_name}</span>
+                          <div className="sm:hidden text-xs text-muted-foreground mt-0.5">
+                            {[player.fide_id, player.rating, player.club?.name].filter(Boolean).join(" · ") || "—"}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">{player.fide_id || "—"}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{player.rating || "—"}</TableCell>
+                      <TableCell className="hidden md:table-cell">{player.club?.name || "—"}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-1">
+                          <Link href={`/jugadores/${player.id}/editar`}>
+                            <Button variant="ghost" size="sm">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteDialog(player)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+
+            {/* Infinite scroll sentinel */}
+            <div ref={sentinelRef} className="h-1" />
+
+            {isLoadingMore && (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-terracotta" />
+                <span className="ml-2 text-sm text-muted-foreground">Cargando más...</span>
+              </div>
             )}
-          </TableBody>
-        </Table>
+
+            {!hasMore && players.length > 0 && (
+              <p className="text-center text-sm text-muted-foreground py-4">
+                {players.length} jugador{players.length !== 1 ? 'es' : ''} mostrado{players.length !== 1 ? 's' : ''}
+              </p>
+            )}
+          </>
+        )}
       </Card>
 
       {/* Delete Confirmation Dialog */}
@@ -240,14 +332,14 @@ export default function PlayersManagement() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete} 
+            <AlertDialogAction
+              onClick={handleDelete}
               className="bg-red-600 hover:bg-red-700"
               disabled={isDeleting}
             >
               {isDeleting ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   Eliminando...
                 </>
               ) : (
@@ -259,4 +351,4 @@ export default function PlayersManagement() {
       </AlertDialog>
     </div>
   )
-} 
+}
