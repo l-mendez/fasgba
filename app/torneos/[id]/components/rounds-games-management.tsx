@@ -15,6 +15,7 @@ import { GameDisplay } from '@/lib/gameUtils-client'
 import { toast } from 'sonner'
 import { apiCall } from '@/lib/utils/apiClient'
 import { RoundFormDialog } from './round-form-dialog'
+import { Round, Team } from './types'
 
 interface Player {
   id: number
@@ -31,16 +32,6 @@ interface Match {
   id: number
   team_a: { id: number; name: string }
   team_b: { id: number; name: string }
-}
-
-interface Round {
-  id: number
-  round_number: number
-}
-
-interface Team {
-  id: number
-  name: string
 }
 
 interface RoundsGamesManagementProps {

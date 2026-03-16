@@ -9,20 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiCall } from '@/lib/utils/apiClient'
-
-interface Round {
-  id: number
-  round_number: number
-}
-
-interface Team {
-  id: number
-  name: string
-}
+import { Round, Team } from './types'
 
 interface RoundFormData {
   round_number: number
-  matches?: { club_a_id: number; club_b_id: number }[]
+  matches?: { team_a_id: number; team_b_id: number }[]
 }
 
 interface RoundFormDialogProps {
@@ -65,7 +56,7 @@ export function RoundFormDialog({
   const addMatch = () => {
     setRoundFormData(prev => ({
       ...prev,
-      matches: [...(prev.matches || []), { club_a_id: 0, club_b_id: 0 }]
+      matches: [...(prev.matches || []), { team_a_id: 0, team_b_id: 0 }]
     }))
   }
 
@@ -76,7 +67,7 @@ export function RoundFormDialog({
     }))
   }
 
-  const updateMatch = (index: number, field: 'club_a_id' | 'club_b_id', value: number) => {
+  const updateMatch = (index: number, field: 'team_a_id' | 'team_b_id', value: number) => {
     setRoundFormData(prev => ({
       ...prev,
       matches: prev.matches?.map((match, i) => 
@@ -103,14 +94,14 @@ export function RoundFormDialog({
       }
 
       for (const match of roundFormData.matches) {
-        if (match.club_a_id === match.club_b_id) {
+        if (match.team_a_id === match.team_b_id) {
           toast.error('Los equipos en un enfrentamiento deben ser diferentes')
           return
         }
       }
 
       const matchPairs = roundFormData.matches.map(m => 
-        [Math.min(m.club_a_id, m.club_b_id), Math.max(m.club_a_id, m.club_b_id)].join('-')
+        [Math.min(m.team_a_id, m.team_b_id), Math.max(m.team_a_id, m.team_b_id)].join('-')
       )
       const uniquePairs = new Set(matchPairs)
       if (matchPairs.length !== uniquePairs.size) {
@@ -135,8 +126,8 @@ export function RoundFormDialog({
           return apiCall(`/api/tournaments/${tournamentId}/rounds/${roundId}/matches`, {
             method: 'POST',
             body: JSON.stringify({
-              club_a_id: match.club_a_id,
-              club_b_id: match.club_b_id
+              team_a_id: match.team_a_id,
+              team_b_id: match.team_b_id
             })
           })
         })
@@ -213,8 +204,8 @@ export function RoundFormDialog({
                     <div key={index} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-md">
                       <div className="flex-1">
                         <Select
-                          value={match.club_a_id.toString()}
-                          onValueChange={(value) => updateMatch(index, 'club_a_id', parseInt(value))}
+                          value={match.team_a_id.toString()}
+                          onValueChange={(value) => updateMatch(index, 'team_a_id', parseInt(value))}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Equipo A" />
@@ -233,8 +224,8 @@ export function RoundFormDialog({
                       
                       <div className="flex-1">
                         <Select
-                          value={match.club_b_id.toString()}
-                          onValueChange={(value) => updateMatch(index, 'club_b_id', parseInt(value))}
+                          value={match.team_b_id.toString()}
+                          onValueChange={(value) => updateMatch(index, 'team_b_id', parseInt(value))}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Equipo B" />
