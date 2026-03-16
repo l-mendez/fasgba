@@ -27,8 +27,8 @@ interface Player {
 
 interface Match {
   id: number
-  club_a: { id: number; name: string }
-  club_b: { id: number; name: string }
+  team_a: { id: number; name: string }
+  team_b: { id: number; name: string }
 }
 
 interface Round {
@@ -105,24 +105,27 @@ export default function GameManagement({
   const fetchPlayers = async () => {
     try {
       if (tournamentType === 'team') {
-        // For team tournaments, get players from all registered clubs
+        // For team tournaments, get players from all registered teams' clubs
         const data = await apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
         const registeredTeams = data.teams || []
-        
-        // Fetch all players from registered clubs
+
+        // Fetch all players from registered teams' clubs
         const allPlayers: Player[] = []
-        for (const team of registeredTeams) {
+        const fetchedClubIds = new Set<number>()
+        for (const reg of registeredTeams) {
+          const clubId = reg.teams?.club_id
+          if (!clubId || fetchedClubIds.has(clubId)) continue
+          fetchedClubIds.add(clubId)
           try {
-            const clubPlayersData = await apiCall(`/api/clubs/${team.club_id}/players`)
+            const clubPlayersData = await apiCall(`/api/clubs/${clubId}/players`)
             const clubPlayers = clubPlayersData.players || []
-            // Add club info to each player
             const playersWithClub = clubPlayers.map((player: any) => ({
               ...player,
-              club: { id: team.club_id, name: team.club_name }
+              club: { id: clubId, name: reg.teams?.clubs?.name || '' }
             }))
             allPlayers.push(...playersWithClub)
           } catch (error) {
-            console.error(`Error fetching players for club ${team.club_id}:`, error)
+            console.error(`Error fetching players for club ${clubId}:`, error)
           }
         }
         setPlayers(allPlayers)
@@ -139,10 +142,16 @@ export default function GameManagement({
 
   const fetchClubs = async () => {
     try {
-      const data = await apiCall('/api/clubs')
-      setClubs(data.clubs || [])
+      // For team tournaments, fetch registered teams for match creation
+      const data = await apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
+      const registeredTeams = data.teams || []
+      const teamsList = registeredTeams.map((reg: any) => ({
+        id: reg.teams.id,
+        name: reg.teams.name
+      }))
+      setClubs(teamsList)
     } catch (error) {
-      console.error('Error fetching clubs:', error)
+      console.error('Error fetching teams:', error)
     }
   }
 
@@ -318,15 +327,15 @@ export default function GameManagement({
   })
 
   // Handle add match
-  const [newMatch, setNewMatch] = useState<{ club_a_id: number; club_b_id: number }>({ club_a_id: 0, club_b_id: 0 })
+  const [newMatch, setNewMatch] = useState<{ team_a_id: number; team_b_id: number }>({ team_a_id: 0, team_b_id: 0 })
 
   const handleAddMatch = async () => {
-    if (!selectedRound || newMatch.club_a_id === 0 || newMatch.club_b_id === 0) {
-      toast.error('Selecciona ambos clubes')
+    if (!selectedRound || newMatch.team_a_id === 0 || newMatch.team_b_id === 0) {
+      toast.error('Selecciona ambos equipos')
       return
     }
-    if (newMatch.club_a_id === newMatch.club_b_id) {
-      toast.error('Los clubes deben ser diferentes')
+    if (newMatch.team_a_id === newMatch.team_b_id) {
+      toast.error('Los equipos deben ser diferentes')
       return
     }
     setLoading(true)
@@ -337,10 +346,8 @@ export default function GameManagement({
       })
       toast.success('Enfrentamiento creado')
       setIsAddMatchDialogOpen(false)
-      setNewMatch({ club_a_id: 0, club_b_id: 0 })
-      // Refresh matches list
+      setNewMatch({ team_a_id: 0, team_b_id: 0 })
       fetchMatches(selectedRound)
-      // Auto-select this match in game form
       setFormData(prev => ({ ...prev, match_id: match.id }))
     } catch (error) {
       console.error('Error creando match:', error)
@@ -430,7 +437,7 @@ export default function GameManagement({
                       <SelectContent>
                         {matches.map((match) => (
                           <SelectItem key={match.id} value={match.id.toString()}>
-                            {match.club_a.name} vs {match.club_b.name}
+                            {match.team_a.name} vs {match.team_b.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -738,27 +745,27 @@ export default function GameManagement({
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="club_a">Club A</Label>
-                  <Select value={newMatch.club_a_id.toString()} onValueChange={(val) => setNewMatch(prev => ({ ...prev, club_a_id: parseInt(val) }))}>
+                  <Label htmlFor="team_a">Equipo A</Label>
+                  <Select value={newMatch.team_a_id.toString()} onValueChange={(val) => setNewMatch(prev => ({ ...prev, team_a_id: parseInt(val) }))}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar club" />
+                      <SelectValue placeholder="Seleccionar equipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {clubs.map(club => (
-                        <SelectItem key={club.id} value={club.id.toString()}>{club.name}</SelectItem>
+                      {clubs.map(team => (
+                        <SelectItem key={team.id} value={team.id.toString()}>{team.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="club_b">Club B</Label>
-                  <Select value={newMatch.club_b_id.toString()} onValueChange={(val) => setNewMatch(prev => ({ ...prev, club_b_id: parseInt(val) }))}>
+                  <Label htmlFor="team_b">Equipo B</Label>
+                  <Select value={newMatch.team_b_id.toString()} onValueChange={(val) => setNewMatch(prev => ({ ...prev, team_b_id: parseInt(val) }))}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar club" />
+                      <SelectValue placeholder="Seleccionar equipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {clubs.map(club => (
-                        <SelectItem key={club.id} value={club.id.toString()}>{club.name}</SelectItem>
+                      {clubs.map(team => (
+                        <SelectItem key={team.id} value={team.id.toString()}>{team.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

@@ -136,22 +136,31 @@ CREATE TABLE players (
     club_id INTEGER REFERENCES clubs(id) ON DELETE SET NULL
 );
 
--- 1️⃣3️⃣ Tournament Club Teams
-CREATE TABLE tournament_club_teams (
-    tournament_id INTEGER REFERENCES tournaments(id) ON DELETE CASCADE,
-    club_id INTEGER REFERENCES clubs(id) ON DELETE CASCADE,
-    PRIMARY KEY (tournament_id, club_id)
+-- 1️⃣3️⃣ Teams (belong to a club, participate in team tournaments)
+CREATE TABLE teams (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    club_id INTEGER NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (name, club_id)
 );
 
--- 1️⃣4️⃣ Tournament Team Players
+-- 1️⃣4️⃣ Tournament Teams (teams registered for a tournament)
+CREATE TABLE tournament_teams (
+    tournament_id INTEGER REFERENCES tournaments(id) ON DELETE CASCADE,
+    team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
+    PRIMARY KEY (tournament_id, team_id)
+);
+
+-- 1️⃣5️⃣ Tournament Team Players
 CREATE TABLE tournament_team_players (
     tournament_id INTEGER REFERENCES tournaments(id) ON DELETE CASCADE,
-    club_id INTEGER REFERENCES clubs(id) ON DELETE CASCADE,
+    team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
     player_id INTEGER REFERENCES players(id) ON DELETE CASCADE,
     PRIMARY KEY (tournament_id, player_id)
 );
 
--- 1️⃣5️⃣ Tournament Registrations (for individual tournaments)
+-- 1️⃣6️⃣ Tournament Registrations (for individual tournaments)
 CREATE TABLE tournament_registrations (
     id SERIAL PRIMARY KEY,
     tournament_id INTEGER REFERENCES tournaments(id) ON DELETE CASCADE,
@@ -160,23 +169,23 @@ CREATE TABLE tournament_registrations (
     UNIQUE (tournament_id, player_id)
 );
 
--- 1️⃣6️⃣ Rounds
+-- 1️⃣7️⃣ Rounds
 CREATE TABLE rounds (
     id SERIAL PRIMARY KEY,
     tournament_id INTEGER REFERENCES tournaments(id) ON DELETE CASCADE,
     round_number INTEGER NOT NULL
 );
 
--- 1️⃣7️⃣ Matches (for team tournaments)
+-- 1️⃣8️⃣ Matches (for team tournaments)
 CREATE TABLE matches (
     id SERIAL PRIMARY KEY,
     round_id INTEGER REFERENCES rounds(id) ON DELETE CASCADE,
-    club_a_id INTEGER REFERENCES clubs(id),
-    club_b_id INTEGER REFERENCES clubs(id),
-    UNIQUE (round_id, club_a_id, club_b_id)
+    team_a_id INTEGER REFERENCES teams(id),
+    team_b_id INTEGER REFERENCES teams(id),
+    UNIQUE (round_id, team_a_id, team_b_id)
 );
 
--- 1️⃣8️⃣ Match Games (team tournaments)
+-- 1️⃣9️⃣ Match Games (team tournaments)
 CREATE TABLE match_games (
     id SERIAL PRIMARY KEY,
     match_id INTEGER REFERENCES matches(id) ON DELETE CASCADE,
@@ -190,7 +199,7 @@ CREATE TABLE match_games (
     game_time TIME
 );
 
--- 1️⃣9️⃣ Individual Games (individual tournaments)
+-- 2️⃣0️⃣ Individual Games (individual tournaments)
 CREATE TABLE individual_games (
     id SERIAL PRIMARY KEY,
     round_id INTEGER REFERENCES rounds(id) ON DELETE CASCADE,
@@ -225,8 +234,10 @@ CREATE INDEX idx_players_fide_id ON players(fide_id);
 CREATE INDEX idx_players_rating ON players(rating);
 CREATE INDEX idx_players_full_name ON players(full_name);
 CREATE INDEX idx_players_club_id ON players(club_id);
-CREATE INDEX idx_tournament_club_teams_tournament_id ON tournament_club_teams(tournament_id);
-CREATE INDEX idx_tournament_club_teams_club_id ON tournament_club_teams(club_id);
+CREATE INDEX idx_teams_club_id ON teams(club_id);
+CREATE INDEX idx_teams_name ON teams(name);
+CREATE INDEX idx_tournament_teams_tournament_id ON tournament_teams(tournament_id);
+CREATE INDEX idx_tournament_teams_team_id ON tournament_teams(team_id);
 CREATE INDEX idx_tournament_team_players_tournament_id ON tournament_team_players(tournament_id);
 CREATE INDEX idx_tournament_team_players_player_id ON tournament_team_players(player_id);
 CREATE INDEX idx_tournament_registrations_tournament_id ON tournament_registrations(tournament_id);
@@ -234,6 +245,8 @@ CREATE INDEX idx_tournament_registrations_player_id ON tournament_registrations(
 CREATE INDEX idx_rounds_tournament_id ON rounds(tournament_id);
 CREATE INDEX idx_rounds_round_number ON rounds(round_number);
 CREATE INDEX idx_matches_round_id ON matches(round_id);
+CREATE INDEX idx_matches_team_a ON matches(team_a_id);
+CREATE INDEX idx_matches_team_b ON matches(team_b_id);
 CREATE INDEX idx_match_games_match_id ON match_games(match_id);
 CREATE INDEX idx_match_games_white_player ON match_games(white_player_id);
 CREATE INDEX idx_match_games_black_player ON match_games(black_player_id);
@@ -251,7 +264,8 @@ ALTER TABLE news ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tournaments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tournamentdates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE players ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tournament_club_teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tournament_teams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tournament_team_players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tournament_registrations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rounds ENABLE ROW LEVEL SECURITY;
@@ -333,11 +347,18 @@ CREATE POLICY "Allow public read access to players" ON players
 CREATE POLICY "Allow authenticated users to manage players" ON players
     FOR ALL USING (auth.role() = 'authenticated');
 
--- Tournament club teams policies
-CREATE POLICY "Allow public read access to tournament_club_teams" ON tournament_club_teams
+-- Teams table policies
+CREATE POLICY "Allow public read access to teams" ON teams
     FOR SELECT USING (true);
 
-CREATE POLICY "Allow authenticated users to manage tournament_club_teams" ON tournament_club_teams
+CREATE POLICY "Allow authenticated users to manage teams" ON teams
+    FOR ALL USING (auth.role() = 'authenticated');
+
+-- Tournament teams policies
+CREATE POLICY "Allow public read access to tournament_teams" ON tournament_teams
+    FOR SELECT USING (true);
+
+CREATE POLICY "Allow authenticated users to manage tournament_teams" ON tournament_teams
     FOR ALL USING (auth.role() = 'authenticated');
 
 -- Tournament team players policies
