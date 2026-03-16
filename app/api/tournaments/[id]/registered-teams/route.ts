@@ -41,17 +41,22 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // Get registered teams for this tournament
     const { data: teams, error } = await serverSupabase
-      .from('tournament_club_teams')
+      .from('tournament_teams')
       .select(`
         tournament_id,
-        club_id,
-        clubs (
+        team_id,
+        teams (
           id,
-          name
+          name,
+          club_id,
+          clubs (
+            id,
+            name
+          )
         )
       `)
       .eq('tournament_id', tournamentIdNum)
-      .order('clubs(name)', { ascending: true })
+      .order('teams(name)', { ascending: true })
 
     if (error) {
       console.error('Error fetching registered teams:', error)
@@ -82,13 +87,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json()
-    const { club_id } = body
+    const { team_id } = body
 
-    if (!club_id || isNaN(parseInt(club_id)) || parseInt(club_id) <= 0) {
-      return validationError('Valid club ID is required')
+    if (!team_id || isNaN(parseInt(team_id)) || parseInt(team_id) <= 0) {
+      return validationError('Valid team ID is required')
     }
 
-    const clubIdNum = parseInt(club_id)
+    const teamIdNum = parseInt(team_id)
 
     // Check if tournament exists and is a team tournament
     const { data: tournament, error: tournamentError } = await serverSupabase
@@ -105,42 +110,47 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return validationError('This endpoint is only for team tournaments')
     }
 
-    // Check if club exists
-    const { data: club, error: clubError } = await serverSupabase
-      .from('clubs')
-      .select('id, name')
-      .eq('id', clubIdNum)
+    // Check if team exists
+    const { data: team, error: teamError } = await serverSupabase
+      .from('teams')
+      .select('id, name, club_id, clubs(id, name)')
+      .eq('id', teamIdNum)
       .single()
 
-    if (clubError || !club) {
-      return notFoundError('Club not found')
+    if (teamError || !team) {
+      return notFoundError('Team not found')
     }
 
     // Check if team is already registered
     const { data: existingRegistration } = await serverSupabase
-      .from('tournament_club_teams')
-      .select('tournament_id, club_id')
+      .from('tournament_teams')
+      .select('tournament_id, team_id')
       .eq('tournament_id', tournamentIdNum)
-      .eq('club_id', clubIdNum)
+      .eq('team_id', teamIdNum)
       .single()
 
     if (existingRegistration) {
-      return validationError('This club is already registered for this tournament')
+      return validationError('Este equipo ya está registrado en el torneo')
     }
 
     // Register the team
     const { data: newRegistration, error: registrationError } = await serverSupabase
-      .from('tournament_club_teams')
+      .from('tournament_teams')
       .insert([{
         tournament_id: tournamentIdNum,
-        club_id: clubIdNum
+        team_id: teamIdNum
       }])
       .select(`
         tournament_id,
-        club_id,
-        clubs (
+        team_id,
+        teams (
           id,
-          name
+          name,
+          club_id,
+          clubs (
+            id,
+            name
+          )
         )
       `)
       .single()

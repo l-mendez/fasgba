@@ -327,6 +327,131 @@ export async function deleteClubImages(clubId: number): Promise<void> {
 }
 
 /**
+ * Upload an image for a specific arbitro
+ */
+export async function uploadArbitroImage(
+  arbitroId: number,
+  fileBuffer: ArrayBuffer,
+  fileName: string
+): Promise<{ filePath: string; wasReused: boolean }> {
+  try {
+    const fileHash = await generateFileHashFromBuffer(fileBuffer)
+    const existingPath = await findExistingArbitroImage(arbitroId, fileHash)
+
+    if (existingPath) {
+      return { filePath: existingPath, wasReused: true }
+    }
+
+    const fileExt = fileName.split('.').pop()
+    const timestamp = Date.now()
+    const randomId = Math.random().toString(36).substring(2, 15)
+    const newFileName = `${fileHash}-${timestamp}-${randomId}.${fileExt}`
+
+    const filePath = `arbitros/${arbitroId}/${newFileName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('images')
+      .upload(filePath, new Uint8Array(fileBuffer), {
+        contentType: `image/${fileExt}`
+      })
+
+    if (uploadError) {
+      throw new Error('Failed to upload arbitro image: ' + uploadError.message)
+    }
+
+    return { filePath, wasReused: false }
+  } catch (error) {
+    console.error('Error uploading arbitro image:', error)
+    throw error
+  }
+}
+
+/**
+ * Check if an arbitro image already exists in storage
+ */
+export async function findExistingArbitroImage(arbitroId: number, fileHash: string): Promise<string | null> {
+  try {
+    const { data: files, error } = await supabase.storage
+      .from('images')
+      .list(`arbitros/${arbitroId}`, {
+        limit: 100,
+        sortBy: { column: 'name', order: 'asc' }
+      })
+
+    if (error || !files) {
+      return null
+    }
+
+    const existingFile = files.find(file => file.name.includes(fileHash))
+
+    if (existingFile) {
+      return `arbitros/${arbitroId}/${existingFile.name}`
+    }
+
+    return null
+  } catch (error) {
+    console.error('Error checking for existing arbitro image:', error)
+    return null
+  }
+}
+
+/**
+ * Delete all images for a specific arbitro
+ */
+export async function deleteArbitroImages(arbitroId: number): Promise<void> {
+  try {
+    const { data: files, error: listError } = await supabase.storage
+      .from('images')
+      .list(`arbitros/${arbitroId}`, {
+        limit: 1000,
+        sortBy: { column: 'name', order: 'asc' }
+      })
+
+    if (listError) {
+      console.error('Error listing arbitro images for deletion:', listError)
+      return
+    }
+
+    if (!files || files.length === 0) {
+      return
+    }
+
+    const filePaths = files.map(file => `arbitros/${arbitroId}/${file.name}`)
+
+    const { error: deleteError } = await supabase.storage
+      .from('images')
+      .remove(filePaths)
+
+    if (deleteError) {
+      console.error('Error deleting arbitro images:', deleteError)
+      throw new Error('Failed to delete some arbitro images')
+    }
+  } catch (error) {
+    console.error('Error in deleteArbitroImages:', error)
+    throw error
+  }
+}
+
+/**
+ * Delete a specific arbitro image
+ */
+export async function deleteArbitroImage(filePath: string): Promise<void> {
+  try {
+    const { error } = await supabase.storage
+      .from('images')
+      .remove([filePath])
+
+    if (error) {
+      console.error('Error deleting arbitro image:', error)
+      throw new Error('Failed to delete arbitro image')
+    }
+  } catch (error) {
+    console.error('Error in deleteArbitroImage:', error)
+    throw error
+  }
+}
+
+/**
  * Delete a specific club image
  */
 export async function deleteClubImage(filePath: string): Promise<void> {

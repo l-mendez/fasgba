@@ -22,11 +22,11 @@ interface RouteParams {
 
 // Validation schema for new match
 const createMatchSchema = z.object({
-  club_a_id: z.number().int().positive('Invalid club A ID'),
-  club_b_id: z.number().int().positive('Invalid club B ID')
-}).refine(data => data.club_a_id !== data.club_b_id, {
-  message: 'Los dos clubes deben ser diferentes',
-  path: ['club_b_id']
+  team_a_id: z.number().int().positive('Invalid club A ID'),
+  team_b_id: z.number().int().positive('Invalid club B ID')
+}).refine(data => data.team_a_id !== data.team_b_id, {
+  message: 'Los dos equipos deben ser diferentes',
+  path: ['team_b_id']
 })
 
 // Helper auth function similar to games route
@@ -127,8 +127,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       .from('matches')
       .select(`
         id,
-        club_a:clubs!club_a_id (id, name),
-        club_b:clubs!club_b_id (id, name)
+        team_a:teams!team_a_id (id, name, club:clubs(id, name)),
+        team_b:teams!team_b_id (id, name, club:clubs(id, name))
       `)
       .eq('round_id', roundIdNum)
 
@@ -214,8 +214,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Insert match
     const { data: newMatch, error: insertErr } = await serverSupabase
       .from('matches')
-      .insert([{ round_id: roundIdNum, club_a_id: validated.club_a_id, club_b_id: validated.club_b_id }])
-      .select('id, club_a:clubs!club_a_id(id, name), club_b:clubs!club_b_id(id, name)')
+      .insert([{ round_id: roundIdNum, team_a_id: validated.team_a_id, team_b_id: validated.team_b_id }])
+      .select('id, team_a:teams!team_a_id(id, name), team_b:teams!team_b_id(id, name)')
       .single()
 
     if (insertErr) {

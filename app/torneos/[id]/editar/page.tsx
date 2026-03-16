@@ -85,6 +85,7 @@ async function getTournamentData(tournamentId: string): Promise<{
   isSiteAdmin: boolean
   isClubAdmin: boolean
   rounds: Round[]
+  userClubIds: number[]
 }> {
   try {
     // Get authenticated user
@@ -98,7 +99,8 @@ async function getTournamentData(tournamentId: string): Promise<{
         error: 'Usuario no autenticado',
         isSiteAdmin: false,
         isClubAdmin: false,
-        rounds: []
+        rounds: [],
+        userClubIds: []
       }
     }
 
@@ -127,7 +129,8 @@ async function getTournamentData(tournamentId: string): Promise<{
         error: 'Error verificando permisos de club',
         isSiteAdmin,
         isClubAdmin: false,
-        rounds: []
+        rounds: [],
+        userClubIds: []
       }
     }
 
@@ -181,7 +184,8 @@ async function getTournamentData(tournamentId: string): Promise<{
         error: 'Torneo no encontrado',
         isSiteAdmin,
         isClubAdmin,
-        rounds: []
+        rounds: [],
+        userClubIds: userClubs
       }
     }
 
@@ -235,7 +239,8 @@ async function getTournamentData(tournamentId: string): Promise<{
       error: errorMessage,
       isSiteAdmin,
       isClubAdmin,
-      rounds
+      rounds,
+      userClubIds: userClubs
     }
 
   } catch (error) {
@@ -246,7 +251,8 @@ async function getTournamentData(tournamentId: string): Promise<{
       error: error instanceof Error ? error.message : 'Error desconocido',
       isSiteAdmin: false,
       isClubAdmin: false,
-      rounds: []
+      rounds: [],
+      userClubIds: []
     }
   }
 }
@@ -269,7 +275,7 @@ export default async function EditarTorneoPage({ params }: PageProps) {
   }
   
   // Get tournament data and authorization
-  const { tournament, isAuthorized, error, isSiteAdmin, isClubAdmin, rounds } = await getTournamentData(id)
+  const { tournament, isAuthorized, error, isSiteAdmin, isClubAdmin, rounds, userClubIds } = await getTournamentData(id)
 
   // Prefetch existing games if we have a tournament and user is authorized
   let initialGames: any[] = []
@@ -380,6 +386,7 @@ export default async function EditarTorneoPage({ params }: PageProps) {
                 <TeamManagement
                   tournamentId={id}
                   tournamentType={tournament.tournament_type as 'individual' | 'team' || 'individual'}
+                  restrictToClubIds={!isSiteAdmin && isClubAdmin ? userClubIds : undefined}
                 />
               </TabsContent>
             )}

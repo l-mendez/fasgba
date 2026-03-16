@@ -613,13 +613,16 @@ export default function ChessBoard({
         {/* Chess Board */}
         <div className="max-w-full overflow-hidden" style={{ width: boardWidth }}>
           {isReady && (
-            <ReactChessboard 
-              position={currentPosition} 
-              boardWidth={boardWidth}
-              areArrowsAllowed={true}
-              customBoardStyle={{
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+            <ReactChessboard
+              options={{
+                position: currentPosition,
+                allowDrawingArrows: true,
+                boardStyle: {
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  width: `${boardWidth}px`,
+                  height: `${boardWidth}px`,
+                },
               }}
             />
           )}

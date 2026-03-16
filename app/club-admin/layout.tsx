@@ -9,6 +9,7 @@ import {
   Home,
   Menu,
   Settings,
+  Shield,
   Trophy,
   Users,
 } from "lucide-react"
@@ -57,6 +58,17 @@ export default function ClubAdminLayout({ children }: ClubAdminLayoutProps) {
             Jugadores
           </Link>
           <Link
+            href="/club-admin/torneos"
+            className={cn(
+              "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
+              pathname.startsWith("/club-admin/torneos") ? "bg-amber/10 text-amber" : "text-muted-foreground"
+            )}
+            onClick={onLinkClick}
+          >
+            <Trophy className="mr-2 h-4 w-4" />
+            Torneos
+          </Link>
+          <Link
             href="/club-admin/noticias"
             className={cn(
               "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
@@ -68,15 +80,15 @@ export default function ClubAdminLayout({ children }: ClubAdminLayoutProps) {
             Noticias
           </Link>
           <Link
-            href="/club-admin/torneos"
+            href="/club-admin/equipos"
             className={cn(
               "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
-              pathname.startsWith("/club-admin/torneos") ? "bg-amber/10 text-amber" : "text-muted-foreground"
+              pathname.startsWith("/club-admin/equipos") ? "bg-amber/10 text-amber" : "text-muted-foreground"
             )}
             onClick={onLinkClick}
           >
-            <Trophy className="mr-2 h-4 w-4" />
-            Torneos
+            <Shield className="mr-2 h-4 w-4" />
+            Equipos
           </Link>
           <Link
             href="/club-admin/settings"
