@@ -56,6 +56,41 @@ export interface Database {
           updated_at?: string
         }
       }
+      arbitros: {
+        Row: {
+          id: number
+          name: string
+          title: string
+          photo: string | null
+          club_id: number | null
+          birth_year: number | null
+          bio: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          name: string
+          title: string
+          photo?: string | null
+          club_id?: number | null
+          birth_year?: number | null
+          bio?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          name?: string
+          title?: string
+          photo?: string | null
+          club_id?: number | null
+          birth_year?: number | null
+          bio?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       clubs: {
         Row: {
           id: number
@@ -108,6 +143,40 @@ export interface Database {
           recorded_at?: string
         }
       }
+      teams: {
+        Row: {
+          id: number
+          name: string
+          club_id: number
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          name: string
+          club_id: number
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          name?: string
+          club_id?: number
+          created_at?: string
+        }
+      }
+      alumnos: {
+        Row: {
+          auth_id: string
+          created_at: string
+        }
+        Insert: {
+          auth_id: string
+          created_at?: string
+        }
+        Update: {
+          auth_id?: string
+          created_at?: string
+        }
+      }
       documentos: {
         Row: {
           id: number
@@ -145,6 +214,44 @@ export interface Database {
           uploaded_by_auth_id?: string | null
           sort_order?: number
           importance_level?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      profesores: {
+        Row: {
+          id: number
+          titulo: string
+          foto: string | null
+          club_id: number | null
+          anio_nacimiento: number | null
+          modalidad: string
+          zona: string | null
+          biografia: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          titulo: string
+          foto?: string | null
+          club_id?: number | null
+          anio_nacimiento?: number | null
+          modalidad?: string
+          zona?: string | null
+          biografia?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          titulo?: string
+          foto?: string | null
+          club_id?: number | null
+          anio_nacimiento?: number | null
+          modalidad?: string
+          zona?: string | null
+          biografia?: string | null
           created_at?: string
           updated_at?: string
         }

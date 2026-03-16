@@ -11,19 +11,45 @@ const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 // Validation schema for player data
 const playerSchema = z.object({
   full_name: z.string().min(1, 'Full name is required').max(255, 'Name too long'),
-  fide_id: z.string().max(20, 'FIDE ID too long').optional().or(z.literal('')),
-  rating: z.number().int().min(0, 'Rating must be positive').max(4000, 'Rating too high').optional(),
-  club_id: z.number().int().positive('Invalid club ID').optional(),
+  fide_id: z.string().max(20, 'FIDE ID too long').nullish().or(z.literal('')),
+  rating: z.number().int().min(0, 'Rating must be positive').max(4000, 'Rating too high').nullish(),
+  club_id: z.number().int().positive('Invalid club ID').nullish(),
 })
 
 // GET /api/players - Get players with pagination and search
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
+
+    // Return aggregate stats if requested
+    if (searchParams.get('stats') === 'true') {
+      const [totalResult, fideResult, clubResult] = await Promise.all([
+        serverSupabase.from('players').select('*', { count: 'exact', head: true }),
+        serverSupabase.from('players').select('*', { count: 'exact', head: true }).not('fide_id', 'is', null),
+        serverSupabase.from('players').select('*', { count: 'exact', head: true }).not('club_id', 'is', null),
+      ])
+      return apiSuccess({
+        total: totalResult.count || 0,
+        withFideId: fideResult.count || 0,
+        withClub: clubResult.count || 0,
+      })
+    }
+
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10))) // Max 100
     const search = searchParams.get('search') || ''
+    const clubId = searchParams.get('club_id') || ''
     const offset = (page - 1) * limit
+
+    // If searching, find matching club IDs for club name search
+    let matchingClubIds: number[] = []
+    if (search) {
+      const { data: clubs } = await serverSupabase
+        .from('clubs')
+        .select('id')
+        .ilike('name', `%${search}%`)
+      matchingClubIds = (clubs || []).map(c => c.id)
+    }
 
     // Build query with pagination
     let query = serverSupabase
@@ -39,9 +65,18 @@ export async function GET(request: NextRequest) {
         )
       `, { count: 'exact' })
 
-    // Apply search filter if provided
+    // Apply search filter (name, FIDE ID, or club name)
     if (search) {
-      query = query.ilike('full_name', `%${search}%`)
+      const orFilters = [`full_name.ilike.%${search}%`, `fide_id.ilike.%${search}%`]
+      if (matchingClubIds.length > 0) {
+        orFilters.push(`club_id.in.(${matchingClubIds.join(',')})`)
+      }
+      query = query.or(orFilters.join(','))
+    }
+
+    // Apply club filter
+    if (clubId) {
+      query = query.eq('club_id', parseInt(clubId, 10))
     }
 
     const { data: players, error: playersError, count } = await query

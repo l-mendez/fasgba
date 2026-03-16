@@ -20,7 +20,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     
     // Determine what to include
     const includeParam = searchParams.get('include')
-    const include = includeParam ? includeParam.split(',').map(i => i.trim()) as Array<'author' | 'club'> : ['author', 'club']
+    const include: Array<'author' | 'club'> = includeParam ? includeParam.split(',').map(i => i.trim()).filter((i): i is 'author' | 'club' => i === 'author' || i === 'club') : ['author', 'club']
     
     const news = await getNewsById(newsId, include)
     

@@ -101,7 +101,7 @@ export async function hasPermission(permission: keyof NonNullable<AuthenticatedU
   }
 
   const permissions = await getUserPermissions(userId)
-  return permissions[permission]
+  return permissions?.[permission] ?? false
 }
 
 /**
@@ -294,3 +294,30 @@ export function withAdminAuth<T extends any[]>(
     }
   }
 } 
+/**
+ * Checks if a user has the alumno role
+ */
+export async function isAlumno(userId: string): Promise<boolean> {
+  const { data } = await serverSupabase
+    .from('alumnos')
+    .select('auth_id')
+    .eq('auth_id', userId)
+    .single()
+  return !!data
+}
+
+/**
+ * Middleware to require alumno or admin role
+ */
+export async function requireAlumnoOrAdmin(request: NextRequest): Promise<AuthenticatedUser> {
+  const user = await requireAuth(request)
+
+  const alumno = await isAlumno(user.id)
+  const admin = await hasPermission('isAdmin', user.id)
+
+  if (!alumno && !admin) {
+    throw new ForbiddenError('Acceso restringido a alumnos de la escuela')
+  }
+
+  return user
+}

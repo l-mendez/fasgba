@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { notFound } from "next/navigation"
 import { unstable_cache } from "next/cache"
 import { FileText, FileSpreadsheet, Download, Eye, Calendar, FolderOpen } from "lucide-react"
 
@@ -8,6 +9,9 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Card, CardContent } from "@/components/ui/card"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { createClient as createServerSupabaseClient } from "@/lib/supabase/server"
+import { isAlumno, hasPermission } from "@/lib/middleware/auth"
+import { EscuelaSection } from "@/components/escuela-document-card"
 import {
   DOCUMENT_CATEGORIES,
   CATEGORY_COLORS,
@@ -80,6 +84,7 @@ function groupByCategory(documentos: Documento[]): Record<DocumentCategory, Docu
     reglamentos: [],
     actas: [],
     minutas: [],
+    escuela: [],
     otros: [],
   }
 
@@ -92,12 +97,41 @@ function groupByCategory(documentos: Documento[]): Record<DocumentCategory, Docu
   return grouped
 }
 
+async function checkEscuelaAccess(): Promise<boolean> {
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return false
+    const alumno = await isAlumno(user.id)
+    if (alumno) return true
+    const admin = await hasPermission('isAdmin', user.id)
+    return admin
+  } catch {
+    return false
+  }
+}
+
 export default async function DocumentosPage({ searchParams }: PageProps) {
   const params = await searchParams
   const selectedCategory = params.categoria || "todos"
 
+  // Server-side auth gate for escuela category
+  const canAccessEscuela = selectedCategory === "escuela" || selectedCategory === "todos"
+    ? await checkEscuelaAccess()
+    : false
+
+  if (selectedCategory === "escuela" && !canAccessEscuela) {
+    notFound()
+  }
+
   const allDocumentos = await fetchDocumentos()
-  const filteredDocumentos = filterByCategory(allDocumentos, selectedCategory)
+
+  // Filter out escuela documents for unauthorized users
+  const visibleDocumentos = canAccessEscuela
+    ? allDocumentos
+    : allDocumentos.filter((d) => d.category !== "escuela")
+
+  const filteredDocumentos = filterByCategory(visibleDocumentos, selectedCategory)
   const hasActiveFilter = selectedCategory !== "todos" && isValidCategory(selectedCategory)
 
   // Group documents by category for display when showing all
@@ -105,12 +139,20 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
 
   // Count documents per category for the filter badges
   const categoryCounts = {
-    todos: allDocumentos.length,
+    todos: visibleDocumentos.length,
     reglamentos: allDocumentos.filter((d) => d.category === "reglamentos").length,
     actas: allDocumentos.filter((d) => d.category === "actas").length,
     minutas: allDocumentos.filter((d) => d.category === "minutas").length,
+    escuela: canAccessEscuela ? allDocumentos.filter((d) => d.category === "escuela").length : 0,
     otros: allDocumentos.filter((d) => d.category === "otros").length,
   }
+
+  // Categories to show in filter
+  const visibleCategories = canAccessEscuela
+    ? DOCUMENT_CATEGORIES
+    : Object.fromEntries(
+        Object.entries(DOCUMENT_CATEGORIES).filter(([key]) => key !== "escuela")
+      ) as Record<string, string>
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -150,7 +192,7 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
                     Todos ({categoryCounts.todos})
                   </Badge>
                 </Link>
-                {Object.entries(DOCUMENT_CATEGORIES).map(([key, label]) => (
+                {Object.entries(visibleCategories).map(([key, label]) => (
                   <Link key={key} href={`/documentos?categoria=${key}`}>
                     <Badge
                       variant={selectedCategory === key ? "default" : "outline"}
@@ -194,6 +236,18 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
                   </Link>
                 )}
               </div>
+            ) : hasActiveFilter && selectedCategory === 'escuela' ? (
+              // Escuela category uses special auth-gated component
+              <EscuelaSection
+                documentos={filteredDocumentos.map((doc) => ({
+                  id: doc.id,
+                  name: doc.name,
+                  category: 'escuela' as const,
+                  file_size: doc.file_size,
+                  created_at: doc.created_at,
+                  file_ext: doc.file_path?.split('.').pop()?.toLowerCase(),
+                }))}
+              />
             ) : hasActiveFilter ? (
               // Show flat list when filtering by category
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -204,9 +258,22 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
             ) : (
               // Show grouped by category when showing all
               <div className="space-y-10">
-                {Object.entries(DOCUMENT_CATEGORIES).map(([categoryKey, categoryLabel]) => {
+                {Object.entries(visibleCategories).map(([categoryKey, categoryLabel]) => {
                   const categoryDocs = groupedDocumentos?.[categoryKey as DocumentCategory] || []
                   if (categoryDocs.length === 0) return null
+
+                  // Escuela section uses a special client component with auth checks
+                  if (categoryKey === 'escuela') {
+                    const escuelaDocs = categoryDocs.map((doc) => ({
+                      id: doc.id,
+                      name: doc.name,
+                      category: 'escuela' as const,
+                      file_size: doc.file_size,
+                      created_at: doc.created_at,
+                      file_ext: doc.file_path?.split('.').pop()?.toLowerCase(),
+                    }))
+                    return <EscuelaSection key={categoryKey} documentos={escuelaDocs} />
+                  }
 
                   return (
                     <div key={categoryKey}>
