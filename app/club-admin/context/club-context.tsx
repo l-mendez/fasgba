@@ -12,6 +12,7 @@ export type Club = {
   telephone: string | null
   mail: string | null
   schedule: string | null
+  image: string | null
 }
 
 // Definir el tipo para el contexto

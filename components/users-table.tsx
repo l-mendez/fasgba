@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ChevronDown, Search } from "lucide-react"
+import { ChevronDown, Search, GraduationCap, Loader2, Shield } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -99,6 +99,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
   const [originalOrder, setOriginalOrder] = useState<UserWithPermissions[]>(initialUsers)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
+  const [addingAlumno, setAddingAlumno] = useState<string | null>(null)
 
   // Add delete user handler
   const handleDeleteUser = async (userId: string, userEmail: string) => {
@@ -122,6 +123,21 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
       alert(error instanceof Error ? error.message : 'Error al eliminar el usuario')
     } finally {
       setIsDeleting(null)
+    }
+  }
+
+  const handleAddAlumno = async (userId: string, userEmail: string) => {
+    try {
+      setAddingAlumno(userId)
+      await apiCall('/api/admin/alumnos', {
+        method: 'POST',
+        body: JSON.stringify({ auth_id: userId }),
+      })
+      alert(`${userEmail} fue agregado como alumno de la escuela`)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error al agregar alumno')
+    } finally {
+      setAddingAlumno(null)
     }
   }
 
@@ -431,12 +447,20 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                           <DropdownMenuItem>
-                            <Link href={`/admin/usuarios/${user.id}/editar`} className="flex w-full">
+                            <Link href={`/admin/usuarios/${user.id}/editar`} className="flex w-full items-center">
+                              <Shield className="mr-2 h-4 w-4" />
                               Editar permisos
                             </Link>
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleAddAlumno(user.id, user.email)}
+                            disabled={addingAlumno === user.id}
+                          >
+                            <GraduationCap className="mr-2 h-4 w-4" />
+                            {addingAlumno === user.id ? 'Agregando...' : 'Hacer alumno'}
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="text-red-600"
                             onClick={() => handleDeleteUser(user.id, user.email)}
                             disabled={isDeleting === user.id}

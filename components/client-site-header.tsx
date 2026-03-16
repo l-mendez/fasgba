@@ -17,42 +17,39 @@ interface ClientSiteHeaderProps {
 export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  
+
   useEffect(() => {
     const supabase = createClient()
-    
+
     async function getUser() {
       try {
-        const { data: { user }, error } = await supabase.auth.getUser()
-        
-        if (error || !user) {
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (!session?.user) {
           setUser(null)
           setLoading(false)
           return
         }
 
-        // Check if user is an admin
-        const { data: adminData, error: adminError } = await supabase
-          .from('admins')
-          .select('auth_id')
-          .eq('auth_id', user.id)
-          .single()
+        const res = await fetch('/api/users/me/permissions', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
 
-        // Check if user is a club admin
-        const { data: clubAdminData, error: clubAdminError } = await supabase
-          .from('club_admins')
-          .select('auth_id, club_id')
-          .eq('auth_id', user.id)
-
-        const userData = {
-          id: user.id,
-          email: user.email,
-          isAdmin: !!adminData,
-          isClubAdmin: !!(clubAdminData && clubAdminData.length > 0),
-          clubAdminClubs: clubAdminData || []
+        if (!res.ok) {
+          setUser({ id: session.user.id, email: session.user.email, isAdmin: false, isClubAdmin: false, clubAdminClubs: [] })
+          setLoading(false)
+          return
         }
 
-        setUser(userData)
+        const data = await res.json()
+
+        setUser({
+          id: session.user.id,
+          email: session.user.email,
+          isAdmin: data.isAdmin,
+          isClubAdmin: data.isClubAdmin,
+          clubAdminClubs: data.clubAdminClubs || []
+        })
       } catch (error) {
         console.error('Error getting user:', error)
         setUser(null)
@@ -61,10 +58,8 @@ export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
       }
     }
 
-    // Initial user fetch
     getUser()
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_OUT' || !session) {
@@ -80,7 +75,7 @@ export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
       subscription?.unsubscribe()
     }
   }, [])
-  
+
   const isAuthenticated = !!user
   const isAdmin = user?.isAdmin || false
   const isClubAdmin = user?.isClubAdmin || false
@@ -142,11 +137,11 @@ export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
             </Link>
           </nav>
         </div>
-        
+
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-4">
           {!loading && (
-            <AuthButtons 
+            <AuthButtons
               isAuthenticated={isAuthenticated}
               isAdmin={isAdmin}
               isClubAdmin={isClubAdmin}
@@ -157,7 +152,7 @@ export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
 
         {/* Mobile Navigation */}
         {!loading && (
-          <MobileNavigation 
+          <MobileNavigation
             isAuthenticated={isAuthenticated}
             isAdmin={isAdmin}
             isClubAdmin={isClubAdmin}
@@ -167,4 +162,4 @@ export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
       </div>
     </header>
   )
-} 
+}
