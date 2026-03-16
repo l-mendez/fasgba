@@ -132,22 +132,20 @@ async function fetchTournaments(): Promise<Tournament[]> {
         let participants = 0
         try {
           if (tournament.tournament_type === 'team') {
-            // For team tournaments, count all players from all clubs registered for the tournament
-            // First get all clubs registered for this tournament, then count their players
-            const { data: registeredClubs, error: clubsError } = await supabase
-              .from('tournament_club_teams')
-              .select('club_id')
+            // For team tournaments, count registered teams
+            const { data: registeredTeams, error: teamsError } = await supabase
+              .from('tournament_teams')
+              .select('team_id, teams(club_id)')
               .eq('tournament_id', tournament.id)
-            
-            if (!clubsError && registeredClubs && registeredClubs.length > 0) {
-              const clubIds = registeredClubs.map(club => club.club_id)
-              
-              // Count all players from these clubs
+
+            if (!teamsError && registeredTeams && registeredTeams.length > 0) {
+              const clubIds = [...new Set(registeredTeams.map((t: any) => t.teams?.club_id).filter(Boolean))]
+
               const { data: clubPlayers, error: playersError } = await supabase
                 .from('players')
                 .select('id')
                 .in('club_id', clubIds)
-              
+
               if (!playersError && clubPlayers) {
                 participants = clubPlayers.length
               }

@@ -29,8 +29,8 @@ interface Player {
 
 interface Match {
   id: number
-  club_a: { id: number; name: string }
-  club_b: { id: number; name: string }
+  team_a: { id: number; name: string }
+  team_b: { id: number; name: string }
 }
 
 interface Round {
@@ -100,11 +100,11 @@ export default function RoundsGamesManagement({
   const [isEditMatchDialogOpen, setIsEditMatchDialogOpen] = useState(false)
   const [editingMatch, setEditingMatch] = useState<Match | null>(null)
   const [matchFormData, setMatchFormData] = useState<{
-    club_a_id: number
-    club_b_id: number
+    team_a_id: number
+    team_b_id: number
   }>({
-    club_a_id: 0,
-    club_b_id: 0
+    team_a_id: 0,
+    team_b_id: 0
   })
 
   // New state for team-specific players
@@ -142,19 +142,23 @@ export default function RoundsGamesManagement({
       if (tournamentType === 'team') {
         const data = await apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
         const registeredTeams = data.teams || []
-        
+
         const allPlayers: Player[] = []
-        for (const team of registeredTeams) {
+        const fetchedClubIds = new Set<number>()
+        for (const reg of registeredTeams) {
+          const clubId = reg.teams?.club_id
+          if (!clubId || fetchedClubIds.has(clubId)) continue
+          fetchedClubIds.add(clubId)
           try {
-            const clubPlayersData = await apiCall(`/api/clubs/${team.club_id}/players`)
+            const clubPlayersData = await apiCall(`/api/clubs/${clubId}/players`)
             const clubPlayers = clubPlayersData.players || []
             const playersWithClub = clubPlayers.map((player: any) => ({
               ...player,
-              club: { id: team.club_id, name: team.club_name }
+              club: { id: clubId, name: reg.teams?.clubs?.name || '' }
             }))
             allPlayers.push(...playersWithClub)
           } catch (error) {
-            console.error(`Error fetching players for club ${team.club_id}:`, error)
+            console.error(`Error fetching players for club ${clubId}:`, error)
           }
         }
         setPlayers(allPlayers)
@@ -170,10 +174,15 @@ export default function RoundsGamesManagement({
 
   const fetchClubs = async () => {
     try {
-      const data = await apiCall('/api/clubs')
-      setClubs(data.clubs || [])
+      const data = await apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
+      const registeredTeams = data.teams || []
+      const teamsList = registeredTeams.map((reg: any) => ({
+        id: reg.teams.id,
+        name: reg.teams.name
+      }))
+      setClubs(teamsList)
     } catch (error) {
-      console.error('Error fetching clubs:', error)
+      console.error('Error fetching teams:', error)
     }
   }
 
@@ -205,9 +214,9 @@ export default function RoundsGamesManagement({
     try {
       setFetchingTeams(true)
       const data = await apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
-      const transformedTeams = data.teams?.map((team: any) => ({
-        id: team.clubs.id,
-        name: team.clubs.name
+      const transformedTeams = data.teams?.map((reg: any) => ({
+        id: reg.teams.id,
+        name: reg.teams.name
       })) || []
       setTeams(transformedTeams)
     } catch (error) {
@@ -386,12 +395,12 @@ export default function RoundsGamesManagement({
   const handleEditMatch = async () => {
     if (!editingMatch) return
 
-    if (matchFormData.club_a_id === 0 || matchFormData.club_b_id === 0) {
+    if (matchFormData.team_a_id === 0 || matchFormData.team_b_id === 0) {
       toast.error('Debe seleccionar ambos equipos')
       return
     }
 
-    if (matchFormData.club_a_id === matchFormData.club_b_id) {
+    if (matchFormData.team_a_id === matchFormData.team_b_id) {
       toast.error('Los equipos deben ser diferentes')
       return
     }
@@ -401,8 +410,8 @@ export default function RoundsGamesManagement({
       await apiCall(`/api/tournaments/${tournamentId}/rounds/${selectedRound}/matches/${editingMatch.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          club_a_id: matchFormData.club_a_id,
-          club_b_id: matchFormData.club_b_id
+          team_a_id: matchFormData.team_a_id,
+          team_b_id: matchFormData.team_b_id
         }),
       })
 
@@ -427,7 +436,7 @@ export default function RoundsGamesManagement({
   }
 
   const handleDeleteMatch = async (match: Match) => {
-    if (!confirm(`¿Estás seguro de que quieres eliminar el enfrentamiento ${match.club_a.name} vs ${match.club_b.name}? Esto eliminará todas las partidas de este enfrentamiento.`)) {
+    if (!confirm(`¿Estás seguro de que quieres eliminar el enfrentamiento ${match.team_a.name} vs ${match.team_b.name}? Esto eliminará todas las partidas de este enfrentamiento.`)) {
       return
     }
 
@@ -457,16 +466,16 @@ export default function RoundsGamesManagement({
   const openEditMatchDialog = (match: Match) => {
     setEditingMatch(match)
     setMatchFormData({
-      club_a_id: match.club_a.id,
-      club_b_id: match.club_b.id
+      team_a_id: match.team_a.id,
+      team_b_id: match.team_b.id
     })
     setIsEditMatchDialogOpen(true)
   }
 
   const resetMatchForm = () => {
     setMatchFormData({
-      club_a_id: 0,
-      club_b_id: 0
+      team_a_id: 0,
+      team_b_id: 0
     })
   }
 
@@ -554,8 +563,8 @@ export default function RoundsGamesManagement({
 
     try {
       const [teamAPlayersData, teamBPlayersData] = await Promise.all([
-        fetchTeamPlayers(selectedMatch.club_a.id),
-        fetchTeamPlayers(selectedMatch.club_b.id)
+        fetchTeamPlayers(selectedMatch.team_a.id),
+        fetchTeamPlayers(selectedMatch.team_b.id)
       ])
       
       setTeamAPlayers(teamAPlayersData)
@@ -594,8 +603,8 @@ export default function RoundsGamesManagement({
 
     const isOddBoard = (gameFormData.board_number || 1) % 2 === 1
     return {
-      whiteTeam: isOddBoard ? selectedMatch.club_a.name : selectedMatch.club_b.name,
-      blackTeam: isOddBoard ? selectedMatch.club_b.name : selectedMatch.club_a.name,
+      whiteTeam: isOddBoard ? selectedMatch.team_a.name : selectedMatch.team_b.name,
+      blackTeam: isOddBoard ? selectedMatch.team_b.name : selectedMatch.team_a.name,
       isOddBoard
     }
   }
@@ -631,14 +640,14 @@ export default function RoundsGamesManagement({
             </Badge>
           </div>
           
-          <Button 
+          <Button
             onClick={() => setIsAddRoundDialogOpen(true)}
             className="flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
             Nueva Ronda
           </Button>
-          
+
           <RoundFormDialog
             open={isAddRoundDialogOpen}
             onOpenChange={setIsAddRoundDialogOpen}
@@ -747,7 +756,7 @@ export default function RoundsGamesManagement({
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-base">
-                          {match.club_a.name} vs {match.club_b.name}
+                          {match.team_a.name} vs {match.team_b.name}
                         </CardTitle>
                         <div className="flex items-center gap-2">
                           <Button
@@ -772,9 +781,9 @@ export default function RoundsGamesManagement({
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-                        <span>Equipo A: {match.club_a.name}</span>
+                        <span>Equipo A: {match.team_a.name}</span>
                         <span>vs</span>
-                        <span>Equipo B: {match.club_b.name}</span>
+                        <span>Equipo B: {match.team_b.name}</span>
                       </div>
                       <div className="mt-2 text-xs text-gray-500">
                         {(() => {
@@ -855,7 +864,7 @@ export default function RoundsGamesManagement({
                         <SelectContent>
                           {matches.map((match) => (
                             <SelectItem key={match.id} value={match.id.toString()}>
-                              {match.club_a.name} vs {match.club_b.name}
+                              {match.team_a.name} vs {match.team_b.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1273,7 +1282,7 @@ export default function RoundsGamesManagement({
                 <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Enfrentamiento Original:</p>
                   <p className="font-medium">
-                    {editingMatch.club_a.name} vs {editingMatch.club_b.name}
+                    {editingMatch.team_a.name} vs {editingMatch.team_b.name}
                   </p>
                 </div>
 
@@ -1281,9 +1290,9 @@ export default function RoundsGamesManagement({
                   <div>
                     <Label htmlFor="edit_club_a">Equipo A *</Label>
                     <Select 
-                      value={matchFormData.club_a_id.toString()} 
+                      value={matchFormData.team_a_id.toString()} 
                       onValueChange={(value) => 
-                        setMatchFormData(prev => ({ ...prev, club_a_id: parseInt(value) }))
+                        setMatchFormData(prev => ({ ...prev, team_a_id: parseInt(value) }))
                       }
                     >
                       <SelectTrigger>
@@ -1302,9 +1311,9 @@ export default function RoundsGamesManagement({
                   <div>
                     <Label htmlFor="edit_club_b">Equipo B *</Label>
                     <Select 
-                      value={matchFormData.club_b_id.toString()} 
+                      value={matchFormData.team_b_id.toString()} 
                       onValueChange={(value) => 
-                        setMatchFormData(prev => ({ ...prev, club_b_id: parseInt(value) }))
+                        setMatchFormData(prev => ({ ...prev, team_b_id: parseInt(value) }))
                       }
                     >
                       <SelectTrigger>

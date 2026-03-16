@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Calendar, Clock, MapPin, Trophy, Users, ExternalLink } from "lucide-react"
 import Link from "next/link"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -38,9 +39,17 @@ function TorneoCard({
   return (
     <Card className="border-amber/20 shadow-md transition-all duration-300 hover:shadow-lg">
       <CardHeader className="pb-3 border-b border-amber/10">
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-start gap-2">
           <div className="flex-1">
-            <CardTitle className="text-terracotta">{torneo.title}</CardTitle>
+            <div className="flex items-center gap-2 flex-wrap">
+              <CardTitle className="text-terracotta">{torneo.title}</CardTitle>
+              {torneo.tournament_type === 'team' && (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200">
+                  <Users className="h-3 w-3 mr-1" />
+                  Por Equipos
+                </Badge>
+              )}
+            </div>
             <CardDescription>{torneo.description || "Información del torneo próximamente"}</CardDescription>
           </div>
         </div>

@@ -56,6 +56,12 @@ interface IndividualGameRaw {
   round: Round
 }
 
+interface Team {
+  id: number
+  name: string
+  club: Club
+}
+
 interface MatchGameRaw {
   id: number
   board_number: number
@@ -68,8 +74,8 @@ interface MatchGameRaw {
   black_player: Player
   match: {
     id: number
-    club_a: Club
-    club_b: Club
+    team_a: Team
+    team_b: Team
     round: Round
   }
 }
@@ -129,8 +135,8 @@ export async function getTournamentGames(tournamentId: number, tournamentType: s
           black_player:players!match_games_black_player_id_fkey(id, full_name, rating),
           match:matches!inner(
             id,
-            club_a:clubs!matches_club_a_id_fkey(id, name),
-            club_b:clubs!matches_club_b_id_fkey(id, name),
+            team_a:teams!matches_team_a_id_fkey(id, name, club:clubs(id, name)),
+            team_b:teams!matches_team_b_id_fkey(id, name, club:clubs(id, name)),
             round:rounds!inner(id, round_number, tournament_id)
           )
         `)
@@ -148,8 +154,8 @@ export async function getTournamentGames(tournamentId: number, tournamentType: s
         // Odd boards (1,3,5): Club A plays white, Club B plays black
         // Even boards (2,4,6): Club A plays black, Club B plays white
         const isOddBoard = (game.board_number || 1) % 2 === 1
-        const whiteTeam = isOddBoard ? game.match?.club_a?.name : game.match?.club_b?.name
-        const blackTeam = isOddBoard ? game.match?.club_b?.name : game.match?.club_a?.name
+        const whiteTeam = isOddBoard ? game.match?.team_a?.name : game.match?.team_b?.name
+        const blackTeam = isOddBoard ? game.match?.team_b?.name : game.match?.team_a?.name
         
         return {
           id: game.id,
@@ -296,8 +302,8 @@ export async function getGameById(gameId: number, tournamentType: string = 'indi
           black_player:players!match_games_black_player_id_fkey(id, full_name, rating),
           match:matches(
             id,
-            club_a:clubs!matches_club_a_id_fkey(id, name),
-            club_b:clubs!matches_club_b_id_fkey(id, name),
+            team_a:teams!matches_team_a_id_fkey(id, name, club:clubs(id, name)),
+            team_b:teams!matches_team_b_id_fkey(id, name, club:clubs(id, name)),
             round:rounds(id, round_number)
           )
         `)
@@ -313,8 +319,8 @@ export async function getGameById(gameId: number, tournamentType: string = 'indi
       // Odd boards (1,3,5): Club A plays white, Club B plays black
       // Even boards (2,4,6): Club A plays black, Club B plays white
       const isOddBoard = (matchGame.board_number || 1) % 2 === 1
-      const whiteTeam = isOddBoard ? matchGame.match?.club_a?.name : matchGame.match?.club_b?.name
-      const blackTeam = isOddBoard ? matchGame.match?.club_b?.name : matchGame.match?.club_a?.name
+      const whiteTeam = isOddBoard ? matchGame.match?.team_a?.name : matchGame.match?.team_b?.name
+      const blackTeam = isOddBoard ? matchGame.match?.team_b?.name : matchGame.match?.team_a?.name
 
       return {
         id: matchGame.id,

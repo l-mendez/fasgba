@@ -123,6 +123,7 @@ export default function AdminDocumentosPage() {
     reglamentos: 0,
     actas: 0,
     minutas: 0,
+    escuela: 0,
     otros: 0,
   })
   const [isSavingSettings, setIsSavingSettings] = useState(false)

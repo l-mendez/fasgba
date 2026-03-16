@@ -12,7 +12,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Helper function to authenticate and authorize user for tournament operations
-async function authenticateAndAuthorize(request: NextRequest, tournamentId: string) {
+async function authenticateAndAuthorize(request: NextRequest, tournamentId: number) {
   // Get the authorization header
   const authHeader = request.headers.get('authorization')
   
@@ -70,7 +70,7 @@ async function authenticateAndAuthorize(request: NextRequest, tournamentId: stri
 }
 
 // Helper function to check if user can edit tournament
-async function canUserEditTournament(userId: string, tournamentId: string): Promise<boolean> {
+async function canUserEditTournament(userId: string, tournamentId: number): Promise<boolean> {
   try {
     // Check if user is site admin
     const { data: adminData, error: adminError } = await serverSupabase
@@ -234,7 +234,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     
     // Authenticate and authorize user
     try {
-      await authenticateAndAuthorize(request, idParam)
+      await authenticateAndAuthorize(request, tournamentId)
     } catch (authError) {
       if (authError instanceof Error) {
         switch (authError.message) {
@@ -324,14 +324,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
         // 3. Delete team registrations (but keep players - they can be re-registered individually)
         const { data: teamRegistrations, error: teamRegError } = await serverSupabase
-          .from('tournament_club_teams')
-          .select('club_id')
+          .from('tournament_teams')
+          .select('team_id')
           .eq('tournament_id', tournamentId)
 
         let teamsDeleted = 0
         if (teamRegistrations && teamRegistrations.length > 0) {
           const { error: deleteTeamsError } = await serverSupabase
-            .from('tournament_club_teams')
+            .from('tournament_teams')
             .delete()
             .eq('tournament_id', tournamentId)
 

@@ -8,6 +8,7 @@ export const DOCUMENT_CATEGORIES = {
   reglamentos: 'Reglamentos',
   actas: 'Actas',
   minutas: 'Minutas',
+  escuela: 'Escuela',
   otros: 'Otros',
 } as const
 
@@ -18,6 +19,7 @@ export const CATEGORY_COLORS: Record<DocumentCategory, string> = {
   reglamentos: 'bg-blue-100 text-blue-800',
   actas: 'bg-green-100 text-green-800',
   minutas: 'bg-amber-100 text-amber-800',
+  escuela: 'bg-purple-100 text-purple-800',
   otros: 'bg-gray-100 text-gray-800',
 }
 

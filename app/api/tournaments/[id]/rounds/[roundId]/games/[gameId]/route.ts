@@ -133,7 +133,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return notFoundError('Round not found')
     }
 
-    const tournament = round.tournaments
+    const tournament = Array.isArray(round.tournaments) ? round.tournaments[0] : round.tournaments
     if (!tournament) {
       return notFoundError(ERROR_MESSAGES.TOURNAMENT_NOT_FOUND)
     }
@@ -147,8 +147,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           matches (
             id,
             round_id,
-            club_a:clubs!club_a_id (id, name),
-            club_b:clubs!club_b_id (id, name)
+            team_a:teams!team_a_id (id, name, club:clubs(id, name)),
+            team_b:teams!team_b_id (id, name, club:clubs(id, name))
           ),
           white_player:players!white_player_id (id, full_name, fide_id, rating),
           black_player:players!black_player_id (id, full_name, fide_id, rating)
@@ -268,7 +268,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return notFoundError('Round not found')
     }
 
-    const tournament = round.tournaments
+    const tournament = Array.isArray(round.tournaments) ? round.tournaments[0] : round.tournaments
     if (!tournament) {
       return notFoundError(ERROR_MESSAGES.TOURNAMENT_NOT_FOUND)
     }
@@ -284,8 +284,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           matches (
             id,
             round_id,
-            club_a:clubs!club_a_id (id, name),
-            club_b:clubs!club_b_id (id, name)
+            team_a:teams!team_a_id (id, name, club:clubs(id, name)),
+            team_b:teams!team_b_id (id, name, club:clubs(id, name))
           ),
           white_player:players!white_player_id (id, full_name, fide_id, rating),
           black_player:players!black_player_id (id, full_name, fide_id, rating)
@@ -393,7 +393,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return notFoundError('Round not found')
     }
 
-    const tournament = round.tournaments
+    const tournament = Array.isArray(round.tournaments) ? round.tournaments[0] : round.tournaments
     if (!tournament) {
       return notFoundError(ERROR_MESSAGES.TOURNAMENT_NOT_FOUND)
     }
