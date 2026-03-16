@@ -80,6 +80,16 @@ const getFirstValueByKeys = (obj: Record<string, any>, keys: string[]): any => {
   return undefined
 }
 
+const findPointsRaw = (obj: Record<string, any>): any => {
+  const direct = getFirstValueByKeys(obj, [
+    'Puntos', 'PUNTOS', 'Ranking Nuevo', 'Ranking No', 'Ranking Nro',
+    'Points', 'ELO', 'Elo', 'elo', 'Rating', 'RATING', 'Puntaje', 'PUNTAJE',
+  ])
+  if (direct !== undefined) return direct
+  const pointsKey = Object.keys(obj).find(k => /puntos|ranking|points|elo|rating|puntaje/i.test(k))
+  return pointsKey ? obj[pointsKey] : undefined
+}
+
 const findActiveRaw = (obj: Record<string, any>): any => {
   const direct = getFirstValueByKeys(obj, [
     'Activo', 'ACTIVO', 'active', 'Active', 'ACTIVE', 'Act', 'ACT'
@@ -131,6 +141,11 @@ function parseRankingSheetMulti(sheet: XLSX.WorkSheet): RankingPlayer[] {
     throw new Error('La hoja "Ranking" está vacía')
   }
 
+  // Log detected columns for debugging
+  if (rawData.length > 0) {
+    console.log('Detected Excel columns:', Object.keys(rawData[0]))
+  }
+
   const playerMap = new Map<string, RankingPlayer>()
   const errors: string[] = []
 
@@ -150,8 +165,10 @@ function parseRankingSheetMulti(sheet: XLSX.WorkSheet): RankingPlayer[] {
       const title = row.TIT || row.Titulo || row.TITULO || row.Título || ''
       const club = row.Club || row.CLUB || ''
       const category = row['Categoría'] || row.Categoria || row.CATEGORIA || row.Cat || ''
-      const points = row.Puntos || row['Ranking Nuevo'] || row.Points || row.ELO || row.Elo || 0
-      const matches = row.Partidos || row.Matches || row.PARTIDOS || 0
+      const points = findPointsRaw(row) ?? 0
+      const matches = getFirstValueByKeys(row, [
+        'Partidos', 'PARTIDOS', 'Matches', 'matches', 'N', 'n', 'Games',
+      ]) ?? 0
       const activeRaw = findActiveRaw(row)
 
       // Detect rating type from Tipo column
@@ -288,8 +305,10 @@ function parseLegacySheet(sheet: XLSX.WorkSheet): RankingPlayer[] {
       const name = row.Nombre || row.Name || row.NOMBRE || ''
       const title = row.TIT || row.Titulo || row.TITULO || ''
       const club = row.Club || row.CLUB || ''
-      const points = row.Puntos || row['Ranking Nuevo'] || row.Points || row.ELO || 0
-      const matches = row.Partidos || row.Matches || row.PARTIDOS || 0
+      const points = findPointsRaw(row) ?? 0
+      const matches = getFirstValueByKeys(row, [
+        'Partidos', 'PARTIDOS', 'Matches', 'matches', 'N', 'n', 'Games',
+      ]) ?? 0
       const position = index + 1
 
       if (!name || String(name).trim() === '') {

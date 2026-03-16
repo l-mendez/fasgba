@@ -790,7 +790,7 @@ export default function AdminRankingPage() {
                         {player.club}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        {player.ratings?.standard ? Math.round(player.ratings.standard) : Math.round(player.points)}
+                        {player.ratings?.standard ? Math.round(player.ratings.standard) : '--'}
                       </TableCell>
                       <TableCell className="text-right font-mono text-muted-foreground">
                         {player.ratings?.rapid ? Math.round(player.ratings.rapid) : '--'}
