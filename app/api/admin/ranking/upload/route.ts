@@ -90,6 +90,16 @@ const findPointsRaw = (obj: Record<string, any>): any => {
   return pointsKey ? obj[pointsKey] : undefined
 }
 
+const findTipoRaw = (obj: Record<string, any>): any => {
+  const direct = getFirstValueByKeys(obj, [
+    'Tipo', 'TIPO', 'tipo', 'Tipo de Rating', 'Type', 'TYPE', 'type',
+    'Modalidad', 'MODALIDAD', 'modalidad', 'Mod', 'MOD',
+  ])
+  if (direct !== undefined) return direct
+  const tipoKey = Object.keys(obj).find(k => /tipo|type|modalidad/i.test(k.trim()))
+  return tipoKey ? obj[tipoKey] : undefined
+}
+
 const findActiveRaw = (obj: Record<string, any>): any => {
   const direct = getFirstValueByKeys(obj, [
     'Activo', 'ACTIVO', 'active', 'Active', 'ACTIVE', 'Act', 'ACT'
@@ -172,9 +182,15 @@ function parseRankingSheetMulti(sheet: XLSX.WorkSheet): RankingPlayer[] {
       const activeRaw = findActiveRaw(row)
 
       // Detect rating type from Tipo column
-      const tipoRaw = getFirstValueByKeys(row, ['Tipo', 'TIPO', 'Tipo de Rating', 'Type', 'tipo'])
-      const tipoNum = typeof tipoRaw === 'number' ? tipoRaw : parseInt(String(tipoRaw)) || 1
+      const tipoRaw = findTipoRaw(row)
+      const tipoNum = tipoRaw !== undefined
+        ? (typeof tipoRaw === 'number' ? tipoRaw : parseInt(String(tipoRaw)) || 1)
+        : 1
       const ratingType = mapTipoToRatingType(tipoNum)
+
+      if (index === 0) {
+        console.log('First row Tipo detection:', { tipoRaw, tipoNum, ratingType, rowKeys: Object.keys(row) })
+      }
 
       const playerKey = String(id).trim() || normalizePlayerName(String(name))
       const pointsValue = Math.round(typeof points === 'number' ? points : parseFloat(String(points)) || 0)
@@ -295,21 +311,29 @@ function parseLegacySheet(sheet: XLSX.WorkSheet): RankingPlayer[] {
     throw new Error('La hoja de Excel está vacía o no contiene datos válidos')
   }
 
-  const transformedData: RankingPlayer[] = []
+  const playerMap = new Map<string, RankingPlayer>()
   const errors: string[] = []
+
+  // Check if any row has a Tipo column to decide multi-rating vs single-rating
+  const hasTipoColumn = rawData.some(row => findTipoRaw(row) !== undefined)
+
+  if (rawData.length > 0) {
+    console.log('Legacy parser - columns:', Object.keys(rawData[0]), 'hasTipoColumn:', hasTipoColumn)
+  }
 
   rawData.forEach((row, index) => {
     const rowNumber = index + 2
     try {
       const activeRaw = findActiveRaw(row)
-      const name = row.Nombre || row.Name || row.NOMBRE || ''
-      const title = row.TIT || row.Titulo || row.TITULO || ''
+      const name = row.Nombre || row.Name || row.NOMBRE || row.Jugador || ''
+      const id = row.ID || row.Id || row.id || ''
+      const title = row.TIT || row.Titulo || row.TITULO || row.Título || ''
       const club = row.Club || row.CLUB || ''
+      const category = row['Categoría'] || row.Categoria || row.CATEGORIA || row.Cat || ''
       const points = findPointsRaw(row) ?? 0
       const matches = getFirstValueByKeys(row, [
         'Partidos', 'PARTIDOS', 'Matches', 'matches', 'N', 'n', 'Games',
       ]) ?? 0
-      const position = index + 1
 
       if (!name || String(name).trim() === '') {
         if (Object.keys(row).length > 1) {
@@ -319,21 +343,60 @@ function parseLegacySheet(sheet: XLSX.WorkSheet): RankingPlayer[] {
       }
 
       const pointsValue = Math.round(typeof points === 'number' ? points : parseInt(String(points)) || 0)
+      const matchesValue = typeof matches === 'number' ? matches : parseInt(String(matches)) || 0
 
-      transformedData.push({
-        position,
-        name: normalizePlayerName(String(name)),
-        title: title ? String(title).trim().toUpperCase() : undefined,
-        club: String(club).trim(),
-        points: pointsValue,
-        matches: typeof matches === 'number' ? matches : parseInt(String(matches)) || 0,
-        ratings: { standard: pointsValue, rapid: null, blitz: null },
-        active: parseActive(activeRaw),
-      })
+      if (hasTipoColumn) {
+        // Multi-rating: merge rows by player using Tipo column
+        const tipoRaw = findTipoRaw(row)
+        const tipoNum = tipoRaw !== undefined
+          ? (typeof tipoRaw === 'number' ? tipoRaw : parseInt(String(tipoRaw)) || 1)
+          : 1
+        const ratingType = mapTipoToRatingType(tipoNum)
+        const playerKey = String(id).trim() || normalizePlayerName(String(name))
+
+        if (playerMap.has(playerKey)) {
+          const existing = playerMap.get(playerKey)!
+          existing.ratings[ratingType] = pointsValue
+          existing.matches += matchesValue
+        } else {
+          const ratings: PlayerRatings = { standard: null, rapid: null, blitz: null }
+          ratings[ratingType] = pointsValue
+
+          playerMap.set(playerKey, {
+            position: 0,
+            id: String(id).trim() || undefined,
+            name: normalizePlayerName(String(name)),
+            title: title ? String(title).trim().toUpperCase() : undefined,
+            club: String(club).trim(),
+            category: category ? String(category).trim() : undefined,
+            points: 0,
+            matches: matchesValue,
+            ratings,
+            active: parseActive(activeRaw),
+          })
+        }
+      } else {
+        // Single-rating: all points go to standard
+        const playerKey = String(id).trim() || normalizePlayerName(String(name))
+        playerMap.set(playerKey, {
+          position: 0,
+          id: String(id).trim() || undefined,
+          name: normalizePlayerName(String(name)),
+          title: title ? String(title).trim().toUpperCase() : undefined,
+          club: String(club).trim(),
+          category: category ? String(category).trim() : undefined,
+          points: pointsValue,
+          matches: matchesValue,
+          ratings: { standard: pointsValue, rapid: null, blitz: null },
+          active: parseActive(activeRaw),
+        })
+      }
     } catch (rowError) {
       errors.push(`Fila ${rowNumber}: Error al procesar datos - ${rowError instanceof Error ? rowError.message : 'Error desconocido'}`)
     }
   })
+
+  const transformedData = Array.from(playerMap.values())
 
   if (errors.length > 0 && transformedData.length === 0) {
     const availableColumns = rawData.length > 0 ? Object.keys(rawData[0]) : []
@@ -350,7 +413,15 @@ function parseLegacySheet(sheet: XLSX.WorkSheet): RankingPlayer[] {
     console.warn(`Skipped ${errors.length} rows with errors:`, errors)
   }
 
-  return transformedData.sort((a, b) => a.position - b.position)
+  // Assign positions and set legacy points from standard rating
+  transformedData
+    .sort((a, b) => (b.ratings.standard || 0) - (a.ratings.standard || 0))
+    .forEach((player, i) => {
+      player.position = i + 1
+      player.points = player.ratings.standard || 0
+    })
+
+  return transformedData
 }
 
 export async function POST(request: NextRequest) {
