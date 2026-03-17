@@ -1,22 +1,23 @@
 import { Suspense } from "react";
-import { Search } from "lucide-react"
-import Link from "next/link"
 import { Metadata } from "next"
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { PlayerList } from "@/app/ranking/components/PlayerList"
-import { getPlayers, getAvailableRankings, type PaginatedPlayersResponse } from "@/lib/rankingUtils"
+import {
+  getPlayers,
+  getAvailableRankings,
+  type PaginatedPlayersResponse,
+  type Player,
+  type RatingType,
+} from "@/lib/rankingUtils"
 
-// ISR: Revalidate every 5 minutes (300 seconds) instead of force-dynamic
-// This caches the page and regenerates it in the background when stale
+// Re-export Player type for any consumers
+export type { Player }
+
+// ISR: Revalidate every 5 minutes (300 seconds)
 export const revalidate = 300
 
-// Generate metadata for better link previews
 export const metadata: Metadata = {
   title: 'Ranking FASGBA - Clasificación Oficial de Jugadores',
   description: 'Consulta la clasificación oficial de jugadores de la Federación de Ajedrez del Sur del Gran Buenos Aires. Rankings actualizados con estadísticas completas.',
@@ -57,22 +58,6 @@ export const metadata: Metadata = {
   },
 }
 
-// Define interfaces for the data we're working with
-export interface Player {
-  position: number;
-  name: string;
-  title?: string;
-  club: string;
-  points: number;
-  matches: number;
-  changes?: {
-    position: number | null; // positive = moved up, negative = moved down, null = new player
-    points: number; // positive = gained points, negative = lost points
-    isNew: boolean; // true if player wasn't in previous ranking
-  };
-  active: boolean;
-}
-
 interface ApiResponse {
   players: Player[];
   total: number;
@@ -83,20 +68,25 @@ interface ApiResponse {
   availableRankings?: Array<{filename: string, displayName: string, month: number, year: number, date: Date}>;
 }
 
-// Get players directly from rankingUtils instead of making HTTP call
-async function getPlayersData(page: number = 1, pageSize: number = 50, search: string = '', ranking?: string, activeFilter: 'active' | 'inactive' | 'all' = 'active'): Promise<ApiResponse> {
+async function getPlayersData(
+  page: number = 1,
+  pageSize: number = 50,
+  search: string = '',
+  ranking?: string,
+  activeFilter: 'active' | 'inactive' | 'all' = 'active',
+  sortBy: RatingType = 'standard'
+): Promise<ApiResponse> {
   try {
-    // Clear cache if a specific ranking is requested to ensure fresh data
     if (ranking) {
       const { clearRankingCache } = await import('@/lib/rankingUtils');
       clearRankingCache();
     }
-    
+
     const [data, availableRankings]: [PaginatedPlayersResponse, Array<{filename: string, displayName: string, month: number, year: number, date: Date}>] = await Promise.all([
-      getPlayers(page, pageSize, search, ranking, activeFilter),
+      getPlayers(page, pageSize, search, ranking, activeFilter, sortBy),
       getAvailableRankings()
     ]);
-    
+
     return {
       ...data,
       currentRanking: ranking || (availableRankings.length > 0 ? availableRankings[0].filename : undefined),
@@ -133,7 +123,7 @@ function ErrorState({ message }: { message: string }) {
 export default async function RankingPage({
   searchParams,
 }: {
-  searchParams: { page?: string; search?: string; ranking?: string; active?: string };
+  searchParams: { page?: string; search?: string; ranking?: string; active?: string; sortBy?: string };
 }) {
   return (
     <div className="flex min-h-screen flex-col">
@@ -162,12 +152,11 @@ export default async function RankingPage({
   );
 }
 
-async function RankingContent({ 
+async function RankingContent({
   searchParams,
-}: { 
-  searchParams: { page?: string; search?: string; ranking?: string; active?: string };
+}: {
+  searchParams: { page?: string; search?: string; ranking?: string; active?: string; sortBy?: string };
 }) {
-  // Await the searchParams before using them
   const params = await Promise.resolve(searchParams);
   const page = parseInt(params.page || '1');
   const pageSize = 50;
@@ -176,20 +165,23 @@ async function RankingContent({
   const activeParamRaw = (params.active || 'active').toLowerCase();
   const activeFilter: 'active' | 'inactive' | 'all' =
     activeParamRaw === 'inactive' ? 'inactive' : activeParamRaw === 'all' ? 'all' : 'active';
+  const sortBy: RatingType =
+    params.sortBy === 'rapid' ? 'rapid' : params.sortBy === 'blitz' ? 'blitz' : 'standard';
 
   try {
-    const data = await getPlayersData(page, pageSize, search, ranking || undefined, activeFilter);
-    return <PlayerList 
-      key={`${data.currentRanking || 'latest'}-${page}-${search}-${activeFilter}`}
-      players={data.players} 
+    const data = await getPlayersData(page, pageSize, search, ranking || undefined, activeFilter, sortBy);
+    return <PlayerList
+      key={`${data.currentRanking || 'latest'}-${page}-${search}-${activeFilter}-${sortBy}`}
+      players={data.players}
       currentPage={data.page}
       totalPages={data.totalPages}
       totalPlayers={data.total}
       currentRanking={data.currentRanking}
       availableRankings={data.availableRankings || []}
+      sortBy={sortBy}
     />;
   } catch (error) {
     console.error("Error fetching players:", error);
     return <ErrorState message="Hubo un problema al cargar los datos del ranking. Por favor, intenta nuevamente más tarde." />;
   }
-} 
+}

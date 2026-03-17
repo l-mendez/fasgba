@@ -22,9 +22,10 @@ export async function GET(request: NextRequest) {
 
     // Filter and process ranking files
     const rankingFiles = files
-      .filter(file => 
-        file.name.endsWith('.json') && 
+      .filter(file =>
+        file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
+        !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
       .map(file => {

@@ -30,8 +30,8 @@ export async function POST(request: NextRequest) {
     // Use admin client for storage operations
     const adminSupabase = createAdminClient()
 
-    const { tempJsonPath, filename } = await request.json()
-    
+    const { tempJsonPath, tempAnalyticsPath, filename } = await request.json()
+
     if (!tempJsonPath || !filename) {
       return handleError(new Error('Missing required parameters'))
     }
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const { data: tempFile, error: downloadError } = await adminSupabase.storage
       .from('ranking-data')
       .download(tempJsonPath)
-    
+
     if (downloadError) {
       console.error('Download error:', downloadError)
       return handleError(new Error('Failed to retrieve temp ranking data'))
@@ -58,14 +58,38 @@ export async function POST(request: NextRequest) {
         contentType: 'application/json',
         upsert: false // Don't overwrite existing files - this ensures numbered filenames work correctly
       })
-    
+
     if (uploadError) {
       console.error('Final upload error:', uploadError)
       return handleError(new Error('Failed to save ranking data'))
     }
 
-    // Clean up temp file using admin client
+    // Clean up temp ranking file
     await adminSupabase.storage.from('ranking-data').remove([tempJsonPath])
+
+    // Move analytics file from temp to final location if it exists
+    if (tempAnalyticsPath) {
+      try {
+        const { data: analyticsFile, error: analyticsDownloadError } = await adminSupabase.storage
+          .from('ranking-data')
+          .download(tempAnalyticsPath)
+
+        if (!analyticsDownloadError && analyticsFile) {
+          const analyticsContent = await analyticsFile.text()
+          const analyticsFinalPath = `${filename}-analytics.json`
+          await adminSupabase.storage
+            .from('ranking-data')
+            .upload(analyticsFinalPath, analyticsContent, {
+              contentType: 'application/json',
+              upsert: false
+            })
+          await adminSupabase.storage.from('ranking-data').remove([tempAnalyticsPath])
+        }
+      } catch (analyticsError) {
+        console.warn('Failed to move analytics file:', analyticsError)
+        // Don't fail the confirm for analytics
+      }
+    }
 
     // If this is a past ranking upload, recalculate subsequent rankings
     const needsRecalculation = await checkIfRecalculationNeeded(adminSupabase, rankingData.month, rankingData.year)
@@ -135,6 +159,7 @@ async function checkIfRecalculationNeeded(adminSupabase: any, currentMonth: numb
       .filter((file: { name: string }) =>
         file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
+        !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
       .map((file: { name: string }) => {
@@ -185,6 +210,7 @@ async function recalculateSubsequentRankings(adminSupabase: any, newRankingMonth
       .filter((file: { name: string }) =>
         file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
+        !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
       .map((file: { name: string }) => {

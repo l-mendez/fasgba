@@ -63,6 +63,11 @@ interface RankingPlayer {
   club: string;
   points: number;
   matches: number;
+  ratings?: {
+    standard: number | null;
+    rapid: number | null;
+    blitz: number | null;
+  };
 }
 
 interface PastRanking {
@@ -84,6 +89,7 @@ export default function AdminRankingPage() {
   const [pastRankings, setPastRankings] = useState<PastRanking[]>([])
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [tempJsonPath, setTempJsonPath] = useState<string | null>(null)
+  const [tempAnalyticsPath, setTempAnalyticsPath] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string>('')
   const [successMessage, setSuccessMessage] = useState<string>('')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -235,8 +241,10 @@ export default function AdminRankingPage() {
       const result = await response.json()
       setPreviewData(result.previewData || [])
       setTempJsonPath(result.tempJsonPath)
+      setTempAnalyticsPath(result.tempAnalyticsPath || null)
       setUploadStatus('success')
-      setSuccessMessage(`Archivo procesado correctamente. Se encontraron ${result.previewData?.length || 0} jugadores. Revisa la vista previa y guarda los cambios.`)
+      const analyticsMsg = result.hasAnalytics ? ` Se encontraron ${result.analyticsCount} registros analíticos.` : ''
+      setSuccessMessage(`Archivo procesado correctamente. Se encontraron ${result.totalPlayers || 0} jugadores.${analyticsMsg} Revisa la vista previa y guarda los cambios.`)
       
     } catch (error) {
       console.error('Upload error:', error)
@@ -279,6 +287,7 @@ export default function AdminRankingPage() {
         },
         body: JSON.stringify({
           tempJsonPath,
+          tempAnalyticsPath,
           filename: generateFilename()
         })
       })
@@ -296,7 +305,8 @@ export default function AdminRankingPage() {
       setPreviewData([])
       setUploadStatus('idle')
       setTempJsonPath(null)
-      
+      setTempAnalyticsPath(null)
+
       // Show success message
       setSuccessMessage(`¡Ranking "${generateFilename()}" guardado exitosamente! El ranking ya está disponible en el sistema.`)
       
@@ -342,7 +352,8 @@ export default function AdminRankingPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          tempJsonPath
+          tempJsonPath,
+          tempAnalyticsPath
         })
       })
 
@@ -361,6 +372,7 @@ export default function AdminRankingPage() {
       setPreviewData([])
       setUploadStatus('idle')
       setTempJsonPath(null)
+      setTempAnalyticsPath(null)
       setIsCancelling(false)
       setIsProcessing(false)
       setErrorMessage('')
@@ -549,7 +561,8 @@ export default function AdminRankingPage() {
         <CardHeader>
           <CardTitle>Subir archivo de ranking</CardTitle>
           <CardDescription>
-            Selecciona un archivo Excel (.xlsx) con los datos actualizados del ranking
+            Selecciona un archivo Excel (.xlsx) con los datos actualizados del ranking.
+            Soporta formato con 3 hojas (Ranking, Analítico, Consolidado) o formato simple de una sola hoja.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -752,7 +765,9 @@ export default function AdminRankingPage() {
                     <TableHead className="w-16">Pos.</TableHead>
                     <TableHead>Jugador</TableHead>
                     <TableHead>Club</TableHead>
-                    <TableHead className="text-right">Puntos</TableHead>
+                    <TableHead className="text-right">Standard</TableHead>
+                    <TableHead className="text-right">Rápido</TableHead>
+                    <TableHead className="text-right">Blitz</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -775,7 +790,13 @@ export default function AdminRankingPage() {
                         {player.club}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        {Math.round(player.points)}
+                        {player.ratings?.standard ? Math.round(player.ratings.standard) : '--'}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-muted-foreground">
+                        {player.ratings?.rapid ? Math.round(player.ratings.rapid) : '--'}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-muted-foreground">
+                        {player.ratings?.blitz ? Math.round(player.ratings.blitz) : '--'}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -41,8 +41,9 @@ export async function POST(request: NextRequest) {
     // Process and sort all rankings by chronological date
     const allRankings = files
       .filter(file => 
-        file.name.endsWith('.json') && 
+        file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
+        !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
       .map(file => {
@@ -243,9 +244,40 @@ export async function POST(request: NextRequest) {
       const { error: deleteError } = await adminSupabase.storage
         .from('ranking-data')
         .remove([currentFullFilename])
-      
+
       if (deleteError) {
         console.warn(`Warning: Failed to delete old file ${currentFullFilename}:`, deleteError.message)
+      }
+
+      // Also rename the companion analytics file if it exists
+      const oldAnalyticsFilename = currentFullFilename.replace('.json', '-analytics.json')
+      const newAnalyticsFilename = `${newFilename}-analytics.json`
+      try {
+        const { data: analyticsFile, error: analyticsDownloadErr } = await adminSupabase.storage
+          .from('ranking-data')
+          .download(oldAnalyticsFilename)
+
+        if (!analyticsDownloadErr && analyticsFile) {
+          const analyticsContent = await analyticsFile.text()
+          const analyticsData = JSON.parse(analyticsContent)
+          analyticsData.filename = `${newFilename}-analytics`
+          analyticsData.rankingFilename = newFilename
+          analyticsData.month = month
+          analyticsData.year = year
+
+          const analyticsBuffer = Buffer.from(JSON.stringify(analyticsData, null, 2))
+          await adminSupabase.storage
+            .from('ranking-data')
+            .upload(newAnalyticsFilename, analyticsBuffer, {
+              contentType: 'application/json',
+              upsert: false
+            })
+          await adminSupabase.storage
+            .from('ranking-data')
+            .remove([oldAnalyticsFilename])
+        }
+      } catch (analyticsError) {
+        console.warn('Failed to rename analytics file:', analyticsError)
       }
     }
     

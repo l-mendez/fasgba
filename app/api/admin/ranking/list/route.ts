@@ -37,9 +37,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Filter and process ranking files (exclude temp files and non-JSON)
-    const filteredFiles = files.filter(file => 
-      file.name.endsWith('.json') && 
+    const filteredFiles = files.filter(file =>
+      file.name.endsWith('.json') &&
       !file.name.startsWith('temp/') &&
+      !file.name.includes('-analytics') &&
       file.name.match(/^ranking-\d{2}-\d{4}/)
     )
 
