@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { MobileNavigation } from "@/components/mobile-navigation"
 import { AuthButtons } from "@/components/auth-buttons"
+import { ScrollHeader } from "@/components/scroll-header"
 import { createClient } from "@/lib/supabase/server"
 
 interface SiteHeaderProps {
@@ -58,7 +59,8 @@ export async function SiteHeader({ pathname }: SiteHeaderProps) {
   const isClubAdmin = user?.isClubAdmin || false
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-amber/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <ScrollHeader>
+    <header className="w-full border-b border-amber/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       {/* Desktop Header */}
       <div className="hidden md:block">
         <div className="container flex h-14 items-center justify-between">
@@ -172,6 +174,7 @@ export async function SiteHeader({ pathname }: SiteHeaderProps) {
         <div className="w-10 h-10"></div>
       </div>
     </header>
+    </ScrollHeader>
   )
 }
 

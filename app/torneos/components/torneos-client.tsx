@@ -151,7 +151,7 @@ export default function TorneosClient({
   pastTournaments 
 }: TorneosClientProps) {
   return (
-    <Tabs defaultValue="proximos" className="w-full">
+    <Tabs defaultValue={ongoingTournaments.length > 0 ? "en-curso" : "proximos"} className="w-full">
       <TabsList className="grid w-full grid-cols-3 bg-muted border border-amber/20 mb-8">
         <TabsTrigger value="proximos" className="data-[state=active]:bg-amber data-[state=active]:text-white">
           <span className="hidden sm:inline">Próximos Torneos ({upcomingTournaments.length})</span>
