@@ -307,6 +307,18 @@ export async function isAlumno(userId: string): Promise<boolean> {
 }
 
 /**
+ * Checks if a user is an admin of any club
+ */
+export async function isAnyClubAdmin(userId: string): Promise<boolean> {
+  const { data } = await serverSupabase
+    .from('club_admins')
+    .select('club_id')
+    .eq('auth_id', userId)
+    .limit(1)
+  return !!data && data.length > 0
+}
+
+/**
  * Middleware to require alumno or admin role
  */
 export async function requireAlumnoOrAdmin(request: NextRequest): Promise<AuthenticatedUser> {
