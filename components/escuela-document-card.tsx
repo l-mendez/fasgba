@@ -11,19 +11,23 @@ import {
   CATEGORY_COLORS,
   formatFileSize,
   formatArgentinaDate,
+  type DocumentCategory,
 } from "@/lib/documentosUtils"
 import { createClient } from "@/lib/supabase/client"
 
-interface EscuelaDocumento {
+interface ProtectedDocumento {
   id: number
   name: string
-  category: "escuela"
+  category: DocumentCategory
   file_size: number | null
   created_at: string
   file_ext?: string
 }
 
-function EscuelaDocumentCard({ documento }: { documento: EscuelaDocumento }) {
+// Keep legacy type for backwards compatibility
+type EscuelaDocumento = ProtectedDocumento
+
+function ProtectedDocumentCard({ documento }: { documento: ProtectedDocumento }) {
   const [loadingAction, setLoadingAction] = useState<'view' | 'download' | null>(null)
   const isExcel = documento.file_ext === 'xls' || documento.file_ext === 'xlsx'
 
@@ -85,9 +89,9 @@ function EscuelaDocumentCard({ documento }: { documento: EscuelaDocumento }) {
             </div>
             <Badge
               variant="secondary"
-              className={`text-xs ${CATEGORY_COLORS.escuela}`}
+              className={`text-xs ${CATEGORY_COLORS[documento.category]}`}
             >
-              {DOCUMENT_CATEGORIES.escuela}
+              {DOCUMENT_CATEGORIES[documento.category]}
             </Badge>
           </div>
         </div>
@@ -127,23 +131,28 @@ function EscuelaDocumentCard({ documento }: { documento: EscuelaDocumento }) {
   )
 }
 
-export function EscuelaSection({ documentos }: { documentos: EscuelaDocumento[] }) {
+export function ProtectedSection({ documentos, label }: { documentos: ProtectedDocumento[]; label: string }) {
   if (documentos.length === 0) return null
 
   return (
     <div>
       <div className="flex items-center gap-2 mb-4">
         <Lock className="h-5 w-5 text-terracotta" />
-        <h2 className="text-xl font-semibold text-terracotta">Escuela</h2>
+        <h2 className="text-xl font-semibold text-terracotta">{label}</h2>
         <Badge variant="secondary" className="text-xs">
           {documentos.length}
         </Badge>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {documentos.map((documento) => (
-          <EscuelaDocumentCard key={documento.id} documento={documento} />
+          <ProtectedDocumentCard key={documento.id} documento={documento} />
         ))}
       </div>
     </div>
   )
 }
+
+// Backwards-compatible exports
+export const EscuelaSection = ({ documentos }: { documentos: EscuelaDocumento[] }) => (
+  <ProtectedSection documentos={documentos} label="Escuela" />
+)
