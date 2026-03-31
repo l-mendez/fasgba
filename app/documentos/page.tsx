@@ -10,8 +10,8 @@ import { SiteFooter } from "@/components/site-footer"
 import { Card, CardContent } from "@/components/ui/card"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server"
-import { isAlumno, hasPermission } from "@/lib/middleware/auth"
-import { EscuelaSection } from "@/components/escuela-document-card"
+import { isAlumno, isAnyClubAdmin, hasPermission } from "@/lib/middleware/auth"
+import { EscuelaSection, ProtectedSection } from "@/components/escuela-document-card"
 import {
   DOCUMENT_CATEGORIES,
   CATEGORY_COLORS,
@@ -97,39 +97,62 @@ function groupByCategory(documentos: Documento[]): Record<DocumentCategory, Docu
   return grouped
 }
 
-async function checkEscuelaAccess(): Promise<boolean> {
+async function getAuthUserId(): Promise<string | null> {
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return false
-    const alumno = await isAlumno(user.id)
-    if (alumno) return true
-    const admin = await hasPermission('isAdmin', user.id)
-    return admin
+    return user?.id ?? null
   } catch {
-    return false
+    return null
   }
+}
+
+async function checkEscuelaAccess(userId: string | null): Promise<boolean> {
+  if (!userId) return false
+  const alumno = await isAlumno(userId)
+  if (alumno) return true
+  return hasPermission('isAdmin', userId)
+}
+
+async function checkOtrosAccess(userId: string | null): Promise<boolean> {
+  if (!userId) return false
+  const admin = await hasPermission('isAdmin', userId)
+  if (admin) return true
+  return isAnyClubAdmin(userId)
 }
 
 export default async function DocumentosPage({ searchParams }: PageProps) {
   const params = await searchParams
   const selectedCategory = params.categoria || "todos"
 
-  // Server-side auth gate for escuela category
+  // Resolve auth once, check both protected categories
+  const needsAuth = ["escuela", "otros", "todos"].includes(selectedCategory)
+  const userId = needsAuth ? await getAuthUserId() : null
+
   const canAccessEscuela = selectedCategory === "escuela" || selectedCategory === "todos"
-    ? await checkEscuelaAccess()
+    ? await checkEscuelaAccess(userId)
+    : false
+
+  const canAccessOtros = selectedCategory === "otros" || selectedCategory === "todos"
+    ? await checkOtrosAccess(userId)
     : false
 
   if (selectedCategory === "escuela" && !canAccessEscuela) {
     notFound()
   }
 
+  if (selectedCategory === "otros" && !canAccessOtros) {
+    notFound()
+  }
+
   const allDocumentos = await fetchDocumentos()
 
-  // Filter out escuela documents for unauthorized users
-  const visibleDocumentos = canAccessEscuela
-    ? allDocumentos
-    : allDocumentos.filter((d) => d.category !== "escuela")
+  // Filter out protected documents for unauthorized users
+  const visibleDocumentos = allDocumentos.filter((d) => {
+    if (d.category === "escuela" && !canAccessEscuela) return false
+    if (d.category === "otros" && !canAccessOtros) return false
+    return true
+  })
 
   const filteredDocumentos = filterByCategory(visibleDocumentos, selectedCategory)
   const hasActiveFilter = selectedCategory !== "todos" && isValidCategory(selectedCategory)
@@ -144,15 +167,17 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
     actas: allDocumentos.filter((d) => d.category === "actas").length,
     minutas: allDocumentos.filter((d) => d.category === "minutas").length,
     escuela: canAccessEscuela ? allDocumentos.filter((d) => d.category === "escuela").length : 0,
-    otros: allDocumentos.filter((d) => d.category === "otros").length,
+    otros: canAccessOtros ? allDocumentos.filter((d) => d.category === "otros").length : 0,
   }
 
-  // Categories to show in filter
-  const visibleCategories = canAccessEscuela
-    ? DOCUMENT_CATEGORIES
-    : Object.fromEntries(
-        Object.entries(DOCUMENT_CATEGORIES).filter(([key]) => key !== "escuela")
-      ) as Record<string, string>
+  // Categories to show in filter — hide protected categories the user can't access
+  const hiddenCategories = [
+    ...(!canAccessEscuela ? ["escuela"] : []),
+    ...(!canAccessOtros ? ["otros"] : []),
+  ]
+  const visibleCategories = Object.fromEntries(
+    Object.entries(DOCUMENT_CATEGORIES).filter(([key]) => !hiddenCategories.includes(key))
+  ) as Record<string, string>
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -236,13 +261,14 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
                   </Link>
                 )}
               </div>
-            ) : hasActiveFilter && selectedCategory === 'escuela' ? (
-              // Escuela category uses special auth-gated component
-              <EscuelaSection
+            ) : hasActiveFilter && (selectedCategory === 'escuela' || selectedCategory === 'otros') ? (
+              // Protected categories use auth-gated component
+              <ProtectedSection
+                label={DOCUMENT_CATEGORIES[selectedCategory as DocumentCategory]}
                 documentos={filteredDocumentos.map((doc) => ({
                   id: doc.id,
                   name: doc.name,
-                  category: 'escuela' as const,
+                  category: doc.category,
                   file_size: doc.file_size,
                   created_at: doc.created_at,
                   file_ext: doc.file_path?.split('.').pop()?.toLowerCase(),
@@ -262,17 +288,17 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
                   const categoryDocs = groupedDocumentos?.[categoryKey as DocumentCategory] || []
                   if (categoryDocs.length === 0) return null
 
-                  // Escuela section uses a special client component with auth checks
-                  if (categoryKey === 'escuela') {
-                    const escuelaDocs = categoryDocs.map((doc) => ({
+                  // Protected categories use auth-gated client component
+                  if (categoryKey === 'escuela' || categoryKey === 'otros') {
+                    const protectedDocs = categoryDocs.map((doc) => ({
                       id: doc.id,
                       name: doc.name,
-                      category: 'escuela' as const,
+                      category: doc.category,
                       file_size: doc.file_size,
                       created_at: doc.created_at,
                       file_ext: doc.file_path?.split('.').pop()?.toLowerCase(),
                     }))
-                    return <EscuelaSection key={categoryKey} documentos={escuelaDocs} />
+                    return <ProtectedSection key={categoryKey} label={categoryLabel} documentos={protectedDocs} />
                   }
 
                   return (
