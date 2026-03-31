@@ -97,9 +97,9 @@ async function ClubsList({ searchTerm }: { searchTerm?: string }) {
         const imageUrl = getClubImageUrl(club.image)
 
         return (
-          <Card key={club.id} className="flex flex-col group hover:border-amber transition-colors">
+          <Card key={club.id} className="flex flex-col overflow-hidden group hover:border-amber transition-colors">
             {imageUrl ? (
-              <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+              <div className="aspect-video w-full overflow-hidden">
                 <img
                   src={imageUrl}
                   alt={`Imagen de ${club.name}`}
@@ -107,7 +107,7 @@ async function ClubsList({ searchTerm }: { searchTerm?: string }) {
                 />
               </div>
             ) : (
-              <div className="aspect-video w-full bg-muted rounded-t-lg flex items-center justify-center">
+              <div className="aspect-video w-full bg-muted flex items-center justify-center">
                 <ImageIcon className="h-12 w-12 text-muted-foreground" />
               </div>
             )}

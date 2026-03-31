@@ -83,7 +83,7 @@ export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
 
   return (
     <ScrollHeader>
-    <header className="w-full border-b border-amber/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="w-full border-b border-amber/30 dark:border-amber/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between">
         <div className="mr-4 flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">

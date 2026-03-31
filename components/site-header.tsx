@@ -60,7 +60,7 @@ export async function SiteHeader({ pathname }: SiteHeaderProps) {
 
   return (
     <ScrollHeader>
-    <header className="w-full border-b border-amber/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="w-full border-b border-amber/30 dark:border-amber/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       {/* Desktop Header */}
       <div className="hidden md:block">
         <div className="container flex h-14 items-center justify-between">
@@ -158,7 +158,7 @@ export async function SiteHeader({ pathname }: SiteHeaderProps) {
       </div>
 
       {/* Mobile Header */}
-      <div className="md:hidden flex h-14 items-center gap-x-4 border-b border-amber/20 bg-background px-4">
+      <div className="md:hidden flex h-14 items-center gap-x-4 border-b border-amber/30 dark:border-amber/20 bg-background px-4">
         <MobileNavigation 
           isAuthenticated={isAuthenticated}
           isAdmin={isAdmin}

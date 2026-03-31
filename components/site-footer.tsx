@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 
 export function SiteFooter() {
   return (
-    <footer className="w-full border-t border-amber/20 bg-gradient-to-b from-background to-amber/5">
+    <footer className="w-full border-t border-amber/30 dark:border-amber/20 bg-gradient-to-b from-background to-amber/10 dark:to-amber/5">
       <div className="container grid gap-8 py-8 md:grid-cols-2 lg:grid-cols-4">
         <div className="flex flex-col gap-2">
           <Link href="/" className="flex items-center gap-2">
@@ -98,7 +98,7 @@ export function SiteFooter() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-amber/20 py-6">
+      <div className="border-t border-amber/30 dark:border-amber/20 py-6">
         <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
           <p className="text-center text-sm text-muted-foreground md:text-left">
             © 2026 Federación de Ajedrez del Sur del Gran Buenos Aires. Todos los derechos reservados.

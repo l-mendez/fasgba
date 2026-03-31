@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { ScrollReveal } from "@/components/scroll-reveal"
+import { HeroAurora } from "@/components/hero-aurora"
 import { ClubMarquee } from "@/components/club-marquee"
 import { FaqAccordion } from "@/components/faq-section"
 import { getAllNews } from "@/lib/newsUtils"
@@ -342,17 +343,8 @@ export default async function Home() {
       <main className="flex-1">
 
         {/* ===== HERO ===== */}
-        <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden hero-mesh-light dark:hero-mesh-dark">
-          {/* Decorative elements */}
-          <div className="absolute inset-0 opacity-[0.08] dark:opacity-[0.03]">
-            <div className="chess-pattern h-full w-full" />
-          </div>
-          <div className="absolute top-20 left-10 w-64 h-64 rounded-full bg-amber/20 dark:bg-amber/10 blur-3xl animate-pulse-glow" />
-          <div className="absolute bottom-20 right-10 w-80 h-80 rounded-full bg-terracotta/15 dark:bg-terracotta/10 blur-3xl animate-pulse-glow" style={{ animationDelay: '1.5s' }} />
-
-          {/* Floating chess symbols */}
-          <div className="absolute top-1/4 left-[15%] text-terracotta/10 dark:text-amber/10 text-6xl font-serif animate-float select-none hidden lg:block" aria-hidden>&#9812;</div>
-          <div className="absolute bottom-1/3 right-[12%] text-terracotta/10 dark:text-amber/10 text-7xl font-serif animate-float-delayed select-none hidden lg:block" aria-hidden>&#9814;</div>
+        <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden bg-background">
+          <HeroAurora />
 
           <div className="container relative z-10 px-4 md:px-6 text-center">
             <div className="mx-auto max-w-4xl space-y-8">
@@ -384,7 +376,7 @@ export default async function Home() {
           </div>
 
           {/* Bottom gradient fade */}
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background to-transparent" />
         </section>
 
         {/* ===== NEWS ===== */}
