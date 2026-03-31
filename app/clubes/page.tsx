@@ -95,12 +95,11 @@ async function ClubsList({ searchTerm }: { searchTerm?: string }) {
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 min-h-[400px] transition-opacity duration-200">
       {clubs.map((club) => {
         const imageUrl = getClubImageUrl(club.image)
-        
+
         return (
-          <Card key={club.id} className="flex flex-col group hover:border-amber transition-colors">
-            {/* Club Image */}
+          <Card key={club.id} className="flex flex-col overflow-hidden group hover:border-amber transition-colors">
             {imageUrl ? (
-              <div className="aspect-video w-full overflow-hidden rounded-t-lg">
+              <div className="aspect-video w-full overflow-hidden">
                 <img
                   src={imageUrl}
                   alt={`Imagen de ${club.name}`}
@@ -108,11 +107,11 @@ async function ClubsList({ searchTerm }: { searchTerm?: string }) {
                 />
               </div>
             ) : (
-              <div className="aspect-video w-full bg-muted rounded-t-lg flex items-center justify-center">
+              <div className="aspect-video w-full bg-muted flex items-center justify-center">
                 <ImageIcon className="h-12 w-12 text-muted-foreground" />
               </div>
             )}
-            
+
             <CardHeader>
               <CardTitle>
                 <Link href={`/clubes/${club.id}`} className="text-terracotta hover:underline">
@@ -121,7 +120,6 @@ async function ClubsList({ searchTerm }: { searchTerm?: string }) {
               </CardTitle>
               <CardDescription>
                 <div className="flex items-center gap-2 mt-2">
-                  {/* Member count removed as it's no longer used */}
                 </div>
               </CardDescription>
             </CardHeader>
@@ -157,9 +155,9 @@ async function ClubsList({ searchTerm }: { searchTerm?: string }) {
               <Button asChild className="w-full">
                 <Link href={`/clubes/${club.id}`}>Ver Detalle</Link>
               </Button>
-              <ClubFollowButton 
-                clubId={club.id} 
-                initialIsFollowing={club.isFollowing} 
+              <ClubFollowButton
+                clubId={club.id}
+                initialIsFollowing={club.isFollowing}
                 isUserAuthenticated={!!user}
               />
             </CardFooter>
