@@ -319,6 +319,17 @@ export async function isAnyClubAdmin(userId: string): Promise<boolean> {
 }
 
 /**
+ * Returns the club IDs where the user is a club admin
+ */
+export async function getClubAdminClubIds(userId: string): Promise<number[]> {
+  const { data } = await serverSupabase
+    .from('club_admins')
+    .select('club_id')
+    .eq('auth_id', userId)
+  return (data || []).map(d => d.club_id)
+}
+
+/**
  * Middleware to require alumno or admin role
  */
 export async function requireAlumnoOrAdmin(request: NextRequest): Promise<AuthenticatedUser> {

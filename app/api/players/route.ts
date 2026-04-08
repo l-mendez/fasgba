@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { apiSuccess, handleError, validationError } from '@/lib/utils/apiResponse'
+import { apiSuccess, handleError, validationError, forbiddenError } from '@/lib/utils/apiResponse'
+import { requireAuth, getClubAdminClubIds } from '@/lib/middleware/auth'
+import { rateLimit } from '@/lib/middleware/rateLimit'
 import { z } from 'zod'
 
 // Create a Supabase client for server-side operations
@@ -103,8 +105,13 @@ export async function GET(request: NextRequest) {
 // POST /api/players - Create a new player
 export async function POST(request: NextRequest) {
   try {
+    const limited = rateLimit(request, 20, 60_000)
+    if (limited) return limited
+
+    const user = await requireAuth(request)
+
     const body = await request.json()
-    
+
     // Clean up empty strings to null for optional fields
     const cleanedBody = {
       ...body,
@@ -112,8 +119,19 @@ export async function POST(request: NextRequest) {
       rating: body.rating === '' || body.rating === undefined ? null : Number(body.rating),
       club_id: body.club_id === '' || body.club_id === undefined ? null : Number(body.club_id),
     }
-    
+
     const validatedData = playerSchema.parse(cleanedBody)
+
+    // Authorization: admins can create for any club, club admins only for their clubs
+    if (!user.permissions?.isAdmin) {
+      const adminClubIds = await getClubAdminClubIds(user.id)
+      if (adminClubIds.length === 0) {
+        return forbiddenError('Se requiere permisos de administrador')
+      }
+      if (validatedData.club_id && !adminClubIds.includes(validatedData.club_id)) {
+        return forbiddenError('No tienes permisos para agregar jugadores a este club')
+      }
+    }
 
     // Create the player
     const { data: player, error: playerError } = await serverSupabase
@@ -133,12 +151,12 @@ export async function POST(request: NextRequest) {
 
     if (playerError) {
       console.error('Error creating player:', playerError)
-      
+
       // Handle unique constraint violations
       if (playerError.code === '23505' && playerError.message.includes('fide_id')) {
         return validationError('A player with this FIDE ID already exists')
       }
-      
+
       throw new Error('Failed to create player')
     }
 

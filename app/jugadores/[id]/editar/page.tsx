@@ -29,7 +29,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner"
 import { apiCall } from "@/lib/utils/apiClient"
 import { useAuth } from "@/hooks/useAuth"
-import { createClient } from "@/lib/supabase/client"
 
 interface Club {
   id: number
@@ -114,45 +113,21 @@ export default function EditarJugadorPage() {
           setCanEdit(true) // Site admins can edit any player
         } else if (isClubAdmin) {
           // Club admins can only see their clubs
-          const supabase = createClient()
-          const { data: adminClubsData, error } = await supabase
-            .from('club_admins')
-            .select(`
-              club_id,
-              clubs (
-                id,
-                name
-              )
-            `)
-            .eq('auth_id', user.id)
+          const adminClubsData = await apiCall('/api/users/me/admin-clubs')
+          const userClubs: Club[] = (adminClubsData || []).map((item: any) => item.clubs || item).filter(Boolean)
+          setAdminClubs(userClubs)
+          setClubs(userClubs)
 
-          if (error) {
-            console.error('Error fetching admin clubs:', error)
-            toast.error('Error al cargar clubes administrados')
-          } else {
-            const userClubs: Club[] = []
-            adminClubsData.forEach((item: any) => {
-              if (item.clubs && typeof item.clubs === 'object' && !Array.isArray(item.clubs)) {
-                userClubs.push({
-                  id: item.clubs.id,
-                  name: item.clubs.name
-                })
-              }
-            })
-            setAdminClubs(userClubs)
-            setClubs(userClubs)
-            
-            // Check if club admin can edit this player
-            // They can edit if: player has no club OR player belongs to one of their clubs
-            const playerClubId = playerData.club?.id
-            const canEditPlayer = !playerClubId || userClubs.some(club => club.id === playerClubId)
-            setCanEdit(canEditPlayer)
-            
-            if (!canEditPlayer) {
-              toast.error('No tienes permisos para editar este jugador')
-              router.push('/club-admin')
-              return
-            }
+          // Check if club admin can edit this player
+          // They can edit if: player has no club OR player belongs to one of their clubs
+          const playerClubId = playerData.club?.id
+          const canEditPlayer = !playerClubId || userClubs.some(club => club.id === playerClubId)
+          setCanEdit(canEditPlayer)
+
+          if (!canEditPlayer) {
+            toast.error('No tienes permisos para editar este jugador')
+            router.push('/club-admin')
+            return
           }
         }
       } catch (error) {

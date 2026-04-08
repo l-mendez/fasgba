@@ -1,75 +1,45 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+import { requireAdmin } from '@/lib/middleware/auth'
+import { rateLimit } from '@/lib/middleware/rateLimit'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { apiSuccess, handleError, validationError } from '@/lib/utils/apiResponse'
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the authorization header
-    const authHeader = request.headers.get('authorization')
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return Response.json({
-        success: false,
-        error: 'Authorization header required'
-      }, { status: 401 })
+    const limited = rateLimit(request, 10, 60_000)
+    if (limited) return limited
+
+    await requireAdmin(request)
+
+    const { auth_id } = await request.json()
+
+    if (!auth_id) {
+      return validationError('auth_id is required')
     }
 
-    const token = authHeader.substring(7) // Remove 'Bearer ' prefix
+    const supabase = createAdminClient()
 
-    // Verify the JWT token with Supabase
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user) {
-      return Response.json({
-        success: false,
-        error: 'Invalid token or user not found'
-      }, { status: 401 })
-    }
-
-    // Check if user is already an admin
-    const { data: existingAdmin } = await supabase
+    // Check if already admin
+    const { data: existing } = await supabase
       .from('admins')
       .select('auth_id')
-      .eq('auth_id', user.id)
+      .eq('auth_id', auth_id)
       .single()
 
-    if (existingAdmin) {
-      return Response.json({
-        success: true,
-        message: 'User is already an admin',
-        userId: user.id,
-        userEmail: user.email
-      })
+    if (existing) {
+      return apiSuccess({ message: 'User is already an admin' })
     }
 
-    // Add user to admins table
     const { error: insertError } = await supabase
       .from('admins')
-      .insert([{ auth_id: user.id }])
+      .insert([{ auth_id }])
 
     if (insertError) {
-      return Response.json({
-        success: false,
-        error: `Failed to add admin: ${insertError.message}`,
-        code: insertError.code
-      }, { status: 500 })
+      throw new Error(`Failed to add admin: ${insertError.message}`)
     }
 
-    return Response.json({
-      success: true,
-      message: 'User successfully added as admin',
-      userId: user.id,
-      userEmail: user.email,
-      timestamp: new Date().toISOString()
-    })
+    return apiSuccess({ message: 'User successfully added as admin' })
   } catch (error) {
-    return Response.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString()
-    }, { status: 500 })
+    return handleError(error)
   }
-} 
+}
