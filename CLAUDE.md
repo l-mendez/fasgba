@@ -24,11 +24,14 @@ npm run test:email       # Test email configuration
 - **Framework**: Next.js 16 (App Router, Server Components by default, Turbopack)
 - **Database**: Supabase (PostgreSQL) with RLS policies
 - **Auth**: Supabase Auth (JWT tokens)
-- **UI**: Tailwind CSS + Shadcn/ui (Radix primitives)
-- **Forms**: React Hook Form + Zod validation
-- **Rich Text**: Tiptap editor
-- **Chess**: chess.js + react-chessboard
+- **UI**: Tailwind CSS + Shadcn UI (Radix UI primitives) + lucide-react icons + cmdk (command palette)
+- **Forms**: React Hook Form + Zod validation (hookform resolvers connect Zod schemas to RHF)
+- **Rich Text**: Tiptap editor with image, link, text-align, and list extensions
+- **Chess**: chess.js + react-chessboard + pgn-parser (PGN format parsing for game import)
 - **Email**: Nodemailer with Zoho SMTP
+- **Notifications**: sonner (toast library)
+- **Exports**: xlsx-js-style (Excel file generation with cell styling)
+- **Theming**: next-themes (dark and light mode)
 
 ## Architecture
 
