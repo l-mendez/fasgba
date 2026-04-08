@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
+import { PasswordRequirements } from "@/components/password-requirements"
+import { validatePassword } from "@/lib/utils/passwordValidation"
 
 function ResetPasswordContent() {
   const [password, setPassword] = useState("")
@@ -102,8 +104,9 @@ function ResetPasswordContent() {
       return
     }
 
-    if (password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres")
+    const passwordResult = validatePassword(password)
+    if (!passwordResult.valid) {
+      setError(passwordResult.errors[0])
       return
     }
 
@@ -339,8 +342,7 @@ function ResetPasswordContent() {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           required
-                          minLength={6}
-                          placeholder="Mínimo 6 caracteres"
+                          placeholder="Ingresá tu nueva contraseña"
                         />
                         <Button
                           type="button"
@@ -357,6 +359,7 @@ function ResetPasswordContent() {
                           )}
                         </Button>
                       </div>
+                      <PasswordRequirements password={password} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="confirmPassword">Confirmar contraseña</Label>

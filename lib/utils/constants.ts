@@ -65,6 +65,9 @@ export const ERROR_MESSAGES = {
   USER_NOT_FOUND: 'User not found',
   NEWS_NOT_FOUND: 'News not found',
   
+  // Password
+  INVALID_CURRENT_PASSWORD: 'La contraseña actual es incorrecta',
+
   // Operations
   CREATION_FAILED: 'Failed to create resource',
   UPDATE_FAILED: 'Failed to update resource',

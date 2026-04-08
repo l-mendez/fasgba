@@ -118,23 +118,6 @@ export async function getUserFullName(): Promise<string> {
 }
 
 /**
- * Updates the user's password
- */
-export async function updatePassword(newPassword: string): Promise<boolean> {
-  const supabase = createClient()
-  const { error } = await supabase.auth.updateUser({
-    password: newPassword
-  })
-
-  if (error) {
-    console.error('Error updating password:', error)
-    return false
-  }
-
-  return true
-}
-
-/**
  * Signs out the current user
  */
 export async function signOut(): Promise<void> {
