@@ -6,6 +6,7 @@ import { useTheme } from "next-themes"
 import { Bell, Moon, LogOut, Trash2, Loader2, Lock, Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -34,6 +35,7 @@ export function SettingsForm({ initial }: { initial?: { type?: string; torneos?:
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [passwordChangeError, setPasswordChangeError] = useState<string | null>(null)
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
 
   // Logout state
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -127,6 +129,16 @@ useEffect(() => {
     setRanking(true)
   }
 
+  const resetPasswordForm = () => {
+    setCurrentPassword("")
+    setNewPassword("")
+    setConfirmNewPassword("")
+    setShowCurrentPassword(false)
+    setShowNewPassword(false)
+    setShowConfirmNewPassword(false)
+    setPasswordChangeError(null)
+  }
+
   const handleChangePassword = async () => {
     setPasswordChangeError(null)
 
@@ -169,9 +181,8 @@ useEffect(() => {
         title: "Contraseña actualizada",
         description: "Tu contraseña se ha cambiado correctamente.",
       })
-      setCurrentPassword("")
-      setNewPassword("")
-      setConfirmNewPassword("")
+      resetPasswordForm()
+      setPasswordDialogOpen(false)
     } catch {
       setPasswordChangeError("Error inesperado. Intenta nuevamente.")
     } finally {
@@ -324,98 +335,114 @@ useEffect(() => {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Password Change */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Lock className="h-4 w-4 text-amber" />
-              <h4 className="text-sm font-medium">Cambiar contraseña</h4>
-            </div>
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword">Contraseña actual</Label>
-                <div className="relative">
-                  <Input
-                    id="currentPassword"
-                    type={showCurrentPassword ? "text" : "password"}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Tu contraseña actual"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    aria-label={showCurrentPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                  >
-                    {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">Nueva contraseña</Label>
-                <div className="relative">
-                  <Input
-                    id="newPassword"
-                    type={showNewPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Tu nueva contraseña"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    aria-label={showNewPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                  >
-                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-                <PasswordRequirements password={newPassword} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmNewPassword">Confirmar nueva contraseña</Label>
-                <div className="relative">
-                  <Input
-                    id="confirmNewPassword"
-                    type={showConfirmNewPassword ? "text" : "password"}
-                    value={confirmNewPassword}
-                    onChange={(e) => setConfirmNewPassword(e.target.value)}
-                    placeholder="Confirmá tu nueva contraseña"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
-                    aria-label={showConfirmNewPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                  >
-                    {showConfirmNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-              {passwordChangeError && (
-                <p className="text-sm text-red-500">{passwordChangeError}</p>
-              )}
+          <Dialog open={passwordDialogOpen} onOpenChange={(open) => {
+            setPasswordDialogOpen(open)
+            if (!open) resetPasswordForm()
+          }}>
+            <DialogTrigger asChild>
               <Button
-                onClick={handleChangePassword}
-                disabled={isChangingPassword}
-                className="bg-terracotta hover:bg-terracotta/90 text-white"
+                variant="outline"
+                className="flex items-center gap-2 border-amber text-amber-dark hover:bg-amber/10"
               >
-                {isChangingPassword ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Cambiando...
-                  </>
-                ) : (
-                  "Cambiar contraseña"
-                )}
+                <Lock className="h-4 w-4" />
+                Cambiar contraseña
               </Button>
-            </div>
-          </div>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Cambiar contraseña</DialogTitle>
+                <DialogDescription>
+                  Ingresá tu contraseña actual y elegí una nueva
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Contraseña actual</Label>
+                  <div className="relative">
+                    <Input
+                      id="currentPassword"
+                      type={showCurrentPassword ? "text" : "password"}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Tu contraseña actual"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      aria-label={showCurrentPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    >
+                      {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">Nueva contraseña</Label>
+                  <div className="relative">
+                    <Input
+                      id="newPassword"
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Tu nueva contraseña"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      aria-label={showNewPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <PasswordRequirements password={newPassword} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmNewPassword">Confirmar nueva contraseña</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmNewPassword"
+                      type={showConfirmNewPassword ? "text" : "password"}
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      placeholder="Confirmá tu nueva contraseña"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                      aria-label={showConfirmNewPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    >
+                      {showConfirmNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                {passwordChangeError && (
+                  <p className="text-sm text-red-500">{passwordChangeError}</p>
+                )}
+                <Button
+                  onClick={handleChangePassword}
+                  disabled={isChangingPassword}
+                  className="w-full bg-terracotta hover:bg-terracotta/90 text-white"
+                >
+                  {isChangingPassword ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Cambiando...
+                    </>
+                  ) : (
+                    "Cambiar contraseña"
+                  )}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <Separator />
 
