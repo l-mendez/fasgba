@@ -111,7 +111,7 @@ export function AuthButton({
         } else {
           // For signup, be more specific about common issues but still secure
           if (authError.message.includes("password")) {
-            setError("La contraseña debe tener al menos 6 caracteres")
+            setError("La contraseña no cumple con los requisitos de seguridad")
           } else if (authError.message.includes("email") || authError.message.includes("invalid")) {
             setError("Por favor verifica el formato de tu email")
           } else {

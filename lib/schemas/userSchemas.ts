@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { API_CONSTANTS } from '@/lib/utils/constants'
+import { validatePassword, PASSWORD_MAX_LENGTH } from '@/lib/utils/passwordValidation'
 
 // Schema for user profile updates
 export const updateUserProfileSchema = z.object({
@@ -14,9 +15,19 @@ export const updateUserProfileSchema = z.object({
   }, 'Invalid birth date').optional(),
 })
 
-// Schema for password update
+// Schema for password update (requires current password verification)
 export const updatePasswordSchema = z.object({
-  newPassword: z.string().min(8, 'Password must be at least 8 characters').max(128, 'Password too long'),
+  currentPassword: z.string().min(1, 'La contraseña actual es requerida'),
+  newPassword: z.string()
+    .max(PASSWORD_MAX_LENGTH, 'La contraseña es demasiado larga')
+    .superRefine((password, ctx) => {
+      const result = validatePassword(password)
+      if (!result.valid) {
+        for (const error of result.errors) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: error })
+        }
+      }
+    }),
 })
 
 // Schema for permission parameter

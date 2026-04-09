@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { SignupButton } from "@/app/components/signup-button"
+import { PasswordRequirements } from "@/components/password-requirements"
+import { validatePassword } from "@/lib/utils/passwordValidation"
 
 export default function Signup() {
   const [nombre, setNombre] = useState("")
@@ -23,7 +25,7 @@ export default function Signup() {
   const validateForm = (currentPassword?: string, currentConfirmPassword?: string) => {
     const pwd = currentPassword ?? password
     const confirmPwd = currentConfirmPassword ?? confirmPassword
-    
+
     if (!nombre.trim()) {
       setPasswordError("El nombre es requerido")
       return false
@@ -40,8 +42,9 @@ export default function Signup() {
       setPasswordError("Todos los campos son requeridos")
       return false
     }
-    if (pwd.length < 6) {
-      setPasswordError("La contraseña debe tener al menos 6 caracteres")
+    const result = validatePassword(pwd)
+    if (!result.valid) {
+      setPasswordError(result.errors[0])
       return false
     }
     if (pwd !== confirmPwd) {
@@ -161,6 +164,7 @@ export default function Signup() {
                           )}
                         </Button>
                       </div>
+                      <PasswordRequirements password={password} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
