@@ -1,10 +1,16 @@
 import { NextRequest } from 'next/server'
+import { requireAdmin } from '@/lib/middleware/auth'
+import { rateLimit } from '@/lib/middleware/rateLimit'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
 import { forceRankingCacheInvalidation } from '@/lib/rankingUtils'
 
 export async function POST(request: NextRequest) {
   try {
+    const limited = rateLimit(request, 10, 60_000)
+    if (limited) return limited
+    await requireAdmin(request)
+
     // Parse request body
     const { currentFilename, newMonth, newYear } = await request.json()
     

@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { apiSuccess, handleError, notFoundError, validationError } from '@/lib/utils/apiResponse'
+import { apiSuccess, handleError, notFoundError, validationError, forbiddenError } from '@/lib/utils/apiResponse'
+import { requireAuth, getClubAdminClubIds } from '@/lib/middleware/auth'
+import { rateLimit } from '@/lib/middleware/rateLimit'
 import { z } from 'zod'
 
 // Create a Supabase client for server-side operations
@@ -60,15 +62,37 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PATCH /api/players/[id] - Update a player
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
+    const limited = rateLimit(request, 20, 60_000)
+    if (limited) return limited
+
+    const user = await requireAuth(request)
     const { id } = await params
     const playerId = parseInt(id, 10)
-    
+
     if (isNaN(playerId) || playerId <= 0) {
       return validationError('Invalid player ID')
     }
 
+    // Check authorization: get player's club to verify ownership
+    const { data: existingPlayer } = await serverSupabase
+      .from('players')
+      .select('club_id')
+      .eq('id', playerId)
+      .single()
+
+    if (!existingPlayer) {
+      return notFoundError('Player not found')
+    }
+
+    if (!user.permissions?.isAdmin) {
+      const adminClubIds = await getClubAdminClubIds(user.id)
+      if (adminClubIds.length === 0 || (existingPlayer.club_id && !adminClubIds.includes(existingPlayer.club_id))) {
+        return forbiddenError('No tienes permisos para editar este jugador')
+      }
+    }
+
     const body = await request.json()
-    
+
     // Clean up empty strings to null for optional fields
     const cleanedBody = {
       ...body,
@@ -76,8 +100,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       rating: body.rating === '' || body.rating === undefined ? null : Number(body.rating),
       club_id: body.club_id === '' || body.club_id === undefined ? null : Number(body.club_id),
     }
-    
+
     const validatedData = updatePlayerSchema.parse(cleanedBody)
+
+    // If changing club_id, verify the user has access to the target club too
+    if (validatedData.club_id && !user.permissions?.isAdmin) {
+      const adminClubIds = await getClubAdminClubIds(user.id)
+      if (!adminClubIds.includes(validatedData.club_id)) {
+        return forbiddenError('No tienes permisos para mover jugadores a este club')
+      }
+    }
 
     // Update the player
     const { data: player, error: playerError } = await serverSupabase
@@ -98,17 +130,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     if (playerError) {
       console.error('Error updating player:', playerError)
-      
-      // Handle unique constraint violations
+
       if (playerError.code === '23505' && playerError.message.includes('fide_id')) {
         return validationError('A player with this FIDE ID already exists')
       }
-      
-      // Handle not found
+
       if (playerError.code === 'PGRST116') {
         return notFoundError('Player not found')
       }
-      
+
       throw new Error('Failed to update player')
     }
 
@@ -125,17 +155,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/players/[id] - Delete a player
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const limited = rateLimit(request, 20, 60_000)
+    if (limited) return limited
+
+    const user = await requireAuth(request)
     const { id } = await params
     const playerId = parseInt(id, 10)
-    
+
     if (isNaN(playerId) || playerId <= 0) {
       return validationError('Invalid player ID')
     }
 
-    // Check if player exists
+    // Check player exists and get club for authorization
     const { data: player, error: fetchError } = await serverSupabase
       .from('players')
-      .select('id, full_name')
+      .select('id, full_name, club_id')
       .eq('id', playerId)
       .single()
 
@@ -143,7 +177,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return notFoundError('Player not found')
     }
 
-    // Delete the player
+    if (!user.permissions?.isAdmin) {
+      const adminClubIds = await getClubAdminClubIds(user.id)
+      if (adminClubIds.length === 0 || (player.club_id && !adminClubIds.includes(player.club_id))) {
+        return forbiddenError('No tienes permisos para eliminar este jugador')
+      }
+    }
+
     const { error: deleteError } = await serverSupabase
       .from('players')
       .delete()
@@ -151,21 +191,17 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     if (deleteError) {
       console.error('Error deleting player:', deleteError)
-      
-      // Handle foreign key constraints
+
       if (deleteError.code === '23503') {
         return validationError('Cannot delete player because they are referenced in tournaments or games')
       }
-      
+
       throw new Error('Failed to delete player')
     }
 
-    return apiSuccess({ 
+    return apiSuccess({
       message: 'Player deleted successfully',
-      deletedPlayer: {
-        id: player.id,
-        full_name: player.full_name
-      }
+      deletedPlayer: { id: player.id, full_name: player.full_name },
     })
   } catch (error) {
     return handleError(error)

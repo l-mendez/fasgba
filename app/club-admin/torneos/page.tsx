@@ -170,53 +170,17 @@ export default function ClubAdminTorneosPage() {
         const tournaments = await apiCall(`/clubs/${selectedClub.id}/tournaments`)
         const tournamentList = tournaments.tournaments || []
         
-        // Fetch participant counts for each tournament using direct database queries
-        const { createClient } = await import('@/lib/supabase/client')
-        const supabase = createClient()
-        
+        // Fetch participant counts for each tournament via API
         const tournamentsWithParticipants = await Promise.all(
           tournamentList.map(async (tournament: Tournament) => {
             let participants = 0
             try {
-              if (tournament.tournament_type === 'team') {
-                // For team tournaments, count registered teams
-                const { data: registeredTeams, error: teamsError } = await supabase
-                  .from('tournament_teams')
-                  .select('team_id, teams(club_id)')
-                  .eq('tournament_id', tournament.id)
-
-                if (!teamsError && registeredTeams && registeredTeams.length > 0) {
-                  const clubIds = [...new Set(registeredTeams.map((t: any) => t.teams?.club_id).filter(Boolean))]
-
-                  const { data: clubPlayers, error: playersError } = await supabase
-                    .from('players')
-                    .select('id')
-                    .in('club_id', clubIds)
-
-                  if (!playersError && clubPlayers) {
-                    participants = clubPlayers.length
-                  }
-                }
-              } else {
-                // For individual tournaments, count players registered through tournament_registrations
-                const { data: individualPlayers, error: individualPlayersError } = await supabase
-                  .from('tournament_registrations')
-                  .select('player_id')
-                  .eq('tournament_id', tournament.id)
-                
-                if (!individualPlayersError && individualPlayers) {
-                  participants = individualPlayers.length
-                }
-              }
+              const data = await apiCall(`/tournaments/${tournament.id}/participant-count?type=${tournament.tournament_type}`)
+              participants = data?.participants || 0
             } catch (error) {
               console.error(`Error fetching participants for tournament ${tournament.id}:`, error)
-              // Keep participants as 0 if there's an error
             }
-            
-            return {
-              ...tournament,
-              participants
-            }
+            return { ...tournament, participants }
           })
         )
         

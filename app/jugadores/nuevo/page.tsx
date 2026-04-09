@@ -18,7 +18,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner"
 import { apiCall } from "@/lib/utils/apiClient"
 import { useAuth } from "@/hooks/useAuth"
-import { createClient } from "@/lib/supabase/client"
 
 interface Club {
   id: number
@@ -72,34 +71,10 @@ export default function NuevoJugadorPage() {
           setClubs(clubsData.clubs || [])
         } else if (isClubAdmin) {
           // Club admins can only see their clubs
-          const supabase = createClient()
-          const { data: adminClubsData, error } = await supabase
-            .from('club_admins')
-            .select(`
-              club_id,
-              clubs (
-                id,
-                name
-              )
-            `)
-            .eq('auth_id', user.id)
-
-          if (error) {
-            console.error('Error fetching admin clubs:', error)
-            toast.error('Error al cargar clubes administrados')
-          } else {
-            const userClubs: Club[] = []
-            adminClubsData.forEach((item: any) => {
-              if (item.clubs && typeof item.clubs === 'object' && !Array.isArray(item.clubs)) {
-                userClubs.push({
-                  id: item.clubs.id,
-                  name: item.clubs.name
-                })
-              }
-            })
-            setAdminClubs(userClubs)
-            setClubs(userClubs)
-          }
+          const adminClubsData = await apiCall('/api/users/me/admin-clubs')
+          const adminClubs = (adminClubsData || []).map((item: any) => item.clubs || item).filter(Boolean)
+          setAdminClubs(adminClubs)
+          setClubs(adminClubs)
         }
       } catch (error) {
         console.error('Error fetching data:', error)
