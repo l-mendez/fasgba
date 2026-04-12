@@ -174,7 +174,6 @@ export default function EditarJugadorPage() {
 
       await apiCall(`/api/players/${playerId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
 
