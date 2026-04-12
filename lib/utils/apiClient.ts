@@ -11,14 +11,15 @@ export async function apiCall(endpoint: string, options: RequestInit = {}): Prom
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
   const url = `${baseUrl}${endpoint}`
-  
+
+  const { headers: optionHeaders, ...restOptions } = options
   const config: RequestInit = {
+    ...restOptions,
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.access_token}`,
-      ...options.headers
+      ...optionHeaders,
     },
-    ...options
   }
 
   const response = await fetch(url, config)
