@@ -11,7 +11,8 @@
     "migrate:ranking": "npx tsx scripts/migrate-ranking-to-supabase.ts",
     "setup:storage": "npx tsx scripts/setup-storage-buckets.ts",
     "test:email": "node scripts/test-email.js",
-    "send:admin-update": "npx tsx scripts/send-admin-update.ts"
+    "send:admin-update": "npx tsx scripts/send-admin-update.ts",
+    "setup:worktree": "bash scripts/setup-worktree.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
@@ -64,7 +65,7 @@
     "nodemailer": "^8.0.5",
     "react": "^19.2.4",
     "react-chessboard": "^5.10.0",
-    "react-dom": "^19.1.0",
+    "react-dom": "^19.2.4",
     "react-hook-form": "^7.71.2",
     "sonner": "^2.0.5",
     "tailwind-merge": "^3.5.0",
