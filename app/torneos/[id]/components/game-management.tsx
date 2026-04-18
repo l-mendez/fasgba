@@ -105,30 +105,38 @@ export default function GameManagement({
   const fetchPlayers = async () => {
     try {
       if (tournamentType === 'team') {
-        // For team tournaments, get players from all registered teams' clubs
-        const data = await apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
-        const registeredTeams = data.teams || []
+        // For team tournaments, get registered tournament players (with correct club info via player FK)
+        const data = await apiCall(`/api/tournaments/${tournamentId}/players`)
+        const tournamentPlayers = data.players || []
 
-        // Fetch all players from registered teams' clubs
-        const allPlayers: Player[] = []
-        const fetchedClubIds = new Set<number>()
-        for (const reg of registeredTeams) {
-          const clubId = reg.teams?.club_id
-          if (!clubId || fetchedClubIds.has(clubId)) continue
-          fetchedClubIds.add(clubId)
-          try {
-            const clubPlayersData = await apiCall(`/api/clubs/${clubId}/players`)
-            const clubPlayers = clubPlayersData.players || []
-            const playersWithClub = clubPlayers.map((player: any) => ({
-              ...player,
-              club: { id: clubId, name: reg.teams?.clubs?.name || '' }
-            }))
-            allPlayers.push(...playersWithClub)
-          } catch (error) {
-            console.error(`Error fetching players for club ${clubId}:`, error)
+        if (tournamentPlayers.length > 0) {
+          setPlayers(tournamentPlayers)
+        } else {
+          // Fallback: fetch all players from registered clubs (when no players registered yet)
+          const teamsData = await apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
+          const registeredTeams = teamsData.teams || []
+          const allPlayers: Player[] = []
+          const fetchedClubIds = new Set<number>()
+          for (const reg of registeredTeams) {
+            const clubId = reg.teams?.club_id
+            if (!clubId || fetchedClubIds.has(clubId)) continue
+            fetchedClubIds.add(clubId)
+            try {
+              const clubPlayersData = await apiCall(`/api/clubs/${clubId}/players`)
+              const clubPlayers = clubPlayersData.players || []
+              // Use club info from the direct clubs query, not from the teams join
+              const clubInfo = clubPlayersData.club
+              const playersWithClub = clubPlayers.map((player: any) => ({
+                ...player,
+                club: clubInfo || { id: clubId, name: '' }
+              }))
+              allPlayers.push(...playersWithClub)
+            } catch (error) {
+              console.error(`Error fetching players for club ${clubId}:`, error)
+            }
           }
+          setPlayers(allPlayers)
         }
-        setPlayers(allPlayers)
       } else {
         // For individual tournaments, get all players (they can register individually)
         const data = await apiCall('/api/players')

@@ -111,6 +111,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (tournament.tournament_type === 'team') {
       // For team tournaments, get players through team registrations
+      // Use players.club_id FK directly for club info (not teams.club_id)
       const { data: players, error } = await serverSupabase
         .from('tournament_team_players')
         .select(`
@@ -118,15 +119,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             id,
             full_name,
             fide_id,
-            rating
-          ),
-          teams (
-            id,
-            name,
-            clubs (
+            rating,
+            club:clubs!players_club_id_fkey (
               id,
               name
             )
+          ),
+          teams (
+            id,
+            name
           )
         `)
         .eq('tournament_id', tournamentIdNum)
@@ -136,11 +137,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         throw new Error('Failed to fetch tournament players')
       }
 
-      const formattedPlayers = players?.map(p => ({
-        ...p.players,
-        team: p.teams,
-        club: p.teams?.clubs
-      })) || []
+      const formattedPlayers = players?.map(p => {
+        const player = Array.isArray(p.players) ? p.players[0] : p.players
+        return player ? {
+          id: player.id,
+          full_name: player.full_name,
+          fide_id: player.fide_id,
+          rating: player.rating,
+          team: p.teams,
+          club: player.club
+        } : null
+      }).filter(Boolean) || []
 
       return apiSuccess({ players: formattedPlayers, tournament_type: 'team' })
     } else {
