@@ -1,19 +1,18 @@
 import Link from "next/link"
-import { CastleIcon as ChessKnight, Facebook, Instagram, Mail, MapPin, Phone, Twitter } from "lucide-react"
+import { Facebook, Instagram, Mail, Phone } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 
 export function SiteFooter() {
   return (
-    <footer className="w-full border-t border-amber/20 bg-gradient-to-b from-background to-amber/5">
+    <footer className="w-full border-t border-amber/30 dark:border-amber/20 bg-gradient-to-b from-background to-amber/10 dark:to-amber/5">
       <div className="container grid gap-8 py-8 md:grid-cols-2 lg:grid-cols-4">
         <div className="flex flex-col gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <ChessKnight className="h-6 w-6 text-terracotta" />
             <span className="font-bold text-terracotta">FASGBA</span>
           </Link>
           <p className="text-sm text-muted-foreground">
-            Federación de Ajedrez del Sur del Gran Buenos Aires - Promoviendo el ajedrez en la región desde 1985
+            Federación de Ajedrez del Sur del Gran Buenos Aires - Promoviendo el ajedrez en la región desde 1975
           </p>
           <div className="mt-4 flex gap-4">
             <Button variant="ghost" size="icon" asChild className="text-amber hover:text-amber-dark hover:bg-amber/10">
@@ -99,10 +98,10 @@ export function SiteFooter() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-amber/20 py-6">
+      <div className="border-t border-amber/30 dark:border-amber/20 py-6">
         <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
           <p className="text-center text-sm text-muted-foreground md:text-left">
-            © 2025 Federación de Ajedrez del Sur del Gran Buenos Aires. Todos los derechos reservados.
+            © 2026 Federación de Ajedrez del Sur del Gran Buenos Aires. Todos los derechos reservados.
           </p>
           <div className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/politica-privacidad" className="hover:text-amber-dark">
