@@ -22,6 +22,10 @@ interface Player {
   full_name: string
   fide_id?: string
   rating?: number
+  team?: {
+    id: number
+    name: string
+  }
   club?: {
     id: number
     name: string
@@ -98,10 +102,6 @@ export default function RoundsGamesManagement({
     team_b_id: 0
   })
 
-  // New state for team-specific players
-  const [teamAPlayers, setTeamAPlayers] = useState<Player[]>([])
-  const [teamBPlayers, setTeamBPlayers] = useState<Player[]>([])
-
   // Update games when initialGames prop changes
   useEffect(() => {
     setGames(initialGames)
@@ -131,28 +131,9 @@ export default function RoundsGamesManagement({
   const fetchPlayers = async () => {
     try {
       if (tournamentType === 'team') {
-        const data = await apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
-        const registeredTeams = data.teams || []
-
-        const allPlayers: Player[] = []
-        const fetchedClubIds = new Set<number>()
-        for (const reg of registeredTeams) {
-          const clubId = reg.teams?.club_id
-          if (!clubId || fetchedClubIds.has(clubId)) continue
-          fetchedClubIds.add(clubId)
-          try {
-            const clubPlayersData = await apiCall(`/api/clubs/${clubId}/players`)
-            const clubPlayers = clubPlayersData.players || []
-            const playersWithClub = clubPlayers.map((player: any) => ({
-              ...player,
-              club: { id: clubId, name: reg.teams?.clubs?.name || '' }
-            }))
-            allPlayers.push(...playersWithClub)
-          } catch (error) {
-            console.error(`Error fetching players for club ${clubId}:`, error)
-          }
-        }
-        setPlayers(allPlayers)
+        // Only players registered to a team for this tournament are eligible.
+        const data = await apiCall(`/api/tournaments/${tournamentId}/players`)
+        setPlayers(data.players || [])
       } else {
         const data = await apiCall('/api/players')
         setPlayers(data.players || [])
@@ -482,12 +463,7 @@ export default function RoundsGamesManagement({
       game_time: game.time || '',
       match_id: game.matchId || undefined
     })
-    
-    // For team tournaments, update team players if we have a match
-    if (tournamentType === 'team' && game.matchId) {
-      updateTeamPlayersForMatch(game.matchId)
-    }
-    
+
     setIsEditGameDialogOpen(true)
   }
 
@@ -502,9 +478,6 @@ export default function RoundsGamesManagement({
       game_time: '',
       match_id: undefined
     })
-    // Reset team players when form is reset
-    setTeamAPlayers([])
-    setTeamBPlayers([])
   }
 
   const getResultBadgeClass = (result: string) => {
@@ -529,62 +502,28 @@ export default function RoundsGamesManagement({
 
   const sortedRounds = [...rounds].sort((a, b) => a.round_number - b.round_number)
 
-  // New functions for team-based player management
-  const fetchTeamPlayers = async (clubId: number): Promise<Player[]> => {
-    try {
-      const clubPlayersData = await apiCall(`/api/clubs/${clubId}/players`)
-      const clubPlayers = clubPlayersData.players || []
-      return clubPlayers.map((player: any) => ({
-        ...player,
-        club: { id: clubId, name: clubs.find(c => c.id === clubId)?.name || 'Unknown' }
-      }))
-    } catch (error) {
-      console.error(`Error fetching players for club ${clubId}:`, error)
-      return []
-    }
-  }
-
-  const updateTeamPlayersForMatch = async (matchId: number) => {
-    const selectedMatch = matches.find(m => m.id === matchId)
-    if (!selectedMatch) {
-      setTeamAPlayers([])
-      setTeamBPlayers([])
-      return
-    }
-
-    try {
-      const [teamAPlayersData, teamBPlayersData] = await Promise.all([
-        fetchTeamPlayers(selectedMatch.team_a.id),
-        fetchTeamPlayers(selectedMatch.team_b.id)
-      ])
-      
-      setTeamAPlayers(teamAPlayersData)
-      setTeamBPlayers(teamBPlayersData)
-    } catch (error) {
-      console.error('Error fetching team players:', error)
-      setTeamAPlayers([])
-      setTeamBPlayers([])
-    }
-  }
-
+  // White/black dropdowns are filtered to whichever team plays that color on this board.
+  // Team A plays white on odd boards, team B on even (standard alternating colors).
   const getWhitePlayerOptions = (): Player[] => {
     if (tournamentType !== 'team' || !gameFormData.match_id || !gameFormData.board_number) {
       return players
     }
-
-    // Team A plays white on odd boards, Team B plays white on even boards
+    const selectedMatch = matches.find(m => m.id === gameFormData.match_id)
+    if (!selectedMatch) return []
     const isOddBoard = gameFormData.board_number % 2 === 1
-    return isOddBoard ? teamAPlayers : teamBPlayers
+    const whiteTeamId = isOddBoard ? selectedMatch.team_a.id : selectedMatch.team_b.id
+    return players.filter(p => p.team?.id === whiteTeamId)
   }
 
   const getBlackPlayerOptions = (): Player[] => {
     if (tournamentType !== 'team' || !gameFormData.match_id || !gameFormData.board_number) {
       return players
     }
-
-    // Team A plays black on even boards, Team B plays black on odd boards
+    const selectedMatch = matches.find(m => m.id === gameFormData.match_id)
+    if (!selectedMatch) return []
     const isOddBoard = gameFormData.board_number % 2 === 1
-    return isOddBoard ? teamBPlayers : teamAPlayers
+    const blackTeamId = isOddBoard ? selectedMatch.team_b.id : selectedMatch.team_a.id
+    return players.filter(p => p.team?.id === blackTeamId)
   }
 
   const getSelectedMatchInfo = () => {
@@ -839,15 +778,14 @@ export default function RoundsGamesManagement({
                   {tournamentType === 'team' && (
                     <div>
                       <Label htmlFor="match">Enfrentamiento *</Label>
-                      <Select value={gameFormData.match_id?.toString() || ''} onValueChange={async (value) => {
+                      <Select value={gameFormData.match_id?.toString() || ''} onValueChange={(value) => {
                         const matchId = parseInt(value)
-                        setGameFormData(prev => ({ 
-                          ...prev, 
+                        setGameFormData(prev => ({
+                          ...prev,
                           match_id: matchId,
                           white_player_id: 0,
                           black_player_id: 0
                         }))
-                        await updateTeamPlayersForMatch(matchId)
                       }}>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar enfrentamiento" />
