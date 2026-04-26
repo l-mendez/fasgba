@@ -19,6 +19,10 @@ interface Player {
   full_name: string
   fide_id?: string
   rating?: number
+  team?: {
+    id: number
+    name: string
+  }
   club?: {
     id: number
     name: string
@@ -112,22 +116,23 @@ export default function GameManagement({
         if (tournamentPlayers.length > 0) {
           setPlayers(tournamentPlayers)
         } else {
-          // Fallback: fetch all players from registered clubs (when no players registered yet)
+          // Fallback: fetch all players from registered clubs (when no players registered yet).
+          // Tag each player with the team they'd play for so the dropdown filter still works.
           const teamsData = await apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
           const registeredTeams = teamsData.teams || []
           const allPlayers: Player[] = []
-          const fetchedClubIds = new Set<number>()
           for (const reg of registeredTeams) {
             const clubId = reg.teams?.club_id
-            if (!clubId || fetchedClubIds.has(clubId)) continue
-            fetchedClubIds.add(clubId)
+            const teamId = reg.teams?.id
+            const teamName = reg.teams?.name
+            if (!clubId || !teamId) continue
             try {
               const clubPlayersData = await apiCall(`/api/clubs/${clubId}/players`)
               const clubPlayers = clubPlayersData.players || []
-              // Use club info from the direct clubs query, not from the teams join
               const clubInfo = clubPlayersData.club
               const playersWithClub = clubPlayers.map((player: any) => ({
                 ...player,
+                team: { id: teamId, name: teamName },
                 club: clubInfo || { id: clubId, name: '' }
               }))
               allPlayers.push(...playersWithClub)
@@ -334,6 +339,14 @@ export default function GameManagement({
     return gameRoundId === selectedRound
   })
 
+  const selectedMatch = matches.find(m => m.id === formData.match_id)
+  const whitePlayers = tournamentType === 'team'
+    ? (selectedMatch ? players.filter(p => p.team?.id === selectedMatch.team_a.id) : [])
+    : players
+  const blackPlayers = tournamentType === 'team'
+    ? (selectedMatch ? players.filter(p => p.team?.id === selectedMatch.team_b.id) : [])
+    : players
+
   // Handle add match
   const [newMatch, setNewMatch] = useState<{ team_a_id: number; team_b_id: number }>({ team_a_id: 0, team_b_id: 0 })
 
@@ -436,8 +449,13 @@ export default function GameManagement({
                 {tournamentType === 'team' && (
                   <div>
                     <Label htmlFor="match">Enfrentamiento *</Label>
-                    <Select value={formData.match_id?.toString() || ''} onValueChange={(value) => 
-                      setFormData(prev => ({ ...prev, match_id: parseInt(value) }))
+                    <Select value={formData.match_id?.toString() || ''} onValueChange={(value) =>
+                      setFormData(prev => ({
+                        ...prev,
+                        match_id: parseInt(value),
+                        white_player_id: 0,
+                        black_player_id: 0,
+                      }))
                     }>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar enfrentamiento" />
@@ -471,15 +489,17 @@ export default function GameManagement({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="white_player">Jugador Blancas *</Label>
-                    <Select value={formData.white_player_id.toString()} onValueChange={(value) => 
+                    <Label htmlFor="white_player">
+                      Jugador Blancas{tournamentType === 'team' && selectedMatch ? ` (${selectedMatch.team_a.name})` : ''} *
+                    </Label>
+                    <Select value={formData.white_player_id.toString()} onValueChange={(value) =>
                       setFormData(prev => ({ ...prev, white_player_id: parseInt(value) }))
                     }>
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar jugador" />
+                        <SelectValue placeholder={tournamentType === 'team' && !selectedMatch ? 'Selecciona enfrentamiento primero' : 'Seleccionar jugador'} />
                       </SelectTrigger>
                       <SelectContent>
-                        {players.map((player) => (
+                        {whitePlayers.map((player) => (
                           <SelectItem key={player.id} value={player.id.toString()}>
                             {player.full_name} {player.rating && `(${player.rating})`}
                             {player.club && ` - ${player.club.name}`}
@@ -490,15 +510,17 @@ export default function GameManagement({
                   </div>
 
                   <div>
-                    <Label htmlFor="black_player">Jugador Negras *</Label>
-                    <Select value={formData.black_player_id.toString()} onValueChange={(value) => 
+                    <Label htmlFor="black_player">
+                      Jugador Negras{tournamentType === 'team' && selectedMatch ? ` (${selectedMatch.team_b.name})` : ''} *
+                    </Label>
+                    <Select value={formData.black_player_id.toString()} onValueChange={(value) =>
                       setFormData(prev => ({ ...prev, black_player_id: parseInt(value) }))
                     }>
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar jugador" />
+                        <SelectValue placeholder={tournamentType === 'team' && !selectedMatch ? 'Selecciona enfrentamiento primero' : 'Seleccionar jugador'} />
                       </SelectTrigger>
                       <SelectContent>
-                        {players.map((player) => (
+                        {blackPlayers.map((player) => (
                           <SelectItem key={player.id} value={player.id.toString()}>
                             {player.full_name} {player.rating && `(${player.rating})`}
                             {player.club && ` - ${player.club.name}`}
