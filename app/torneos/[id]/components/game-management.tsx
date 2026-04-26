@@ -109,41 +109,10 @@ export default function GameManagement({
   const fetchPlayers = async () => {
     try {
       if (tournamentType === 'team') {
-        // For team tournaments, get registered tournament players (with correct club info via player FK)
+        // Only players registered to a team for this tournament are eligible.
         const data = await apiCall(`/api/tournaments/${tournamentId}/players`)
-        const tournamentPlayers = data.players || []
-
-        if (tournamentPlayers.length > 0) {
-          setPlayers(tournamentPlayers)
-        } else {
-          // Fallback: fetch all players from registered clubs (when no players registered yet).
-          // Tag each player with the team they'd play for so the dropdown filter still works.
-          const teamsData = await apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
-          const registeredTeams = teamsData.teams || []
-          const allPlayers: Player[] = []
-          for (const reg of registeredTeams) {
-            const clubId = reg.teams?.club_id
-            const teamId = reg.teams?.id
-            const teamName = reg.teams?.name
-            if (!clubId || !teamId) continue
-            try {
-              const clubPlayersData = await apiCall(`/api/clubs/${clubId}/players`)
-              const clubPlayers = clubPlayersData.players || []
-              const clubInfo = clubPlayersData.club
-              const playersWithClub = clubPlayers.map((player: any) => ({
-                ...player,
-                team: { id: teamId, name: teamName },
-                club: clubInfo || { id: clubId, name: '' }
-              }))
-              allPlayers.push(...playersWithClub)
-            } catch (error) {
-              console.error(`Error fetching players for club ${clubId}:`, error)
-            }
-          }
-          setPlayers(allPlayers)
-        }
+        setPlayers(data.players || [])
       } else {
-        // For individual tournaments, get all players (they can register individually)
         const data = await apiCall('/api/players')
         setPlayers(data.players || [])
       }

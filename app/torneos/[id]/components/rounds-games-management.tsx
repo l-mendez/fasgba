@@ -131,40 +131,9 @@ export default function RoundsGamesManagement({
   const fetchPlayers = async () => {
     try {
       if (tournamentType === 'team') {
-        // Prefer registered tournament players (carries team membership for filtering).
+        // Only players registered to a team for this tournament are eligible.
         const data = await apiCall(`/api/tournaments/${tournamentId}/players`)
-        const tournamentPlayers = data.players || []
-
-        if (tournamentPlayers.length > 0) {
-          setPlayers(tournamentPlayers)
-          return
-        }
-
-        // Fallback: no players registered yet — list each registered team's club roster,
-        // tagging players with the team they'd play for so the dropdown filter still works.
-        const teamsData = await apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
-        const registeredTeams = teamsData.teams || []
-        const allPlayers: Player[] = []
-        for (const reg of registeredTeams) {
-          const clubId = reg.teams?.club_id
-          const teamId = reg.teams?.id
-          const teamName = reg.teams?.name
-          if (!clubId || !teamId) continue
-          try {
-            const clubPlayersData = await apiCall(`/api/clubs/${clubId}/players`)
-            const clubPlayers = clubPlayersData.players || []
-            const clubInfo = clubPlayersData.club
-            const playersWithClub = clubPlayers.map((player: any) => ({
-              ...player,
-              team: { id: teamId, name: teamName },
-              club: clubInfo || { id: clubId, name: reg.teams?.clubs?.name || '' }
-            }))
-            allPlayers.push(...playersWithClub)
-          } catch (error) {
-            console.error(`Error fetching players for club ${clubId}:`, error)
-          }
-        }
-        setPlayers(allPlayers)
+        setPlayers(data.players || [])
       } else {
         const data = await apiCall('/api/players')
         setPlayers(data.players || [])
