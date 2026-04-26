@@ -70,13 +70,13 @@ function TorneoCard({
           </div>
           <div className="flex items-start gap-2">
             <MapPin className="h-4 w-4 text-amber shrink-0 mt-0.5" />
-            <div>
+            <div className="min-w-0 flex-1">
               {torneo.place && (
-                <span className="text-sm block text-amber-dark">
+                <span className="text-sm block text-amber-dark break-words">
                   {torneo.place}
                 </span>
               )}
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-muted-foreground break-words">
                 {getLocationDisplay(torneo.place, torneo.location)}
               </span>
             </div>
@@ -88,13 +88,13 @@ function TorneoCard({
             </span>
           </div>
           {tipo !== "past" && (
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-amber" />
-              <div>
-                <span className="text-sm block">
+            <div className="flex items-start gap-2">
+              <Users className="h-4 w-4 text-amber shrink-0 mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <span className="text-sm block break-words">
                   {torneo.inscription_details || "Información de inscripción próximamente"}
                 </span>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground break-words">
                   Costo: {getCostDisplay(torneo.cost)}
                 </span>
               </div>
