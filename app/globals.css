@@ -157,11 +157,91 @@
   }
 }
 
-.chess-pattern {
+/* Hero gradient mesh – light mode */
+@utility hero-mesh-light {
+  background:
+    radial-gradient(ellipse at 25% 40%, rgba(218, 160, 86, 0.15) 0%, transparent 55%),
+    radial-gradient(ellipse at 75% 30%, rgba(143, 63, 18, 0.1) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 90%, rgba(218, 160, 86, 0.08) 0%, transparent 50%),
+    linear-gradient(180deg, #fffbf5 0%, #fef6ed 50%, #ffffff 100%);
+}
+
+/* Hero gradient mesh – dark mode */
+@utility hero-mesh-dark {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(143, 63, 18, 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(218, 160, 86, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 80%, rgba(143, 63, 18, 0.2) 0%, transparent 50%),
+    linear-gradient(135deg, #1a0f08 0%, #2d1810 40%, #1a1008 100%);
+}
+
+/* Chess pattern overlay */
+@utility chess-pattern {
   background-image: linear-gradient(45deg, rgba(218, 160, 86, 0.1) 25%, transparent 25%),
     linear-gradient(-45deg, rgba(218, 160, 86, 0.1) 25%, transparent 25%),
     linear-gradient(45deg, transparent 75%, rgba(218, 160, 86, 0.1) 75%),
     linear-gradient(-45deg, transparent 75%, rgba(218, 160, 86, 0.1) 75%);
   background-size: 20px 20px;
   background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+/* Gradient text – amber shine */
+@utility gradient-text {
+  background: linear-gradient(135deg, #daa056 0%, #e5bb7f 50%, #daa056 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Marquee mask */
+@utility marquee-container {
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+@utility marquee-track {
+  animation: marquee 30s linear infinite;
+  width: max-content;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Floating chess pieces */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(5deg); }
+}
+
+@utility animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@utility animate-float-delayed {
+  animation: float 8s ease-in-out 2s infinite;
+}
+
+/* Pulse glow */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+@utility animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* Section divider */
+@utility section-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(218, 160, 86, 0.4), transparent);
+}
+
+/* Glass card */
+@utility glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(218, 160, 86, 0.15);
 }
