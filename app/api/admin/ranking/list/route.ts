@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
               .download(file.name)
 
             let totalPlayers = 0
-            let lastUpdated = file.created_at
+            let lastUpdated = file.created_at ?? new Date().toISOString()
 
             if (!downloadError && fileData) {
               try {
