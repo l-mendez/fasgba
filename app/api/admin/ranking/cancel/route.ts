@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
         const oldTempFiles = tempFiles
           .filter(file => {
-            const fileDate = new Date(file.created_at)
+            const fileDate = new Date(file.created_at ?? 0)
             return fileDate < oneHourAgo
           })
           .map(file => `temp/${file.name}`)
