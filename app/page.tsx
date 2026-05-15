@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { getAllNews } from "@/lib/newsUtils"
-import { getUpcomingTournaments } from "@/lib/tournamentUtils"
+import { getAllTournamentsForDisplay } from "@/lib/tournamentUtils"
 import { getAllClubs } from "@/lib/clubUtils"
 import { getImageUrl } from "@/lib/imageUtils"
 
@@ -122,12 +122,33 @@ async function fetchNews(): Promise<NewsItem[]> {
 
 async function fetchTournaments(): Promise<Tournament[]> {
   try {
-    const tournaments = await getUpcomingTournaments(supabase, 3)
-    
-    // Add formatted dates for display - tournaments don't have direct start_date
-    return tournaments.map(tournament => ({
-      ...tournament,
-      formatted_start_date: 'Fecha por confirmar' // We'll update this based on tournament dates logic
+    const allTournaments = await getAllTournamentsForDisplay(supabase)
+    const upcoming = allTournaments.filter(t => t.is_upcoming)
+
+    // Sort FASGBA tournaments (no created_by_club_id) first, then by start date ascending
+    const sorted = upcoming.sort((a, b) => {
+      const aIsFasgba = !a.created_by_club_id
+      const bIsFasgba = !b.created_by_club_id
+      if (aIsFasgba && !bIsFasgba) return -1
+      if (!aIsFasgba && bIsFasgba) return 1
+      return a.start_date.getTime() - b.start_date.getTime()
+    })
+
+    return sorted.slice(0, 3).map(t => ({
+      id: t.id,
+      title: t.title,
+      description: t.description,
+      time: t.time,
+      place: t.place,
+      location: t.location,
+      rounds: t.rounds,
+      pace: t.pace,
+      inscription_details: t.inscription_details,
+      cost: t.cost,
+      prizes: t.prizes,
+      image: t.image,
+      created_by_club_id: t.created_by_club_id,
+      formatted_start_date: t.formatted_start_date,
     }))
   } catch (error) {
     console.error('Error fetching tournaments:', error)
@@ -249,9 +270,12 @@ function TournamentCard({ tournament }: { tournament: Tournament }): ReactNode {
   const clubName = tournament.place || 'Sede por confirmar'
   
   return (
-    <div className="group relative overflow-hidden rounded-lg border border-amber/20 bg-background shadow-md transition-colors hover:border-amber">
+    <Link
+      href={`/torneos/${tournament.id}`}
+      className="group relative block overflow-hidden rounded-lg border border-amber/20 bg-background shadow-md transition-colors hover:border-amber"
+    >
       <div className="p-6">
-        <h3 className="text-xl font-bold text-terracotta line-clamp-2">{tournament.title}</h3>
+        <h3 className="text-xl font-bold text-terracotta line-clamp-2 group-hover:text-terracotta/90">{tournament.title}</h3>
         <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
           <Calendar className="h-4 w-4 text-amber flex-shrink-0" />
           <span className="line-clamp-1">
@@ -266,13 +290,8 @@ function TournamentCard({ tournament }: { tournament: Tournament }): ReactNode {
         {tournament.description && (
           <p className="mt-3 text-sm line-clamp-3">{tournament.description}</p>
         )}
-        <div className="mt-4">
-          <Button asChild size="sm" className="bg-terracotta hover:bg-terracotta/90 text-white">
-            <Link href={`/torneos/${tournament.id}`}>Ver detalles</Link>
-          </Button>
-        </div>
       </div>
-    </div>
+    </Link>
   )
 }
 
