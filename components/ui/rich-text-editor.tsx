@@ -54,6 +54,28 @@ export function RichTextEditor({ content, onChange, placeholder = "Escribe aquí
       attributes: {
         class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl prose-gray dark:prose-invert mx-auto focus:outline-none min-h-[200px] p-4 text-gray-900 dark:text-gray-100',
       },
+      // Preserve the first pasted paragraph's text alignment: ProseMirror merges
+      // the slice's open first block into the destination paragraph and drops its
+      // attrs. We propagate textAlign to the empty destination before paste.
+      handlePaste: (view, _event, slice) => {
+        const firstNode = slice.content.firstChild
+        const align = firstNode?.attrs?.textAlign as string | undefined
+        if (!align || align === 'left') return false
+
+        const { state } = view
+        const { $from } = state.selection
+        for (let depth = $from.depth; depth >= 0; depth--) {
+          const node = $from.node(depth)
+          if (node.type.name !== 'paragraph' && node.type.name !== 'heading') continue
+          if (node.content.size > 0) break
+          const pos = $from.before(depth)
+          view.dispatch(
+            state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, textAlign: align })
+          )
+          break
+        }
+        return false
+      },
     },
   })
 
