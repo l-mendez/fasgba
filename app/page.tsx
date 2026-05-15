@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { getAllNews } from "@/lib/newsUtils"
-import { getUpcomingTournaments } from "@/lib/tournamentUtils"
+import { getAllTournamentsForDisplay } from "@/lib/tournamentUtils"
 import { getAllClubs } from "@/lib/clubUtils"
 import { getImageUrl } from "@/lib/imageUtils"
 
@@ -121,12 +121,33 @@ async function fetchNews(): Promise<NewsItem[]> {
 
 async function fetchTournaments(): Promise<Tournament[]> {
   try {
-    const tournaments = await getUpcomingTournaments(supabase, 3)
-    
-    // Add formatted dates for display - tournaments don't have direct start_date
-    return tournaments.map(tournament => ({
-      ...tournament,
-      formatted_start_date: 'Fecha por confirmar' // We'll update this based on tournament dates logic
+    const allTournaments = await getAllTournamentsForDisplay(supabase)
+    const upcoming = allTournaments.filter(t => t.is_upcoming)
+
+    // Sort FASGBA tournaments (no created_by_club_id) first, then by start date ascending
+    const sorted = upcoming.sort((a, b) => {
+      const aIsFasgba = !a.created_by_club_id
+      const bIsFasgba = !b.created_by_club_id
+      if (aIsFasgba && !bIsFasgba) return -1
+      if (!aIsFasgba && bIsFasgba) return 1
+      return a.start_date.getTime() - b.start_date.getTime()
+    })
+
+    return sorted.slice(0, 3).map(t => ({
+      id: t.id,
+      title: t.title,
+      description: t.description,
+      time: t.time,
+      place: t.place,
+      location: t.location,
+      rounds: t.rounds,
+      pace: t.pace,
+      inscription_details: t.inscription_details,
+      cost: t.cost,
+      prizes: t.prizes,
+      image: t.image,
+      created_by_club_id: t.created_by_club_id,
+      formatted_start_date: t.formatted_start_date,
     }))
   } catch (error) {
     console.error('Error fetching tournaments:', error)
