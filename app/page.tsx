@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Calendar, ChevronLeft, ChevronRight, MapPin } from "lucide-react"
 import { ReactNode } from "react"
 import { createClient } from '@supabase/supabase-js'
@@ -200,7 +201,14 @@ function NoticiaDestacada({ noticia }: NoticiaProps): ReactNode {
   return (
     <div className="relative h-full overflow-hidden rounded-lg">
       <div className="absolute inset-0">
-        <img src={noticia.imagen || "/placeholder.svg"} alt={noticia.titulo} className="h-full w-full object-cover" />
+        <Image
+          src={noticia.imagen || "/placeholder.svg"}
+          alt={noticia.titulo}
+          fill
+          sizes="(max-width: 1024px) 100vw, 33vw"
+          className="object-cover"
+          priority
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
       </div>
       <div className="relative flex h-full flex-col justify-end p-6 text-white">
@@ -226,10 +234,12 @@ function NoticiaCard({ noticia }: NoticiaProps): ReactNode {
   return (
     <div className="group relative h-full overflow-hidden rounded-lg">
       <div className="absolute inset-0">
-        <img
+        <Image
           src={noticia.imagen || "/placeholder.svg"}
           alt={noticia.titulo}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
       </div>
