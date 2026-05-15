@@ -1,6 +1,8 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
+import { useState } from "react"
 import { Calendar, ChevronLeft } from "lucide-react"
 import dynamic from "next/dynamic"
 
@@ -59,6 +61,23 @@ interface News {
   updated_at: string
 }
 
+// Content-block image with broken-image fallback
+const ContentImage = ({ src, alt }: { src: string; alt: string }) => {
+  const [imgSrc, setImgSrc] = useState(src)
+  return (
+    <Image
+      src={imgSrc}
+      alt={alt}
+      width={1200}
+      height={800}
+      sizes="(max-width: 768px) 100vw, 768px"
+      className="rounded-lg mx-auto max-w-full h-auto"
+      style={{ width: '100%', height: 'auto' }}
+      onError={() => setImgSrc("/placeholder.svg")}
+    />
+  )
+}
+
 // Component to render content blocks
 const ContentRenderer = ({ content }: { content: any[] }) => {
   console.log('ContentRenderer - content blocks:', content) // Debug log
@@ -90,18 +109,7 @@ const ContentRenderer = ({ content }: { content: any[] }) => {
           return (
             <figure key={index} className="my-4 sm:my-6">
               <div className="relative">
-                <img 
-                  src={finalImageUrl} 
-                  alt={imageCaption || 'Imagen'} 
-                  className="rounded-lg mx-auto max-w-full h-auto"
-                  onError={(e) => {
-                    // Replace broken image with placeholder
-                    const target = e.target as HTMLImageElement
-                    target.src = "/placeholder.svg"
-                    target.onerror = null // Prevent infinite loop
-                  }}
-                  onLoad={() => console.log(`Image loaded successfully:`, finalImageUrl)} // Debug log
-                />
+                <ContentImage src={finalImageUrl} alt={imageCaption || 'Imagen'} />
               </div>
               {imageCaption && <figcaption className="text-center text-xs sm:text-sm text-muted-foreground mt-2">{imageCaption}</figcaption>}
             </figure>
@@ -164,10 +172,13 @@ export default function NewsContentWrapper({
         <article>
           {/* Imagen de cabecera - Optimized for mobile */}
           <div className="relative h-[250px] sm:h-[300px] md:h-[400px] lg:h-[500px] w-full">
-            <img
+            <Image
               src={getImageUrl(newsItem.image)}
               alt={newsItem.title}
-              className="h-full w-full object-cover"
+              fill
+              sizes="100vw"
+              priority
+              className="object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
           </div>
@@ -221,11 +232,13 @@ export default function NewsContentWrapper({
                   {relatedNews.map((news) => (
                     <Link key={news.id} href={`/noticias/${news.id}`} className="group">
                       <div className="overflow-hidden rounded-lg border border-amber/20 dark:border-amber/30 bg-background dark:bg-background/95 shadow-md transition-colors hover:border-amber dark:hover:border-amber/50">
-                        <div className="aspect-video overflow-hidden">
-                          <img
+                        <div className="relative aspect-video overflow-hidden">
+                          <Image
                             src={getImageUrl(news.image)}
                             alt={news.title}
-                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            fill
+                            sizes="(max-width: 640px) 100vw, 50vw"
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
                           />
                         </div>
                         <div className="p-3 sm:p-4">
