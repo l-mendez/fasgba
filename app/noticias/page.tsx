@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { unstable_cache } from "next/cache"
 
 import { Button } from "@/components/ui/button"
@@ -295,10 +296,12 @@ export default async function NoticiasPage({ searchParams }: PageProps) {
                         <div className="cursor-pointer hover:scale-[1.02] transition-transform">
                           <div className="aspect-video relative bg-muted">
                             {item.image ? (
-                              <img
-                                src={getImageUrl(item.image) || undefined}
+                              <Image
+                                src={getImageUrl(item.image) || ''}
                                 alt={item.title}
-                                className="w-full h-full object-cover"
+                                fill
+                                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                className="object-cover"
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-muted-foreground">
