@@ -1,187 +1,86 @@
 # Email Notification System
 
-This document describes the email notification system implemented for the FASGBA chess federation website.
-
-## Overview
-
-The email notification system automatically sends email notifications when new news articles are posted to the website. It uses Node Mailer with Zoho SMTP for reliable email delivery.
-
-## Features
-
-- 🔔 Automatic email notifications when news is published
-- 📧 Beautiful HTML email templates with branding
-- 🏢 Support for both FASGBA and club-specific news
-- 🧪 Test endpoint for verification
-- 🔒 Secure authentication with JWT tokens
-- 📱 Responsive email design
+Email notifications for news, tournaments, and ranking updates, sent via Zoho SMTP and filtered by each user's notification preferences and club follows.
 
 ## Architecture
 
-### API Endpoints
+All broadcasts go through a single library module called from each content-creation handler:
 
-1. **`/api/notifications/email`** - Main email notification endpoint
-2. **`/api/notifications/email/test`** - Test endpoint for verification
-
-### Email Configuration
-
-The system uses Zoho SMTP with the following configuration:
-
-```javascript
-const transporter = nodemailer.createTransport({
-  host: "smtp.zoho.com",
-  port: 465, // use 465 for secure SSL
-  secure: true, // true for port 465
-  auth: {
-    user: "notificaciones@my-website.com", // your Zoho email
-    pass: "NO_REPLY_PASSWORD", // password or app-specific password if using 2FA
-  },
-})
+```
+lib/notifications/
+  types.ts          Shared types (BroadcastInput, NotificationCategory, NotificationPrefs, ...)
+  filter.ts         shouldIncludeUser() — follow-aware recipient filter
+  templates.ts      buildEmailContent() — three HTML/text templates
+  sendBroadcast.ts  Orchestration: build → load followers → paginate users → filter → SMTP → log
 ```
 
-### Integration Points
+Call sites:
 
-The email notification is integrated into the news creation flow:
+- `app/api/news/route.ts` → `after(() => sendBroadcast({ type: 'news_created', newsId }))`
+- `app/api/tournaments/route.ts` → `after(() => sendBroadcast({ type: 'tournament_created', tournamentId }))`
+- `app/api/admin/ranking/confirm/route.ts` → `after(() => sendBroadcast({ type: 'ranking_updated', rankingMonth, rankingYear }))`
 
-- **Main news form**: `app/noticias/nueva/new-news-form.tsx`
-- **Club admin flow**: Uses the same form via redirects
-- **API endpoints**: `app/api/news/route.ts` and related endpoints
+`after()` (Next.js post-response continuation) runs the broadcast after the 201 is sent so SMTP latency never blocks the client.
 
-## Setup Instructions
+## SMTP
 
-### 1. Email Account Configuration
+Zoho, hardcoded in `lib/notifications/sendBroadcast.ts`:
 
-1. Set up a Zoho email account for `notificaciones@my-website.com`
-2. If using 2FA, create an app-specific password
-3. Update the credentials in the email configuration
+```ts
+host: 'smtp.zoho.com', port: 465, secure: true
+user: 'no-responder@fasgba.com'
+pass: process.env.NO_REPLY_PASSWORD
+```
 
-### 2. Environment Variables
+Mails are sent `from no-responder@fasgba.com` to itself with all real recipients in BCC (one SMTP transaction per broadcast).
 
-Add the following environment variables (if needed for production):
+## Recipient filter
+
+`shouldIncludeUser(notif, category, isFollower)` (see `lib/notifications/filter.ts`) implements:
+
+| `notif.type` | FASGBA news / FASGBA tournament | Club news / club tournament | Ranking |
+|---|---|---|---|
+| missing | yes | yes | yes |
+| `todas` | yes | yes | yes |
+| `ninguna` | no | no | no |
+| `personalizar`, sub-pref `todos` | yes | yes | `notif.ranking` |
+| `personalizar`, sub-pref `fasgba` | yes | no | `notif.ranking` |
+| `personalizar`, sub-pref `fasgba-y-clubes` | yes | yes if follower | `notif.ranking` |
+| `personalizar`, sub-pref `clubes` | no | yes if follower | `notif.ranking` |
+| `personalizar`, sub-pref `ninguno` | no | no | `notif.ranking` |
+
+Sub-pref comes from `notif.noticias` for news, `notif.torneos` for tournaments. Followers come from the `user_follows_club` table, loaded once per broadcast.
+
+## Observability
+
+Every `sendBroadcast` invocation writes one row to `notification_log`:
+
+```sql
+SELECT created_at, type, target_id, club_id, status, recipients_count, error_message
+FROM notification_log
+ORDER BY created_at DESC
+LIMIT 20;
+```
+
+`status` is `sent`, `no_recipients`, or `error`. SMTP failures and `loadFollowerSet` failures both surface here.
+
+## Endpoints
+
+- `POST /api/notifications/email/test` — SMTP health probe. Sends a single test mail to confirm credentials work. Used by `scripts/test-email.js` (`npm run test:email`).
+
+The old broadcast endpoint (`POST /api/notifications/email`) was removed once all callers switched to the in-process library.
+
+## Setup
 
 ```env
-EMAIL_HOST=smtp.zoho.com
-EMAIL_PORT=465
-EMAIL_USER=notificaciones@my-website.com
-EMAIL_PASS=NO_REPLY_PASSWORD
+NO_REPLY_PASSWORD=<zoho app password for no-responder@fasgba.com>
+NEXT_PUBLIC_SITE_URL=<production origin, used only to build absolute URLs in email bodies>
 ```
 
-### 3. Testing
-
-To test the email system:
-
-```bash
-# Make sure the server is running
-npm run dev
-
-# Run the email test
-npm run test:email
-```
-
-Alternatively, you can test manually using curl:
-
-```bash
-curl -X POST http://localhost:3000/api/notifications/email/test \
-  -H "Content-Type: application/json"
-```
-
-## Email Templates
-
-### News Notification Email
-
-When a news article is created, the system sends an email with:
-
-- **Subject**: `Nueva noticia: [News Title]`
-- **Content**: News title, source (FASGBA or club), date, and extract
-- **Design**: Branded HTML template with FASGBA colors (#8B4513)
-
-### Test Email
-
-The test endpoint sends a verification email to confirm the system is working properly.
-
-## Security Features
-
-- 🔐 JWT token authentication required
-- 🛡️ User permission validation
-- 🚫 Rate limiting (inherent via API structure)
-- ✅ Input validation and sanitization
-
-## Error Handling
-
-The system includes comprehensive error handling:
-
-- **Non-blocking**: Email failures don't block news creation
-- **Logging**: All email attempts are logged
-- **Graceful degradation**: System continues to function even if emails fail
+`NO_REPLY_PASSWORD` is required — if missing, SMTP auth fails and every broadcast is logged as `status='error'`.
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **Email not sending**
-   - Check SMTP credentials
-   - Verify internet connection
-   - Check Zoho account status
-
-2. **Authentication errors**
-   - Verify JWT token is valid
-   - Check user permissions
-   - Ensure session is active
-
-3. **Template rendering issues**
-   - Check news data retrieval
-   - Verify database connection
-   - Review email template syntax
-
-### Debug Steps
-
-1. Check server logs for email sending attempts
-2. Use the test endpoint to verify basic functionality
-3. Verify SMTP connection manually
-4. Check email delivery in recipient's spam folder
-
-## Future Enhancements
-
-Potential improvements for the email notification system:
-
-- 📧 **Subscription management**: Allow users to subscribe/unsubscribe
-- 🎯 **Targeted notifications**: Send only relevant news to interested users
-- 📊 **Analytics**: Track email open rates and engagement
-- 🔄 **Email queuing**: Implement background job processing for large lists
-- 🎨 **Template customization**: Allow clubs to customize email templates
-- 📱 **Mobile optimization**: Further optimize for mobile email clients
-
-## API Reference
-
-### Send News Notification
-
-```http
-POST /api/notifications/email
-Authorization: Bearer <jwt_token>
-Content-Type: application/json
-
-{
-  "type": "news_created",
-  "newsId": 123,
-  "recipientEmail": "test@example.com" // Optional, for testing
-}
-```
-
-### Test Email System
-
-```http
-POST /api/notifications/email/test
-Content-Type: application/json
-```
-
-## Support
-
-For issues with the email notification system, check:
-
-1. Server logs for detailed error messages
-2. SMTP provider (Zoho) status
-3. Network connectivity
-4. Email account configuration
-
----
-
-**Note**: Currently configured for testing with `lolomendez985@gmail.com`. Update recipient logic for production deployment. 
+1. **No emails fire.** Check `notification_log` first — there should be a row per news/tournament/ranking action. No rows → `sendBroadcast` never ran (check server logs for `[sendBroadcast] failed`). Rows with `status='error'` → see `error_message`. Rows with `status='no_recipients'` → preference filter excluded everyone.
+2. **Followers not getting club news.** Confirm the user's `user_metadata.notifications.noticias` (or `torneos`) is set to `clubes` or `fasgba-y-clubes`, and they have a row in `user_follows_club` for that club.
+3. **SMTP auth fails.** Run `npm run test:email`. If it fails, rotate the Zoho app password and update `NO_REPLY_PASSWORD`.

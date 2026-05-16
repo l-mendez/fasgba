@@ -103,10 +103,9 @@ async function loadFollowerSet(clubId: number): Promise<Set<string>> {
     .from('user_follows_club')
     .select('auth_id')
     .eq('club_id', clubId)
-  if (error) {
-    console.error('[sendBroadcast] loadFollowerSet error', error)
-    return new Set()
-  }
+  // Throw on error so the outer catch logs status='error' to notification_log.
+  // Swallowing here would hide under-delivery to club followers.
+  if (error) throw new Error(`loadFollowerSet failed for club ${clubId}: ${error.message}`)
   return new Set((data ?? []).map((r: any) => r.auth_id))
 }
 
