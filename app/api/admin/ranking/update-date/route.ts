@@ -3,7 +3,7 @@ import { requireAdmin } from '@/lib/middleware/auth'
 import { rateLimit } from '@/lib/middleware/rateLimit'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
-import { forceRankingCacheInvalidation } from '@/lib/rankingUtils'
+import { forceRankingCacheInvalidation, findPreviousPlayer } from '@/lib/rankingUtils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -341,22 +341,11 @@ async function recalculatePlayerDifferences(players: any[], previousRankingFilen
     }
     
     const previousRankingData = JSON.parse(await prevFileData.text())
-    
-    // Helper function to normalize names for comparison
-    const normalizeName = (name: string): string => {
-      return name
-        .trim()
-        .toLowerCase()
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ')
-    }
+    const prevPlayers: any[] = previousRankingData.players || []
 
-    // Calculate differences
+    // Calculate differences (match by ID, fall back to name only for legacy data)
     return players.map(currentPlayer => {
-      const previousPlayer = previousRankingData.players.find((p: any) => 
-        normalizeName(p.name) === normalizeName(currentPlayer.name)
-      )
+      const previousPlayer = findPreviousPlayer<any>(currentPlayer, prevPlayers)
       
       if (!previousPlayer) {
         // New player
