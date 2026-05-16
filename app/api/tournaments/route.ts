@@ -1,4 +1,5 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, after } from 'next/server'
+import { sendBroadcast } from '@/lib/notifications/sendBroadcast'
 import { createClient } from '@/lib/supabase/server'
 import {
   getAllTournamentsWithDates,
@@ -159,26 +160,13 @@ export async function POST(request: NextRequest) {
     // Create the tournament
     const newTournament = await createTournament(supabase, validatedData)
     
-    // Trigger broadcast email for new tournament
-    try {
-      const notifyRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ''}/api/notifications/email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          type: 'tournament_created',
-          tournamentId: newTournament.id,
-          broadcast: true,
-        })
-      })
-      if (!notifyRes.ok) {
-        console.error('Failed to trigger tournament broadcast email:', await notifyRes.text())
+    after(async () => {
+      try {
+        await sendBroadcast({ type: 'tournament_created', tournamentId: newTournament.id })
+      } catch (err) {
+        console.error('[tournaments] sendBroadcast failed', err)
       }
-    } catch (e) {
-      console.error('Tournament broadcast email trigger error:', e)
-    }
+    })
     
     return apiSuccess(newTournament, 201)
   } catch (error) {
