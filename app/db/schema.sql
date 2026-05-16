@@ -402,3 +402,18 @@ CREATE POLICY "Allow public read access to individual_games" ON individual_games
 
 CREATE POLICY "Allow authenticated users to manage individual_games" ON individual_games
     FOR ALL USING (auth.role() = 'authenticated');
+
+-- 🔔 Notification broadcast attempt log
+CREATE TABLE notification_log (
+    id BIGSERIAL PRIMARY KEY,
+    type TEXT NOT NULL CHECK (type IN ('news_created', 'tournament_created', 'ranking_updated')),
+    target_id TEXT,
+    club_id INTEGER REFERENCES clubs(id) ON DELETE SET NULL,
+    recipients_count INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL CHECK (status IN ('sent', 'no_recipients', 'error')),
+    error_message TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX notification_log_created_at_idx ON notification_log (created_at DESC);
+CREATE INDEX notification_log_type_status_idx ON notification_log (type, status);
