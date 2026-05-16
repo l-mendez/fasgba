@@ -1,84 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import Link from "next/link"
-import { CastleIcon as ChessKnight, Menu, X, Bell, User, Settings, Trophy, Calendar, Home, FileText, Shield, LogOut, BarChart3 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { MobileNavigation } from "@/components/mobile-navigation"
 import { AuthButtons } from "@/components/auth-buttons"
-import { createClient } from "@/lib/supabase/client"
+import { useAuth } from "@/hooks/useAuth"
 
 interface ClientSiteHeaderProps {
   pathname: string
 }
 
 export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const supabase = createClient()
-
-    async function getUser() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-
-        if (!session?.user) {
-          setUser(null)
-          setLoading(false)
-          return
-        }
-
-        const res = await fetch('/api/users/me/permissions', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        })
-
-        if (!res.ok) {
-          setUser({ id: session.user.id, email: session.user.email, isAdmin: false, isClubAdmin: false, clubAdminClubs: [] })
-          setLoading(false)
-          return
-        }
-
-        const data = await res.json()
-
-        setUser({
-          id: session.user.id,
-          email: session.user.email,
-          isAdmin: data.isAdmin,
-          isClubAdmin: data.isClubAdmin,
-          clubAdminClubs: data.clubAdminClubs || []
-        })
-      } catch (error) {
-        console.error('Error getting user:', error)
-        setUser(null)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    getUser()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT' || !session) {
-          setUser(null)
-          setLoading(false)
-        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          getUser()
-        }
-      }
-    )
-
-    return () => {
-      subscription?.unsubscribe()
-    }
-  }, [])
-
-  const isAuthenticated = !!user
-  const isAdmin = user?.isAdmin || false
-  const isClubAdmin = user?.isClubAdmin || false
+  const { isAuthenticated, isAdmin, isClubAdmin, isLoading } = useAuth()
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-amber/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -140,7 +74,7 @@ export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-4">
-          {!loading && (
+          {!isLoading && (
             <AuthButtons
               isAuthenticated={isAuthenticated}
               isAdmin={isAdmin}
@@ -151,7 +85,7 @@ export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
         </div>
 
         {/* Mobile Navigation */}
-        {!loading && (
+        {!isLoading && (
           <MobileNavigation
             isAuthenticated={isAuthenticated}
             isAdmin={isAdmin}

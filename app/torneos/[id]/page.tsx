@@ -1,12 +1,14 @@
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
-import { 
-  getAllTournamentsWithDates, 
+import {
+  getAllTournamentsWithDates,
   transformTournamentToDisplay,
-  type TournamentDisplay 
+  type TournamentDisplay
 } from "@/lib/tournamentUtils"
 import { getTournamentGames, getTournamentRounds } from "@/lib/gameUtils"
+import { SiteHeader } from "@/components/site-header"
+import { SiteFooter } from "@/components/site-footer"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import TournamentClient from "./components/tournament-client"
 import { Metadata } from "next"
@@ -107,16 +109,20 @@ export default async function TournamentPage({ params }: PageProps) {
     }))
 
     return (
-      <div className="min-h-screen bg-background">
-        <Suspense fallback={<LoadingSpinner />}>
-          <TournamentClient
-            tournament={tournament}
-            initialGamesByRound={gamesByRound}
-            initialTotalRounds={totalRounds}
-            tournamentId={tournamentId}
-            registeredTeams={registeredTeams}
-          />
-        </Suspense>
+      <div className="flex min-h-screen flex-col">
+        <SiteHeader pathname="/torneos" />
+        <main className="flex-1">
+          <Suspense fallback={<LoadingSpinner />}>
+            <TournamentClient
+              tournament={tournament}
+              initialGamesByRound={gamesByRound}
+              initialTotalRounds={totalRounds}
+              tournamentId={tournamentId}
+              registeredTeams={registeredTeams}
+            />
+          </Suspense>
+        </main>
+        <SiteFooter />
       </div>
     )
   } catch (error) {
