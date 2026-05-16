@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-// Simple script to test the email notification system
-const fetch = require('node-fetch');
+// Simple script to test the email notification system.
+// Uses Node's built-in global fetch (Node 18+); no node-fetch needed.
 
 async function testEmail() {
   try {

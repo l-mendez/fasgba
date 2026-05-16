@@ -1,4 +1,5 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, after } from 'next/server'
+import { sendBroadcast } from '@/lib/notifications/sendBroadcast'
 import { createClient } from '@supabase/supabase-js'
 import { getAllNews, createNews } from '@/lib/newsUtils'
 import { validateCreateNews, validateNewsQuery } from '@/lib/schemas/newsSchemas'
@@ -76,26 +77,16 @@ export async function POST(request: NextRequest) {
 
     const createdNews = await createNews(newsData)
     
-    // Trigger broadcast email for all news (FASGBA and club)
-    try {
-      const notifyRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ''}/api/notifications/email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          type: 'news_created',
-          newsId: createdNews.id,
-          broadcast: true,
-        })
-      })
-      if (!notifyRes.ok) {
-        console.error('Failed to trigger broadcast email:', await notifyRes.text())
+    // Run broadcast after the response is sent so the 201 isn't blocked
+    // by SMTP latency. `after()` is reliable in serverless (unlike bare
+    // fire-and-forget which can be killed when the response returns).
+    after(async () => {
+      try {
+        await sendBroadcast({ type: 'news_created', newsId: createdNews.id })
+      } catch (err) {
+        console.error('[news] sendBroadcast failed', err)
       }
-    } catch (e) {
-      console.error('Broadcast email trigger error:', e)
-    }
+    })
 
     return apiSuccess(createdNews, 201)
   } catch (error) {
