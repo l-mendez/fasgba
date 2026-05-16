@@ -13,6 +13,7 @@ import {
   mapTipoToRatingType,
   computePositionsByRatingType,
   normalizePlayer,
+  findPreviousPlayer,
 } from '@/lib/rankingUtils'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -122,12 +123,23 @@ const parseActive = (value: any): boolean => {
 }
 
 /**
- * Detects if the workbook has the multi-sheet format (Ranking + Analítico + Consolidado)
+ * Detects if the workbook has the multi-sheet format (Ranking + Analítico + Consolidado).
+ * Accepts both the single-`Ranking` and the Sirafa split `Ranking 1/2/3` variants.
  */
 function isMultiSheetFormat(workbook: XLSX.WorkBook): boolean {
   const sheetNames = workbook.SheetNames.map(s => s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, ''))
-  return sheetNames.some(s => s === 'ranking') &&
-    sheetNames.some(s => s === 'analitico' || s === 'analítico')
+  const hasAnalitico = sheetNames.some(s => s === 'analitico' || s === 'analítico')
+  const hasRanking = sheetNames.some(s => s === 'ranking')
+  const hasSplitRanking = ['ranking 1', 'ranking 2', 'ranking 3'].every(n => sheetNames.includes(n))
+  return hasAnalitico && (hasRanking || hasSplitRanking)
+}
+
+/**
+ * Detects the Sirafa split-ranking format (Ranking 1 + Ranking 2 + Ranking 3).
+ */
+function hasSplitRankingSheets(workbook: XLSX.WorkBook): boolean {
+  const normalized = workbook.SheetNames.map(s => s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, ''))
+  return ['ranking 1', 'ranking 2', 'ranking 3'].every(n => normalized.includes(n))
 }
 
 /**
@@ -241,6 +253,97 @@ function parseRankingSheetMulti(sheet: XLSX.WorkSheet): RankingPlayer[] {
   })
 
   // Sort by standard rating (descending) for default position
+  players.sort((a, b) => (b.ratings.standard || 0) - (a.ratings.standard || 0))
+  players.forEach((p, i) => { p.position = i + 1 })
+
+  return players
+}
+
+/**
+ * Parses the Sirafa split-ranking format: one sheet per modality
+ * (Ranking 1 = standard, Ranking 2 = rápido, Ranking 3 = blitz).
+ * Players are merged by ID across the three sheets.
+ */
+function parseRankingSheetsSplit(workbook: XLSX.WorkBook): RankingPlayer[] {
+  const sheetMap: Array<[string, RatingType]> = [
+    ['Ranking 1', 'standard'],
+    ['Ranking 2', 'rapid'],
+    ['Ranking 3', 'blitz'],
+  ]
+
+  const playerMap = new Map<string, RankingPlayer>()
+  const errors: string[] = []
+
+  for (const [sheetName, ratingType] of sheetMap) {
+    const sheet = findSheet(workbook, sheetName)
+    if (!sheet) {
+      throw new Error(`No se encontró la hoja "${sheetName}" en el archivo`)
+    }
+
+    const rawData = XLSX.utils.sheet_to_json<ExcelPlayer>(sheet)
+    rawData.forEach((row, index) => {
+      const rowNumber = index + 2
+      try {
+        const name = row.Nombre || row.Name || row.NOMBRE || row.Jugador || ''
+        if (!name || String(name).trim() === '') return
+
+        const id = row.ID || row.Id || row.id || ''
+        const title = row.TIT || row.Titulo || row.TITULO || row.Título || ''
+        const club = row.Club || row.CLUB || ''
+        const category = row['Categoría'] || row.Categoria || row.CATEGORIA || row.Cat || ''
+        const points = findPointsRaw(row) ?? 0
+        const matches = getFirstValueByKeys(row, [
+          'Partidos', 'PARTIDOS', 'Matches', 'matches', 'N', 'n', 'Games',
+        ]) ?? 0
+        const activeRaw = findActiveRaw(row)
+
+        const playerKey = String(id).trim() || normalizePlayerName(String(name))
+        const pointsValue = Math.round(typeof points === 'number' ? points : parseFloat(String(points)) || 0)
+        const matchesValue = typeof matches === 'number' ? matches : parseInt(String(matches)) || 0
+
+        if (playerMap.has(playerKey)) {
+          const existing = playerMap.get(playerKey)!
+          existing.ratings[ratingType] = pointsValue
+          existing.matches += matchesValue
+          // Prefer non-empty club/category/title from any sheet
+          if (!existing.club && club) existing.club = String(club).trim()
+          if (!existing.category && category) existing.category = String(category).trim()
+          if (!existing.title && title) existing.title = String(title).trim().toUpperCase()
+          if (!existing.active && parseActive(activeRaw)) existing.active = true
+        } else {
+          const ratings: PlayerRatings = { standard: null, rapid: null, blitz: null }
+          ratings[ratingType] = pointsValue
+          playerMap.set(playerKey, {
+            position: 0,
+            id: String(id).trim() || undefined,
+            name: normalizePlayerName(String(name)),
+            title: title ? String(title).trim().toUpperCase() : undefined,
+            club: String(club).trim(),
+            category: category ? String(category).trim() : undefined,
+            points: 0,
+            matches: matchesValue,
+            ratings,
+            active: parseActive(activeRaw),
+          })
+        }
+      } catch (rowError) {
+        errors.push(`${sheetName} fila ${rowNumber}: ${rowError instanceof Error ? rowError.message : 'Error desconocido'}`)
+      }
+    })
+  }
+
+  if (errors.length > 0) {
+    console.warn(`Skipped ${errors.length} rows with errors:`, errors.slice(0, 10))
+  }
+
+  const players = Array.from(playerMap.values())
+  if (players.length === 0) {
+    throw new Error('No se encontraron jugadores válidos en las hojas "Ranking 1/2/3"')
+  }
+
+  players.forEach(p => {
+    p.points = p.ratings.standard || p.ratings.rapid || p.ratings.blitz || 0
+  })
   players.sort((a, b) => (b.ratings.standard || 0) - (a.ratings.standard || 0))
   players.forEach((p, i) => { p.position = i + 1 })
 
@@ -493,13 +596,17 @@ export async function POST(request: NextRequest) {
       }
 
       if (isMultiSheetFormat(workbook)) {
-        // Multi-sheet format: Ranking + Analítico + Consolidado
+        // Multi-sheet format: Ranking(+) + Analítico + Consolidado
         isMultiSheet = true
-        const rankingSheet = findSheet(workbook, 'Ranking')
-        if (!rankingSheet) {
-          throw new Error('No se encontró la hoja "Ranking" en el archivo')
+        if (hasSplitRankingSheets(workbook)) {
+          rankingData = parseRankingSheetsSplit(workbook)
+        } else {
+          const rankingSheet = findSheet(workbook, 'Ranking')
+          if (!rankingSheet) {
+            throw new Error('No se encontró la hoja "Ranking" en el archivo')
+          }
+          rankingData = parseRankingSheetMulti(rankingSheet)
         }
-        rankingData = parseRankingSheetMulti(rankingSheet)
 
         // Parse Analítico sheet
         const analiticoSheet = findSheet(workbook, 'Analítico') || findSheet(workbook, 'Analitico')
@@ -708,19 +815,8 @@ async function findPreviousRanking(adminSupabase: any, currentMonth: number, cur
 
 // Calculate changes for each player, including per-rating changes
 function calculatePlayerChanges(newPlayers: RankingPlayer[], previousPlayers: any[]) {
-  const normalizeName = (name: string): string => {
-    return name.trim().toLowerCase()
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ')
-  }
-
   return newPlayers.map(player => {
-    // Match by ID first, then by name
-    const previousPlayer = previousPlayers.find(p =>
-      (player.id && p.id && player.id === p.id) ||
-      normalizeName(p.name) === normalizeName(player.name)
-    )
+    const previousPlayer = findPreviousPlayer(player, previousPlayers)
 
     if (!previousPlayer) {
       return {

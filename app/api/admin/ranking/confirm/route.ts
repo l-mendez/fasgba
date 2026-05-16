@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/middleware/auth'
 import { apiSuccess, handleError, forbiddenError } from '@/lib/utils/apiResponse'
+import { findPreviousPlayer } from '@/lib/rankingUtils'
 
 interface RankingFileInfo {
   filename: string
@@ -341,21 +342,8 @@ async function findPreviousRankingForRecalculation(adminSupabase: any, currentMo
 
 // Helper function to calculate changes (same logic as in upload route)
 function calculatePlayerChangesForRecalculation(newPlayers: any[], previousPlayers: any[]) {
-  // Helper function to normalize names for comparison
-  const normalizeName = (name: string): string => {
-    return name
-      .trim()
-      .toLowerCase()
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ')
-  }
-
   return newPlayers.map(player => {
-    // Find player in previous ranking (using normalized name matching)
-    const previousPlayer = previousPlayers.find(p => 
-      normalizeName(p.name) === normalizeName(player.name)
-    )
+    const previousPlayer = findPreviousPlayer(player, previousPlayers)
 
     if (!previousPlayer) {
       // New player

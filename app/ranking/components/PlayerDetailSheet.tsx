@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Player, TournamentDetail, RatingType } from "@/lib/rankingUtils";
+import { RatingEvolutionChart } from "./RatingEvolutionChart";
 
 interface PlayerDetailSheetProps {
   player: Player | null;
@@ -151,6 +152,12 @@ export function PlayerDetailSheet({
             rating={player.ratings.blitz}
             change={ratingChanges?.blitz}
           />
+        </div>
+
+        {/* Rating evolution chart */}
+        <div className="mt-6">
+          <h3 className="text-sm font-semibold mb-3">Evolución del rating</h3>
+          <RatingEvolutionChart playerId={player.id} playerName={player.name} />
         </div>
 
         {/* Tournament history */}

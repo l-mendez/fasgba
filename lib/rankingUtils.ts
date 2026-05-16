@@ -114,6 +114,36 @@ function normalizeRankingData(data: any): RankingData {
 }
 
 /**
+ * Normalized name for legacy comparisons when no ID is available.
+ */
+export function normalizePlayerNameForMatch(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+/**
+ * Finds the matching previous-ranking player for a current player.
+ * Matches strictly by ID first. Falls back to name only against legacy records
+ * that don't have an ID — never cross-matches by name when both sides have IDs,
+ * since IDs that don't match mean different players.
+ */
+export function findPreviousPlayer<T extends { id?: string; name: string }>(
+  player: { id?: string; name: string },
+  previousPlayers: T[]
+): T | undefined {
+  if (player.id) {
+    const byId = previousPlayers.find(p => p.id && p.id === player.id);
+    if (byId) return byId;
+  }
+  const target = normalizePlayerNameForMatch(player.name);
+  return previousPlayers.find(p => !p.id && normalizePlayerNameForMatch(p.name) === target);
+}
+
+/**
  * Maps a numeric tipo value to a RatingType string
  */
 export function mapTipoToRatingType(tipo: number): RatingType {
