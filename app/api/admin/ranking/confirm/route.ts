@@ -1,9 +1,10 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/middleware/auth'
 import { apiSuccess, handleError, forbiddenError } from '@/lib/utils/apiResponse'
 import { findPreviousPlayer } from '@/lib/rankingUtils'
+import { sendBroadcast } from '@/lib/notifications/sendBroadcast'
 
 interface RankingFileInfo {
   filename: string
@@ -105,28 +106,17 @@ export async function POST(request: NextRequest) {
       .from('ranking-data')
       .getPublicUrl(finalPath)
 
-    // Trigger broadcast email for ranking update
-    try {
-      const authHeader = request.headers.get('authorization')
-      const notifyRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ''}/api/notifications/email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader || '',
-        },
-        body: JSON.stringify({
+    after(async () => {
+      try {
+        await sendBroadcast({
           type: 'ranking_updated',
           rankingMonth: rankingData.month,
           rankingYear: rankingData.year,
-          broadcast: true,
         })
-      })
-      if (!notifyRes.ok) {
-        console.error('Failed to trigger ranking broadcast email:', await notifyRes.text())
+      } catch (err) {
+        console.error('[ranking] sendBroadcast failed', err)
       }
-    } catch (e) {
-      console.error('Ranking broadcast email trigger error:', e)
-    }
+    })
 
     return apiSuccess({
       filename: filename,
