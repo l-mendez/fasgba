@@ -3,7 +3,6 @@
 import { useState } from "react"
 import Link from "next/link"
 import { ChevronDown, Edit, Eye, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,6 +25,7 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { deleteNewsAction } from "@/lib/actions/news"
 
 interface News {
   id: number
@@ -47,39 +47,6 @@ interface News {
   updated_at: string
 }
 
-// Helper function to make authenticated API calls
-async function apiCall(endpoint: string, options: RequestInit = {}) {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  if (!session) {
-    throw new Error('No hay sesión activa')
-  }
-
-  const url = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`
-  const config: RequestInit = {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-      ...options.headers
-    },
-    ...options
-  }
-
-  const response = await fetch(url, config)
-  
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
-    throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
-  }
-  
-  if (response.status === 204) {
-    return null // No content
-  }
-  
-  return response.json()
-}
-
 interface NewsTableProps {
   initialNews: News[]
 }
@@ -97,9 +64,11 @@ export function NewsTable({ initialNews }: NewsTableProps) {
 
   // Delete news function
   const deleteNews = async (newsId: number) => {
-    return await apiCall(`/news/${newsId}`, {
-      method: 'DELETE'
-    })
+    const result = await deleteNewsAction(newsId)
+    if (!result.ok) {
+      throw new Error(result.error)
+    }
+    return result
   }
 
   // Sorting functions

@@ -31,6 +31,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { updateNewsAction, uploadNewsImagesAction } from "@/lib/actions/news"
 
 interface Club {
   id: number
@@ -608,21 +609,13 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
       )
 
       // Update the news item with processed content and images
-      const updateResponse = await fetch(`/api/news/${newsId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          text: JSON.stringify(processedContent),
-          image: featuredImagePath
-        }),
+      const updateResult = await updateNewsAction(newsId, {
+        text: JSON.stringify(processedContent),
+        image: featuredImagePath
       })
 
-      if (!updateResponse.ok) {
-        const errorData = await updateResponse.json()
-        throw new Error(errorData.error || `HTTP error! status: ${updateResponse.status}`)
+      if (!updateResult.ok) {
+        throw new Error(updateResult.error)
       }
 
       // Determine redirect path based on user type
@@ -692,20 +685,13 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
             formData.append(`originalIndex-${chunkIndex}`, originalIndex.toString())
           })
 
-          const uploadResponse = await fetch(`/api/news/${newsId}/upload-images`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-            body: formData,
-          })
+          const uploadActionResult = await uploadNewsImagesAction(Number(newsId), formData)
 
-          if (!uploadResponse.ok) {
-            throw new Error(`Error uploading chunk ${chunkNumber}/${totalChunks}: ${uploadResponse.statusText}`)
+          if (!uploadActionResult.ok) {
+            throw new Error(`Error uploading chunk ${chunkNumber}/${totalChunks}: ${uploadActionResult.error}`)
           }
 
-          const chunkResults = await uploadResponse.json()
-          uploadResults.push(...chunkResults)
+          uploadResults.push(...uploadActionResult.data.results)
           
           // Update progress
           setUploadProgress(prev => ({ ...prev, current: Math.min(i + CHUNK_SIZE, imagesToUpload.length) }))

@@ -14,6 +14,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { ImageUpload } from "@/components/ui/image-upload"
+import { updateNewsAction, uploadNewsImagesAction } from "@/lib/actions/news"
 
 interface News {
   id: number
@@ -177,19 +178,12 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
     if (imageFiles.length === 0) return uploadResults
     
     setUploadProgress({ current: 0, total: imageFiles.length, isUploading: true })
-    
-    try {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        throw new Error('No hay sesión activa')
-      }
 
+    try {
       for (let i = 0; i < imageFiles.length; i += CHUNK_SIZE) {
         const chunk = imageFiles.slice(i, i + CHUNK_SIZE)
         const chunkNumber = Math.floor(i / CHUNK_SIZE) + 1
-        
+
         try {
           const formData = new FormData()
           chunk.forEach((file, chunkIndex) => {
@@ -197,26 +191,17 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
             formData.append(`prefix-${chunkIndex}`, `block-${i + chunkIndex}`)
           })
 
-          const uploadResponse = await fetch(`/api/news/${newsId}/upload-images`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-            body: formData,
-          })
+          const uploadActionResult = await uploadNewsImagesAction(Number(newsId), formData)
 
-          if (!uploadResponse.ok) {
-            throw new Error(`Error uploading chunk ${chunkNumber}/${totalChunks}: ${uploadResponse.statusText}`)
+          if (!uploadActionResult.ok) {
+            throw new Error(`Error uploading chunk ${chunkNumber}/${totalChunks}: ${uploadActionResult.error}`)
           }
 
-          const chunkResults = await uploadResponse.json()
-          
-          // Convert results to expected format
-          const processedResults = chunkResults.map((result: any) => ({
+          const processedResults = uploadActionResult.data.results.map((result) => ({
             filePath: result.filePath,
-            publicUrl: getPublicUrl(result.filePath) || ''
+            publicUrl: result.publicUrl,
           }))
-          
+
           uploadResults.push(...processedResults)
           
           // Update progress
@@ -312,11 +297,11 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
         image: news.image // Include the featured image path
       }
       
-      // Use the API to update news
-      await apiCall(`/news/${news.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(updateData)
-      })
+      // Use the server action to update news
+      const result = await updateNewsAction(news.id, updateData)
+      if (!result.ok) {
+        throw new Error(result.error)
+      }
 
       // Add a small delay to ensure the update is completed before redirecting
       setTimeout(() => {
