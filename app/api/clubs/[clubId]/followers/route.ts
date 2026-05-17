@@ -14,12 +14,6 @@ interface RouteParams {
   }>
 }
 
-interface ClubFollower {
-  id: string // auth UUID
-  email: string
-  created_at: string // Note: placeholder date since table doesn't track follow date
-}
-
 // Helper function to create user-context Supabase client
 function createUserClient(token: string) {
   return createClient(supabaseUrl, supabaseAnonKey, {
@@ -29,61 +23,6 @@ function createUserClient(token: string) {
       }
     }
   })
-}
-
-// GET: Get all followers of a club
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    // Use regular client for public read operations
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
-    
-    const { clubId: clubIdParam } = await params
-    const clubId = parseInt(clubIdParam)
-    
-    if (isNaN(clubId)) {
-      return validationError('Invalid club ID')
-    }
-    
-    // Check if club exists
-    const { data: club, error: clubError } = await supabase
-      .from('clubs')
-      .select('id, name')
-      .eq('id', clubId)
-      .single()
-    
-    if (clubError || !club) {
-      return notFoundError('Club not found')
-    }
-    
-    // Get all followers
-    const { data: followRelations, error: followError } = await supabase
-      .from('user_follows_club')
-      .select('auth_id')
-      .eq('club_id', clubId)
-    
-    if (followError) {
-      console.error('Error fetching club followers:', followError)
-      throw new Error('Failed to fetch club followers')
-    }
-    
-    // Return followers with auth_id (we can't easily get email without admin access)
-    const followers: ClubFollower[] = (followRelations || []).map(relation => ({
-      id: relation.auth_id,
-      email: `user-${relation.auth_id.slice(0, 8)}...`, // Show partial ID instead of email for privacy
-      created_at: new Date().toISOString() // Use current date as placeholder since table doesn't have created_at
-    }))
-    
-    return apiSuccess({
-      club: {
-        id: club.id,
-        name: club.name
-      },
-      followers: followers,
-      count: followers.length
-    })
-  } catch (error) {
-    return handleError(error)
-  }
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
