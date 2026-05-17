@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getTournamentById, getAllTournamentsWithDates, transformTournamentToDisplay, updateTournament, deleteTournament } from '@/lib/tournamentUtils'
-import { validateTournamentId, validateSingleTournamentQuery, validateUpdateTournament } from '@/lib/schemas/tournamentSchemas'
+import { getTournamentById, updateTournament, deleteTournament } from '@/lib/tournamentUtils'
+import { validateTournamentId, validateUpdateTournament } from '@/lib/schemas/tournamentSchemas'
 import { apiSuccess, handleError, notFoundError, unauthorizedError, noContent, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { isUserClubAdmin } from '@/lib/clubUtils'
@@ -101,39 +101,6 @@ interface RouteParams {
   params: Promise<{
     id: string
   }>
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    const { id: idParam } = await params
-    const tournamentId = validateTournamentId(idParam)
-    const { searchParams } = new URL(request.url)
-    const queryParams = validateSingleTournamentQuery(searchParams)
-    
-    if (queryParams.format === 'display') {
-      // For display format, we need to get tournament with dates and transform it
-      const tournamentsWithDates = await getAllTournamentsWithDates(serverSupabase)
-      const tournamentWithDates = tournamentsWithDates.find(t => t.id === tournamentId)
-      
-      if (!tournamentWithDates) {
-        return notFoundError(ERROR_MESSAGES.TOURNAMENT_NOT_FOUND, `No tournament found with ID ${tournamentId}`)
-      }
-      
-      const displayTournament = transformTournamentToDisplay(tournamentWithDates)
-      return apiSuccess(displayTournament)
-    }
-    
-    // Default format: raw
-    const tournament = await getTournamentById(serverSupabase, tournamentId)
-    
-    if (!tournament) {
-      return notFoundError(ERROR_MESSAGES.TOURNAMENT_NOT_FOUND, `No tournament found with ID ${tournamentId}`)
-    }
-    
-    return apiSuccess(tournament)
-  } catch (error) {
-    return handleError(error)
-  }
 }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
