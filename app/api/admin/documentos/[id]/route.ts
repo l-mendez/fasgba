@@ -16,39 +16,6 @@ interface RouteParams {
 }
 
 /**
- * GET /api/admin/documentos/[id]
- * Admin endpoint to get a single document with full details
- */
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    await requireAdmin(request)
-
-    const { id } = await params
-    const idResult = documentoIdSchema.safeParse(id)
-
-    if (!idResult.success) {
-      return validationError('ID de documento no válido')
-    }
-
-    const adminSupabase = createAdminClient()
-
-    const { data: documento, error } = await adminSupabase
-      .from('documentos')
-      .select('*')
-      .eq('id', idResult.data)
-      .single()
-
-    if (error || !documento) {
-      return notFoundError('Documento no encontrado')
-    }
-
-    return apiSuccess({ documento })
-  } catch (error) {
-    return handleError(error)
-  }
-}
-
-/**
  * DELETE /api/admin/documentos/[id]
  * Admin endpoint to delete a document
  */

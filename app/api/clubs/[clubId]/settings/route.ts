@@ -15,45 +15,6 @@ interface RouteParams {
   }>
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    // Get the authorization header
-    const authHeader = request.headers.get('authorization')
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return unauthorizedError(ERROR_MESSAGES.UNAUTHORIZED)
-    }
-
-    const token = authHeader.substring(7) // Remove 'Bearer ' prefix
-
-    // Verify the JWT token with Supabase
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user) {
-      return unauthorizedError(ERROR_MESSAGES.UNAUTHORIZED)
-    }
-
-    const { clubId: clubIdParam } = await params
-    const clubId = validateClubId(clubIdParam)
-    
-    // Check if club exists
-    const club = await getClubById(clubId)
-    if (!club) {
-      return notFoundError(ERROR_MESSAGES.CLUB_NOT_FOUND, `No club found with ID ${clubId}`)
-    }
-
-    // Check if user is admin of this club
-    const isClubAdmin = await isUserClubAdmin(clubId, user.id)
-    if (!isClubAdmin) {
-      return unauthorizedError('You must be an admin of this club to access its settings')
-    }
-    
-    return apiSuccess(club)
-  } catch (error) {
-    return handleError(error)
-  }
-}
-
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     // Get the authorization header

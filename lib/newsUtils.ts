@@ -323,36 +323,6 @@ export async function createNews(input: CreateNewsInput): Promise<News> {
 }
 
 /**
- * Updates a news item with processed images in organized folders
- */
-export async function updateNewsWithProcessedImages(
-  newsId: number, 
-  processedText: string, 
-  featuredImagePath?: string
-): Promise<boolean> {
-  const updateData: any = {
-    text: processedText,
-    updated_at: new Date().toISOString()
-  }
-
-  if (featuredImagePath) {
-    updateData.image = featuredImagePath
-  }
-
-  const { error } = await supabase
-    .from('news')
-    .update(updateData)
-    .eq('id', newsId)
-
-  if (error) {
-    console.error('Error updating news with processed images:', error)
-    throw new Error('Failed to update news with images')
-  }
-
-  return true
-}
-
-/**
  * Updates a news item (regular update for other operations)
  */
 export async function updateNews(id: number, input: UpdateNewsInput): Promise<boolean> {

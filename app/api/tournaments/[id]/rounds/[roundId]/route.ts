@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { apiSuccess, handleError, notFoundError, validationError, noContent, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
+import { handleError, notFoundError, validationError, noContent, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { isUserClubAdmin } from '@/lib/clubUtils'
 
@@ -76,56 +76,6 @@ async function authenticateAndAuthorize(request: NextRequest, tournamentId: numb
   }
 
   return user
-}
-
-// GET /api/tournaments/[id]/rounds/[roundId] - Get a specific round
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    const { id: tournamentId, roundId } = await params
-    const tournamentIdNum = parseInt(tournamentId, 10)
-    const roundIdNum = parseInt(roundId, 10)
-    
-    if (isNaN(tournamentIdNum) || tournamentIdNum <= 0) {
-      return validationError('Invalid tournament ID')
-    }
-    
-    if (isNaN(roundIdNum) || roundIdNum <= 0) {
-      return validationError('Invalid round ID')
-    }
-
-    // Check if tournament exists
-    const { data: tournament, error: tournamentError } = await serverSupabase
-      .from('tournaments')
-      .select('id, title')
-      .eq('id', tournamentIdNum)
-      .single()
-
-    if (tournamentError || !tournament) {
-      return notFoundError(ERROR_MESSAGES.TOURNAMENT_NOT_FOUND)
-    }
-
-    // Get the specific round
-    const { data: round, error } = await serverSupabase
-      .from('rounds')
-      .select('*')
-      .eq('id', roundIdNum)
-      .eq('tournament_id', tournamentIdNum)
-      .single()
-
-    if (error || !round) {
-      return notFoundError('Round not found')
-    }
-
-    return apiSuccess({ 
-      round,
-      tournament: {
-        id: tournament.id,
-        title: tournament.title
-      }
-    })
-  } catch (error) {
-    return handleError(error)
-  }
 }
 
 // DELETE /api/tournaments/[id]/rounds/[roundId] - Delete a specific round
