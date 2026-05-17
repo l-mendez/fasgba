@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/dialog"
 import { Slider } from "@/components/ui/slider"
 import { createClient } from "@/lib/supabase/client"
+import { uploadDocumentoAction } from "@/lib/actions/documentos"
 import {
   DOCUMENT_CATEGORIES,
   CATEGORY_COLORS,
@@ -252,32 +253,17 @@ export default function AdminDocumentosPage() {
     setSuccessMessage("")
 
     try {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (!session) {
-        throw new Error("Sesión no válida. Por favor, inicia sesión nuevamente.")
-      }
-
       const formData = new FormData()
       formData.append("file", file)
       formData.append("name", documentName.trim())
       formData.append("category", category)
 
-      const response = await fetch("/api/admin/documentos/upload", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: formData,
-      })
+      const result = await uploadDocumentoAction(formData)
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || `Error del servidor (${response.status})`)
+      if (!result.ok) {
+        setErrorMessage(result.error)
+        return
       }
-
-      const result = await response.json()
 
       // Reset form
       setFile(null)
@@ -285,7 +271,7 @@ export default function AdminDocumentosPage() {
       setCategory("otros")
 
       // Show success message
-      setSuccessMessage(result.message || "Documento subido exitosamente")
+      setSuccessMessage(result.data.message)
 
       // Reload documents list
       await loadDocuments()
