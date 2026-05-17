@@ -342,45 +342,6 @@ export async function getClubFollowersCount(clubId: number): Promise<number> {
 }
 
 /**
- * Checks if a user is following a club using API endpoint (CLIENT-SIDE ONLY)
- */
-export async function isUserFollowingClub(clubId: number, authId: string): Promise<boolean> {
-  try {
-    // Get authentication token from client-side Supabase
-    const clientSupabase = createBrowserClient()
-    const { data: { session } } = await clientSupabase.auth.getSession()
-    const token = session?.access_token
-    
-    if (!token) {
-      console.warn('No authentication token available for checking follow status')
-      return false
-    }
-
-    const response = await fetch(`/api/clubs/${clubId}/followers/me`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        console.warn('User not authenticated for follow status check')
-        return false
-      }
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-
-    const data = await response.json()
-    return data.isFollowing || false
-  } catch (error) {
-    console.error('Error checking if user is following club:', error)
-    return false
-  }
-}
-
-/**
  * Checks if a user is following a club using direct database query (SERVER-SIDE)
  */
 export async function isUserFollowingClubServer(clubId: number, authId: string): Promise<boolean> {
@@ -792,50 +753,6 @@ export async function getUserFollowedClubs(authId: string): Promise<Club[]> {
     return clubs || []
   } catch (error) {
     console.error('Error in getUserFollowedClubs:', error)
-    throw error
-  }
-}
-
-/**
- * Gets all followers of a club using API endpoint
- */
-export async function getClubFollowers(clubId: number): Promise<{
-  club: { id: number; name: string },
-  followers: Array<{ id: string; email: string; created_at: string }>,
-  count: number
-} | null> {
-  try {
-    // Get authentication token (optional for this endpoint since it's public data)
-    const clientSupabase = createBrowserClient()
-    const { data: { session } } = await clientSupabase.auth.getSession()
-    const token = session?.access_token
-
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    }
-
-    // Add auth header if available (though not required for this endpoint)
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-
-    const response = await fetch(`/api/clubs/${clubId}/followers`, {
-      method: 'GET',
-      headers,
-    })
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        console.warn(`Club with ID ${clubId} not found`)
-        return null
-      }
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error('Error fetching club followers:', error)
     throw error
   }
 }
