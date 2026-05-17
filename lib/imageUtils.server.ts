@@ -452,6 +452,37 @@ export async function deleteArbitroImage(filePath: string): Promise<void> {
 }
 
 /**
+ * Upload an image for a specific profesor (no dedup — matches old route behavior)
+ */
+export async function uploadProfesorImage(
+  profesorId: number,
+  fileBuffer: ArrayBuffer,
+  fileName: string
+): Promise<{ filePath: string }> {
+  const fileHash = await generateFileHashFromBuffer(fileBuffer)
+  const fileExt = fileName.split('.').pop()
+  const timestamp = Date.now()
+  const randomId = Math.random().toString(36).substring(2, 15)
+  const newFileName = `${fileHash}-${timestamp}-${randomId}.${fileExt}`
+  const filePath = `profesores/${profesorId}/${newFileName}`
+
+  const { error } = await supabase.storage
+    .from('images')
+    .upload(filePath, new Uint8Array(fileBuffer), { contentType: `image/${fileExt}` })
+
+  if (error) throw new Error('Failed to upload profesor image: ' + error.message)
+  return { filePath }
+}
+
+/**
+ * Delete a specific profesor image
+ */
+export async function deleteProfesorImage(filePath: string): Promise<void> {
+  const { error } = await supabase.storage.from('images').remove([filePath])
+  if (error) throw new Error('Failed to delete profesor image: ' + error.message)
+}
+
+/**
  * Delete a specific club image
  */
 export async function deleteClubImage(filePath: string): Promise<void> {

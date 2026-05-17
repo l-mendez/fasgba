@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
+import { uploadProfesorImageAction } from "@/lib/actions/profesores"
 
 interface Club {
   id: number
@@ -180,17 +181,9 @@ export default function NuevoProfesorPage() {
 
       // Upload image if selected
       if (selectedImage && result?.id) {
-        const supabase = createClient()
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session) {
-          const imageForm = new FormData()
-          imageForm.append('image', selectedImage)
-          await fetch(`/api/profesores/${result.id}/upload-image`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${session.access_token}` },
-            body: imageForm,
-          })
-        }
+        const imageForm = new FormData()
+        imageForm.append('image', selectedImage)
+        await uploadProfesorImageAction(Number(result.id), imageForm)
       }
 
       router.push("/admin/profesores")

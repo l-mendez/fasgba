@@ -5,7 +5,8 @@ import { Upload, X, Loader2, ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { createClient } from "@/lib/supabase/client"
+import { uploadGenericImageAction, deleteGenericImageAction } from "@/lib/actions/uploads"
+import { uploadNewsImageAction, deleteNewsImageAction } from "@/lib/actions/news"
 
 interface ImageUploadProps {
   onImageUpload: (filePath: string, publicUrl: string) => void
@@ -59,55 +60,18 @@ export function ImageUpload({
     setError(null)
 
     try {
-      const supabase = createClient()
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      
-      if (sessionError) {
-        throw new Error('Error al obtener la sesión: ' + sessionError.message)
+      const fd = new FormData()
+      fd.append('file', file)
+      const result = newsId
+        ? await uploadNewsImageAction(Number(newsId), fd)
+        : await uploadGenericImageAction(fd)
+      if (!result.ok) {
+        setError(result.error)
+        return
       }
-      
-      if (!session) {
-        throw new Error('No hay sesión activa. Por favor, inicia sesión nuevamente.')
-      }
-
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const url = newsId 
-        ? `/api/news/${newsId}/upload-image`
-        : '/api/upload-image' // Fallback URL for general uploads
-
-      console.log('Uploading to:', url) // Debug log
-      console.log('Session token available:', !!session.access_token) // Debug log
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: formData
-      })
-
-      console.log('Response status:', response.status) // Debug log
-
-      if (!response.ok) {
-        let errorMessage = `Error ${response.status}`
-        try {
-          const errorData = await response.json()
-          errorMessage = errorData.error || errorMessage
-          console.error('Error response:', errorData) // Debug log
-        } catch (e) {
-          console.error('Could not parse error response') // Debug log
-        }
-        throw new Error(errorMessage)
-      }
-
-      const result = await response.json()
-      console.log('Upload successful:', result) // Debug log
-      setPreview(result.publicUrl)
-      onImageUpload(result.filePath, result.publicUrl)
+      setPreview(result.data.publicUrl)
+      onImageUpload(result.data.filePath, result.data.publicUrl)
     } catch (err) {
-      console.error('Upload error:', err) // Debug log
       const errorMessage = err instanceof Error ? err.message : 'Error al subir la imagen'
       setError(errorMessage)
     } finally {
@@ -122,45 +86,15 @@ export function ImageUpload({
     }
 
     try {
-      const supabase = createClient()
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      
-      if (sessionError) {
-        throw new Error('Error al obtener la sesión: ' + sessionError.message)
+      const result = newsId
+        ? await deleteNewsImageAction(Number(newsId), currentImagePath)
+        : await deleteGenericImageAction(currentImagePath)
+      if (!result.ok) {
+        setError(result.error)
+        return
       }
-      
-      if (!session) {
-        throw new Error('No hay sesión activa')
-      }
-
-      const url = newsId 
-        ? `/api/news/${newsId}/upload-image`
-        : '/api/upload-image'
-
-      const response = await fetch(url, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ filePath: currentImagePath })
-      })
-
-      if (!response.ok) {
-        let errorMessage = `Error ${response.status}`
-        try {
-          const errorData = await response.json()
-          errorMessage = errorData.error || errorMessage
-        } catch (e) {
-          // Ignore parsing error
-        }
-        throw new Error(errorMessage)
-      }
-
       setPreview(null)
-      if (onImageRemove) {
-        onImageRemove(currentImagePath)
-      }
+      onImageRemove?.(currentImagePath)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al eliminar la imagen'
       setError(errorMessage)
@@ -174,7 +108,7 @@ export function ImageUpload({
   return (
     <div className={`space-y-2 ${className}`}>
       <Label>{label}</Label>
-      
+
       <div className="space-y-2">
         <div
           className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors relative"
@@ -240,4 +174,4 @@ export function ImageUpload({
       </div>
     </div>
   )
-} 
+}

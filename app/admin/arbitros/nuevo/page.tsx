@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import { uploadArbitroImageAction } from "@/lib/actions/arbitros"
 
 interface FormData {
   name: string
@@ -178,17 +179,12 @@ export default function NuevoArbitroPage() {
       // Upload photo if one was selected
       if (selectedFile && result?.id) {
         try {
-          const supabase = createClient()
-          const { data: { session } } = await supabase.auth.getSession()
-          if (session) {
-            const uploadFormData = new globalThis.FormData()
-            uploadFormData.append('image', selectedFile)
+          const uploadFormData = new globalThis.FormData()
+          uploadFormData.append('image', selectedFile)
 
-            await fetch(`/api/arbitros/${result.id}/upload-image`, {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${session.access_token}` },
-              body: uploadFormData,
-            })
+          const uploadResult = await uploadArbitroImageAction(Number(result.id), uploadFormData)
+          if (!uploadResult.ok) {
+            throw new Error(uploadResult.error || 'Failed to upload image')
           }
         } catch (uploadErr) {
           console.error('Error uploading photo:', uploadErr)

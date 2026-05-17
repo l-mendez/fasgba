@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
+import { uploadClubImageAction, deleteClubImageAction } from "@/lib/actions/clubs"
 import { toast } from "sonner"
 
 interface FormData {
@@ -104,42 +105,26 @@ export default function EditarClubPage({ params }: PageProps) {
   // Handle image upload
   const handleImageUpload = async (file: File) => {
     setIsUploadingImage(true)
-    
-    try {
-      // Get session for authentication
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        throw new Error('No session found')
-      }
 
+    try {
       // Create form data for upload
       const formData = new FormData()
       formData.append('image', file)
 
-      // Upload image
-      const response = await fetch(`/api/clubs/${resolvedParams.id}/upload-image`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: formData,
-      })
+      // Upload image via server action
+      const result = await uploadClubImageAction(Number(resolvedParams.id), formData)
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Failed to upload image')
+      if (!result.ok) {
+        throw new Error(result.error || 'Failed to upload image')
       }
 
-      const result = await response.json()
-      
       // Update state
-      setCurrentImage(result.filePath)
+      setCurrentImage(result.data.filePath)
       setImagePreview(null)
       setPendingImageDeletion(false)
-      
+
       // Show success toast
-      const actionMessage = result.replacedExisting ? 'reemplazada' : 'subida'
+      const actionMessage = result.data.replacedExisting ? 'reemplazada' : 'subida'
       toast.success(`✅ Imagen ${actionMessage} correctamente`, {
         description: "La imagen del club se ha actualizado exitosamente",
         duration: 4000,
@@ -248,27 +233,12 @@ export default function EditarClubPage({ params }: PageProps) {
       // Handle pending image deletion
       if (pendingImageDeletion && currentImage) {
         try {
-          // Get session for authentication
-          const supabase = createClient()
-          const { data: { session } } = await supabase.auth.getSession()
-          if (!session) {
-            throw new Error('No session found')
+          const result = await deleteClubImageAction(Number(resolvedParams.id))
+
+          if (!result.ok) {
+            throw new Error(result.error || 'Failed to delete image')
           }
 
-          // Call the delete image API endpoint
-          const response = await fetch(`/api/clubs/${resolvedParams.id}/delete-image`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-              'Content-Type': 'application/json',
-            },
-          })
-
-          if (!response.ok) {
-            const error = await response.json()
-            throw new Error(error.message || 'Failed to delete image')
-          }
-          
           // Update local state
           setCurrentImage(null)
           setPendingImageDeletion(false)
