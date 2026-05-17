@@ -895,6 +895,50 @@ export async function updateTournament(supabase: any, tournamentId: number, tour
 }
 
 /**
+ * Counts participants for a tournament. For team tournaments, counts all
+ * players from the clubs whose teams are registered. For individual tournaments,
+ * counts rows in tournament_registrations.
+ */
+export async function getTournamentParticipantCount(
+  supabase: any,
+  tournamentId: number,
+  type: string | null | undefined
+): Promise<number> {
+  try {
+    if (type === 'team') {
+      const { data: registeredTeams } = await supabase
+        .from('tournament_teams')
+        .select('team_id, teams(club_id)')
+        .eq('tournament_id', tournamentId)
+
+      if (!registeredTeams || registeredTeams.length === 0) return 0
+
+      const clubIds = [...new Set(
+        registeredTeams.map((t: any) => t.teams?.club_id).filter(Boolean)
+      )]
+      if (clubIds.length === 0) return 0
+
+      const { data: clubPlayers } = await supabase
+        .from('players')
+        .select('id')
+        .in('club_id', clubIds)
+
+      return clubPlayers?.length || 0
+    }
+
+    const { data: registrations } = await supabase
+      .from('tournament_registrations')
+      .select('player_id')
+      .eq('tournament_id', tournamentId)
+
+    return registrations?.length || 0
+  } catch (error) {
+    console.error(`Error counting participants for tournament ${tournamentId}:`, error)
+    return 0
+  }
+}
+
+/**
  * Deletes a tournament and its associated dates
  */
 export async function deleteTournament(supabase: any, tournamentId: number): Promise<boolean> {

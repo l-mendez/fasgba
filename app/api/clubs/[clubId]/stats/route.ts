@@ -122,6 +122,28 @@ export async function GET(
     // Create unified activity feed
     const activities: ActivityItem[] = []
 
+    // Resolve author display names for recent news (deduped, parallel)
+    const authorIds = [...new Set(
+      (recentNewsData.data || [])
+        .map((n: any) => n.created_by_auth_id)
+        .filter((id: any): id is string => typeof id === 'string' && id.length > 0)
+    )] as string[]
+
+    const authorNames = new Map<string, string>()
+    await Promise.all(authorIds.map(async (authId) => {
+      try {
+        const { data, error } = await adminClient.auth.admin.getUserById(authId)
+        if (error || !data?.user) return
+        const nombre = data.user.user_metadata?.nombre || ''
+        const apellido = data.user.user_metadata?.apellido || ''
+        const fullName = nombre && apellido ? `${nombre} ${apellido}` : (nombre || apellido)
+        const display = fullName || data.user.email
+        if (display) authorNames.set(authId, display)
+      } catch (err) {
+        console.warn(`Could not resolve author ${authId}:`, err)
+      }
+    }))
+
     // Add recent news
     if (recentNewsData.data) {
       recentNewsData.data.forEach((news: any) => {
@@ -130,7 +152,7 @@ export async function GET(
           title: news.title,
           date: news.date || news.created_at,
           description: news.extract,
-          author: 'Autor del club' // We could join with profiles if needed
+          author: news.created_by_auth_id ? authorNames.get(news.created_by_auth_id) : undefined,
         })
       })
     }

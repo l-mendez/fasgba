@@ -168,24 +168,10 @@ export default function ClubAdminTorneosPage() {
         setError(null)
         
         const tournaments = await apiCall(`/clubs/${selectedClub.id}/tournaments`)
-        const tournamentList = tournaments.tournaments || []
-        
-        // Fetch participant counts for each tournament via API
-        const tournamentsWithParticipants = await Promise.all(
-          tournamentList.map(async (tournament: Tournament) => {
-            let participants = 0
-            try {
-              const data = await apiCall(`/tournaments/${tournament.id}/participant-count?type=${tournament.tournament_type}`)
-              participants = data?.participants || 0
-            } catch (error) {
-              console.error(`Error fetching participants for tournament ${tournament.id}:`, error)
-            }
-            return { ...tournament, participants }
-          })
-        )
-        
-        setTorneos(tournamentsWithParticipants)
-        setOriginalOrder(tournamentsWithParticipants)
+        const tournamentList: Tournament[] = tournaments.tournaments || []
+
+        setTorneos(tournamentList)
+        setOriginalOrder(tournamentList)
       } catch (err) {
         console.error('Error loading tournaments:', err)
         setError(err instanceof Error ? err.message : 'Error al cargar los torneos')

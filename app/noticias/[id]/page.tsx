@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
 import { Metadata } from "next"
 
@@ -6,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import NewsContentWrapper from "@/app/components/news-content-wrapper"
-import { getNewsById } from "@/lib/newsUtils"
+import { getNewsById, getRelatedNews } from "@/lib/newsUtils"
 import { extractShortTextFromContentBlocks } from "@/lib/textUtils"
 
 // ISR: Revalidate individual news pages every 5 minutes
@@ -96,21 +95,8 @@ export default async function NoticiaPage({ params }: { params: Promise<{ id: st
     )
   }
   
-  // Fetch related news
-  const supabase = await createClient()
-  const { data: relatedNews } = await supabase
-    .from('news')
-    .select(`
-      id,
-      title,
-      date,
-      image,
-      tags
-    `)
-    .neq('id', newsItem.id)
-    .filter('tags', 'cs', `{${(newsItem.tags || []).join(',')}}`)
-    .order('date', { ascending: false })
-    .limit(2)
+  // Fetch related news (limit 3 since the util filters out current after limiting)
+  const relatedNews = (await getRelatedNews(newsItem.id, 3)).slice(0, 2)
 
   // Transform the newsItem to match the News interface
   const transformedNewsItem: News = {
@@ -133,6 +119,6 @@ export default async function NoticiaPage({ params }: { params: Promise<{ id: st
     updated_at: newsItem.updated_at
   }
 
-  return <NewsContentWrapper newsItem={transformedNewsItem} relatedNews={relatedNews || []} />
+  return <NewsContentWrapper newsItem={transformedNewsItem} relatedNews={relatedNews} />
 }
 
