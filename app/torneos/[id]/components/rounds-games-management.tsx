@@ -102,31 +102,6 @@ export default function RoundsGamesManagement({
     team_b_id: 0
   })
 
-  // Update games when initialGames prop changes
-  useEffect(() => {
-    setGames(initialGames)
-  }, [initialGames])
-
-  // Update rounds when initialRounds prop changes
-  useEffect(() => {
-    setRounds(initialRounds)
-  }, [initialRounds])
-
-  // Fetch data when component mounts or dependencies change
-  useEffect(() => {
-    fetchPlayers()
-    if (tournamentType === 'team' && selectedRound) {
-      fetchMatches(selectedRound)
-    }
-  }, [tournamentId, tournamentType, selectedRound])
-
-  useEffect(() => {
-    if (tournamentType === 'team') {
-      fetchClubs()
-      fetchTeams()
-    }
-  }, [tournamentType])
-
   // Game management functions
   const fetchPlayers = async () => {
     try {
@@ -182,7 +157,7 @@ export default function RoundsGamesManagement({
   // Round management functions
   const fetchTeams = async () => {
     if (tournamentType !== 'team') return
-    
+
     try {
       setFetchingTeams(true)
       const data = await apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
@@ -198,6 +173,31 @@ export default function RoundsGamesManagement({
       setFetchingTeams(false)
     }
   }
+
+  // Update games when initialGames prop changes
+  useEffect(() => {
+    setGames(initialGames)
+  }, [initialGames])
+
+  // Update rounds when initialRounds prop changes
+  useEffect(() => {
+    setRounds(initialRounds)
+  }, [initialRounds])
+
+  // Fetch data when component mounts or dependencies change
+  useEffect(() => {
+    fetchPlayers()
+    if (tournamentType === 'team' && selectedRound) {
+      fetchMatches(selectedRound)
+    }
+  }, [tournamentId, tournamentType, selectedRound])
+
+  useEffect(() => {
+    if (tournamentType === 'team') {
+      fetchClubs()
+      fetchTeams()
+    }
+  }, [tournamentType])
 
   const fetchRounds = async () => {
     try {

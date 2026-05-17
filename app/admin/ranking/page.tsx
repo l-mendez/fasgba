@@ -125,11 +125,6 @@ export default function AdminRankingPage() {
     return filename
   }
 
-  // Load existing rankings on component mount
-  useEffect(() => {
-    loadPastRankings()
-  }, [])
-
   const loadPastRankings = async () => {
     try {
       const supabase = createClient()
@@ -160,6 +155,11 @@ export default function AdminRankingPage() {
       setErrorMessage(`Error de conexión al cargar rankings: ${error instanceof Error ? error.message : 'Error desconocido'}`)
     }
   }
+
+  // Load existing rankings on component mount
+  useEffect(() => {
+    loadPastRankings()
+  }, [])
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()

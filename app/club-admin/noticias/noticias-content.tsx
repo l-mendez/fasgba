@@ -176,13 +176,6 @@ export function NoticiasContent({ initialNews, selectedClub }: NoticiasContentPr
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
   const [originalOrder, setOriginalOrder] = useState<ClubNews[]>(initialNews)
   
-  // Update news when selectedClub changes
-  useEffect(() => {
-    if (selectedClub) {
-      loadNews()
-    }
-  }, [selectedClub])
-
   // Cargar noticias del club seleccionado usando la API
   const loadNews = async () => {
     if (!selectedClub) return
@@ -209,6 +202,13 @@ export function NoticiasContent({ initialNews, selectedClub }: NoticiasContentPr
       setIsLoading(false)
     }
   }
+
+  // Update news when selectedClub changes
+  useEffect(() => {
+    if (selectedClub) {
+      loadNews()
+    }
+  }, [selectedClub])
 
   // Sorting functions
   const handleSort = (field: string) => {

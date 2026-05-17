@@ -132,11 +132,6 @@ export default function AdminDocumentosPage() {
   const [errorMessage, setErrorMessage] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
 
-  // Load documents on mount or when sort changes
-  useEffect(() => {
-    loadDocuments()
-  }, [sortOption])
-
   const loadDocuments = async () => {
     setIsLoading(true)
     try {
@@ -171,6 +166,11 @@ export default function AdminDocumentosPage() {
       setIsLoading(false)
     }
   }
+
+  // Load documents on mount or when sort changes
+  useEffect(() => {
+    loadDocuments()
+  }, [sortOption])
 
   const loadSettings = async () => {
     try {
