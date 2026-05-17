@@ -1,8 +1,8 @@
 import { NextRequest, after } from 'next/server'
 import { sendBroadcast } from '@/lib/notifications/sendBroadcast'
 import { createClient } from '@supabase/supabase-js'
-import { getAllNews, createNews } from '@/lib/newsUtils'
-import { validateCreateNews, validateNewsQuery } from '@/lib/schemas/newsSchemas'
+import { createNews } from '@/lib/newsUtils'
+import { validateCreateNews } from '@/lib/schemas/newsSchemas'
 import { apiSuccess, handleError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
@@ -10,27 +10,6 @@ import { ERROR_MESSAGES } from '@/lib/utils/constants'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const queryParams = validateNewsQuery(searchParams)
-    
-    const result = await getAllNews(queryParams)
-    
-    return apiSuccess({
-      news: result.data,
-      pagination: {
-        page: queryParams.page || 1,
-        limit: queryParams.limit || 10,
-        total: result.total,
-        totalPages: Math.ceil(result.total / (queryParams.limit || 10))
-      }
-    })
-  } catch (error) {
-    return handleError(error)
-  }
-}
 
 export async function POST(request: NextRequest) {
   try {

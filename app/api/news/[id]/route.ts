@@ -1,8 +1,7 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { getNewsById, updateNews, deleteNews, canUserEditNews } from '@/lib/newsUtils'
 import { validateNewsId, validateUpdateNews } from '@/lib/schemas/newsSchemas'
-import { apiSuccess, handleError, notFoundError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
+import { apiSuccess, handleError, notFoundError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { requireAuth } from '@/lib/middleware/auth'
 
@@ -10,28 +9,6 @@ interface RouteParams {
   params: Promise<{
     id: string
   }>
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    const { id: idParam } = await params
-    const newsId = validateNewsId(idParam)
-    const { searchParams } = new URL(request.url)
-    
-    // Determine what to include
-    const includeParam = searchParams.get('include')
-    const include: Array<'author' | 'club'> = includeParam ? includeParam.split(',').map(i => i.trim()).filter((i): i is 'author' | 'club' => i === 'author' || i === 'club') : ['author', 'club']
-    
-    const news = await getNewsById(newsId, include)
-    
-    if (!news) {
-      return notFoundError(ERROR_MESSAGES.NEWS_NOT_FOUND || 'News not found', `No news found with ID ${newsId}`)
-    }
-    
-    return apiSuccess(news)
-  } catch (error) {
-    return handleError(error)
-  }
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
