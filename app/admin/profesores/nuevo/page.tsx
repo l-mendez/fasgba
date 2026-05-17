@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 import { uploadProfesorImageAction } from "@/lib/actions/profesores"
 
 interface Club {
@@ -181,9 +182,17 @@ export default function NuevoProfesorPage() {
 
       // Upload image if selected
       if (selectedImage && result?.id) {
-        const imageForm = new FormData()
-        imageForm.append('image', selectedImage)
-        await uploadProfesorImageAction(Number(result.id), imageForm)
+        try {
+          const imageForm = new FormData()
+          imageForm.append('image', selectedImage)
+          const uploadResult = await uploadProfesorImageAction(Number(result.id), imageForm)
+          if (!uploadResult.ok) {
+            throw new Error(uploadResult.error || 'Failed to upload image')
+          }
+        } catch (uploadErr) {
+          console.error('Error uploading photo:', uploadErr)
+          toast.error("Profesor creado, pero hubo un error al subir la foto.")
+        }
       }
 
       router.push("/admin/profesores")
