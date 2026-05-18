@@ -1,8 +1,4 @@
-import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAuth } from '@/lib/middleware/auth'
-import { apiSuccess, handleError, payloadTooLargeError, forbiddenError } from '@/lib/utils/apiResponse'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import * as XLSX from 'xlsx-js-style'
 import {
   type Player,
@@ -16,13 +12,11 @@ import {
   findPreviousPlayer,
 } from '@/lib/rankingUtils'
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-const ALLOWED_TYPES = [
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-  'application/vnd.ms-excel' // .xls
-]
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
-interface ExcelPlayer {
+export interface ExcelPlayer {
   __EMPTY?: number;
   ID?: string;
   TIT?: string;
@@ -36,7 +30,7 @@ interface ExcelPlayer {
   [key: string]: any;
 }
 
-interface RankingPlayer {
+export interface RankingPlayer {
   position: number;
   id?: string;
   name: string;
@@ -55,13 +49,52 @@ interface RankingPlayer {
   };
 }
 
-interface PreviousPlayer {
+export interface PreviousPlayer {
   position: number;
   name: string;
   id?: string;
   points: number;
   ratings?: PlayerRatings;
 }
+
+export interface ParsedRanking {
+  rankingData: RankingPlayer[]
+  analyticsDetails: TournamentDetail[]
+  isMultiSheet: boolean
+  previousRanking: { filename: string; players: any[] } | null
+  requiresRecalculation: boolean
+}
+
+export interface BuiltJson {
+  jsonPayload: {
+    version: number
+    filename: string
+    lastUpdated: string
+    totalPlayers: number
+    month: number
+    year: number
+    previousRanking: string | null
+    players: RankingPlayer[]
+    analyticsFilename?: string
+  }
+  analyticsPayload?: AnalyticsData
+}
+
+export interface RankingUploadResult {
+  filename: string
+  totalPlayers: number
+  previewData: RankingPlayer[]
+  tempJsonPath: string
+  tempAnalyticsPath?: string
+  isMultiSheet: boolean
+  hasAnalytics: boolean
+  analyticsCount: number
+  requiresRecalculation: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Pure helpers
+// ---------------------------------------------------------------------------
 
 // Helper function to normalize names with proper capitalization
 const normalizePlayerName = (name: string): string => {
@@ -122,6 +155,10 @@ const parseActive = (value: any): boolean => {
   return false
 }
 
+// ---------------------------------------------------------------------------
+// Workbook detection
+// ---------------------------------------------------------------------------
+
 /**
  * Detects if the workbook has the multi-sheet format (Ranking + Analítico + Consolidado).
  * Accepts both the single-`Ranking` and the Sirafa split `Ranking 1/2/3` variants.
@@ -153,6 +190,10 @@ function findSheet(workbook: XLSX.WorkBook, targetName: string): XLSX.WorkSheet 
   return found ? workbook.Sheets[found] : null
 }
 
+// ---------------------------------------------------------------------------
+// Sheet parsers
+// ---------------------------------------------------------------------------
+
 /**
  * Parses the Ranking sheet in multi-sheet format.
  * Groups rows by player ID/name, merging rating types into one player object.
@@ -161,11 +202,6 @@ function parseRankingSheetMulti(sheet: XLSX.WorkSheet): RankingPlayer[] {
   const rawData = XLSX.utils.sheet_to_json<ExcelPlayer>(sheet)
   if (!rawData || rawData.length === 0) {
     throw new Error('La hoja "Ranking" está vacía')
-  }
-
-  // Log detected columns for debugging
-  if (rawData.length > 0) {
-    console.log('Detected Excel columns:', Object.keys(rawData[0]))
   }
 
   const playerMap = new Map<string, RankingPlayer>()
@@ -199,10 +235,6 @@ function parseRankingSheetMulti(sheet: XLSX.WorkSheet): RankingPlayer[] {
         ? (typeof tipoRaw === 'number' ? tipoRaw : parseInt(String(tipoRaw)) || 1)
         : 1
       const ratingType = mapTipoToRatingType(tipoNum)
-
-      if (index === 0) {
-        console.log('First row Tipo detection:', { tipoRaw, tipoNum, ratingType, rowKeys: Object.keys(row) })
-      }
 
       const playerKey = String(id).trim() || normalizePlayerName(String(name))
       const pointsValue = Math.round(typeof points === 'number' ? points : parseFloat(String(points)) || 0)
@@ -420,10 +452,6 @@ function parseLegacySheet(sheet: XLSX.WorkSheet): RankingPlayer[] {
   // Check if any row has a Tipo column to decide multi-rating vs single-rating
   const hasTipoColumn = rawData.some(row => findTipoRaw(row) !== undefined)
 
-  if (rawData.length > 0) {
-    console.log('Legacy parser - columns:', Object.keys(rawData[0]), 'hasTipoColumn:', hasTipoColumn)
-  }
-
   rawData.forEach((row, index) => {
     const rowNumber = index + 2
     try {
@@ -527,206 +555,12 @@ function parseLegacySheet(sheet: XLSX.WorkSheet): RankingPlayer[] {
   return transformedData
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const user = await requireAuth(request)
-
-    const supabase = await createClient()
-    const { data: adminData, error: adminError } = await supabase
-      .from('admins')
-      .select('auth_id')
-      .eq('auth_id', user.id)
-      .single()
-
-    if (adminError || !adminData) {
-      return forbiddenError('Admin access required')
-    }
-
-    const adminSupabase = createAdminClient()
-
-    const formData = await request.formData()
-    const file = formData.get('file') as File
-    const month = formData.get('month') as string
-    const year = formData.get('year') as string
-
-    if (!file) {
-      return handleError(new Error('No file provided'))
-    }
-
-    if (!month || !year) {
-      return handleError(new Error('Month and year are required'))
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      return payloadTooLargeError(`File size must be less than ${MAX_FILE_SIZE / (1024 * 1024)}MB`)
-    }
-
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return handleError(new Error(`File type must be Excel (.xlsx or .xls). Received: ${file.type}`))
-    }
-
-    const filename = `ranking-${month.padStart(2, '0')}-${year}`
-    const tempExcelPath = `temp/${filename}.xlsx`
-    const tempJsonPath = `temp/${filename}.json`
-    const tempAnalyticsPath = `temp/${filename}-analytics.json`
-
-    // Upload Excel file to temp storage
-    const { error: uploadError } = await adminSupabase.storage
-      .from('ranking-data')
-      .upload(tempExcelPath, file, {
-        contentType: file.type,
-        upsert: true
-      })
-
-    if (uploadError) {
-      console.error('Upload error:', uploadError)
-      return handleError(new Error('Failed to upload file: ' + uploadError.message))
-    }
-
-    let rankingData: RankingPlayer[]
-    let analyticsDetails: TournamentDetail[] = []
-    let isMultiSheet = false
-
-    try {
-      const fileBuffer = await file.arrayBuffer()
-      const workbook = XLSX.read(fileBuffer, { type: 'buffer' })
-
-      if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-        throw new Error('El archivo Excel no contiene hojas de trabajo válidas')
-      }
-
-      if (isMultiSheetFormat(workbook)) {
-        // Multi-sheet format: Ranking(+) + Analítico + Consolidado
-        isMultiSheet = true
-        if (hasSplitRankingSheets(workbook)) {
-          rankingData = parseRankingSheetsSplit(workbook)
-        } else {
-          const rankingSheet = findSheet(workbook, 'Ranking')
-          if (!rankingSheet) {
-            throw new Error('No se encontró la hoja "Ranking" en el archivo')
-          }
-          rankingData = parseRankingSheetMulti(rankingSheet)
-        }
-
-        // Parse Analítico sheet
-        const analiticoSheet = findSheet(workbook, 'Analítico') || findSheet(workbook, 'Analitico')
-        if (analiticoSheet) {
-          analyticsDetails = parseAnaliticoSheet(analiticoSheet)
-        }
-      } else {
-        // Legacy single-sheet format
-        const sheetName = workbook.SheetNames[0]
-        const sheet = workbook.Sheets[sheetName]
-        if (!sheet) {
-          throw new Error(`No se pudo acceder a la hoja de trabajo: ${sheetName}`)
-        }
-        rankingData = parseLegacySheet(sheet)
-      }
-    } catch (parseError) {
-      await adminSupabase.storage.from('ranking-data').remove([tempExcelPath])
-      console.error('Parse error:', parseError)
-      if (parseError instanceof Error) {
-        return handleError(new Error(`Error al procesar el archivo Excel: ${parseError.message}`))
-      }
-      return handleError(new Error('Error desconocido al procesar el archivo Excel.'))
-    }
-
-    // Compute positions for each rating type
-    const playersWithPositions = computePositionsByRatingType(rankingData as Player[])
-    rankingData = playersWithPositions as RankingPlayer[]
-
-    // Find previous ranking and calculate changes
-    const previousRanking = await findPreviousRanking(adminSupabase, parseInt(month), parseInt(year))
-
-    let enhancedRankingData: RankingPlayer[]
-    if (previousRanking) {
-      enhancedRankingData = calculatePlayerChanges(rankingData, previousRanking.players)
-    } else {
-      enhancedRankingData = rankingData.map(player => ({
-        ...player,
-        changes: {
-          position: null,
-          points: 0,
-          ratings: { standard: 0, rapid: 0, blitz: 0 },
-          isNew: true
-        }
-      }))
-    }
-
-    // Create JSON data
-    const jsonData = {
-      version: 2,
-      filename,
-      lastUpdated: new Date().toISOString(),
-      totalPlayers: enhancedRankingData.length,
-      month: parseInt(month),
-      year: parseInt(year),
-      previousRanking: previousRanking?.filename || null,
-      players: enhancedRankingData,
-      analyticsFilename: analyticsDetails.length > 0 ? `${filename}-analytics` : undefined,
-    }
-
-    // Upload ranking JSON to temp
-    const jsonBuffer = Buffer.from(JSON.stringify(jsonData, null, 2))
-    const { error: jsonUploadError } = await adminSupabase.storage
-      .from('ranking-data')
-      .upload(tempJsonPath, jsonBuffer, {
-        contentType: 'application/json',
-        upsert: true
-      })
-
-    if (jsonUploadError) {
-      await adminSupabase.storage.from('ranking-data').remove([tempExcelPath])
-      console.error('JSON upload error:', jsonUploadError)
-      return handleError(new Error('Failed to process ranking data'))
-    }
-
-    // Upload analytics JSON to temp if available
-    if (analyticsDetails.length > 0) {
-      const analyticsData: AnalyticsData = {
-        filename: `${filename}-analytics`,
-        rankingFilename: filename,
-        month: parseInt(month),
-        year: parseInt(year),
-        details: analyticsDetails,
-      }
-
-      const analyticsBuffer = Buffer.from(JSON.stringify(analyticsData, null, 2))
-      const { error: analyticsUploadError } = await adminSupabase.storage
-        .from('ranking-data')
-        .upload(tempAnalyticsPath, analyticsBuffer, {
-          contentType: 'application/json',
-          upsert: true
-        })
-
-      if (analyticsUploadError) {
-        console.warn('Failed to upload analytics data:', analyticsUploadError)
-        // Don't fail the upload - analytics is supplementary
-      }
-    }
-
-    // Delete the temp Excel file
-    await adminSupabase.storage.from('ranking-data').remove([tempExcelPath])
-
-    return apiSuccess({
-      filename,
-      totalPlayers: enhancedRankingData.length,
-      previewData: enhancedRankingData.slice(0, 10),
-      tempJsonPath,
-      tempAnalyticsPath: analyticsDetails.length > 0 ? tempAnalyticsPath : undefined,
-      isMultiSheet,
-      hasAnalytics: analyticsDetails.length > 0,
-      analyticsCount: analyticsDetails.length,
-      requiresRecalculation: await checkIfRecalculationNeeded(adminSupabase, parseInt(month), parseInt(year))
-    })
-
-  } catch (error) {
-    return handleError(error)
-  }
-}
+// ---------------------------------------------------------------------------
+// Previous-ranking lookup + change calc + recalculation check
+// ---------------------------------------------------------------------------
 
 // Helper function to find previous ranking
-async function findPreviousRanking(adminSupabase: any, currentMonth: number, currentYear: number) {
+async function findPreviousRanking(adminSupabase: SupabaseClient, currentMonth: number, currentYear: number) {
   try {
     const { data: files, error: listError } = await adminSupabase.storage
       .from('ranking-data')
@@ -766,7 +600,7 @@ async function findPreviousRanking(adminSupabase: any, currentMonth: number, cur
       .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 
     if (sameMonthRankings.length > 0) {
-      const sameMonthPrevious = sameMonthRankings[sameMonthRankings.length - 1]
+      const sameMonthPrevious = sameMonthRankings[sameMonthRankings.length - 1]!
       const { data: fileData, error: downloadError } = await adminSupabase.storage
         .from('ranking-data')
         .download(sameMonthPrevious.filename)
@@ -852,7 +686,7 @@ function calculatePlayerChanges(newPlayers: RankingPlayer[], previousPlayers: an
   })
 }
 
-async function checkIfRecalculationNeeded(adminSupabase: any, currentMonth: number, currentYear: number): Promise<boolean> {
+async function checkIfRecalculationNeeded(adminSupabase: SupabaseClient, currentMonth: number, currentYear: number): Promise<boolean> {
   try {
     const { data: files, error: listError } = await adminSupabase.storage
       .from('ranking-data')
@@ -883,4 +717,122 @@ async function checkIfRecalculationNeeded(adminSupabase: any, currentMonth: numb
     console.warn('Error checking recalculation need:', error)
     return false
   }
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse the workbook + look up previous ranking + compute changes.
+ * High-level entry point for the action.
+ */
+export async function parseWorkbook(
+  workbook: XLSX.WorkBook,
+  month: number,
+  year: number,
+  adminClient: SupabaseClient
+): Promise<ParsedRanking> {
+  if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+    throw new Error('El archivo Excel no contiene hojas de trabajo válidas')
+  }
+
+  let rankingData: RankingPlayer[]
+  let analyticsDetails: TournamentDetail[] = []
+  let isMultiSheet = false
+
+  if (isMultiSheetFormat(workbook)) {
+    // Multi-sheet format: Ranking(+) + Analítico + Consolidado
+    isMultiSheet = true
+    if (hasSplitRankingSheets(workbook)) {
+      rankingData = parseRankingSheetsSplit(workbook)
+    } else {
+      const rankingSheet = findSheet(workbook, 'Ranking')
+      if (!rankingSheet) {
+        throw new Error('No se encontró la hoja "Ranking" en el archivo')
+      }
+      rankingData = parseRankingSheetMulti(rankingSheet)
+    }
+
+    // Parse Analítico sheet
+    const analiticoSheet = findSheet(workbook, 'Analítico') || findSheet(workbook, 'Analitico')
+    if (analiticoSheet) {
+      analyticsDetails = parseAnaliticoSheet(analiticoSheet)
+    }
+  } else {
+    // Legacy single-sheet format
+    const sheetName = workbook.SheetNames[0]
+    const sheet = workbook.Sheets[sheetName]
+    if (!sheet) {
+      throw new Error(`No se pudo acceder a la hoja de trabajo: ${sheetName}`)
+    }
+    rankingData = parseLegacySheet(sheet)
+  }
+
+  // Compute positions for each rating type
+  const playersWithPositions = computePositionsByRatingType(rankingData as Player[])
+  rankingData = playersWithPositions as RankingPlayer[]
+
+  // Find previous ranking and calculate changes
+  const previousRanking = await findPreviousRanking(adminClient, month, year)
+
+  let enhancedRankingData: RankingPlayer[]
+  if (previousRanking) {
+    enhancedRankingData = calculatePlayerChanges(rankingData, previousRanking.players)
+  } else {
+    enhancedRankingData = rankingData.map(player => ({
+      ...player,
+      changes: {
+        position: null,
+        points: 0,
+        ratings: { standard: 0, rapid: 0, blitz: 0 },
+        isNew: true
+      }
+    }))
+  }
+
+  const requiresRecalculation = await checkIfRecalculationNeeded(adminClient, month, year)
+
+  return {
+    rankingData: enhancedRankingData,
+    analyticsDetails,
+    isMultiSheet,
+    previousRanking,
+    requiresRecalculation,
+  }
+}
+
+/**
+ * Build the JSON payload(s) to persist after parsing.
+ */
+export function buildPersistedJson(
+  parsed: ParsedRanking,
+  filename: string,
+  month: number,
+  year: number
+): BuiltJson {
+  const jsonPayload = {
+    version: 2,
+    filename,
+    lastUpdated: new Date().toISOString(),
+    totalPlayers: parsed.rankingData.length,
+    month,
+    year,
+    previousRanking: parsed.previousRanking?.filename || null,
+    players: parsed.rankingData,
+    analyticsFilename: parsed.analyticsDetails.length > 0 ? `${filename}-analytics` : undefined,
+  }
+
+  let analyticsPayload: AnalyticsData | undefined
+  if (parsed.analyticsDetails.length > 0) {
+    analyticsPayload = {
+      filename: `${filename}-analytics`,
+      rankingFilename: filename,
+      month,
+      year,
+      details: parsed.analyticsDetails,
+    }
+  }
+
+  return { jsonPayload, analyticsPayload }
 }

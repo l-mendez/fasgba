@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { deleteNewsAction } from "@/lib/actions/news"
 
 // Define el tipo para noticias según la API
 interface ClubNews {
@@ -312,7 +313,10 @@ export function NoticiasContent({ initialNews, selectedClub }: NoticiasContentPr
       setIsDeleting(true)
       setError(null)
       
-      await apiCall(`/news/${noticiaToDelete}`, { method: 'DELETE' })
+      const deleteResult = await deleteNewsAction(noticiaToDelete)
+      if (!deleteResult.ok) {
+        throw new Error(deleteResult.error)
+      }
       
       // Actualizar el estado local
       setNoticias(noticias.filter((noticia) => noticia.id !== noticiaToDelete))

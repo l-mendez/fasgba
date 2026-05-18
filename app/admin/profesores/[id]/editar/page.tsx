@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
+import { uploadProfesorImageAction } from "@/lib/actions/profesores"
 import { toast } from "sonner"
 
 interface Club {
@@ -113,29 +114,16 @@ export default function EditarProfesorPage({ params }: PageProps) {
     setIsUploadingImage(true)
 
     try {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('No session found')
+      const fd = new FormData()
+      fd.append('image', file)
 
-      const formData = new FormData()
-      formData.append('image', file)
+      const result = await uploadProfesorImageAction(Number(resolvedParams.id), fd)
 
-      const response = await fetch(`/api/profesores/${resolvedParams.id}/upload-image`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Failed to upload image')
+      if (!result.ok) {
+        throw new Error(result.error || 'Failed to upload image')
       }
 
-      const result = await response.json()
-
-      setCurrentImage(result.filePath)
+      setCurrentImage(result.data.filePath)
       setImagePreview(null)
 
       toast.success("Imagen subida correctamente", {

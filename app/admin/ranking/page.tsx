@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { createClient } from "@/lib/supabase/client"
+import { uploadRankingAction } from "@/lib/actions/ranking"
 
 // Month names in Spanish
 const monthNames = [
@@ -206,46 +207,31 @@ export default function AdminRankingPage() {
 
   const handleUpload = async () => {
     if (!file) return
-    
+
     setIsUploading(true)
     setErrorMessage('')
     setSuccessMessage('')
 
     try {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session) {
-        throw new Error('Sesión no válida. Por favor, inicia sesión nuevamente.')
-      }
-
       const formData = new FormData()
       formData.append('file', file)
       formData.append('month', selectedMonth)
       formData.append('year', selectedYear)
 
-      const response = await fetch('/api/admin/ranking/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: formData
-      })
+      const result = await uploadRankingAction(formData)
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        const errorMsg = errorData.error || `Error del servidor (${response.status})`
-        throw new Error(errorMsg)
+      if (!result.ok) {
+        throw new Error(result.error || 'Error desconocido al procesar el archivo')
       }
 
-      const result = await response.json()
-      setPreviewData(result.previewData || [])
-      setTempJsonPath(result.tempJsonPath)
-      setTempAnalyticsPath(result.tempAnalyticsPath || null)
+      const data = result.data
+      setPreviewData(data.previewData || [])
+      setTempJsonPath(data.tempJsonPath)
+      setTempAnalyticsPath(data.tempAnalyticsPath || null)
       setUploadStatus('success')
-      const analyticsMsg = result.hasAnalytics ? ` Se encontraron ${result.analyticsCount} registros analíticos.` : ''
-      setSuccessMessage(`Archivo procesado correctamente. Se encontraron ${result.totalPlayers || 0} jugadores.${analyticsMsg} Revisa la vista previa y guarda los cambios.`)
-      
+      const analyticsMsg = data.hasAnalytics ? ` Se encontraron ${data.analyticsCount} registros analíticos.` : ''
+      setSuccessMessage(`Archivo procesado correctamente. Se encontraron ${data.totalPlayers || 0} jugadores.${analyticsMsg} Revisa la vista previa y guarda los cambios.`)
+
     } catch (error) {
       console.error('Upload error:', error)
       setErrorMessage(error instanceof Error ? error.message : 'Error desconocido al procesar el archivo. Verifica el formato y vuelve a intentarlo.')

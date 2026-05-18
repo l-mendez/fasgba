@@ -9,6 +9,7 @@ import { Loader2, Save, Upload, X, ImageIcon, CheckCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 import { apiCall } from "@/app/club-admin/context/club-context"
+import { uploadClubImageAction, deleteClubImageAction } from "@/lib/actions/clubs"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -87,47 +88,32 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
   const handleImageUpload = async (file: File) => {
     try {
       setIsUploadingImage(true)
-      
+
       // Create form data
       const formData = new FormData()
       formData.append('image', file)
-      
-      // Get session for authentication
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        throw new Error('No session found')
+
+      // Upload the image via server action
+      const result = await uploadClubImageAction(club.id, formData)
+
+      if (!result.ok) {
+        throw new Error(result.error || 'Failed to upload image')
       }
 
-      // Upload the image
-      const response = await fetch(`/api/clubs/${club.id}/upload-image`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: formData
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Failed to upload image')
-      }
-
-      const result = await response.json()
-      
       // Update current image and clear preview
-      setCurrentImage(result.filePath)
+      setCurrentImage(result.data.filePath)
       setImagePreview(null)
       setPendingImageDeletion(false)
-      
+
       // Show appropriate success message based on whether an image was replaced
-      const successMessage = result.replacedExisting 
+      const successMessage = result.data.replacedExisting
         ? '✅ Imagen actualizada correctamente'
         : '✅ Imagen subida correctamente'
-      
-      const successDescription = result.replacedExisting
+
+      const successDescription = result.data.replacedExisting
         ? 'La imagen anterior ha sido reemplazada exitosamente'
         : 'La imagen del club se ha agregado exitosamente'
-      
+
       toast.success(successMessage, {
         description: successDescription,
         duration: 3000,
@@ -202,26 +188,12 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
       // Handle pending image deletion
       if (pendingImageDeletion && currentImage) {
         try {
-          // Get session for authentication
-          const { data: { session } } = await supabase.auth.getSession()
-          if (!session) {
-            throw new Error('No session found')
+          const result = await deleteClubImageAction(club.id)
+
+          if (!result.ok) {
+            throw new Error(result.error || 'Failed to delete image')
           }
 
-          // Call the delete image API endpoint
-          const response = await fetch(`/api/clubs/${club.id}/delete-image`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-              'Content-Type': 'application/json',
-            },
-          })
-
-          if (!response.ok) {
-            const error = await response.json()
-            throw new Error(error.message || 'Failed to delete image')
-          }
-          
           // Update local state
           setCurrentImage(null)
           setPendingImageDeletion(false)

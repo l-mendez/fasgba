@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import { uploadArbitroImageAction, deleteArbitroImageAction } from "@/lib/actions/arbitros"
 
 interface FormData {
   name: string
@@ -110,33 +111,20 @@ export default function EditarArbitroPage({ params }: PageProps) {
     setIsUploadingImage(true)
 
     try {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('No session found')
-
       const uploadFormData = new FormData()
       uploadFormData.append('image', file)
 
-      const response = await fetch(`/api/arbitros/${resolvedParams.id}/upload-image`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: uploadFormData,
-      })
+      const result = await uploadArbitroImageAction(Number(resolvedParams.id), uploadFormData)
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Failed to upload image')
+      if (!result.ok) {
+        throw new Error(result.error || 'Failed to upload image')
       }
 
-      const result = await response.json()
-
-      setCurrentImage(result.filePath)
+      setCurrentImage(result.data.filePath)
       setImagePreview(null)
       setPendingImageDeletion(false)
 
-      const actionMessage = result.replacedExisting ? 'reemplazada' : 'subida'
+      const actionMessage = result.data.replacedExisting ? 'reemplazada' : 'subida'
       toast.success(`Foto ${actionMessage} correctamente`, {
         description: "La foto del árbitro se ha actualizado exitosamente",
         duration: 4000,
@@ -248,21 +236,10 @@ export default function EditarArbitroPage({ params }: PageProps) {
       // Handle pending image deletion
       if (pendingImageDeletion && currentImage) {
         try {
-          const supabase = createClient()
-          const { data: { session } } = await supabase.auth.getSession()
-          if (!session) throw new Error('No session found')
+          const result = await deleteArbitroImageAction(Number(resolvedParams.id))
 
-          const response = await fetch(`/api/arbitros/${resolvedParams.id}/delete-image`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-              'Content-Type': 'application/json',
-            },
-          })
-
-          if (!response.ok) {
-            const error = await response.json()
-            throw new Error(error.message || 'Failed to delete image')
+          if (!result.ok) {
+            throw new Error(result.error || 'Failed to delete image')
           }
 
           setCurrentImage(null)
