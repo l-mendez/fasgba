@@ -714,22 +714,6 @@ export async function getPlayersByClub(clubName: string): Promise<Player[]> {
 }
 
 /**
- * Gets unique clubs from the ranking data
- */
-export async function getClubs(): Promise<string[]> {
-  try {
-    const rankingData = await fetchRankingData();
-    const clubs = [...new Set(rankingData.players.map(player => player.club))]
-      .filter(club => club && club.trim() !== '');
-    
-    return clubs.sort();
-  } catch (error) {
-    console.error('Error getting clubs:', error);
-    throw error;
-  }
-}
-
-/**
  * Updates the ranking data in Supabase Storage (admin only)
  */
 export async function updateRankingData(newData: RankingData): Promise<void> {
@@ -781,47 +765,6 @@ export function clearRankingCache(): void {
 }
 
 /**
- * Forces a cache refresh by clearing cache and fetching fresh data
- */
-export async function refreshRankingData(): Promise<void> {
-  clearRankingCache();
-  // Trigger a fresh fetch
-  try {
-    await fetchRankingData();
-  } catch (error) {
-    console.warn('Error refreshing ranking data:', error);
-  }
-}
-
-/**
- * Gets the last updated timestamp from the ranking data
- */
-export async function getLastUpdated(): Promise<string | null> {
-  try {
-    const rankingData = await fetchRankingData();
-    return rankingData.lastUpdated || null;
-  } catch (error) {
-    console.error('Error getting last updated timestamp:', error);
-    return null;
-  }
-}
-
-/**
- * Gets players with recent changes (moved up/down positions or new players)
- */
-export async function getPlayersWithChanges(): Promise<Player[]> {
-  try {
-    const rankingData = await fetchRankingData();
-    return rankingData.players.filter(player => 
-      player.changes && (player.changes.isNew || player.changes.position !== 0)
-    );
-  } catch (error) {
-    console.error('Error getting players with changes:', error);
-    throw error;
-  }
-}
-
-/**
  * Forces cache invalidation after ranking modifications
  * Call this after any ranking updates that might affect chronological order
  */
@@ -829,14 +772,6 @@ export function forceRankingCacheInvalidation(): void {
   rankingCache = null;
   cacheTimestamp = 0;
   cachedLatestFilename = null;
-}
-
-/**
- * Gets available tournament categories/types
- */
-export async function getCategories(): Promise<string[]> {
-  // Return the available tournament types as categories
-  return ['individual', 'team'];
 }
 
 /**

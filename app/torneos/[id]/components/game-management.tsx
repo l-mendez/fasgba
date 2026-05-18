@@ -86,26 +86,6 @@ export default function GameManagement({
     game_time: ''
   })
 
-  // Update games when initialGames prop changes
-  useEffect(() => {
-    setGames(initialGames)
-  }, [initialGames])
-
-  // Fetch players and matches when component mounts
-  useEffect(() => {
-    fetchPlayers()
-    if (tournamentType === 'team' && selectedRound) {
-      fetchMatches(selectedRound)
-    }
-  }, [tournamentId, tournamentType, selectedRound])
-
-  // Fetch clubs for team tournaments
-  useEffect(() => {
-    if (tournamentType === 'team') {
-      fetchClubs()
-    }
-  }, [tournamentType])
-
   const fetchPlayers = async () => {
     try {
       if (tournamentType === 'team') {
@@ -145,6 +125,26 @@ export default function GameManagement({
       console.error('Error fetching matches:', error)
     }
   }
+
+  // Update games when initialGames prop changes
+  useEffect(() => {
+    setGames(initialGames)
+  }, [initialGames])
+
+  // Fetch players and matches when component mounts
+  useEffect(() => {
+    fetchPlayers()
+    if (tournamentType === 'team' && selectedRound) {
+      fetchMatches(selectedRound)
+    }
+  }, [tournamentId, tournamentType, selectedRound])
+
+  // Fetch clubs for team tournaments
+  useEffect(() => {
+    if (tournamentType === 'team') {
+      fetchClubs()
+    }
+  }, [tournamentType])
 
   const fetchGames = async () => {
     try {

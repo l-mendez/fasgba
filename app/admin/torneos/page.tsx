@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Plus, AlertCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
+import { getTournamentParticipantCount } from "@/lib/tournamentUtils"
 
 // Mark this page as dynamic since it requires server-side authentication  
 export const dynamic = 'force-dynamic'
@@ -128,44 +129,12 @@ async function fetchTournaments(): Promise<Tournament[]> {
         const formatted_start_date = startDate.toLocaleDateString('es-AR')
         const formatted_end_date = endDate ? endDate.toLocaleDateString('es-AR') : null
         
-        // Fetch participant count based on tournament type
-        let participants = 0
-        try {
-          if (tournament.tournament_type === 'team') {
-            // For team tournaments, count registered teams
-            const { data: registeredTeams, error: teamsError } = await supabase
-              .from('tournament_teams')
-              .select('team_id, teams(club_id)')
-              .eq('tournament_id', tournament.id)
+        const participants = await getTournamentParticipantCount(
+          supabase,
+          tournament.id,
+          tournament.tournament_type
+        )
 
-            if (!teamsError && registeredTeams && registeredTeams.length > 0) {
-              const clubIds = [...new Set(registeredTeams.map((t: any) => t.teams?.club_id).filter(Boolean))]
-
-              const { data: clubPlayers, error: playersError } = await supabase
-                .from('players')
-                .select('id')
-                .in('club_id', clubIds)
-
-              if (!playersError && clubPlayers) {
-                participants = clubPlayers.length
-              }
-            }
-          } else {
-            // For individual tournaments, count players registered through tournament_registrations
-            const { data: individualPlayers, error: individualPlayersError } = await supabase
-              .from('tournament_registrations')
-              .select('player_id')
-              .eq('tournament_id', tournament.id)
-            
-            if (!individualPlayersError && individualPlayers) {
-              participants = individualPlayers.length
-            }
-          }
-        } catch (error) {
-          console.error(`Error fetching participants for tournament ${tournament.id}:`, error)
-          // Keep participants as 0 if there's an error
-        }
-        
         return {
           id: tournament.id.toString(),
           title: tournament.title || 'Sin título',

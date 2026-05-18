@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getClubTournaments, getClubById, DateFilterOptions } from '@/lib/clubUtils'
+import { getTournamentParticipantCount } from '@/lib/tournamentUtils'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { validateClubId } from '@/lib/schemas/clubSchemas'
 import { apiSuccess, handleError, notFoundError, validationError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
@@ -57,8 +59,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     const tournaments = await getClubTournaments(clubId, options)
-    
-    return apiSuccess({ tournaments })
+
+    const adminClient = createAdminClient()
+    const tournamentsWithParticipants = await Promise.all(
+      tournaments.map(async (tournament: any) => ({
+        ...tournament,
+        participants: await getTournamentParticipantCount(
+          adminClient,
+          tournament.id,
+          tournament.tournament_type
+        ),
+      }))
+    )
+
+    return apiSuccess({ tournaments: tournamentsWithParticipants })
   } catch (error: any) {
     console.error('Error in GET /api/clubs/[clubId]/tournaments:', error)
     return handleError(error)

@@ -53,23 +53,6 @@ export interface TournamentDisplay extends Omit<Tournament, 'id'> {
   formatted_all_dates: string[]; // Formatted versions of all dates
 }
 
-// Summary type for tournament lists
-export interface TournamentSummary {
-  id: number;
-  title: string;
-  start_date: Date;
-  end_date: Date | null;
-  formatted_start_date: string;
-  place: string | null;
-  location: string | null;
-  cost: string | null;
-  image: string | null;
-  is_upcoming: boolean;
-  is_ongoing: boolean;
-  is_past: boolean;
-  tournament_type?: string | null;
-}
-
 /**
  * Transforms tournament with dates to display format with proper date handling
  */
@@ -119,51 +102,6 @@ export function transformTournamentToDisplay(tournamentWithDates: TournamentWith
     is_past: isPast,
     all_dates: allDates,
     formatted_all_dates: formattedAllDates,
-  };
-}
-
-/**
- * Transforms tournament with dates to summary format for lists
- */
-export function transformTournamentToSummary(tournamentWithDates: TournamentWithDates): TournamentSummary {
-  const { tournament_dates, ...tournament } = tournamentWithDates;
-  
-  // Parse all dates as local dates to avoid timezone issues
-  // The database stores dates as YYYY-MM-DD, so we need to parse them as local dates
-  const allDates = tournament_dates
-    .map(td => {
-      // Parse as local date to avoid timezone offset issues
-      const [year, month, day] = td.event_date.split('-').map(Number);
-      return new Date(year, month - 1, day); // month is 0-indexed in Date constructor
-    })
-    .sort((a, b) => a.getTime() - b.getTime());
-  
-  if (allDates.length === 0) {
-    throw new Error(`Tournament "${tournament.title}" has no dates`);
-  }
-  
-  const startDate = allDates[0];
-  const endDate = allDates.length > 1 ? allDates[allDates.length - 1] : null;
-  const now = new Date();
-
-  const isUpcoming = startDate > now;
-  const isPast = endDate ? endDate < now : startDate < now;
-  const isOngoing = !isUpcoming && !isPast;
-
-  return {
-    id: tournament.id,
-    title: tournament.title,
-    start_date: startDate,
-    end_date: endDate,
-    formatted_start_date: formatDate(startDate),
-    place: tournament.place,
-    location: tournament.location,
-    cost: tournament.cost,
-    image: tournament.image,
-    is_upcoming: isUpcoming,
-    is_ongoing: isOngoing,
-    is_past: isPast,
-    tournament_type: tournament.tournament_type,
   };
 }
 
@@ -584,34 +522,6 @@ export async function getOngoingTournaments(supabase: any): Promise<Tournament[]
 }
 
 /**
- * Searches tournaments by title or description
- */
-export async function searchTournaments(
-  supabase: any,
-  searchTerm: string,
-  limit: number = 20
-): Promise<Tournament[]> {
-  try {
-    const { data, error } = await supabase
-      .from('tournaments')
-      .select('id, title, description, time, place, location, rounds, pace, inscription_details, cost, prizes, image, created_by_club_id')
-      .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
-      .order('id', { ascending: true })
-      .limit(limit);
-
-    if (error) {
-      console.error('Error searching tournaments:', error);
-      throw new Error('Failed to search tournaments');
-    }
-
-    return data || [];
-  } catch (error) {
-    console.error('Database error:', error);
-    throw error;
-  }
-}
-
-/**
  * Comprehensive function to get all tournaments with display formatting
  */
 export async function getAllTournamentsForDisplay(supabase: any): Promise<TournamentDisplay[]> {
@@ -620,41 +530,6 @@ export async function getAllTournamentsForDisplay(supabase: any): Promise<Tourna
     return tournamentsWithDates.map(transformTournamentToDisplay);
   } catch (error) {
     console.error('Error getting tournaments for display:', error);
-    throw error;
-  }
-}
-
-/**
- * Comprehensive function to get tournament summaries for lists
- */
-export async function getTournamentSummaries(
-  supabase: any,
-  status: 'upcoming' | 'ongoing' | 'past' | 'all' = 'all',
-  limit?: number
-): Promise<TournamentSummary[]> {
-  try {
-    // For now, use the main function and filter client-side
-    const tournaments = await getAllTournamentsForDisplay(supabase);
-    const filtered = filterTournamentsByStatus(tournaments, status);
-    const summaries = filtered.map(t => ({
-      id: t.id,
-      title: t.title,
-      start_date: t.start_date,
-      end_date: t.end_date,
-      formatted_start_date: t.formatted_start_date,
-      place: t.place,
-      location: t.location,
-      cost: t.cost,
-      image: t.image,
-      is_upcoming: t.is_upcoming,
-      is_ongoing: t.is_ongoing,
-      is_past: t.is_past,
-      tournament_type: t.tournament_type,
-    }));
-    
-    return limit ? summaries.slice(0, limit) : summaries;
-  } catch (error) {
-    console.error('Error getting tournament summaries:', error);
     throw error;
   }
 }
@@ -891,6 +766,50 @@ export async function updateTournament(supabase: any, tournamentId: number, tour
   } catch (error) {
     console.error('Error in updateTournament:', error);
     throw error;
+  }
+}
+
+/**
+ * Counts participants for a tournament. For team tournaments, counts all
+ * players from the clubs whose teams are registered. For individual tournaments,
+ * counts rows in tournament_registrations.
+ */
+export async function getTournamentParticipantCount(
+  supabase: any,
+  tournamentId: number,
+  type: string | null | undefined
+): Promise<number> {
+  try {
+    if (type === 'team') {
+      const { data: registeredTeams } = await supabase
+        .from('tournament_teams')
+        .select('team_id, teams(club_id)')
+        .eq('tournament_id', tournamentId)
+
+      if (!registeredTeams || registeredTeams.length === 0) return 0
+
+      const clubIds = [...new Set(
+        registeredTeams.map((t: any) => t.teams?.club_id).filter(Boolean)
+      )]
+      if (clubIds.length === 0) return 0
+
+      const { data: clubPlayers } = await supabase
+        .from('players')
+        .select('id')
+        .in('club_id', clubIds)
+
+      return clubPlayers?.length || 0
+    }
+
+    const { data: registrations } = await supabase
+      .from('tournament_registrations')
+      .select('player_id')
+      .eq('tournament_id', tournamentId)
+
+    return registrations?.length || 0
+  } catch (error) {
+    console.error(`Error counting participants for tournament ${tournamentId}:`, error)
+    return 0
   }
 }
 
