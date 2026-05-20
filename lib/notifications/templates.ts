@@ -17,18 +17,29 @@ export async function buildEmailContent(
     if (error || !newsData) return null
 
     const clubData = newsData.clubs as any
-    const newsSource = clubData?.name || 'Federación de Ajedrez del Sur del Gran Buenos Aires (FASGBA)'
-    const newsDate = new Date(newsData.date).toLocaleDateString('es-AR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
+    const newsSource = clubData?.name || 'FASGBA'
     const newsUrl = `${baseUrl}/noticias/${newsData.id}`
     const category = newsData.club_id ? 'news_club' : 'news_fasgba'
 
     const subject = `Nueva noticia: ${newsData.title}`
-    const textContent = `\n¡Nueva noticia publicada!\n\nTítulo: ${newsData.title}\nFuente: ${newsSource}\nFecha: ${newsDate}\n\n${newsData.extract || ''}\n\nLeer la noticia: ${newsUrl}\nDesactivar notificaciones: ${unsubscribeUrl}\n\n---\nFederación de Ajedrez del Sur del Gran Buenos Aires`
-    const htmlContent = newsHtml({ title: newsData.title, source: newsSource, date: newsDate, extract: newsData.extract, url: newsUrl, unsubscribeUrl })
+    const textContent = plainText([
+      '¡Nueva noticia publicada!',
+      `Título: ${newsData.title}`,
+      `Fuente: ${newsSource}`,
+      newsData.extract || '',
+      `Leer la noticia: ${newsUrl}`,
+      `Desactivar notificaciones: ${unsubscribeUrl}`,
+    ])
+    const htmlContent = shellHtml({
+      eyebrow: 'Nueva noticia',
+      heading: newsData.title,
+      byline: `Publicado por ${newsSource}`,
+      meta: [],
+      body: newsData.extract || null,
+      ctaLabel: 'Leer la noticia',
+      ctaUrl: newsUrl,
+      unsubscribeUrl,
+    })
 
     return { subject, textContent, htmlContent, category, clubId: newsData.club_id ?? null }
   }
@@ -46,8 +57,27 @@ export async function buildEmailContent(
     const tournamentUrl = `${baseUrl}/torneos/${t.id}`
 
     const subject = `Nuevo torneo: ${t.title}`
-    const textContent = `\n¡Nuevo torneo publicado!\n\nTítulo: ${t.title}\nOrganizador: ${source}\nLugar: ${t.place || 'Por confirmar'}\n\n${t.description || ''}\n\nVer torneo: ${tournamentUrl}\nDesactivar notificaciones: ${unsubscribeUrl}\n\n---\nFederación de Ajedrez del Sur del Gran Buenos Aires`
-    const htmlContent = tournamentHtml({ title: t.title, source, place: t.place, description: t.description, url: tournamentUrl, unsubscribeUrl })
+    const textContent = plainText([
+      '¡Nuevo torneo publicado!',
+      `Título: ${t.title}`,
+      `Organizador: ${source}`,
+      `Lugar: ${t.place || 'Por confirmar'}`,
+      t.description || '',
+      `Ver torneo: ${tournamentUrl}`,
+      `Desactivar notificaciones: ${unsubscribeUrl}`,
+    ])
+    const htmlContent = shellHtml({
+      eyebrow: 'Nuevo torneo',
+      heading: t.title,
+      meta: [
+        { label: 'Organizador', value: source },
+        { label: 'Lugar', value: t.place || 'Por confirmar' },
+      ],
+      body: t.description || null,
+      ctaLabel: 'Ver torneo',
+      ctaUrl: tournamentUrl,
+      unsubscribeUrl,
+    })
 
     const category: 'tournament_fasgba' | 'tournament_club' = t.created_by_club_id ? 'tournament_club' : 'tournament_fasgba'
     return { subject, textContent, htmlContent, category, clubId: t.created_by_club_id ?? null }
@@ -58,8 +88,21 @@ export async function buildEmailContent(
     const monthName = new Date(input.rankingYear, input.rankingMonth - 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
 
     const subject = `Ranking actualizado: ${monthName}`
-    const textContent = `\n¡Nuevo ranking publicado!\n\nEl ranking de ${monthName} ya está disponible.\n\nVer ranking: ${rankingUrl}\nDesactivar notificaciones: ${unsubscribeUrl}\n\n---\nFederación de Ajedrez del Sur del Gran Buenos Aires`
-    const htmlContent = rankingHtml({ monthName, url: rankingUrl, unsubscribeUrl })
+    const textContent = plainText([
+      '¡Nuevo ranking publicado!',
+      `El ranking de ${monthName} ya está disponible.`,
+      `Ver ranking: ${rankingUrl}`,
+      `Desactivar notificaciones: ${unsubscribeUrl}`,
+    ])
+    const htmlContent = shellHtml({
+      eyebrow: 'Ranking actualizado',
+      heading: `Ranking de ${monthName}`,
+      meta: [],
+      body: 'El nuevo ranking ya está disponible. ¡Consulta tu posición!',
+      ctaLabel: 'Ver ranking',
+      ctaUrl: rankingUrl,
+      unsubscribeUrl,
+    })
 
     return { subject, textContent, htmlContent, category: 'ranking', clubId: null }
   }
@@ -67,52 +110,93 @@ export async function buildEmailContent(
   return null
 }
 
-// ─── HTML helpers (copied verbatim from the deleted route, wrapped in functions) ──
+function plainText(lines: string[]): string {
+  return '\n' + lines.filter(Boolean).join('\n\n') + '\n\n---\nFederación de Ajedrez del Sur del Gran Buenos Aires'
+}
 
-function shellHtml(headerTitle: string, body: string, unsubscribeUrl: string): string {
+interface ShellOptions {
+  eyebrow: string
+  heading: string
+  byline?: string
+  meta: Array<{ label: string; value: string }>
+  body: string | null
+  ctaLabel: string
+  ctaUrl: string
+  unsubscribeUrl: string
+}
+
+// Exported so the test-email endpoint can render in the same shell.
+export function shellHtml(opts: ShellOptions): string {
+  const metaRows = opts.meta
+    .map(
+      (m) =>
+        `<div style="margin:4px 0;"><span style="color:#8f3f12;font-weight:600;">${m.label}:</span> <span style="color:#444;">${m.value}</span></div>`
+    )
+    .join('')
+
+  const bodyBlock = opts.body
+    ? `<div class="extract">${opts.body}</div>`
+    : ''
+
   return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><style>
-body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-.container { max-width: 600px; margin: 0 auto; padding: 20px; }
-.header { background-color: #8B4513; color: white; padding: 20px; text-align: center; }
-.content { padding: 20px; background-color: #f9f9f9; }
-.title { color: #8B4513; font-size: 24px; margin-bottom: 10px; }
-.meta { color: #666; margin-bottom: 15px; }
-.extract { background-color: white; padding: 15px; border-left: 4px solid #8B4513; margin: 15px 0; }
-.footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
-.cta-button { display: inline-block; background-color: #8B4513; color: white; padding: 10px 16px; border-radius: 6px; text-decoration: none; }
-.link { color: #8B4513; text-decoration: underline; }
-</style></head><body><div class="container">
-<div class="header"><h1>${headerTitle}</h1></div>
-<div class="content">${body}</div>
-<div class="footer">
-  <p>Federación de Ajedrez del Sur del Gran Buenos Aires</p>
-  <p><a class="link" href="${unsubscribeUrl}">Desactivar notificaciones</a></p>
-</div></div></body></html>`
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${opts.eyebrow} - FASGBA</title>
+<style>
+body { margin:0; padding:0; background:#f8f9fa; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color:#333; line-height:1.6; -webkit-text-size-adjust:100%; }
+.email-container { max-width:600px; margin:0 auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+.header { background:linear-gradient(135deg, #8f3f12 0%, #a85a2d 100%); padding:36px 30px; text-align:center; color:#ffffff; }
+.logo { font-size:28px; font-weight:bold; letter-spacing:1px; margin-bottom:6px; }
+.subtitle { font-size:13px; opacity:0.9; margin:0; }
+.content { padding:40px 30px; text-align:center; }
+.eyebrow { color:#daa056; font-size:13px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px; }
+.title { font-size:24px; font-weight:bold; color:#8f3f12; margin:0 0 12px; }
+.byline { color:#888; font-size:13px; font-style:italic; margin:0 0 24px; }
+.meta { color:#666; font-size:14px; text-align:left; max-width:360px; margin:0 auto 24px; }
+.extract { background:#fef7f0; border:1px solid #e5bb7f; border-radius:8px; padding:20px; font-size:15px; color:#555; line-height:1.7; text-align:left; margin:24px 0; }
+.cta-container { margin:32px 0 8px; }
+.cta-button { display:inline-block; padding:14px 32px; background:linear-gradient(135deg, #8f3f12 0%, #a85a2d 100%); color:#ffffff !important; text-decoration:none; border-radius:8px; font-weight:bold; font-size:15px; letter-spacing:0.3px; box-shadow:0 4px 12px rgba(143,63,18,0.25); }
+.footer { background:#2c2c2c; padding:28px 30px; text-align:center; }
+.footer-logo { color:#daa056; font-size:18px; font-weight:bold; margin-bottom:10px; letter-spacing:0.5px; }
+.footer-text { font-size:13px; margin:4px 0; color:#cccccc; }
+.footer-link { color:#daa056; text-decoration:none; }
+.footer-link:hover { text-decoration:underline; }
+@media only screen and (max-width:600px) {
+  .email-container { margin:0 12px; }
+  .header, .content, .footer { padding-left:20px; padding-right:20px; }
+  .header { padding-top:28px; padding-bottom:28px; }
+  .content { padding-top:32px; padding-bottom:32px; }
+  .title { font-size:20px; }
+  .cta-button { padding:12px 24px; font-size:14px; }
 }
-
-function newsHtml(p: { title: string; source: string; date: string; extract: string | null; url: string; unsubscribeUrl: string }): string {
-  const body = `
-<h2 class="title">${p.title}</h2>
-<div class="meta"><strong>Fuente:</strong> ${p.source}<br><strong>Fecha:</strong> ${p.date}</div>
-${p.extract ? `<div class="extract">${p.extract}</div>` : ''}
-<p style="text-align:center; margin: 20px 0;"><a class="cta-button" href="${p.url}">Leer la noticia</a></p>`
-  return shellHtml('♟️ Nueva Noticia', body, p.unsubscribeUrl)
-}
-
-function tournamentHtml(p: { title: string; source: string; place: string | null; description: string | null; url: string; unsubscribeUrl: string }): string {
-  const body = `
-<h2 class="title">${p.title}</h2>
-<div class="meta"><strong>Organizador:</strong> ${p.source}<br><strong>Lugar:</strong> ${p.place || 'Por confirmar'}</div>
-${p.description ? `<p>${p.description}</p>` : ''}
-<p style="text-align:center; margin: 20px 0;"><a class="cta-button" href="${p.url}">Ver torneo</a></p>`
-  return shellHtml('♟️ Nuevo Torneo', body, p.unsubscribeUrl)
-}
-
-function rankingHtml(p: { monthName: string; url: string; unsubscribeUrl: string }): string {
-  const body = `
-<h2 class="title">Ranking ${p.monthName}</h2>
-<p>El nuevo ranking ya está disponible. ¡Consulta tu posición!</p>
-<p style="text-align:center; margin: 20px 0;"><a class="cta-button" href="${p.url}">Ver ranking</a></p>`
-  return shellHtml('♟️ Ranking Actualizado', body, p.unsubscribeUrl)
+</style>
+</head>
+<body>
+<div style="background:#f8f9fa; padding:24px 0;">
+  <div class="email-container">
+    <div class="header">
+      <div class="logo">FASGBA</div>
+      <p class="subtitle">Federación de Ajedrez del Sur del Gran Buenos Aires</p>
+    </div>
+    <div class="content">
+      <div class="eyebrow">${opts.eyebrow}</div>
+      <h1 class="title">${opts.heading}</h1>
+      ${opts.byline ? `<div class="byline">${opts.byline}</div>` : ''}
+      ${metaRows ? `<div class="meta">${metaRows}</div>` : ''}
+      ${bodyBlock}
+      <div class="cta-container">
+        <a href="${opts.ctaUrl}" class="cta-button">${opts.ctaLabel}</a>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="footer-logo">FASGBA</div>
+      <p class="footer-text">Federación de Ajedrez del Sur del Gran Buenos Aires</p>
+      <p class="footer-text"><a class="footer-link" href="${opts.unsubscribeUrl}">Desactivar notificaciones</a></p>
+    </div>
+  </div>
+</div>
+</body>
+</html>`
 }

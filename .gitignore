@@ -22,6 +22,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# supabase cli (link metadata, generated locally — not part of project state)
+/supabase
+
 # typescript
 *.tsbuildinfo
 next-env.d.tspublic/*.pdf

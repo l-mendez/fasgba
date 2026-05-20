@@ -549,9 +549,15 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
     total: number
     isUploading: boolean
   }>({ current: 0, total: 0, isUploading: false })
+  // Synchronous guard against double-submit: React state updates don't paint
+  // disabled=true until the event loop yields, so a fast double-click can fire
+  // handleSubmit twice before the button is disabled.
+  const isSubmittingRef = useRef(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isSubmittingRef.current) return
+    isSubmittingRef.current = true
 
     try {
       setIsSaving(true)
@@ -631,6 +637,7 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
       setError(errorMessage)
     } finally {
       setIsSaving(false)
+      isSubmittingRef.current = false
     }
   }
 

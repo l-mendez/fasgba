@@ -24,13 +24,14 @@ const transporter = nodemailer.createTransport({
   },
 })
 
-const FROM = '"Federación de Ajedrez" <no-responder@fasgba.com>'
+const FROM = '"FASGBA" <no-responder@fasgba.com>'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://fasgba.com'
 
 export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastResult> {
   let category: NotificationCategory | undefined
   let clubId: number | null = null
   let targetId: string | null = null
+  const recipients: string[] = []
 
   try {
     const content = await buildEmailContent(input, supabaseAdmin, SITE_URL)
@@ -44,9 +45,23 @@ export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastRes
     clubId = content.clubId
     targetId = resolveTargetId(input)
 
+    // Idempotency guard: if we've already sent for this (type, target_id), skip.
+    // Defends against double-POST from the client and any future retry path.
+    const { data: priorSent } = await supabaseAdmin
+      .from('notification_log')
+      .select('id, recipients_count')
+      .eq('type', input.type)
+      .eq('target_id', targetId)
+      .eq('status', 'sent')
+      .limit(1)
+      .maybeSingle()
+    if (priorSent) {
+      console.log(`[sendBroadcast] skipping duplicate ${input.type} target=${targetId} (prior log id ${priorSent.id})`)
+      return { status: 'skipped_duplicate', recipientsCount: priorSent.recipients_count ?? 0 }
+    }
+
     const followerSet = clubId ? await loadFollowerSet(clubId) : new Set<string>()
 
-    const recipients: string[] = []
     let page = 1
     const perPage = 1000
     // Paginate auth users; same approach as the deleted route.
@@ -60,6 +75,9 @@ export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastRes
       if (users.length === 0) break
       for (const u of users) {
         if (!u.email) continue
+        // Only notify users who have confirmed their email — avoids hard bounces
+        // from typo/abandoned signups and helps stay under Zoho's anti-spam ceiling.
+        if (!u.email_confirmed_at) continue
         const notif = (u.user_metadata as any)?.notifications as NotificationPrefs | undefined
         const isFollower = followerSet.has(u.id)
         if (shouldIncludeUser(notif, category, isFollower)) {
@@ -92,7 +110,9 @@ export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastRes
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err)
     console.error('[sendBroadcast] failed', errorMessage)
-    const result: BroadcastResult = { status: 'error', recipientsCount: 0, errorMessage }
+    // Report the recipient count we actually collected, so notification_log
+    // distinguishes "errored after fanning out to N people" from "errored early".
+    const result: BroadcastResult = { status: 'error', recipientsCount: recipients.length, errorMessage }
     await logBroadcast(input, category ?? null, clubId, result, targetId)
     return result
   }

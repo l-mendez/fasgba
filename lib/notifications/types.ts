@@ -27,7 +27,7 @@ export interface NotificationPrefs {
   ranking?: boolean
 }
 
-export type BroadcastStatus = 'sent' | 'no_recipients' | 'error'
+export type BroadcastStatus = 'sent' | 'no_recipients' | 'error' | 'skipped_duplicate'
 
 export interface BroadcastResult {
   status: BroadcastStatus
