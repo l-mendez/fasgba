@@ -1,3 +1,5 @@
+import { formatArgentinaCalendarDate } from '@/lib/dateUtils'
+
 // Tournament types based on new database schema (without direct date fields)
 export interface Tournament {
   id: number;
@@ -109,7 +111,7 @@ export function transformTournamentToDisplay(tournamentWithDates: TournamentWith
  * Formats a date to a user-friendly string
  */
 export function formatDate(date: Date): string {
-  return date.toLocaleDateString('es-AR', {
+  return formatArgentinaCalendarDate(date, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -125,12 +127,12 @@ export function formatDateRange(startDate: Date, endDate: Date | null): string {
     return formatDate(startDate);
   }
 
-  const startStr = startDate.toLocaleDateString('es-AR', {
+  const startStr = formatArgentinaCalendarDate(startDate, {
     day: 'numeric',
     month: 'short'
   });
-  
-  const endStr = endDate.toLocaleDateString('es-AR', {
+
+  const endStr = formatArgentinaCalendarDate(endDate, {
     day: 'numeric',
     month: 'short',
     year: 'numeric'

@@ -32,6 +32,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { updateNewsAction, uploadNewsImagesAction } from "@/lib/actions/news"
+import { getArgentinaDateInputValue } from "@/lib/dateUtils"
 
 interface Club {
   id: number
@@ -532,7 +533,7 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
   const router = useRouter()
   const [formData, setFormData] = useState({
     title: "",
-    date: new Date().toISOString().split('T')[0],
+    date: getArgentinaDateInputValue(),
     extract: "",
     club_id: defaultEntityId,
     image: null as File | null,
@@ -574,7 +575,7 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
       // Create news item first (without images) to get the news ID
       const initialNewsData = {
         title: formData.title,
-        date: new Date(formData.date + 'T00:00:00Z').toISOString(),
+        date: formData.date,
         extract: formData.extract,
         text: JSON.stringify([]), // Temporary empty content
         tags: formData.category ? [formData.category] : [],
@@ -1176,4 +1177,4 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
       </form>
     </div>
   )
-} 
+}

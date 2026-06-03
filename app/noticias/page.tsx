@@ -1,78 +1,23 @@
 import Link from "next/link"
-import Image from "next/image"
+import { redirect } from "next/navigation"
 import { unstable_cache } from "next/cache"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
-import { Card, CardContent } from "@/components/ui/card"
 import { NewsFilters } from "@/components/news-filters"
 import { NewsPagination } from "@/components/news-pagination"
-import { getAllNews, getAllNewsTags } from "@/lib/newsUtils"
+import { NewsCard } from "@/components/news-card"
+import { buildNoticiasUrl } from "@/lib/newsDisplay"
+import { getAllNews, getAllNewsTags, getNewsCount } from "@/lib/newsUtils"
 import { getAllClubs } from "@/lib/clubUtils"
-import { getImageUrlNullable as getImageUrl } from "@/lib/imageUtils"
+import type { NewsDisplay } from "@/lib/newsUtils"
+import type { Club } from "@/lib/clubUtils"
 
 // ISR: Revalidate every 5 minutes (300 seconds)
-// This caches the page and regenerates it in the background when stale
 export const revalidate = 300
 
-// Cached data fetchers - these cache results for 5 minutes
-const getCachedNews = unstable_cache(
-  async () => {
-    // Reduced from 100 to 30 to minimize egress - pagination handles the rest
-    // Removed 'author' from include to reduce N+1 queries (not displayed in list view)
-    const { data } = await getAllNews({
-      limit: 30,
-      include: ['club']
-    })
-    return data
-  },
-  ['news-list'],
-  { revalidate: 300, tags: ['news'] }
-)
-
-const getCachedTags = unstable_cache(
-  async () => getAllNewsTags(),
-  ['news-tags'],
-  { revalidate: 300, tags: ['news'] }
-)
-
-const getCachedClubs = unstable_cache(
-  async () => getAllClubs(),
-  ['clubs-list'],
-  { revalidate: 300, tags: ['clubs'] }
-)
-
-// Define the news interface
-interface News {
-  id: number
-  title: string
-  date: string
-  image: string | null
-  extract: string
-  text: string
-  tags: string[]
-  club_id: number | null
-  club: {
-    id: number
-    name: string
-  } | null
-  created_by_auth_id: string | null
-  author_name?: string
-  author_email?: string
-  created_at: string
-  updated_at: string
-}
-
-interface Club {
-  id: number
-  name: string
-  address: string | null
-  telephone: string | null
-  mail: string | null
-  schedule: string | null
-}
+const ITEMS_PER_PAGE = 9
 
 interface PageProps {
   searchParams: Promise<{
@@ -82,68 +27,112 @@ interface PageProps {
   }>
 }
 
-// Format date to a more readable format
-function formatDate(dateString: string) {
-  const date = new Date(dateString)
-  const options: Intl.DateTimeFormatOptions = { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+function resolveClubFilter(club: string) {
+  if (club === 'fasgba') return { clubScope: 'federation' as const }
+
+  const id = Number(club)
+  if (Number.isInteger(id) && id > 0) {
+    return { clubScope: 'club' as const, clubId: id }
   }
-  return date.toLocaleDateString('es-AR', options)
+
+  return { clubScope: 'all' as const }
 }
 
-// Helper function to get display name for club
-function getClubDisplayName(newsItem: News) {
-  return newsItem.club?.name || 'FASGBA'
+function resolveTags(tag: string): string[] | undefined {
+  return tag === 'all' ? undefined : [tag]
 }
 
-async function fetchNews(): Promise<News[]> {
-  try {
-    // Uses cached query - results cached for 5 minutes
-    const data = await getCachedNews()
+async function getFederationFirstNewsPage(page: number, tag: string) {
+  const tags = resolveTags(tag)
+  const offset = (page - 1) * ITEMS_PER_PAGE
+  const [federationTotal, clubTotal] = await Promise.all([
+    getNewsCount({ clubScope: 'federation', tags }),
+    getNewsCount({ clubScope: 'clubs', tags }),
+  ])
 
-    const mappedNews = data.map(item => ({
-      id: item.id,
-      title: item.title,
-      date: item.date,
-      image: item.image,
-      extract: item.extract || '',
-      text: item.text,
-      tags: item.tags || [],
-      club_id: item.club_id,
-      club: item.club ? {
-        id: item.club.id,
-        name: item.club.name
-      } : null,
-      created_by_auth_id: item.created_by_auth_id,
-      author_name: item.author_name,
-      author_email: item.author_email,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-    }))
+  const data: NewsDisplay[] = []
 
-    // Sort news: FASGBA news (club_id = null) first, then club news
-    // Within each group, sort by date (newest first)
-    return mappedNews.sort((a, b) => {
-      // First, prioritize FASGBA news (club_id = null)
-      if (a.club_id === null && b.club_id !== null) return -1
-      if (a.club_id !== null && b.club_id === null) return 1
-
-      // If both are FASGBA news or both are club news, sort by date (newest first)
-      const dateA = new Date(a.date).getTime()
-      const dateB = new Date(b.date).getTime()
-      return dateB - dateA
+  if (offset < federationTotal) {
+    const federationLimit = Math.min(ITEMS_PER_PAGE, federationTotal - offset)
+    const { data: federationNews } = await getAllNews({
+      offset,
+      limit: federationLimit,
+      include: ['club'],
+      tags,
+      clubScope: 'federation',
     })
+    data.push(...federationNews)
+  }
+
+  const remaining = ITEMS_PER_PAGE - data.length
+  if (remaining > 0) {
+    const { data: clubNews } = await getAllNews({
+      offset: Math.max(0, offset - federationTotal),
+      limit: remaining,
+      include: ['club'],
+      tags,
+      clubScope: 'clubs',
+    })
+    data.push(...clubNews)
+  }
+
+  return {
+    data,
+    total: federationTotal + clubTotal,
+  }
+}
+
+// Cached fetchers — results are cached for 5 minutes per filter/page combination
+// (unstable_cache keys on the arguments) and invalidated via the 'news' tag.
+const getCachedNewsPage = unstable_cache(
+  (page: number, tag: string, club: string) => {
+    const clubFilter = resolveClubFilter(club)
+
+    if (clubFilter.clubScope === 'all') {
+      return getFederationFirstNewsPage(page, tag)
+    }
+
+    return getAllNews({
+      page,
+      limit: ITEMS_PER_PAGE,
+      include: ['club'],
+      tags: resolveTags(tag),
+      ...clubFilter,
+    })
+  },
+  ['noticias-page'],
+  { revalidate: 300, tags: ['news'] }
+)
+
+const getCachedNewsTotal = unstable_cache(
+  () => getNewsCount(),
+  ['noticias-total'],
+  { revalidate: 300, tags: ['news'] }
+)
+
+const getCachedTags = unstable_cache(
+  () => getAllNewsTags(),
+  ['news-tags'],
+  { revalidate: 300, tags: ['news'] }
+)
+
+const getCachedClubs = unstable_cache(
+  () => getAllClubs(),
+  ['clubs-list'],
+  { revalidate: 300, tags: ['clubs'] }
+)
+
+async function fetchNewsPage(page: number, tag: string, club: string) {
+  try {
+    return await getCachedNewsPage(page, tag, club)
   } catch (error) {
     console.error('Error fetching news:', error)
-    return []
+    return { data: [] as NewsDisplay[], total: 0 }
   }
 }
 
 async function fetchTags(): Promise<string[]> {
   try {
-    // Uses cached query
     return await getCachedTags()
   } catch (error) {
     console.error('Error fetching tags:', error)
@@ -153,76 +142,61 @@ async function fetchTags(): Promise<string[]> {
 
 async function fetchClubs(): Promise<Club[]> {
   try {
-    // Uses cached query
-    const clubs = await getCachedClubs()
-    return clubs as Club[]
+    return await getCachedClubs()
   } catch (error) {
     console.error('Error fetching clubs:', error)
     return []
   }
 }
 
-function applyFilters(news: News[], selectedTag: string, selectedClub: string): News[] {
-  let filtered = news
-
-  // Apply tag filter
-  if (selectedTag && selectedTag !== 'all') {
-    filtered = filtered.filter(item => 
-      item.tags && item.tags.includes(selectedTag)
-    )
+async function fetchTotalCount(): Promise<number> {
+  try {
+    return await getCachedNewsTotal()
+  } catch (error) {
+    console.error('Error fetching news count:', error)
+    return 0
   }
-
-  // Apply club filter
-  if (selectedClub && selectedClub !== 'all') {
-    if (selectedClub === 'fasgba') {
-      // Filter for news without club (null club_id)
-      filtered = filtered.filter(item => !item.club_id)
-    } else {
-      // Filter for specific club
-      filtered = filtered.filter(item => 
-        item.club_id && item.club_id.toString() === selectedClub
-      )
-    }
-  }
-
-  return filtered
 }
 
-function paginateNews(news: News[], page: number, itemsPerPage: number = 9) {
-  const startIndex = (page - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedNews = news.slice(startIndex, endIndex)
-  const totalPages = Math.ceil(news.length / itemsPerPage)
-  
-  return {
-    news: paginatedNews,
-    totalPages,
-    currentPage: page,
-    totalItems: news.length
-  }
+// Parses ?page into a strict positive integer, defaulting invalid values to 1.
+function parsePage(value: string | undefined): number {
+  if (!value || !/^[1-9]\d*$/.test(value)) return 1
+  return Number(value)
 }
 
 export default async function NoticiasPage({ searchParams }: PageProps) {
   const params = await searchParams
-  const selectedTag = params.tag || 'all'
-  const selectedClub = params.club || 'all'
-  const currentPage = parseInt(params.page || '1', 10)
+  const rawTag = params.tag || 'all'
+  const rawClub = params.club || 'all'
+  const requestedPage = parsePage(params.page)
 
-  // Fetch all data in parallel
-  const [allNews, tags, clubs] = await Promise.all([
-    fetchNews(),
+  const [tags, clubs, totalCount] = await Promise.all([
     fetchTags(),
-    fetchClubs()
+    fetchClubs(),
+    fetchTotalCount(),
   ])
 
-  // Apply filters
-  const filteredNews = applyFilters(allNews, selectedTag, selectedClub)
-  
-  // Apply pagination
-  const { news: currentNews, totalPages, totalItems } = paginateNews(filteredNews, currentPage)
+  const selectedTag = rawTag === 'all' || tags.includes(rawTag) ? rawTag : 'all'
+  const selectedClub = rawClub === 'all' ||
+    rawClub === 'fasgba' ||
+    clubs.some((club) => club.id.toString() === rawClub)
+    ? rawClub
+    : 'all'
 
-  // Check if any filters are active
+  if (selectedTag !== rawTag || selectedClub !== rawClub || (params.page && params.page !== requestedPage.toString())) {
+    redirect(buildNoticiasUrl({ tag: selectedTag, club: selectedClub, page: requestedPage }))
+  }
+
   const hasActiveFilters = selectedTag !== 'all' || selectedClub !== 'all'
+
+  const { data: currentNews, total } = await fetchNewsPage(requestedPage, selectedTag, selectedClub)
+
+  const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE))
+
+  // Redirect out-of-range pages to the canonical last page so URLs stay valid.
+  if (requestedPage > totalPages) {
+    redirect(buildNoticiasUrl({ tag: selectedTag, club: selectedClub, page: totalPages }))
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -243,14 +217,13 @@ export default async function NoticiasPage({ searchParams }: PageProps) {
 
         <section className="w-full py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">
-            {/* Desktop filters and title */}
             <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="flex-1">
                 <h2 className="text-2xl font-bold tracking-tight text-terracotta mb-4">
                   {hasActiveFilters ? 'Noticias filtradas' : 'Todas las noticias'}
                 </h2>
-                
-                <NewsFilters 
+
+                <NewsFilters
                   tags={tags}
                   clubs={clubs}
                   selectedTag={selectedTag}
@@ -260,17 +233,15 @@ export default async function NoticiasPage({ searchParams }: PageProps) {
               </div>
             </div>
 
-            {/* Results info */}
             <div className="mb-6 text-sm text-muted-foreground">
-              Mostrando {currentNews.length} de {filteredNews.length} noticias
-              {hasActiveFilters && ` (${allNews.length} total)`}
+              Mostrando {currentNews.length} de {total} noticias
+              {hasActiveFilters && ` (${totalCount} total)`}
             </div>
 
-            {/* Content */}
-            {filteredNews.length === 0 ? (
+            {total === 0 ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground mb-4">
-                  {hasActiveFilters 
+                  {hasActiveFilters
                     ? 'No se encontraron noticias con los filtros seleccionados.'
                     : 'No hay noticias disponibles en este momento.'
                   }
@@ -288,88 +259,15 @@ export default async function NoticiasPage({ searchParams }: PageProps) {
               </div>
             ) : (
               <>
-                {/* News grid */}
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {currentNews.map((item) => (
-                    <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-all duration-200">
-                      <Link href={`/noticias/${item.id}`}>
-                        <div className="cursor-pointer hover:scale-[1.02] transition-transform">
-                          <div className="aspect-video relative bg-muted">
-                            {item.image ? (
-                              <Image
-                                src={getImageUrl(item.image) || ''}
-                                alt={item.title}
-                                fill
-                                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                className="object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                                <div className="text-center">
-                                  <p className="text-sm">Sin imagen</p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                              <span>{formatDate(item.date)}</span>
-                              <span className="font-medium">{getClubDisplayName(item)}</span>
-                            </div>
-                            
-                            {item.author_name && (
-                              <div className="text-xs text-muted-foreground mb-2">
-                                Por: <span className="font-medium">{item.author_name}</span>
-                              </div>
-                            )}
-                            
-                            <h3 className="font-semibold text-lg mb-2 line-clamp-2">
-                              {item.title}
-                            </h3>
-                            
-                            {item.extract && (
-                              <p className="text-muted-foreground text-sm mb-3 line-clamp-3">
-                                {item.extract}
-                              </p>
-                            )}
-                          </CardContent>
-                        </div>
-                      </Link>
-                      
-                      {/* Tags outside the main link to avoid nested links */}
-                      {item.tags && item.tags.length > 0 && (
-                        <CardContent className="pt-0 px-4 pb-4">
-                          <div className="flex flex-wrap gap-1">
-                            {item.tags.slice(0, 3).map((tag) => (
-                              <Link
-                                key={tag}
-                                href={`/noticias?tag=${encodeURIComponent(tag)}`}
-                              >
-                                <Badge 
-                                  variant="secondary" 
-                                  className="text-xs cursor-pointer hover:bg-amber/20 hover:text-amber-dark transition-colors"
-                                >
-                                  {tag}
-                                </Badge>
-                              </Link>
-                            ))}
-                            {item.tags.length > 3 && (
-                              <Badge variant="secondary" className="text-xs">
-                                +{item.tags.length - 3}
-                              </Badge>
-                            )}
-                          </div>
-                        </CardContent>
-                      )}
-                    </Card>
+                    <NewsCard key={item.id} news={item} />
                   ))}
                 </div>
 
-                {/* Pagination */}
                 {totalPages > 1 && (
                   <NewsPagination
-                    currentPage={currentPage}
+                    currentPage={requestedPage}
                     totalPages={totalPages}
                   />
                 )}
@@ -382,4 +280,3 @@ export default async function NoticiasPage({ searchParams }: PageProps) {
     </div>
   )
 }
-

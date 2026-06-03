@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { formatArgentinaDate as formatDate } from '@/lib/dateUtils'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -91,12 +92,10 @@ export function formatFileSize(bytes: number | null): string {
  * Get Argentina time formatted date
  */
 export function formatArgentinaDate(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('es-AR', {
+  return formatDate(dateString, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-    timeZone: 'America/Argentina/Buenos_Aires'
   })
 }
 
@@ -104,12 +103,10 @@ export function formatArgentinaDate(dateString: string): string {
  * Get Argentina time formatted date (short format)
  */
 export function formatArgentinaDateShort(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('es-AR', {
+  return formatDate(dateString, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
-    timeZone: 'America/Argentina/Buenos_Aires'
   })
 }
 

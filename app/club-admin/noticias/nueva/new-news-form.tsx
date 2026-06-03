@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { getArgentinaDateInputValue } from "@/lib/dateUtils"
 
 interface Club {
   id: number
@@ -68,7 +69,7 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
   const router = useRouter()
   const [formData, setFormData] = useState({
     title: "",
-    date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+    date: getArgentinaDateInputValue(),
     extract: "",
     club_id: selectedClub.id
   })
@@ -86,15 +87,12 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
       setIsSaving(true)
       setError(null)
 
-      // Format the date to ISO string for API
-      const formattedDate = new Date(formData.date + 'T00:00:00Z').toISOString()
-      
       // Convert content blocks to JSON string
       const contentJson = JSON.stringify(contentBlocks)
 
       const newsData = {
         title: formData.title,
-        date: formattedDate,
+        date: formData.date,
         extract: formData.extract,
         text: contentJson, // Save the structured content
         tags: category ? [category] : [],
@@ -374,4 +372,4 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
       </form>
     </div>
   )
-} 
+}

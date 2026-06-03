@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { updateNewsAction, uploadNewsImagesAction } from "@/lib/actions/news"
+import { getDateInputValue } from "@/lib/dateUtils"
 
 interface News {
   id: number
@@ -75,13 +76,9 @@ async function apiCall(endpoint: string, options: RequestInit = {}) {
 export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormProps) {
   const router = useRouter()
   const [news, setNews] = useState(() => {
-    // Format the date for the input field (YYYY-MM-DD)
-    const dateObj = new Date(initialNews.date)
-    const formattedDate = dateObj.toISOString().split('T')[0]
-    
     return {
       ...initialNews,
-      date: formattedDate
+      date: getDateInputValue(initialNews.date)
     }
   })
   const [isSaving, setIsSaving] = useState(false)
@@ -281,15 +278,12 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
       setIsSaving(true)
       setError(null)
 
-      // Format the date to ISO string for API
-      const formattedDate = new Date(news.date + 'T00:00:00Z').toISOString()
-      
       // Convert content blocks to JSON string
       const contentJson = JSON.stringify(contentBlocks)
 
       const updateData = {
         title: news.title,
-        date: formattedDate,
+        date: news.date,
         extract: news.extract,
         text: contentJson, // Save the structured content
         tags: category ? [category] : [],
@@ -687,4 +681,4 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
       </form>
     </div>
   )
-} 
+}
