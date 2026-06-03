@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
 import { PasswordRequirements } from "@/components/password-requirements"
 import { validatePassword } from "@/lib/utils/passwordValidation"
+import { PageHero } from "@/components/page-hero"
 
 function ResetPasswordContent() {
   const [password, setPassword] = useState("")
@@ -170,18 +171,10 @@ function ResetPasswordContent() {
     return (
       <div className="flex min-h-screen flex-col">
         <main className="flex-1">
-          <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-            <div className="container px-4 md:px-6">
-              <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                <div className="space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-green-600">¡Contraseña Actualizada!</h1>
-                  <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                    Tu contraseña ha sido actualizada exitosamente
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
+          <PageHero
+            title="¡Contraseña Actualizada!"
+            subtitle="Tu contraseña ha sido actualizada exitosamente"
+          />
           <section className="w-full py-12 md:py-24 lg:py-32">
             <div className="container px-4 md:px-6">
               <div className="mx-auto max-w-[400px]">
@@ -212,18 +205,10 @@ function ResetPasswordContent() {
     return (
       <div className="flex min-h-screen flex-col">
         <main className="flex-1">
-          <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-            <div className="container px-4 md:px-6">
-              <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                <div className="space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-red-600">Enlace Inválido</h1>
-                  <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                    No se pudo verificar el enlace de restablecimiento
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
+          <PageHero
+            title="Enlace Inválido"
+            subtitle="No se pudo verificar el enlace de restablecimiento"
+          />
           <section className="w-full py-12 md:py-24 lg:py-32">
             <div className="container px-4 md:px-6">
               <div className="mx-auto max-w-[400px]">
@@ -272,18 +257,10 @@ function ResetPasswordContent() {
     return (
       <div className="flex min-h-screen flex-col">
         <main className="flex-1">
-          <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-            <div className="container px-4 md:px-6">
-              <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                <div className="space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-terracotta">Verificando enlace</h1>
-                  <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                    Validando tu enlace de restablecimiento...
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
+          <PageHero
+            title="Verificando enlace"
+            subtitle="Validando tu enlace de restablecimiento..."
+          />
           <section className="w-full py-12 md:py-24 lg:py-32">
             <div className="container px-4 md:px-6">
               <div className="mx-auto max-w-[400px]">
@@ -311,18 +288,10 @@ function ResetPasswordContent() {
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex-1">
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-          <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-terracotta">Nueva Contraseña</h1>
-                <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Crea una nueva contraseña para tu cuenta
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+        <PageHero
+          title="Nueva Contraseña"
+          subtitle="Crea una nueva contraseña para tu cuenta"
+        />
         <section className="w-full py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">
             <div className="mx-auto max-w-[400px]">
@@ -421,18 +390,10 @@ function ResetPasswordFallback() {
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex-1">
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-          <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-terracotta">Nueva Contraseña</h1>
-                <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Crea una nueva contraseña para tu cuenta
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+        <PageHero
+          title="Nueva Contraseña"
+          subtitle="Crea una nueva contraseña para tu cuenta"
+        />
         <section className="w-full py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">
             <div className="mx-auto max-w-[400px]">

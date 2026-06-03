@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { LoginButton } from "@/app/components/login-button"
+import { PageHero } from "@/components/page-hero"
 
 export default function Login() {
   const [email, setEmail] = useState("")
@@ -27,18 +28,10 @@ export default function Login() {
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex-1">
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-          <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-terracotta">Iniciar Sesión</h1>
-                <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Accede a tu cuenta de FASGBA
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+        <PageHero
+          title="Iniciar Sesión"
+          subtitle="Accede a tu cuenta de FASGBA"
+        />
         <section className="w-full py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">
             <div className="mx-auto max-w-[400px]">

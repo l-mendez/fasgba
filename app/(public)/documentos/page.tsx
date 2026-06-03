@@ -10,6 +10,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server"
 import { isAlumno, isAnyClubAdmin, hasPermission } from "@/lib/middleware/auth"
 import { EscuelaSection, ProtectedSection } from "@/components/escuela-document-card"
+import { PageHero } from "@/components/page-hero"
 import {
   DOCUMENT_CATEGORIES,
   CATEGORY_COLORS,
@@ -179,21 +180,10 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
 
   return (
     <>
-      {/* Hero Section */}
-      <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-        <div className="container px-4 md:px-6">
-          <div className="flex flex-col items-center justify-center space-y-4 text-center">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-muted-foreground">
-                Documentos
-              </h1>
-              <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Documentos oficiales de la Federación de Ajedrez del Sur del Gran Buenos Aires
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <PageHero
+        title="Documentos"
+        subtitle="Documentos oficiales de la Federación de Ajedrez del Sur del Gran Buenos Aires"
+      />
 
       {/* Documents Section */}
       <section className="w-full py-12 md:py-24 lg:py-32">

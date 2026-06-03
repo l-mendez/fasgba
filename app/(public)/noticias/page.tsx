@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { NewsFilters } from "@/components/news-filters"
 import { NewsPagination } from "@/components/news-pagination"
 import { NewsCard } from "@/components/news-card"
+import { PageHero } from "@/components/page-hero"
 import { buildNoticiasUrl } from "@/lib/newsDisplay"
 import { getAllNews, getAllNewsTags, getNewsCount } from "@/lib/newsUtils"
 import { getAllClubs } from "@/lib/clubUtils"
@@ -198,18 +199,10 @@ export default async function NoticiasPage({ searchParams }: PageProps) {
 
   return (
     <>
-      <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-          <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-muted-foreground">Noticias</h1>
-                <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Mantenete al día con las últimas novedades del ajedrez en la región sur de Buenos Aires
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+      <PageHero
+        title="Noticias"
+        subtitle="Mantenete al día con las últimas novedades del ajedrez en la región sur de Buenos Aires"
+      />
 
         <section className="w-full py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">
