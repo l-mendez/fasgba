@@ -6,15 +6,12 @@ import { CastleIcon as ChessKnight, Menu, User, Settings, Trophy, Home, FileText
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+import { Skeleton } from "@/components/ui/skeleton"
 import { createClient } from "@/lib/supabase/client"
+import { useAuth } from "@/hooks/useAuth"
 
-interface MobileNavigationProps {
-  isAuthenticated: boolean
-  isAdmin: boolean
-  isClubAdmin: boolean
-}
-
-export function MobileNavigation({ isAuthenticated, isAdmin, isClubAdmin }: MobileNavigationProps) {
+export function MobileNavigation() {
+  const { isAuthenticated, isAdmin, isClubAdmin, isLoading } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const supabase = createClient()
   const router = useRouter()
@@ -120,8 +117,14 @@ export function MobileNavigation({ isAuthenticated, isAdmin, isClubAdmin }: Mobi
           </Link>
 
           <div className="my-2 border-t border-amber/20" />
-          
-          {!isAuthenticated ? (
+
+          {isLoading ? (
+            // Hold space while the session resolves: no flash of logged-out state.
+            <div className="flex flex-col space-y-4" aria-hidden="true">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-5 w-28" />
+            </div>
+          ) : !isAuthenticated ? (
             // Mobile login/signup buttons
             <>
               <Link
