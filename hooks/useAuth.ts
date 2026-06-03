@@ -31,8 +31,8 @@ interface AuthState {
 }
 
 // Module-level dedupe: if multiple components mount simultaneously (e.g.
-// ClientSiteHeader + AdminLayout), they share a single in-flight request
-// instead of each firing their own.
+// AdminLayout + other client components), they share a single in-flight
+// request instead of each firing their own.
 let pendingPermissions: { token: string; promise: Promise<PermissionsResponse> } | null = null
 
 async function fetchPermissions(token: string): Promise<PermissionsResponse> {

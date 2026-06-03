@@ -1,0 +1,104 @@
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { createClient } from "@/lib/supabase/server"
+import { Metadata } from "next"
+import {
+  type TournamentDisplay,
+  getAllTournamentsForDisplay,
+  sortTournamentsByDate,
+} from "@/lib/tournamentUtils"
+import { TournamentsTabs } from "./components/tournaments-tabs"
+
+// Force dynamic rendering for SSR
+export const dynamic = 'force-dynamic'
+
+// Generate metadata for better link previews
+export const metadata: Metadata = {
+  title: 'Torneos FASGBA - Calendario de Competencias',
+  description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires. Consulta próximos torneos, torneos en curso y resultados.',
+  keywords: ['FASGBA', 'torneos', 'ajedrez', 'competencias', 'calendario', 'federación', 'Buenos Aires', 'inscripción'],
+  openGraph: {
+    title: 'Torneos FASGBA - Calendario de Competencias',
+    description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires. Consulta próximos torneos, torneos en curso y resultados.',
+    url: 'https://fasgba.com/torneos',
+    siteName: 'FASGBA',
+    images: [
+      {
+        url: 'https://fasgba.com/images/fasgba-logo.png',
+        width: 1200,
+        height: 630,
+        alt: 'Torneos FASGBA',
+      }
+    ],
+    locale: 'es_AR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Torneos FASGBA - Calendario de Competencias',
+    description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires.',
+    images: ['https://fasgba.com/images/fasgba-logo.png'],
+    creator: '@FASGBA',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+}
+
+// Carga los torneos en el servidor, ordenados por fecha ascendente.
+async function getTorneos(): Promise<{ tournaments: TournamentDisplay[]; error: string | null }> {
+  try {
+    const supabase = await createClient()
+    const tournamentsData = await getAllTournamentsForDisplay(supabase)
+    return { tournaments: sortTournamentsByDate(tournamentsData, 'asc'), error: null }
+  } catch (err) {
+    console.error('Error loading tournaments:', err)
+    return {
+      tournaments: [],
+      error: `Error al cargar los torneos: ${err instanceof Error ? err.message : 'Error desconocido'}`,
+    }
+  }
+}
+
+export default async function TorneosPage() {
+  const { tournaments, error } = await getTorneos()
+
+  return (
+    <>
+      <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-terracotta/10 to-amber/5">
+          <div className="container px-4 md:px-6">
+            <div className="flex flex-col items-center justify-center space-y-4 text-center">
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-muted-foreground">Torneos FASGBA</h1>
+                <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                  Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="w-full py-12 md:py-24 lg:py-32">
+          <div className="container px-4 md:px-6">
+            {error && (
+              <Alert className="mb-6 border-red-200 bg-red-50">
+                <AlertDescription className="text-red-800">
+                  {error}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <TournamentsTabs tournaments={tournaments} />
+          </div>
+        </section>
+    </>
+  )
+}
+

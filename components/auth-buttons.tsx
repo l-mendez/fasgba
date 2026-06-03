@@ -1,7 +1,7 @@
 'use client'
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { Settings, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -11,12 +11,12 @@ interface AuthButtonsProps {
   isAuthenticated: boolean
   isAdmin: boolean
   isClubAdmin: boolean
-  pathname: string
 }
 
-export function AuthButtons({ isAuthenticated, isAdmin, isClubAdmin, pathname }: AuthButtonsProps) {
+export function AuthButtons({ isAuthenticated, isAdmin, isClubAdmin }: AuthButtonsProps) {
   const supabase = createClient()
   const router = useRouter()
+  const pathname = usePathname()
 
   const handleLogout = async () => {
     try {
@@ -65,7 +65,7 @@ export function AuthButtons({ isAuthenticated, isAdmin, isClubAdmin, pathname }:
           href="/admin"
           className={cn(
             "rounded-md bg-terracotta/10 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-terracotta/20",
-            pathname === "/admin" ? "text-terracotta" : "text-muted-foreground"
+            pathname.startsWith("/admin") ? "text-terracotta" : "text-muted-foreground"
           )}
         >
           Admin
@@ -78,7 +78,7 @@ export function AuthButtons({ isAuthenticated, isAdmin, isClubAdmin, pathname }:
           href="/club-admin"
           className={cn(
             "rounded-md bg-amber/10 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-amber/20",
-            pathname === "/club-admin" ? "text-amber" : "text-muted-foreground"
+            pathname.startsWith("/club-admin") ? "text-amber" : "text-muted-foreground"
           )}
         >
           Club Admin

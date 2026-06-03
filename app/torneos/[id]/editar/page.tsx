@@ -305,8 +305,8 @@ export default async function EditarTorneoPage({ params }: PageProps) {
   let RoundsGamesManagement, TeamManagement
   if (tournament && isAuthorized) {
     const [roundsGamesManagementModule, teamManagementModule] = await Promise.all([
-      import("../components/rounds-games-management"),
-      import("../components/team-management")
+      import("@/components/tournament/rounds-games-management"),
+      import("@/components/tournament/team-management")
     ])
     RoundsGamesManagement = roundsGamesManagementModule.default
     TeamManagement = teamManagementModule.default
