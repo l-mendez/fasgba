@@ -102,7 +102,7 @@ export function SiteFooter() {
       <div className="border-t border-amber/20 py-6">
         <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
           <p className="text-center text-sm text-muted-foreground md:text-left">
-            © 2025 Federación de Ajedrez del Sur del Gran Buenos Aires. Todos los derechos reservados.
+            © {new Date().getFullYear()} Federación de Ajedrez del Sur del Gran Buenos Aires. Todos los derechos reservados.
           </p>
           <div className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/politica-privacidad" className="hover:text-amber-dark">
