@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation"
 import { Settings as SettingsIcon } from "lucide-react"
 import { SettingsForm } from "@/components/settings-form"
 import { createClient as createServerSupabase } from "@/lib/supabase/server"
@@ -9,7 +10,10 @@ export const dynamic = 'force-dynamic'
 export default async function AjustesPage() {
   const supabase = await createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()
-  const initial = (user?.user_metadata as any)?.notifications || null
+  if (!user) {
+    redirect('/login')
+  }
+  const initial = (user.user_metadata as any)?.notifications || null
   return (
     <>
       <div className="container max-w-4xl px-4 md:px-6 py-8">

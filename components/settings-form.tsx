@@ -40,6 +40,10 @@ export function SettingsForm({ initial }: { initial?: { type?: string; torneos?:
   // Logout state
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
+  // Avoid hydration mismatch: resolvedTheme is only known on the client.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
 // Sync state if SSR initial changes (e.g., unsubscribe handler updated metadata)
 useEffect(() => {
   if (initial?.type && initial.type !== notificaciones) setNotificaciones(initial.type)
@@ -318,7 +322,7 @@ useEffect(() => {
             </div>
             <Switch
               id="modo-oscuro"
-              checked={resolvedTheme === "dark"}
+              checked={mounted && resolvedTheme === "dark"}
               onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
             />
           </div>
