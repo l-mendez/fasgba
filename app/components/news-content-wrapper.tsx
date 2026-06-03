@@ -8,8 +8,6 @@ import dynamic from "next/dynamic"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ClientSiteHeader } from "@/components/client-site-header"
-import { SiteFooter } from "@/components/site-footer"
 import { RichTextDisplay } from "@/components/ui/rich-text-display"
 import { getImageUrl } from "@/lib/imageUtils"
 import { formatArgentinaDateOnly } from "@/lib/dateUtils"
@@ -156,10 +154,7 @@ export default function NewsContentWrapper({
   console.log('Final content blocks to render:', contentBlocks) // Debug log
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <ClientSiteHeader />
-      <main className="flex-1">
-        <article>
+    <article>
           {/* Imagen de cabecera - Optimized for mobile */}
           <div className="relative h-[250px] sm:h-[300px] md:h-[400px] lg:h-[500px] w-full">
             <Image
@@ -247,9 +242,6 @@ export default function NewsContentWrapper({
               </div>
             </div>
           )}
-        </article>
-      </main>
-      <SiteFooter />
-    </div>
+    </article>
   )
 }
