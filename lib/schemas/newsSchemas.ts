@@ -12,6 +12,7 @@ export const newsIdSchema = z.string().transform((val) => {
 // Schema for creating a new news item
 export const createNewsSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255, 'Title must be less than 255 characters'),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').optional(),
   extract: z.string().max(500, 'Extract must be less than 500 characters').optional(),
   text: z.string().min(1, 'Content is required'),
   image: z.string().min(1, 'Image must not be empty').nullable().optional(),
@@ -22,6 +23,7 @@ export const createNewsSchema = z.object({
 // Schema for updating a news item
 export const updateNewsSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255, 'Title must be less than 255 characters').optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').optional(),
   extract: z.string().max(500, 'Extract must be less than 500 characters').optional(),
   text: z.string().min(1, 'Content is required').optional(),
   image: z.string().min(1, 'Image must not be empty').nullable().optional(),
@@ -141,4 +143,4 @@ export function validateNewsQuery(searchParams: URLSearchParams) {
     }
     throw error
   }
-} 
+}

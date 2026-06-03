@@ -1,11 +1,12 @@
 'use client'
 
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Filter, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { buildNoticiasUrl } from "@/lib/newsDisplay"
 import {
   Select,
   SelectContent,
@@ -42,22 +43,17 @@ export function NewsFilters({
   selectedClub, 
   hasActiveFilters 
 }: NewsFiltersProps) {
-  const searchParams = useSearchParams()
   const router = useRouter()
 
   const capitalize = (value: string) => (value ? value.charAt(0).toUpperCase() + value.slice(1) : value)
 
-  // Create URL with updated search params
-  const createFilterUrl = (key: string, value: string) => {
-    const params = new URLSearchParams(searchParams.toString())
-    if (value === 'all') {
-      params.delete(key)
-    } else {
-      params.set(key, value)
-    }
-    params.delete('page') // Reset to first page when filters change
-    return `/noticias?${params.toString()}`
-  }
+  // Build the URL for changing one filter; the other filter is preserved and
+  // the page resets to 1 (buildNoticiasUrl omits page when it's the default).
+  const createFilterUrl = (key: 'tag' | 'club', value: string) =>
+    buildNoticiasUrl({
+      tag: key === 'tag' ? value : selectedTag,
+      club: key === 'club' ? value : selectedClub,
+    })
 
   // Mobile filter content component
   const FilterContent = () => (

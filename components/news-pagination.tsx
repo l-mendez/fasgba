@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
+import { buildNoticiasUrl } from "@/lib/newsDisplay"
 
 interface NewsPaginationProps {
   currentPage: number
@@ -16,17 +17,13 @@ export function NewsPagination({
 }: NewsPaginationProps) {
   const urlSearchParams = useSearchParams()
   
-  // Create URL with updated page
-  const createPageUrl = (page: number) => {
-    const params = new URLSearchParams(urlSearchParams.toString())
-    if (page === 1) {
-      params.delete('page')
-    } else {
-      params.set('page', page.toString())
-    }
-    const queryString = params.toString()
-    return `/noticias${queryString ? `?${queryString}` : ''}`
-  }
+  // Build the URL for a given page, preserving the active tag/club filters.
+  const createPageUrl = (page: number) =>
+    buildNoticiasUrl({
+      tag: urlSearchParams.get('tag') ?? 'all',
+      club: urlSearchParams.get('club') ?? 'all',
+      page,
+    })
 
   // Generate array of page numbers to show
   const getPageNumbers = () => {

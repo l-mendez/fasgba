@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Calendar, ChevronDown, Edit, Eye, MoreHorizontal, Search, Trash2, AlertCircle, Loader2 } from "lucide-react"
+import { ChevronDown, Edit, Eye, MoreHorizontal, Search, Trash2, AlertCircle, Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 import { Button } from "@/components/ui/button"
@@ -27,6 +27,8 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { deleteNewsAction } from "@/lib/actions/news"
+import { formatArgentinaDateOnly, getDateInputValue } from "@/lib/dateUtils"
+import { compareBy } from "@/lib/sortUtils"
 
 // Define el tipo para noticias según la API
 interface ClubNews {
@@ -97,10 +99,10 @@ async function apiCall(endpoint: string, options: RequestInit = {}) {
 // Helper functions for data processing
 const formatDate = (dateString: string) => {
   try {
-    return new Date(dateString).toLocaleDateString('es-AR', {
+    return formatArgentinaDateOnly(dateString, {
       year: 'numeric',
       month: '2-digit',
-      day: '2-digit'
+      day: '2-digit',
     })
   } catch {
     return 'Fecha inválida'
@@ -118,15 +120,15 @@ const getNewsCategory = (news: ClubNews) => {
   return 'General'
 }
 
-const getNewsStatus = (news: ClubNews) => {
+const getNewsStatus = () => {
   // For now, we'll consider all news as published since we don't have a status field
   // In the future, this could be based on a publication date or status field
   return 'publicada'
 }
 
 // Get date for sorting (use the news date)
-const getNewsSortDate = (news: ClubNews): Date => {
-  return new Date(news.date)
+const getNewsSortDate = (news: ClubNews): string => {
+  return getDateInputValue(news.date)
 }
 
 // Get status badge variant
@@ -234,41 +236,24 @@ export function NoticiasContent({ initialNews, selectedClub }: NoticiasContentPr
       )
     }
 
-    const sorted = [...noticiasToSort].sort((a, b) => {
-      let aValue: any
-      let bValue: any
+    return [...noticiasToSort].sort(
+      compareBy((news) => getNoticiasSortValue(news, sortBy), sortOrder)
+    )
+  }
 
-      switch (sortBy) {
-        case 'title':
-          aValue = a.title.toLowerCase()
-          bValue = b.title.toLowerCase()
-          break
-        case 'date':
-          aValue = getNewsSortDate(a).getTime()
-          bValue = getNewsSortDate(b).getTime()
-          break
-        case 'author':
-          aValue = getAuthorName(a).toLowerCase()
-          bValue = getAuthorName(b).toLowerCase()
-          break
-        case 'category':
-          aValue = getNewsCategory(a).toLowerCase()
-          bValue = getNewsCategory(b).toLowerCase()
-          break
-        default:
-          return 0
-      }
-
-      if (aValue < bValue) {
-        return sortOrder === 'asc' ? -1 : 1
-      }
-      if (aValue > bValue) {
-        return sortOrder === 'asc' ? 1 : -1
-      }
-      return 0
-    })
-
-    return sorted
+  const getNoticiasSortValue = (news: ClubNews, field: string): string => {
+    switch (field) {
+      case 'title':
+        return news.title.toLowerCase()
+      case 'date':
+        return getNewsSortDate(news)
+      case 'author':
+        return getAuthorName(news).toLowerCase()
+      case 'category':
+        return getNewsCategory(news).toLowerCase()
+      default:
+        return ''
+    }
   }
 
   const getSortIcon = (field: string) => {
@@ -290,7 +275,7 @@ export function NoticiasContent({ initialNews, selectedClub }: NoticiasContentPr
     const searchLower = searchTerm.toLowerCase()
     const author = getAuthorName(noticia)
     const category = getNewsCategory(noticia)
-    const status = getNewsStatus(noticia)
+    const status = getNewsStatus()
     
     return (
       noticia.title.toLowerCase().includes(searchLower) ||
@@ -469,7 +454,7 @@ export function NoticiasContent({ initialNews, selectedClub }: NoticiasContentPr
                   const author = getAuthorName(noticia)
                   const formattedDate = formatDate(noticia.date)
                   const category = getNewsCategory(noticia)
-                  const status = getNewsStatus(noticia)
+                  const status = getNewsStatus()
                   
                   return (
                     <TableRow key={noticia.id}>
@@ -549,7 +534,7 @@ export function NoticiasContent({ initialNews, selectedClub }: NoticiasContentPr
                 const author = getAuthorName(noticia)
                 const formattedDate = formatDate(noticia.date)
                 const category = getNewsCategory(noticia)
-                const status = getNewsStatus(noticia)
+                const status = getNewsStatus()
                 
                 return (
                   <div key={noticia.id} className="bg-card rounded-lg border p-4 shadow-sm">
@@ -668,4 +653,4 @@ export function NoticiasContent({ initialNews, selectedClub }: NoticiasContentPr
       </Dialog>
     </>
   )
-} 
+}

@@ -49,7 +49,7 @@ CREATE TABLE user_follows_club (
 CREATE TABLE news (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
-    date TIMESTAMP DEFAULT NOW(),
+    date DATE DEFAULT CURRENT_DATE,
     image TEXT,
     extract TEXT,
     text TEXT NOT NULL,

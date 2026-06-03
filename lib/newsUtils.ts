@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from './supabase/server'
 import { deleteNewsImages } from './imageUtils.server'
+import { getArgentinaDateInputValue } from './dateUtils'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -39,6 +40,7 @@ export interface NewsDisplay extends NewsWithAuthor, NewsWithClub {}
 
 export interface CreateNewsInput {
   title: string
+  date?: string
   extract?: string
   text: string
   image?: string
@@ -49,6 +51,7 @@ export interface CreateNewsInput {
 
 export interface UpdateNewsInput {
   title?: string
+  date?: string
   extract?: string
   text?: string
   image?: string | null
@@ -62,10 +65,12 @@ export interface NewsQueryOptions {
   orderBy?: 'date' | 'title' | 'created_at' | 'updated_at'
   order?: 'asc' | 'desc'
   search?: string
+  clubScope?: 'all' | 'federation' | 'clubs' | 'club'
   clubId?: number
   authorId?: string // Now string (UUID) instead of number
   tags?: string[]
   include?: Array<'author' | 'club'>
+  offset?: number
 }
 
 /**
@@ -78,13 +83,15 @@ export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data
     orderBy = 'date',
     order = 'desc',
     search,
+    clubScope = 'all',
     clubId,
     authorId,
     tags,
-    include = ['author', 'club']
+    include = ['author', 'club'],
+    offset: explicitOffset,
   } = options
 
-  const offset = (page - 1) * limit
+  const offset = explicitOffset ?? (page - 1) * limit
 
   // Build the select query - simplified without user joins
   let selectFields = `
@@ -120,8 +127,15 @@ export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data
     query = query.or(`title.ilike.%${search}%,extract.ilike.%${search}%,text.ilike.%${search}%`)
   }
 
-  if (clubId) {
+  if (clubScope === 'federation') {
+    query = query.is('club_id', null)
+  } else if (clubScope === 'club') {
+    if (!clubId) {
+      throw new Error('clubId is required when clubScope is "club"')
+    }
     query = query.eq('club_id', clubId)
+  } else if (clubScope === 'clubs') {
+    query = query.not('club_id', 'is', null)
   }
 
   if (authorId) {
@@ -132,9 +146,11 @@ export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data
     query = query.overlaps('tags', tags)
   }
 
-  // Apply ordering and pagination
+  // Apply ordering and pagination. The 'id' tiebreaker keeps ordering stable
+  // across page boundaries when the primary key (e.g. day-granular date) ties.
   query = query
     .order(orderBy, { ascending: order === 'asc' })
+    .order('id', { ascending: order === 'asc' })
     .range(offset, offset + limit - 1)
 
   const { data, error, count } = await query
@@ -307,7 +323,7 @@ export async function createNews(input: CreateNewsInput): Promise<News> {
       tags: input.tags || [],
       club_id: input.club_id,
       created_by_auth_id: input.created_by_auth_id,
-      date: new Date().toISOString(),
+      date: input.date ?? getArgentinaDateInputValue(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     })
@@ -326,7 +342,7 @@ export async function createNews(input: CreateNewsInput): Promise<News> {
  * Updates a news item (regular update for other operations)
  */
 export async function updateNews(id: number, input: UpdateNewsInput): Promise<boolean> {
-  const updateData: any = {
+  const updateData: UpdateNewsInput & { updated_at: string } = {
     ...input,
     updated_at: new Date().toISOString()
   }
@@ -441,8 +457,18 @@ export async function getNewsCount(filters: Partial<NewsQueryOptions> = {}): Pro
     .from('news')
     .select('*', { count: 'exact', head: true })
 
-  if (filters.clubId) {
+  const clubScope = filters.clubScope ?? 'all'
+
+  if (clubScope === 'federation') {
+    query = query.is('club_id', null)
+  } else if (clubScope === 'club') {
+    if (!filters.clubId) {
+      console.error('clubId is required when clubScope is "club"')
+      return 0
+    }
     query = query.eq('club_id', filters.clubId)
+  } else if (clubScope === 'clubs') {
+    query = query.not('club_id', 'is', null)
   }
 
   if (filters.authorId) {
@@ -557,4 +583,4 @@ export async function getAllNewsTags(): Promise<string[]> {
       return []
     }
   }
-} 
+}

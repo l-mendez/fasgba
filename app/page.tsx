@@ -1,6 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Calendar, ChevronLeft, ChevronRight, MapPin } from "lucide-react"
+import { Calendar, MapPin } from "lucide-react"
 import { ReactNode } from "react"
 import { createClient } from '@supabase/supabase-js'
 
@@ -12,6 +12,7 @@ import { getAllNews } from "@/lib/newsUtils"
 import { getAllTournamentsForDisplay } from "@/lib/tournamentUtils"
 import { getAllClubs } from "@/lib/clubUtils"
 import { getImageUrl } from "@/lib/imageUtils"
+import { formatArgentinaDateOnly, getDateInputValue } from "@/lib/dateUtils"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
@@ -107,9 +108,7 @@ async function fetchNews(): Promise<NewsItem[]> {
       if (a.club_id !== null && b.club_id === null) return 1
       
       // If both are FASGBA news or both are club news, sort by date (newest first)
-      const dateA = new Date(a.date).getTime()
-      const dateB = new Date(b.date).getTime()
-      return dateB - dateA
+      return getDateInputValue(b.date).localeCompare(getDateInputValue(a.date))
     })
 
     // Return only the first 5 for homepage display
@@ -169,17 +168,10 @@ async function fetchClubs(): Promise<Club[]> {
 
 // Helper function to convert API news to component format
 function mapNewsToNoticia(newsItem: NewsItem, isFeatured = false): Noticia {
-  const date = new Date(newsItem.date)
-  const formattedDate = date.toLocaleDateString('es-ES', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-
   return {
     id: newsItem.id.toString(),
     titulo: newsItem.title,
-    fecha: formattedDate,
+    fecha: formatArgentinaDateOnly(newsItem.date),
     imagen: getImageUrl(newsItem.image),
     categorias: newsItem.tags,
     extracto: newsItem.extract || newsItem.title,
@@ -464,4 +456,3 @@ export default async function Home() {
     </div>
   )
 }
-

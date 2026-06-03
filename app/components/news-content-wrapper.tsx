@@ -12,6 +12,7 @@ import { ClientSiteHeader } from "@/components/client-site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { RichTextDisplay } from "@/components/ui/rich-text-display"
 import { getImageUrl } from "@/lib/imageUtils"
+import { formatArgentinaDateOnly } from "@/lib/dateUtils"
 
 // Simpler loading placeholder
 const ChessComponentLoader = () => (
@@ -28,17 +29,6 @@ const ChessGameBlock = dynamic(
     loading: () => <ChessComponentLoader />
   }
 );
-
-// Format date function for client-side
-function formatDate(dateString: string) {
-  const date = new Date(dateString)
-  const options: Intl.DateTimeFormatOptions = { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  }
-  return date.toLocaleDateString('es-AR', options)
-}
 
 // Define the news interface
 interface News {
@@ -216,7 +206,7 @@ export default function NewsContentWrapper({
 
               <div className="mb-6 sm:mb-8 flex items-center gap-2 text-xs sm:text-sm text-muted-foreground dark:text-muted-foreground">
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-amber dark:text-amber-400 flex-shrink-0" />
-                <span>{formatDate(newsItem.date)}</span>
+                <span>{formatArgentinaDateOnly(newsItem.date)}</span>
               </div>
 
               <ContentRenderer content={contentBlocks} />
@@ -247,7 +237,7 @@ export default function NewsContentWrapper({
                           </h3>
                           <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground dark:text-muted-foreground">
                             <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-amber dark:text-amber-400 flex-shrink-0" />
-                            <span>{formatDate(news.date)}</span>
+                            <span>{formatArgentinaDateOnly(news.date)}</span>
                           </div>
                         </div>
                       </div>
@@ -262,4 +252,4 @@ export default function NewsContentWrapper({
       <SiteFooter />
     </div>
   )
-} 
+}

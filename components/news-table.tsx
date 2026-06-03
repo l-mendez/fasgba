@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ChevronDown, Edit, Eye, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react"
+import { ChevronDown, Edit, Eye, MoreHorizontal, Search, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,9 +23,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { deleteNewsAction } from "@/lib/actions/news"
+import { formatArgentinaDateOnly, getArgentinaDateInputValue, getDateInputValue } from "@/lib/dateUtils"
+import { FEDERATION_NAME } from "@/lib/newsDisplay"
+import { compareBy } from "@/lib/sortUtils"
 
 interface News {
   id: number
@@ -94,41 +96,24 @@ export function NewsTable({ initialNews }: NewsTableProps) {
       )
     }
 
-    const sorted = [...newsToSort].sort((a, b) => {
-      let aValue: any
-      let bValue: any
+    return [...newsToSort].sort(
+      compareBy((item) => getNewsSortValue(item, sortBy), sortOrder)
+    )
+  }
 
-      switch (sortBy) {
-        case 'title':
-          aValue = a.title.toLowerCase()
-          bValue = b.title.toLowerCase()
-          break
-        case 'club':
-          aValue = (a.club?.name || 'FASGBA').toLowerCase()
-          bValue = (b.club?.name || 'FASGBA').toLowerCase()
-          break
-        case 'date':
-          aValue = new Date(a.date).getTime()
-          bValue = new Date(b.date).getTime()
-          break
-        case 'author':
-          aValue = (a.author_name || a.author_email || 'Desconocido').toLowerCase()
-          bValue = (b.author_name || b.author_email || 'Desconocido').toLowerCase()
-          break
-        default:
-          return 0
-      }
-
-      if (aValue < bValue) {
-        return sortOrder === 'asc' ? -1 : 1
-      }
-      if (aValue > bValue) {
-        return sortOrder === 'asc' ? 1 : -1
-      }
-      return 0
-    })
-
-    return sorted
+  const getNewsSortValue = (newsItem: News, field: string): string => {
+    switch (field) {
+      case 'title':
+        return newsItem.title.toLowerCase()
+      case 'club':
+        return (newsItem.club?.name || FEDERATION_NAME).toLowerCase()
+      case 'date':
+        return getDateInputValue(newsItem.date)
+      case 'author':
+        return (newsItem.author_name || newsItem.author_email || 'Desconocido').toLowerCase()
+      default:
+        return ''
+    }
   }
 
   const getSortIcon = (field: string) => {
@@ -178,9 +163,7 @@ export function NewsTable({ initialNews }: NewsTableProps) {
     
     // Apply date filter
     if (selectedDateFilter) {
-      const filterDate = new Date(selectedDateFilter)
-      const newsDate = new Date(newsItem.date)
-      if (newsDate < filterDate) return false
+      if (getDateInputValue(newsItem.date) < selectedDateFilter) return false
     }
     
     // Apply text search (only if there's a search term)
@@ -264,13 +247,13 @@ export function NewsTable({ initialNews }: NewsTableProps) {
               <DropdownMenuItem onClick={() => {
                 const today = new Date()
                 const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
-                const lastWeekStr = lastWeek.toISOString().split('T')[0]
+                const lastWeekStr = getArgentinaDateInputValue(lastWeek)
                 setSelectedDateFilter(lastWeekStr)
               }}>Última semana</DropdownMenuItem>
               <DropdownMenuItem onClick={() => {
                 const today = new Date()
                 const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
-                const lastMonthStr = lastMonth.toISOString().split('T')[0]
+                const lastMonthStr = getArgentinaDateInputValue(lastMonth)
                 setSelectedDateFilter(lastMonthStr)
               }}>Último mes</DropdownMenuItem>
             </DropdownMenuContent>
@@ -364,8 +347,8 @@ export function NewsTable({ initialNews }: NewsTableProps) {
               sortedAndFilteredNews.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{item.title}</TableCell>
-                  <TableCell>{item.club?.name || "FASGBA"}</TableCell>
-                  <TableCell>{new Date(item.date).toLocaleDateString()}</TableCell>
+                  <TableCell>{item.club?.name || FEDERATION_NAME}</TableCell>
+                  <TableCell>{formatArgentinaDateOnly(item.date)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
@@ -463,10 +446,10 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="font-medium text-terracotta">
-                        {item.club?.name || "FASGBA"}
+                        {item.club?.name || FEDERATION_NAME}
                       </span>
                       <span>•</span>
-                      <span>{new Date(item.date).toLocaleDateString()}</span>
+                      <span>{formatArgentinaDateOnly(item.date)}</span>
                     </div>
                     
                     <div className="flex items-center gap-2">
@@ -559,4 +542,4 @@ export function NewsTable({ initialNews }: NewsTableProps) {
       </Dialog>
     </div>
   )
-} 
+}
