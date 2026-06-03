@@ -80,7 +80,7 @@ export default async function NoticiaPage({ params }: { params: Promise<{ id: st
   if (!newsItem) {
     return (
       <div className="flex min-h-screen flex-col">
-        <SiteHeader pathname={`/noticias/${id}`} />
+        <SiteHeader />
         <main className="flex-1 flex items-center justify-center px-4">
           <div className="text-center max-w-md">
             <h1 className="text-xl sm:text-2xl font-bold text-terracotta mb-3 sm:mb-4">Noticia no encontrada</h1>

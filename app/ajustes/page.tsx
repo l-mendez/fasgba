@@ -14,7 +14,7 @@ export default async function AjustesPage() {
   const initial = (user?.user_metadata as any)?.notifications || null
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader pathname="/ajustes" />
+      <SiteHeader />
       <main className="flex-1 py-8">
         <div className="container max-w-4xl px-4 md:px-6">
           {/* Page Header */}

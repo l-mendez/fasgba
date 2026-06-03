@@ -2,16 +2,12 @@
 
 import Link from "next/link"
 
-import { cn } from "@/lib/utils"
 import { MobileNavigation } from "@/components/mobile-navigation"
 import { AuthButtons } from "@/components/auth-buttons"
+import { MainNav } from "@/components/main-nav"
 import { useAuth } from "@/hooks/useAuth"
 
-interface ClientSiteHeaderProps {
-  pathname: string
-}
-
-export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
+export function ClientSiteHeader() {
   const { isAuthenticated, isAdmin, isClubAdmin, isLoading } = useAuth()
 
   return (
@@ -23,53 +19,7 @@ export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
               FASGBA
             </span>
           </Link>
-          <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-            <Link
-              href="/"
-              className={cn(
-                "transition-colors hover:text-amber",
-                pathname === "/" ? "text-amber" : "text-muted-foreground"
-              )}
-            >
-              Inicio
-            </Link>
-            <Link
-              href="/torneos"
-              className={cn(
-                "transition-colors hover:text-amber",
-                pathname === "/torneos" ? "text-amber" : "text-muted-foreground"
-              )}
-            >
-              Torneos
-            </Link>
-            <Link
-              href="/clubes"
-              className={cn(
-                "transition-colors hover:text-amber",
-                pathname === "/clubes" ? "text-amber" : "text-muted-foreground"
-              )}
-            >
-              Clubes
-            </Link>
-            <Link
-              href="/ranking"
-              className={cn(
-                "transition-colors hover:text-amber",
-                pathname === "/ranking" ? "text-amber" : "text-muted-foreground"
-              )}
-            >
-              Ranking
-            </Link>
-            <Link
-              href="/noticias"
-              className={cn(
-                "transition-colors hover:text-amber",
-                pathname === "/noticias" ? "text-amber" : "text-muted-foreground"
-              )}
-            >
-              Noticias
-            </Link>
-          </nav>
+          <MainNav className="hidden md:flex" />
         </div>
 
         {/* Desktop Navigation */}
@@ -79,7 +29,6 @@ export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
               isAuthenticated={isAuthenticated}
               isAdmin={isAdmin}
               isClubAdmin={isClubAdmin}
-              pathname={pathname}
             />
           )}
         </div>
@@ -90,7 +39,6 @@ export function ClientSiteHeader({ pathname }: ClientSiteHeaderProps) {
             isAuthenticated={isAuthenticated}
             isAdmin={isAdmin}
             isClubAdmin={isClubAdmin}
-            pathname={pathname}
           />
         )}
       </div>

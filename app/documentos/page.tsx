@@ -181,7 +181,7 @@ export default async function DocumentosPage({ searchParams }: PageProps) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader pathname="/documentos" />
+      <SiteHeader />
       <main className="flex-1">
         {/* Hero Section */}
         <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">

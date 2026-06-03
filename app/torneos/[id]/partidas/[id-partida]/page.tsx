@@ -100,7 +100,7 @@ export default async function GamePage({ params }: {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader pathname={`/torneos/${tournamentId}/partidas/${gameId}`} />
+      <SiteHeader />
       <main className="flex-1">
         {/* Game Header */}
         <section className="w-full py-6 md:py-8 bg-gradient-to-b from-terracotta/10 to-amber/5">

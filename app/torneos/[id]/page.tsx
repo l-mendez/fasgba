@@ -110,7 +110,7 @@ export default async function TournamentPage({ params }: PageProps) {
 
     return (
       <div className="flex min-h-screen flex-col">
-        <SiteHeader pathname="/torneos" />
+        <SiteHeader />
         <main className="flex-1">
           <Suspense fallback={<LoadingSpinner />}>
             <TournamentClient

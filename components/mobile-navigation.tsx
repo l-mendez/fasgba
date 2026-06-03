@@ -12,10 +12,9 @@ interface MobileNavigationProps {
   isAuthenticated: boolean
   isAdmin: boolean
   isClubAdmin: boolean
-  pathname: string
 }
 
-export function MobileNavigation({ isAuthenticated, isAdmin, isClubAdmin, pathname }: MobileNavigationProps) {
+export function MobileNavigation({ isAuthenticated, isAdmin, isClubAdmin }: MobileNavigationProps) {
   const [isOpen, setIsOpen] = useState(false)
   const supabase = createClient()
   const router = useRouter()

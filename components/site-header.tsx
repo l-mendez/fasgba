@@ -1,23 +1,16 @@
 import Link from "next/link"
-import { CastleIcon as ChessKnight, Menu, X, Bell, User, Settings, Trophy, Calendar, Home, FileText, Shield, LogOut, BarChart3 } from "lucide-react"
-import { cookies } from "next/headers"
 
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 import { MobileNavigation } from "@/components/mobile-navigation"
 import { AuthButtons } from "@/components/auth-buttons"
+import { MainNav } from "@/components/main-nav"
 import { createClient } from "@/lib/supabase/server"
-
-interface SiteHeaderProps {
-  pathname: string
-}
 
 async function getUser() {
   try {
     const supabase = await createClient()
-    
+
     const { data: { user }, error } = await supabase.auth.getUser()
-    
+
     if (error || !user) {
       return null
     }
@@ -50,9 +43,9 @@ async function getUser() {
   }
 }
 
-export async function SiteHeader({ pathname }: SiteHeaderProps) {
+export async function SiteHeader() {
   const user = await getUser()
-  
+
   const isAuthenticated = !!user
   const isAdmin = user?.isAdmin || false
   const isClubAdmin = user?.isClubAdmin || false
@@ -68,88 +61,14 @@ export async function SiteHeader({ pathname }: SiteHeaderProps) {
                 FASGBA
               </span>
             </Link>
-            <nav className="flex items-center space-x-6 text-sm font-medium">
-              <Link
-                href="/"
-                className={cn(
-                  "transition-colors hover:text-amber",
-                  pathname === "/" ? "text-amber" : "text-muted-foreground"
-                )}
-              >
-                Inicio
-              </Link>
-              <Link
-                href="/torneos"
-                className={cn(
-                  "transition-colors hover:text-amber",
-                  pathname === "/torneos" ? "text-amber" : "text-muted-foreground"
-                )}
-              >
-                Torneos
-              </Link>
-              <Link
-                href="/clubes"
-                className={cn(
-                  "transition-colors hover:text-amber",
-                  pathname === "/clubes" ? "text-amber" : "text-muted-foreground"
-                )}
-              >
-                Clubes
-              </Link>
-              <Link
-                href="/ranking"
-                className={cn(
-                  "transition-colors hover:text-amber",
-                  pathname === "/ranking" ? "text-amber" : "text-muted-foreground"
-                )}
-              >
-                Ranking
-              </Link>
-              <Link
-                href="/noticias"
-                className={cn(
-                  "transition-colors hover:text-amber",
-                  pathname === "/noticias" ? "text-amber" : "text-muted-foreground"
-                )}
-              >
-                Noticias
-              </Link>
-              <Link
-                href="/documentos"
-                className={cn(
-                  "transition-colors hover:text-amber",
-                  pathname === "/documentos" ? "text-amber" : "text-muted-foreground"
-                )}
-              >
-                Documentos
-              </Link>
-              <Link
-                href="/profesores"
-                className={cn(
-                  "transition-colors hover:text-amber",
-                  pathname === "/profesores" ? "text-amber" : "text-muted-foreground"
-                )}
-              >
-                Profesores
-              </Link>
-              <Link
-                href="/arbitraje"
-                className={cn(
-                  "transition-colors hover:text-amber",
-                  pathname === "/arbitraje" ? "text-amber" : "text-muted-foreground"
-                )}
-              >
-                Arbitraje
-              </Link>
-            </nav>
+            <MainNav className="flex" />
           </div>
-          
+
           <div className="flex items-center space-x-4">
-            <AuthButtons 
+            <AuthButtons
               isAuthenticated={isAuthenticated}
               isAdmin={isAdmin}
               isClubAdmin={isClubAdmin}
-              pathname={pathname}
             />
           </div>
         </div>
@@ -157,11 +76,10 @@ export async function SiteHeader({ pathname }: SiteHeaderProps) {
 
       {/* Mobile Header */}
       <div className="md:hidden flex h-14 items-center gap-x-4 border-b border-amber/20 bg-background px-4">
-        <MobileNavigation 
+        <MobileNavigation
           isAuthenticated={isAuthenticated}
           isAdmin={isAdmin}
           isClubAdmin={isClubAdmin}
-          pathname={pathname}
         />
         <div className="flex-1 flex justify-center items-center">
           <Link href="/" className="flex items-center space-x-2">
@@ -174,4 +92,3 @@ export async function SiteHeader({ pathname }: SiteHeaderProps) {
     </header>
   )
 }
-

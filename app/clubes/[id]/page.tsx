@@ -180,7 +180,7 @@ export default async function ClubDetailPage({ params }: ClubDetailPageProps) {
   if (isNaN(clubId)) {
     return (
       <div className="flex min-h-screen flex-col">
-        <ClientSiteHeader pathname={`/clubes/${clubId}`} />
+        <ClientSiteHeader />
         <main className="flex-1 flex items-center justify-center px-4">
           <div className="text-center max-w-md mx-auto">
             <h1 className="text-xl sm:text-2xl font-bold mb-4">
@@ -204,7 +204,7 @@ export default async function ClubDetailPage({ params }: ClubDetailPageProps) {
   if (error || !club) {
     return (
       <div className="flex min-h-screen flex-col">
-        <ClientSiteHeader pathname={`/clubes/${clubId}`} />
+        <ClientSiteHeader />
         <main className="flex-1 flex items-center justify-center px-4">
           <div className="text-center max-w-md mx-auto">
             <h1 className="text-xl sm:text-2xl font-bold mb-4">
@@ -225,7 +225,7 @@ export default async function ClubDetailPage({ params }: ClubDetailPageProps) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <ClientSiteHeader pathname={`/clubes/${clubId}`} />
+      <ClientSiteHeader />
       <main className="flex-1">
         <section className="w-full py-6 sm:py-12 md:py-24 lg:py-32 bg-muted">
           <div className="container px-4 md:px-6">
