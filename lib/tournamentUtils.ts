@@ -1,4 +1,5 @@
 import { formatArgentinaCalendarDate } from '@/lib/dateUtils'
+import type { TournamentStatus, TournamentStatusFilter } from '@/lib/utils/constants'
 
 // Tournament types based on new database schema (without direct date fields)
 export interface Tournament {
@@ -144,7 +145,7 @@ export function formatDateRange(startDate: Date, endDate: Date | null): string {
 /**
  * Gets tournament status as a string
  */
-export function getTournamentStatus(tournament: TournamentDisplay): 'upcoming' | 'ongoing' | 'past' {
+export function getTournamentStatus(tournament: TournamentDisplay): TournamentStatus {
   if (tournament.is_upcoming) return 'upcoming';
   if (tournament.is_ongoing) return 'ongoing';
   return 'past';
@@ -172,8 +173,8 @@ export function getTournamentStatusText(tournament: TournamentDisplay): string {
  * Filters tournaments by status
  */
 export function filterTournamentsByStatus(
-  tournaments: TournamentDisplay[], 
-  status: 'upcoming' | 'ongoing' | 'past' | 'all' = 'all'
+  tournaments: TournamentDisplay[],
+  status: TournamentStatusFilter = 'all'
 ): TournamentDisplay[] {
   if (status === 'all') return tournaments;
   
@@ -238,6 +239,13 @@ export function getRoundsDisplay(rounds: number | null): string {
 export function getPaceDisplay(pace: string | null): string {
   if (!pace) return 'Ritmo por definir';
   return pace;
+}
+
+/**
+ * Gets the time display text
+ */
+export function getTimeDisplay(time: string | null): string {
+  return time || 'Horario por confirmar';
 }
 
 /**
