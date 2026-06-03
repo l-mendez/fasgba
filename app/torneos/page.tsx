@@ -6,10 +6,9 @@ import { Metadata } from "next"
 import {
   type TournamentDisplay,
   getAllTournamentsForDisplay,
-  filterTournamentsByStatus,
   sortTournamentsByDate,
 } from "@/lib/tournamentUtils"
-import TorneosClient from "./components/torneos-client"
+import { TournamentsTabs } from "./components/tournaments-tabs"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
@@ -55,24 +54,23 @@ export const metadata: Metadata = {
   },
 }
 
-export default async function TorneosPage() {
-  let tournaments: TournamentDisplay[] = []
-  let error: string | null = null
-  
-  // Cargar torneos en el servidor
+// Carga los torneos en el servidor, ordenados por fecha ascendente.
+async function getTorneos(): Promise<{ tournaments: TournamentDisplay[]; error: string | null }> {
   try {
     const supabase = await createClient()
     const tournamentsData = await getAllTournamentsForDisplay(supabase)
-    tournaments = sortTournamentsByDate(tournamentsData, 'asc')
+    return { tournaments: sortTournamentsByDate(tournamentsData, 'asc'), error: null }
   } catch (err) {
     console.error('Error loading tournaments:', err)
-    error = `Error al cargar los torneos: ${err instanceof Error ? err.message : 'Error desconocido'}`
+    return {
+      tournaments: [],
+      error: `Error al cargar los torneos: ${err instanceof Error ? err.message : 'Error desconocido'}`,
+    }
   }
+}
 
-  // Filtrar torneos por estado
-  const upcomingTournaments = filterTournamentsByStatus(tournaments, 'upcoming')
-  const ongoingTournaments = filterTournamentsByStatus(tournaments, 'ongoing')
-  const pastTournaments = filterTournamentsByStatus(tournaments, 'past')
+export default async function TorneosPage() {
+  const { tournaments, error } = await getTorneos()
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -101,11 +99,7 @@ export default async function TorneosPage() {
               </Alert>
             )}
 
-            <TorneosClient 
-              upcomingTournaments={upcomingTournaments}
-              ongoingTournaments={ongoingTournaments}
-              pastTournaments={pastTournaments}
-            />
+            <TournamentsTabs tournaments={tournaments} />
           </div>
         </section>
       </main>

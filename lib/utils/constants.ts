@@ -39,7 +39,19 @@ export const API_CONSTANTS = {
 } as const
 
 export type TournamentFormat = typeof API_CONSTANTS.TOURNAMENT_FORMATS[number]
-export type TournamentStatus = typeof API_CONSTANTS.TOURNAMENT_STATUSES[number] 
+// All selectable status filter values, including the 'all' selector.
+export type TournamentStatusFilter = typeof API_CONSTANTS.TOURNAMENT_STATUSES[number]
+// The lifecycle status of a single tournament ('all' is only a filter selector, never a real status).
+export type TournamentStatus = Exclude<TournamentStatusFilter, 'all'>
+
+// Tournament status values keyed for ergonomic single-value access (e.g. TOURNAMENT_STATUS.UPCOMING)
+export const TOURNAMENT_STATUS = {
+  UPCOMING: 'upcoming',
+  ONGOING: 'ongoing',
+  PAST: 'past',
+  ALL: 'all',
+} as const
+
 export type TournamentOrderBy = typeof API_CONSTANTS.TOURNAMENT_ORDER_BY[number]
 export type SortOrder = typeof API_CONSTANTS.SORT_ORDERS[number]
 export type UserPermission = typeof API_CONSTANTS.USER_PERMISSIONS[number]
