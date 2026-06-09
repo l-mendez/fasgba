@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import {
   Upload,
   FileText,
@@ -28,7 +28,6 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Table,
   TableBody,
@@ -93,6 +92,13 @@ interface Documento {
 
 type CategoryImportance = Record<DocumentCategory, number>
 
+interface DocumentosResponse {
+  documentos?: Documento[]
+  total?: number
+}
+
+const DOCUMENTS_PAGE_SIZE = 100
+
 export default function AdminDocumentosPage() {
   // Upload state
   const [file, setFile] = useState<File | null>(null)
@@ -104,11 +110,14 @@ export default function AdminDocumentosPage() {
   // Documents list state
   const [documents, setDocuments] = useState<Documento[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [totalDocuments, setTotalDocuments] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
   // Sorting state
   const [sortOption, setSortOption] = useState<SortOption>("custom")
-  const [isDragging, setIsDragging] = useState(false)
   const [draggedId, setDraggedId] = useState<number | null>(null)
   const [isSavingOrder, setIsSavingOrder] = useState(false)
   const [hasOrderChanges, setHasOrderChanges] = useState(false)
@@ -133,7 +142,30 @@ export default function AdminDocumentosPage() {
   const [errorMessage, setErrorMessage] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
 
-  const loadDocuments = async () => {
+  const fetchDocumentsPage = useCallback(
+    async (page: number, accessToken: string): Promise<DocumentosResponse> => {
+      const response = await fetch(
+        `/api/documentos?limit=${DOCUMENTS_PAGE_SIZE}&page=${page}&sort=${sortOption}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(
+          `Error al cargar los documentos (${response.status}). ${errorData.error || "Verifica tu conexión e intenta nuevamente."}`
+        )
+      }
+
+      return response.json()
+    },
+    [sortOption]
+  )
+
+  const loadDocuments = useCallback(async (options?: { ensureDocumentId?: number }) => {
     setIsLoading(true)
     try {
       const supabase = createClient()
@@ -144,34 +176,94 @@ export default function AdminDocumentosPage() {
         return
       }
 
-      const response = await fetch(`/api/documentos?limit=100&sort=${sortOption}`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      })
+      const firstPage = await fetchDocumentsPage(1, session.access_token)
+      const total = firstPage.total || 0
+      let loadedDocuments = firstPage.documentos || []
+      let loadedPage = 1
 
-      if (response.ok) {
-        const result = await response.json()
-        setDocuments(result.documentos || [])
-        setHasOrderChanges(false)
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        setErrorMessage(
-          `Error al cargar los documentos (${response.status}). ${errorData.error || "Verifica tu conexión e intenta nuevamente."}`
-        )
+      while (
+        options?.ensureDocumentId &&
+        loadedDocuments.length < total &&
+        !loadedDocuments.some((documento) => documento.id === options.ensureDocumentId)
+      ) {
+        loadedPage += 1
+        const nextPage = await fetchDocumentsPage(loadedPage, session.access_token)
+        loadedDocuments = [...loadedDocuments, ...(nextPage.documentos || [])]
       }
+
+      setDocuments(loadedDocuments)
+      setTotalDocuments(total)
+      setCurrentPage(loadedPage)
+      setHasOrderChanges(false)
     } catch (error) {
       console.error("Error loading documents:", error)
-      setErrorMessage("Error de conexión al cargar documentos")
+      setErrorMessage(
+        error instanceof Error ? error.message : "Error de conexión al cargar documentos"
+      )
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [fetchDocumentsPage])
 
   // Load documents on mount or when sort changes
   useEffect(() => {
     loadDocuments()
-  }, [sortOption])
+  }, [loadDocuments])
+
+  const loadMoreDocuments = useCallback(async () => {
+    if (isLoading || isLoadingMore || documents.length >= totalDocuments) return
+
+    setIsLoadingMore(true)
+    setErrorMessage("")
+
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        throw new Error("Sesión no válida")
+      }
+
+      const nextPage = currentPage + 1
+      const result = await fetchDocumentsPage(nextPage, session.access_token)
+      const nextDocuments = result.documentos || []
+
+      setDocuments((prev) => [...prev, ...nextDocuments])
+      setTotalDocuments(result.total || totalDocuments)
+      setCurrentPage(nextPage)
+    } catch (error) {
+      console.error("Error loading more documents:", error)
+      setErrorMessage(
+        error instanceof Error ? error.message : "Error de conexión al cargar más documentos"
+      )
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [
+    currentPage,
+    documents.length,
+    fetchDocumentsPage,
+    isLoading,
+    isLoadingMore,
+    totalDocuments,
+  ])
+
+  useEffect(() => {
+    const node = loadMoreRef.current
+    if (!node || isLoading || isLoadingMore || documents.length >= totalDocuments) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadMoreDocuments()
+        }
+      },
+      { rootMargin: "240px" }
+    )
+
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [documents.length, isLoading, isLoadingMore, loadMoreDocuments, totalDocuments])
 
   const loadSettings = async () => {
     try {
@@ -273,8 +365,9 @@ export default function AdminDocumentosPage() {
       // Show success message
       setSuccessMessage(result.data.message)
 
-      // Reload documents list
-      await loadDocuments()
+      // Reload documents list and keep the uploaded document visible even if
+      // it lands beyond the first page in the current sort.
+      await loadDocuments({ ensureDocumentId: result.data.documento.id })
     } catch (error) {
       console.error("Upload error:", error)
       setErrorMessage(
@@ -314,6 +407,7 @@ export default function AdminDocumentosPage() {
 
       // Remove from local state
       setDocuments(documents.filter((d) => d.id !== documento.id))
+      setTotalDocuments((total) => Math.max(total - 1, 0))
 
       // Show success message
       setSuccessMessage(result.message || "Documento eliminado exitosamente")
@@ -361,13 +455,11 @@ export default function AdminDocumentosPage() {
 
   // Drag and drop reordering (desktop)
   const handleRowDragStart = (e: React.DragEvent, id: number) => {
-    setIsDragging(true)
     setDraggedId(id)
     e.dataTransfer.effectAllowed = "move"
   }
 
   const handleRowDragEnd = () => {
-    setIsDragging(false)
     setDraggedId(null)
   }
 
@@ -416,7 +508,19 @@ export default function AdminDocumentosPage() {
         throw new Error("Sesión no válida")
       }
 
-      const documentIds = documents.map((d) => d.id)
+      const totalPages = Math.ceil(totalDocuments / DOCUMENTS_PAGE_SIZE)
+      const remainingPages = Array.from(
+        { length: Math.max(totalPages - currentPage, 0) },
+        (_, index) => currentPage + index + 1
+      )
+      const remainingResults = await Promise.all(
+        remainingPages.map((page) => fetchDocumentsPage(page, session.access_token))
+      )
+      const documentsToSave = [
+        ...documents,
+        ...remainingResults.flatMap((result) => result.documentos || []),
+      ]
+      const documentIds = documentsToSave.map((d) => d.id)
 
       const response = await fetch("/api/admin/documentos/reorder", {
         method: "POST",
@@ -432,6 +536,8 @@ export default function AdminDocumentosPage() {
         throw new Error(errorData.error || `Error del servidor (${response.status})`)
       }
 
+      setDocuments(documentsToSave)
+      setCurrentPage(Math.max(totalPages, currentPage))
       setSuccessMessage("Orden guardado exitosamente")
       setHasOrderChanges(false)
     } catch (error) {
@@ -546,6 +652,8 @@ export default function AdminDocumentosPage() {
       setIsSavingSettings(false)
     }
   }
+
+  const hasMoreDocuments = documents.length < totalDocuments
 
   return (
     <div className="flex-1 space-y-6">
@@ -777,8 +885,8 @@ export default function AdminDocumentosPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableCaption>
-                  {documents.length} documento{documents.length !== 1 ? "s" : ""} encontrado
-                  {documents.length !== 1 ? "s" : ""}
+                  Mostrando {documents.length} de {totalDocuments} documento
+                  {totalDocuments !== 1 ? "s" : ""}
                 </TableCaption>
                 <TableHeader>
                   <TableRow>
@@ -979,6 +1087,25 @@ export default function AdminDocumentosPage() {
                   <FileText className="mx-auto h-12 w-12 mb-4 text-muted-foreground/50" />
                   <p>No se encontraron documentos</p>
                   <p className="text-sm">Sube el primer documento usando el formulario de arriba</p>
+                </div>
+              )}
+
+              {hasMoreDocuments && (
+                <div ref={loadMoreRef} className="flex justify-center py-6">
+                  <Button
+                    variant="outline"
+                    onClick={loadMoreDocuments}
+                    disabled={isLoadingMore}
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Cargando...
+                      </>
+                    ) : (
+                      "Cargar más documentos"
+                    )}
+                  </Button>
                 </div>
               )}
             </div>
