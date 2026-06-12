@@ -59,6 +59,7 @@ const ContentImage = ({ src, alt }: { src: string; alt: string }) => {
       width={1200}
       height={800}
       sizes="(max-width: 768px) 100vw, 768px"
+      unoptimized
       className="rounded-lg mx-auto max-w-full h-auto"
       style={{ width: '100%', height: 'auto' }}
       onError={() => setImgSrc("/placeholder.svg")}
@@ -163,6 +164,7 @@ export default function NewsContentWrapper({
               fill
               sizes="100vw"
               priority
+              unoptimized
               className="object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
@@ -223,6 +225,7 @@ export default function NewsContentWrapper({
                             alt={news.title}
                             fill
                             sizes="(max-width: 640px) 100vw, 50vw"
+                            unoptimized
                             className="object-cover transition-transform duration-300 group-hover:scale-105"
                           />
                         </div>
