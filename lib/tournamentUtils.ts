@@ -152,21 +152,34 @@ export function getTournamentStatus(tournament: TournamentDisplay): TournamentSt
 }
 
 /**
+ * Computes tournament lifecycle status from its dates at a given instant.
+ * Use this (over the precomputed is_* flags) when the result must stay fresh
+ * regardless of when the page was rendered — e.g. client-side under ISR.
+ */
+export function getTournamentStatusAt(
+  tournament: TournamentDisplay,
+  now: number = Date.now()
+): TournamentStatus {
+  if (tournament.start_date.getTime() > now) return 'upcoming';
+  const end = (tournament.end_date ?? tournament.start_date).getTime();
+  if (end < now) return 'past';
+  return 'ongoing';
+}
+
+/**
+ * Display text for each tournament status
+ */
+export const TOURNAMENT_STATUS_TEXT: Record<TournamentStatus, string> = {
+  upcoming: 'Próximo',
+  ongoing: 'En curso',
+  past: 'Finalizado',
+};
+
+/**
  * Gets tournament status display text
  */
 export function getTournamentStatusText(tournament: TournamentDisplay): string {
-  const status = getTournamentStatus(tournament);
-  
-  switch (status) {
-    case 'upcoming':
-      return 'Próximo';
-    case 'ongoing':
-      return 'En curso';
-    case 'past':
-      return 'Finalizado';
-    default:
-      return '';
-  }
+  return TOURNAMENT_STATUS_TEXT[getTournamentStatus(tournament)];
 }
 
 /**
