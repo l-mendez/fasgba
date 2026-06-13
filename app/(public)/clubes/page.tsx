@@ -1,19 +1,22 @@
-import Link from "next/link"
-import { Mail, MapPin, Phone, ImageIcon } from "lucide-react"
 import { Suspense } from "react"
 import { Metadata } from "next"
+import { unstable_cache } from "next/cache"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { getClubsWithFollowStatus, type ClubWithFollowState } from "@/lib/clubUtils"
-import { getCurrentUserServer } from "@/lib/auth-server"
-import { ClubFollowButton } from "@/components/club-follow-button"
+import { getAllClubs, type Club } from "@/lib/clubUtils"
 import { ClubSearch } from "@/components/club-search"
+import { ClubsGrid } from "@/components/clubs-grid"
 import { PageHero } from "@/components/page-hero"
-import { createClient } from "@/lib/supabase/client"
 
-// Force dynamic rendering for SSR
-export const dynamic = 'force-dynamic'
+// The directory is identical for everyone, so cache it and refresh every 5
+// minutes (or via the 'clubs' tag). Per-user follow state and search are
+// resolved on the client, keeping this page statically cacheable.
+export const revalidate = 300
+
+const getCachedClubs = unstable_cache(
+  (): Promise<Club[]> => getAllClubs(),
+  ['clubes-directory'],
+  { revalidate: 300, tags: ['clubs'] }
+)
 
 // Generate metadata for better link previews
 export const metadata: Metadata = {
@@ -56,122 +59,8 @@ export const metadata: Metadata = {
   },
 }
 
-interface PageProps {
-  searchParams: Promise<{ search?: string }>
-}
-
-async function ClubsList({ searchTerm }: { searchTerm?: string }) {
-  const user = await getCurrentUserServer()
-  const clubs = await getClubsWithFollowStatus(user?.id || null, searchTerm)
-
-  if (clubs.length === 0) {
-    return (
-      <div className="text-center py-12 min-h-[400px] flex flex-col justify-center">
-        <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-          {searchTerm ? "No se encontraron clubes" : "No hay clubes disponibles"}
-        </h3>
-        <p className="text-muted-foreground">
-          {searchTerm ? "Intenta con otros términos de búsqueda." : "Vuelve más tarde para ver los clubes afiliados."}
-        </p>
-        {searchTerm && (
-          <Button asChild variant="outline" className="mt-4 mx-auto">
-            <Link href="/clubes">Ver todos los clubes</Link>
-          </Button>
-        )}
-      </div>
-    )
-  }
-
-  // Helper function to get image URL
-  const getClubImageUrl = (imagePath: string | null) => {
-    if (!imagePath) return null
-    const supabase = createClient()
-    const { data } = supabase.storage.from('images').getPublicUrl(imagePath)
-    return data.publicUrl
-  }
-
-  return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 min-h-[400px] transition-opacity duration-200">
-      {clubs.map((club) => {
-        const imageUrl = getClubImageUrl(club.image)
-        
-        return (
-          <Card key={club.id} className="flex flex-col group hover:border-amber transition-colors">
-            {/* Club Image */}
-            {imageUrl ? (
-              <div className="aspect-video w-full overflow-hidden rounded-t-lg">
-                <img
-                  src={imageUrl}
-                  alt={`Imagen de ${club.name}`}
-                  className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200"
-                />
-              </div>
-            ) : (
-              <div className="aspect-video w-full bg-muted rounded-t-lg flex items-center justify-center">
-                <ImageIcon className="h-12 w-12 text-muted-foreground" />
-              </div>
-            )}
-            
-            <CardHeader>
-              <CardTitle>
-                <Link href={`/clubes/${club.id}`} className="text-terracotta hover:underline">
-                  {club.name}
-                </Link>
-              </CardTitle>
-              <CardDescription>
-                <div className="flex items-center gap-2 mt-2">
-                  {/* Member count removed as it's no longer used */}
-                </div>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1">
-              <div className="space-y-4">
-                {club.address && (
-                  <div className="flex items-start gap-2">
-                    <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                    <span className="text-sm">{club.address}</span>
-                  </div>
-                )}
-                {club.telephone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-5 w-5 text-muted-foreground shrink-0" />
-                    <span className="text-sm">{club.telephone}</span>
-                  </div>
-                )}
-                {club.mail && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
-                    <span className="text-sm">{club.mail}</span>
-                  </div>
-                )}
-                {club.schedule && (
-                  <div>
-                    <h4 className="text-sm font-medium mb-1">Horarios de actividad:</h4>
-                    <p className="text-sm text-muted-foreground">{club.schedule}</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-            <CardFooter className="flex gap-2">
-              <Button asChild className="w-full">
-                <Link href={`/clubes/${club.id}`}>Ver Detalle</Link>
-              </Button>
-              <ClubFollowButton 
-                clubId={club.id} 
-                initialIsFollowing={club.isFollowing} 
-                isUserAuthenticated={!!user}
-              />
-            </CardFooter>
-          </Card>
-        )
-      })}
-    </div>
-  )
-}
-
-export default async function ClubesPage({ searchParams }: PageProps) {
-  const resolvedSearchParams = await searchParams
-  const searchTerm = resolvedSearchParams.search
+export default async function ClubesPage() {
+  const clubs = await getCachedClubs()
 
   return (
     <>
@@ -195,7 +84,9 @@ export default async function ClubesPage({ searchParams }: PageProps) {
             </div>
           </div>
 
-          <ClubsList searchTerm={searchTerm} />
+          <Suspense fallback={<div className="min-h-[400px]" />}>
+            <ClubsGrid clubs={clubs} />
+          </Suspense>
         </div>
       </section>
     </>

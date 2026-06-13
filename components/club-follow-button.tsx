@@ -12,14 +12,18 @@ interface ClubFollowButtonProps {
   isUserAuthenticated: boolean
   className?: string
   size?: "default" | "sm" | "lg" | "icon"
+  // Notifies the parent of the new follow state so it can stay the source of
+  // truth (e.g. survive remounts when a list re-filters).
+  onFollowChange?: (clubId: number, isFollowing: boolean) => void
 }
 
-export function ClubFollowButton({ 
-  clubId, 
-  initialIsFollowing, 
+export function ClubFollowButton({
+  clubId,
+  initialIsFollowing,
   isUserAuthenticated,
   className,
-  size = "icon"
+  size = "icon",
+  onFollowChange
 }: ClubFollowButtonProps) {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
   const [isLoading, setIsLoading] = useState(false)
@@ -44,6 +48,7 @@ export function ClubFollowButton({
     
     // Optimistic UI update
     setIsFollowing(newFollowState)
+    onFollowChange?.(clubId, newFollowState)
 
     try {
       if (previousState) {
@@ -54,6 +59,7 @@ export function ClubFollowButton({
     } catch (error) {
       // Revert on error
       setIsFollowing(previousState)
+      onFollowChange?.(clubId, previousState)
       console.error('Error toggling follow status:', error)
     } finally {
       setIsLoading(false)
