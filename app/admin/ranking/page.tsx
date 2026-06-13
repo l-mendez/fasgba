@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Upload, FileSpreadsheet, Save, RefreshCw, AlertCircle, CheckCircle2, Trash2, Calendar, Eye, Edit } from "lucide-react"
+import { Upload, FileSpreadsheet, Save, RefreshCw, CheckCircle2, Trash2, Calendar, Eye, Edit } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ErrorAlert } from "@/components/error-alert"
 import {
   Table,
   TableBody,
@@ -528,10 +529,7 @@ export default function AdminRankingPage() {
 
       {/* Error Alert */}
       {errorMessage && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{errorMessage}</AlertDescription>
-        </Alert>
+        <ErrorAlert message={errorMessage} />
       )}
 
       {/* Success Alert */}
@@ -644,12 +642,7 @@ export default function AdminRankingPage() {
           )}
 
           {uploadStatus === 'error' && !errorMessage && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Error al procesar el archivo. Verifica el formato y vuelve a intentarlo.
-              </AlertDescription>
-            </Alert>
+            <ErrorAlert message="Error al procesar el archivo. Verifica el formato y vuelve a intentarlo." className="mt-4" />
           )}
 
           {/* Action Buttons */}

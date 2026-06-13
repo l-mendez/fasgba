@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Plus, AlertCircle } from "lucide-react"
+import { Plus } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 
 // Mark this page as dynamic since it requires server-side authentication
@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 import { Button } from "@/components/ui/button"
 import { ClubsTable } from "@/components/clubs-table"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ErrorAlert } from "@/components/error-alert"
 
 interface Club {
   id: number
@@ -165,10 +165,7 @@ export default async function AdminClubesPage() {
   if (error) {
     return (
       <div className="flex flex-col gap-8 p-8">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <ErrorAlert message={error} />
       </div>
     )
   }

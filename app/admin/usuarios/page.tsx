@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { UsersTable } from "@/components/users-table"
+import { ErrorAlert } from "@/components/error-alert"
 
 // Mark this page as dynamic since it requires server-side authentication
 export const dynamic = 'force-dynamic'
@@ -130,12 +131,7 @@ export default async function UsersPage() {
   if (error) {
     return (
       <div className="flex-1 space-y-4">
-        <div className="bg-red-50 p-4 rounded-md text-red-800">
-          <div className="flex items-center">
-            <span className="text-red-600 mr-2">⚠️</span>
-            <p>{error}</p>
-          </div>
-        </div>
+        <ErrorAlert message={error} />
       </div>
     )
   }
