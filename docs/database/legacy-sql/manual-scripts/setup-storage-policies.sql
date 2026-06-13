@@ -1,3 +1,6 @@
+-- Legacy archive only. Do not run directly.
+-- Create a new Supabase CLI migration under supabase/migrations instead.
+
 -- Create storage policies for image uploads
 -- Run this in your Supabase SQL editor
 

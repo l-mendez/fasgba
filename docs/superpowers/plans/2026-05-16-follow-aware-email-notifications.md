@@ -2,6 +2,10 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> Historical plan note: this predates the Supabase CLI migration standard.
+> References to `app/db` are archival only. Current database guidance lives in
+> `docs/database.md`.
+
 **Goal:** Make club-news / club-tournament email notifications actually fire end-to-end and route to followers of the publishing club according to each user's existing notification preference.
 
 **Architecture:** Replace the HTTP self-fetch + admin-gated `/api/notifications/email` endpoint with an in-process library called directly from the news / tournament / ranking handlers. Add follower-aware filtering and a `notification_log` table for observability. No new UI; no new test framework.

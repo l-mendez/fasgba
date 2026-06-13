@@ -1,3 +1,6 @@
+-- Legacy archive only. Do not run directly.
+-- Create a new Supabase CLI migration under supabase/migrations instead.
+
 -- Notification broadcast attempt log (one row per sendBroadcast() invocation).
 -- Service-role only; no RLS needed.
 CREATE TABLE notification_log (

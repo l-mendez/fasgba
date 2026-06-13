@@ -1,19 +1,24 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for coding agents working in this repository.
 
-## Project Overview
+## Project
 
-FASGBA - Chess club management platform for Federación de Ajedrez del Sur del Gran Buenos Aires. Full-stack Next.js app with Supabase backend managing clubs, tournaments, users, rankings, and news.
+FASGBA is a chess federation platform for Federación de Ajedrez del Sur del
+Gran Buenos Aires. It manages public content, clubs, tournaments, rankings,
+school documents, and admin/club-admin workflows.
 
 ## Commands
 
 ```bash
-npm run dev              # Development server (localhost:3000)
+npm run dev              # Development server
 npm run build            # Production build
 npm run lint             # ESLint
 npm run type-check       # TypeScript validation
-npm run setup:storage    # Initialize Supabase storage buckets
+npm run db:status        # Supabase local/remote migration status
+npm run db:push:dry-run  # Preview pending remote migrations
+npm run db:push          # Apply pending remote migrations
+npm run db:types         # Regenerate lib/database.types.ts from Supabase
 npm run migrate:ranking  # Migrate ranking data
 npm run send:admin-update # Send admin update emails
 npm run test:email       # Test email configuration
@@ -21,90 +26,82 @@ npm run test:email       # Test email configuration
 
 ## Tech Stack
 
-- **Framework**: Next.js 16 (App Router, Server Components by default, Turbopack)
-- **Database**: Supabase (PostgreSQL) with RLS policies
-- **Auth**: Supabase Auth (JWT tokens)
-- **UI**: Tailwind CSS + Shadcn UI (Radix UI primitives) + lucide-react icons + cmdk (command palette)
-- **Forms**: React Hook Form + Zod validation (hookform resolvers connect Zod schemas to RHF)
-- **Rich Text**: Tiptap editor with image, link, text-align, and list extensions
-- **Chess**: chess.js + react-chessboard + pgn-parser (PGN format parsing for game import)
-- **Email**: Nodemailer with Zoho SMTP
-- **Notifications**: sonner (toast library)
-- **Exports**: xlsx-js-style (Excel file generation with cell styling)
-- **Theming**: next-themes (dark and light mode)
+- Next.js 16 App Router
+- Supabase Auth, PostgreSQL, Storage, and RLS
+- Tailwind CSS, Shadcn UI, Radix UI, lucide-react
+- React Hook Form and Zod
+- Tiptap rich text
+- chess.js, react-chessboard, and PGN parsing
+- Nodemailer with Zoho SMTP
 
-## Architecture
+## Database Source Of Truth
 
-### Directory Structure
+Use Supabase CLI for all schema work.
 
-- `/app` - Next.js pages and 60+ API routes
-- `/lib` - Shared utilities, auth middleware, database operations
-- `/components` - React components (feature + Shadcn UI)
-- `/hooks` - Custom React hooks (useAuth, use-toast)
-- `/scripts` - CLI utilities for migrations and emails
+- Project ref: `uxtfxazbikfqcnnmhufh`
+- Config: `supabase/config.toml`
+- Migrations: `supabase/migrations/`
+- Generated types: `lib/database.types.ts`
+- DB aliases: `lib/db-types.ts`
+- DB docs: `docs/database.md`
 
-### API Route Pattern
+Historical SQL lives in `docs/database/legacy-sql/` for audit context only. Do
+not add or run migrations from `app/db`, `supabase-migrations`, or `scripts`.
 
-All API routes follow this structure:
-```typescript
-import { requireAuth, requireAdmin } from '@/lib/middleware/auth'
-import { apiSuccess, handleError, validationError } from '@/lib/utils/apiResponse'
+When schema changes, create a Supabase migration, run a dry run, apply it only
+when requested, regenerate `lib/database.types.ts`, and commit both the
+migration and generated types.
 
-export async function GET(request: NextRequest) {
-  try {
-    const user = await requireAuth(request)  // or requireAdmin()
-    const data = await fetchData()
-    return apiSuccess({ data })
-  } catch (error) {
-    return handleError(error)
-  }
+## Auth And Roles
+
+Supabase Auth owns identity and sessions. Roles are DB rows:
+
+- `admins`: site-wide FASGBA admins.
+- `club_admins`: club-scoped admins; users may administer multiple clubs.
+- `alumnos`: school document access.
+- `user_follows_club`: normal user follow preferences.
+
+A user can be both a site admin and a club admin. Unauthenticated users can read
+public content. API routes should still check auth for clear UX/errors, and RLS
+must remain the database backstop.
+
+Key files:
+
+- `lib/middleware/auth.ts`: API auth helpers.
+- `hooks/useAuth.ts`: client auth/permission state.
+- `app/api/users/me/permissions/route.ts`: permission response for UI state.
+
+## Types And DTOs
+
+Use the database/app boundary consistently:
+
+- `lib/database.types.ts` is generated. Never hand edit it.
+- `lib/db-types.ts` exports row/insert/update aliases like `ClubRow`,
+  `NewsInsert`, and `TournamentUpdate`.
+- Feature DTOs compose DB aliases with computed/joined fields.
+
+Example:
+
+```ts
+import type { ClubRow } from "@/lib/db-types"
+
+export type ClubWithStats = ClubRow & {
+  adminCount: number
+  followersCount: number
+  newsCount: number
 }
 ```
 
-### Auth Middleware (`lib/middleware/auth.ts`)
+Keep DB field names in DB types (`club_id`, `created_by_auth_id`). Map to
+UI/API-specific names only at the feature boundary that needs them.
 
-- `getAuthenticatedUser(request)` - Extract user from JWT
-- `requireAuth(request)` - Enforce authentication
-- `requireAdmin(request)` - Enforce admin role
-- `hasPermission(permission, userId)` - Check specific permission
-- `withAuth()`, `withAdminAuth()` - HOF decorators
+## Conventions
 
-**Permission levels** (stored in `admins` table): `canEditProfile`, `canViewAdmin`, `canManageUsers`, `canManageContent`, `isAdmin`
-
-### Supabase Clients (`lib/supabase/`)
-
-- `client.ts` - Browser client
-- `server.ts` - Server-side client
-- `admin.ts` - Admin operations (uses service role key)
-
-### Validation Schemas (`lib/schemas/`)
-
-Zod schemas for clubs, users, news, tournaments. Used for request body validation.
-
-### API Response Utilities (`lib/utils/apiResponse.ts`)
-
-- `apiSuccess({ data })` - Success response
-- `validationError()`, `unauthorizedError()`, `forbiddenError()`, `notFoundError()` - Error responses
-- `handleError(error)` - Generic error handler
-
-### Database Types
-
-`lib/database.types.ts` - Auto-generated Supabase TypeScript types
-
-## Key Conventions
-
-- **UX is the priority on all features** — minimize steps, avoid requiring users to copy/paste between pages, provide search by multiple fields (name, email, club), and keep workflows intuitive
-- Server Components by default; use `'use client'` only for interactivity
-- Spanish localization in UI and email templates
-- Custom theme colors: amber (#daa056), terracotta (#8f3f12)
-- Storage buckets: `images` (news/content), `avatars` (user profiles) - 5MB limit
-
-## Environment Variables
-
-```
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY  # Server-only, never expose to client
-NEXT_PUBLIC_SITE_URL
-NO_REPLY_PASSWORD          # Zoho SMTP password
-```
+- Prioritize UX: minimize steps, support search by multiple useful fields, and
+  keep admin workflows responsive.
+- Reuse existing utilities and schemas before adding new abstractions.
+- Keep files short and changes scoped.
+- Server Components by default; use client components only for interactivity.
+- UI copy and emails are Spanish.
+- Use lucide-react icons in controls where available.
+- Do not expose `SUPABASE_SERVICE_ROLE_KEY` to the client.
