@@ -2,8 +2,7 @@
 
 import Link from "next/link"
 import dynamic from "next/dynamic"
-import { useState, useEffect } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { useState } from "react"
 import { Button } from '@/components/ui/button'
 import { Copy, Check } from 'lucide-react'
 
@@ -21,15 +20,8 @@ const ChessBoard = dynamic(() => import('@/app/components/chess-board'), {
 });
 
 interface PlayerInfo {
-  type: 'user' | 'custom' | 'anonymous';
+  type: 'custom' | 'anonymous';
   value: string;
-}
-
-interface UserDetails {
-  id: string;
-  name: string;
-  surname: string;
-  profile_picture?: string | null;
 }
 
 interface ChessGameBlockProps {
@@ -48,10 +40,6 @@ export default function ChessGameBlock({
   result
 }: ChessGameBlockProps) {
   const [currentFen, setCurrentFen] = useState(fen);
-  const [whitePlayerDetails, setWhitePlayerDetails] = useState<UserDetails | null>(null);
-  const [blackPlayerDetails, setBlackPlayerDetails] = useState<UserDetails | null>(null);
-  const [isLoadingWhitePlayer, setIsLoadingWhitePlayer] = useState(false);
-  const [isLoadingBlackPlayer, setIsLoadingBlackPlayer] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   
   // Handler to receive FEN updates from the ChessBoard component
@@ -86,66 +74,6 @@ export default function ChessGameBlock({
     }
   };
   
-  // Fetch user details if the player is a user
-  useEffect(() => {
-    async function fetchUserDetails(playerId: string, setPlayerDetails: React.Dispatch<React.SetStateAction<UserDetails | null>>, setIsLoading: React.Dispatch<React.SetStateAction<boolean>>) {
-      try {
-        setIsLoading(true);
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from('users')
-          .select('id, name, surname, profile_picture')
-          .eq('id', playerId)
-          .single();
-        
-        if (error) {
-          console.error('Error fetching user details:', error);
-          return;
-        }
-        
-        if (data) {
-          setPlayerDetails({
-            id: data.id,
-            name: data.name,
-            surname: data.surname,
-            profile_picture: data.profile_picture
-          });
-        }
-      } catch (err) {
-        console.error('Error in fetchUserDetails:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    
-    // Fetch white player details if it's a user
-    if (whitePlayer?.type === 'user' && whitePlayer.value) {
-      fetchUserDetails(
-        whitePlayer.value, 
-        setWhitePlayerDetails,
-        setIsLoadingWhitePlayer
-      );
-    }
-    
-    // Fetch black player details if it's a user
-    if (blackPlayer?.type === 'user' && blackPlayer.value) {
-      fetchUserDetails(
-        blackPlayer.value, 
-        setBlackPlayerDetails,
-        setIsLoadingBlackPlayer
-      );
-    }
-  }, [whitePlayer, blackPlayer]);
-
-  // Create player objects with user details if available
-  const whitePlayerInfo = whitePlayer?.type === 'user' && whitePlayerDetails 
-    ? { ...whitePlayer, value: `${whitePlayerDetails.name} ${whitePlayerDetails.surname}` }
-    : whitePlayer;
-    
-  const blackPlayerInfo = blackPlayer?.type === 'user' && blackPlayerDetails 
-    ? { ...blackPlayer, value: `${blackPlayerDetails.name} ${blackPlayerDetails.surname}` }
-    : blackPlayer;
-  
   // Create the Lichess analysis URL
   const getLichessUrl = () => {
     // If we have PGN, use that for the full game analysis
@@ -163,8 +91,8 @@ export default function ChessGameBlock({
           fen={fen} 
           pgn={pgn} 
           onPositionChange={handlePositionChange}
-          whitePlayer={whitePlayerInfo}
-          blackPlayer={blackPlayerInfo}
+          whitePlayer={whitePlayer}
+          blackPlayer={blackPlayer}
           result={result}
           width={400}
         />

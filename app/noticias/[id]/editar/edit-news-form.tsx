@@ -332,8 +332,8 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
           type: 'chess_game', 
           content: {
             pgn: '',
-            whitePlayer: { type: 'user', value: '' },
-            blackPlayer: { type: 'user', value: '' },
+            whitePlayer: { type: 'custom', value: '' },
+            blackPlayer: { type: 'custom', value: '' },
             result: '1-0'
           }
         }

@@ -85,11 +85,3 @@ export type ClubWithStats = ClubRow & {
 
 Keep database names in DB aliases (`created_by_auth_id`, `club_id`) and only map
 to UI-friendly names when the consuming component or API contract needs it.
-
-## Known Legacy Edge
-
-`app/components/chess-game-block.tsx` still has a legacy `public.users` lookup for
-rich-text chess player metadata. The generated remote schema has no canonical
-`public.users` table, and browser clients cannot list Supabase Auth users. Do
-not copy this pattern into new code; replace it with an explicit player/profile
-DTO if that UI path becomes active again.
