@@ -25,6 +25,7 @@ function NewsCardImage({ image, title }: { image: string | null; title: string }
       alt={title}
       fill
       sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+      unoptimized
       className="object-cover"
     />
   )
