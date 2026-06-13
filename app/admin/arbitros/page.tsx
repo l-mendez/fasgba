@@ -1,12 +1,12 @@
 import Link from "next/link"
-import { Plus, AlertCircle } from "lucide-react"
+import { Plus } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 
 export const dynamic = 'force-dynamic'
 
 import { Button } from "@/components/ui/button"
 import { ArbitrosTable } from "@/components/arbitros-table"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ErrorAlert } from "@/components/error-alert"
 
 interface ArbitroRow {
   id: number
@@ -78,10 +78,7 @@ export default async function AdminArbitrosPage() {
   if (error) {
     return (
       <div className="flex flex-col gap-8 p-8">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <ErrorAlert message={error} />
       </div>
     )
   }

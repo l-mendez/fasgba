@@ -1,4 +1,4 @@
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ErrorAlert } from "@/components/error-alert"
 import { createClient } from "@/lib/supabase/server"
 import { Metadata } from "next"
 import {
@@ -80,13 +80,7 @@ export default async function TorneosPage() {
 
         <section className="w-full py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">
-            {error && (
-              <Alert className="mb-6 border-red-200 bg-red-50">
-                <AlertDescription className="text-red-800">
-                  {error}
-                </AlertDescription>
-              </Alert>
-            )}
+            {error && <ErrorAlert message={error} className="mb-6" />}
 
             <TournamentsTabs tournaments={tournaments} />
           </div>

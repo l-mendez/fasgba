@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ErrorAlert } from "@/components/error-alert"
 import { useClubContext } from "../context/club-context"
 
 export function ClubSelector() {
@@ -25,12 +26,7 @@ export function ClubSelector() {
 
   if (error) {
     return (
-      <Alert variant="destructive" className="mx-3 my-2">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription className="text-xs">
-          Error al cargar clubes: {error}
-        </AlertDescription>
-      </Alert>
+      <ErrorAlert message={`Error al cargar clubes: ${error}`} className="mx-3 my-2" />
     )
   }
 

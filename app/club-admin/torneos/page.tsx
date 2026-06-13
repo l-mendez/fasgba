@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ChevronDown, Edit, Eye, MoreHorizontal, Plus, Search, Trash2, Users, AlertCircle, Loader2 } from "lucide-react"
+import { ChevronDown, Edit, Eye, MoreHorizontal, Plus, Search, Trash2, Users, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,7 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ErrorAlert } from "@/components/error-alert"
 import { useClubContext, apiCall } from "../context/club-context"
 
 // Tournament type based on the API response
@@ -333,11 +333,7 @@ export default function ClubAdminTorneosPage() {
       </div>
 
       {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <ErrorAlert title="Error" message={error} />
       )}
 
       <div className="flex flex-col gap-4 md:flex-row md:items-center">

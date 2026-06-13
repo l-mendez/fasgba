@@ -9,6 +9,7 @@ import { getGameById, type GameDisplay } from "@/lib/gameUtils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { ErrorAlert } from "@/components/error-alert"
 import { Calendar, MapPin, Trophy, Clock, ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { Metadata } from "next"
@@ -172,11 +173,7 @@ export default async function GamePage({ params }: {
         {/* Game Content */}
         <section className="w-full py-8 md:py-12">
           <div className="container px-4 md:px-6">
-            {error && (
-              <div className="mb-6 p-4 border border-red-200 bg-red-50 rounded-lg">
-                <p className="text-red-800">{error}</p>
-              </div>
-            )}
+            {error && <ErrorAlert message={error} className="mb-6" />}
 
             <ChessGameDisplay game={game} />
           </div>

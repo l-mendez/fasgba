@@ -6,6 +6,7 @@ import Link from "next/link"
 import { ArrowLeft, Upload, X, ImageIcon, Loader2, CheckCircle, Mail, Phone } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { ErrorAlert } from "@/components/error-alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -295,7 +296,7 @@ export default function EditarArbitroPage({ params }: PageProps) {
   if (error && !formData.name) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <div className="text-red-500">{error}</div>
+        <ErrorAlert message={error} className="max-w-md" />
         <Button variant="outline" onClick={() => router.push("/admin/arbitros")}>
           Volver a la lista
         </Button>
