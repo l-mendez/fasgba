@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createClub } from '@/lib/clubUtils'
+import { revalidateClubsCache } from '@/lib/cache/clubs'
 import { apiSuccess, handleError, unauthorizedError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
@@ -70,7 +71,8 @@ export async function POST(request: NextRequest) {
     }
 
     const newClub = await createClub(clubData)
-    
+    revalidateClubsCache()
+
     return apiSuccess(newClub, 201)
   } catch (error) {
     return handleError(error)

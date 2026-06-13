@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getClubById, updateClub, deleteClub } from '@/lib/clubUtils'
+import { revalidateClubsCache } from '@/lib/cache/clubs'
 import { requireAdmin } from '@/lib/middleware/auth'
 import { validateClubId, validateUpdateClub, validateClubQuery } from '@/lib/schemas/clubSchemas'
 import { apiSuccess, noContent, handleError, notFoundError } from '@/lib/utils/apiResponse'
@@ -56,7 +57,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       updateError.name = 'DatabaseError'
       throw updateError
     }
-    
+
+    revalidateClubsCache()
     return apiSuccess({ success: true })
   } catch (error) {
     return handleError(error)
@@ -84,7 +86,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       deleteError.name = 'DatabaseError'
       throw deleteError
     }
-    
+
+    revalidateClubsCache()
     return noContent()
   } catch (error) {
     return handleError(error)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Mail, MapPin, Phone, ImageIcon } from "lucide-react"
@@ -46,6 +46,17 @@ export function ClubsGrid({ clubs }: { clubs: Club[] }) {
     return () => { cancelled = true }
   }, [isAuthenticated])
 
+  // Keep the parent set in sync after a toggle so the follow state survives
+  // card remounts (e.g. when the list re-filters on search).
+  const handleFollowChange = useCallback((clubId: number, isFollowing: boolean) => {
+    setFollowedIds((prev) => {
+      const next = new Set(prev ?? [])
+      if (isFollowing) next.add(clubId)
+      else next.delete(clubId)
+      return next
+    })
+  }, [])
+
   const filteredClubs = useMemo(() => {
     const term = searchTerm.toLowerCase()
     if (!term) return clubs
@@ -82,6 +93,7 @@ export function ClubsGrid({ clubs }: { clubs: Club[] }) {
           club={club}
           isUserAuthenticated={followReady}
           isFollowing={followedIds?.has(club.id) ?? false}
+          onFollowChange={handleFollowChange}
         />
       ))}
     </div>
@@ -92,10 +104,12 @@ function ClubCard({
   club,
   isUserAuthenticated,
   isFollowing,
+  onFollowChange,
 }: {
   club: Club
   isUserAuthenticated: boolean
   isFollowing: boolean
+  onFollowChange: (clubId: number, isFollowing: boolean) => void
 }) {
   const imageUrl = getImageUrlNullable(club.image)
 
@@ -158,6 +172,7 @@ function ClubCard({
           clubId={club.id}
           initialIsFollowing={isFollowing}
           isUserAuthenticated={isUserAuthenticated}
+          onFollowChange={onFollowChange}
         />
       </CardFooter>
     </Card>
