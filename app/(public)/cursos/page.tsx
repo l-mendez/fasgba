@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { PageHero } from "@/components/page-hero"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -305,20 +306,10 @@ const faq = [
 export default function CursosPage() {
   return (
     <>
-      {/* Hero section */}
-      <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-terracotta/10 to-amber/5">
-        <div className="container px-4 md:px-6">
-          <div className="flex flex-col items-center justify-center space-y-4 text-center">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-terracotta">Cursos y Formación</h1>
-              <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Mejora tus habilidades ajedrecísticas con los cursos oficiales de la Federación de Ajedrez del Sur de
-                Buenos Aires
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <PageHero
+        title="Cursos y Formación"
+        subtitle="Mejora tus habilidades ajedrecísticas con los cursos oficiales de la Federación de Ajedrez del Sur de Buenos Aires"
+      />
 
       {/* Cursos destacados */}
       <section className="w-full py-12 md:py-16 bg-muted">

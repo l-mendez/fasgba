@@ -7,6 +7,7 @@ import {
   sortTournamentsByDate,
 } from "@/lib/tournamentUtils"
 import { TournamentsTabs } from "./components/tournaments-tabs"
+import { PageHero } from "@/components/page-hero"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
@@ -72,18 +73,10 @@ export default async function TorneosPage() {
 
   return (
     <>
-      <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-b from-terracotta/10 to-amber/5">
-          <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-muted-foreground">Torneos FASGBA</h1>
-                <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+      <PageHero
+        title="Torneos FASGBA"
+        subtitle="Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires"
+      />
 
         <section className="w-full py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">

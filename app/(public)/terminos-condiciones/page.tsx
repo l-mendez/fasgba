@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Metadata } from "next"
+import { PageHero } from "@/components/page-hero"
 
 export const metadata: Metadata = {
   title: 'Términos y Condiciones',
@@ -9,20 +10,10 @@ export const metadata: Metadata = {
 export default function TerminosCondicionesPage() {
   return (
     <>
-      <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-        <div className="container px-4 md:px-6">
-          <div className="flex flex-col items-center justify-center space-y-4 text-center">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-muted-foreground">
-                Términos y Condiciones
-              </h1>
-              <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed">
-                Última actualización: {new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <PageHero
+        title="Términos y Condiciones"
+        subtitle={`Última actualización: ${new Date().toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}`}
+      />
 
       <section className="w-full py-12 md:py-24 lg:py-32">
         <div className="container max-w-4xl px-4 md:px-6">

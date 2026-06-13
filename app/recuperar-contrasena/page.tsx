@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { ForgotPasswordButton } from "./components/forgot-password-button"
+import { PageHero } from "@/components/page-hero"
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("")
@@ -20,18 +21,10 @@ export default function ForgotPassword() {
     return (
       <div className="flex min-h-screen flex-col">
         <main className="flex-1">
-          <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-            <div className="container px-4 md:px-6">
-              <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                <div className="space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-terracotta">Email Enviado</h1>
-                  <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                    Revisa tu bandeja de entrada
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
+          <PageHero
+            title="Email Enviado"
+            subtitle="Revisa tu bandeja de entrada"
+          />
           <section className="w-full py-12 md:py-24 lg:py-32">
             <div className="container px-4 md:px-6">
               <div className="mx-auto max-w-[400px]">
@@ -70,18 +63,10 @@ export default function ForgotPassword() {
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex-1">
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-          <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl text-terracotta">Recuperar Contraseña</h1>
-                <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Te enviaremos un enlace para restablecer tu contraseña
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+        <PageHero
+          title="Recuperar Contraseña"
+          subtitle="Te enviaremos un enlace para restablecer tu contraseña"
+        />
         <section className="w-full py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">
             <div className="mx-auto max-w-[400px]">
