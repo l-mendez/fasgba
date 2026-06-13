@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { FileText, Trophy, Users } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { ErrorAlert } from "@/components/error-alert"
 import { useClubContext } from "../context/club-context"
 import { QuickActions } from "./quick-actions"
 import { apiCall } from "../context/club-context"
@@ -89,11 +90,7 @@ export function DashboardContent() {
         </div>
       </div>
 
-      {error && (
-        <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-md">
-          <p className="text-sm">{error}</p>
-        </div>
-      )}
+      {error && <ErrorAlert message={error} />}
 
       <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <Card>

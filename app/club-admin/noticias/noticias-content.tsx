@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ChevronDown, Edit, Eye, MoreHorizontal, Search, Trash2, AlertCircle, Loader2 } from "lucide-react"
+import { ChevronDown, Edit, Eye, MoreHorizontal, Search, Trash2, Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 import { Button } from "@/components/ui/button"
@@ -25,7 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { ErrorAlert } from "@/components/error-alert"
 import { deleteNewsAction } from "@/lib/actions/news"
 import { formatArgentinaDateOnly, getDateInputValue } from "@/lib/dateUtils"
 import { compareBy } from "@/lib/sortUtils"
@@ -319,11 +319,7 @@ export function NoticiasContent({ initialNews, selectedClub }: NoticiasContentPr
   return (
     <>
       {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <ErrorAlert title="Error" message={error} />
       )}
 
       <div className="flex flex-col gap-4 md:flex-row md:items-center">

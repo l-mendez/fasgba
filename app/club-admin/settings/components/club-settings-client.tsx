@@ -3,6 +3,7 @@
 import { useClubContext } from "@/app/club-admin/context/club-context"
 import { ClubSettingsForm } from "./club-settings-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ErrorAlert } from "@/components/error-alert"
 import { Loader2 } from "lucide-react"
 
 export function ClubSettingsClient() {
@@ -22,16 +23,7 @@ export function ClubSettingsClient() {
   }
 
   if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-destructive">Error</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>Error al cargar los datos del club: {error}</p>
-        </CardContent>
-      </Card>
-    )
+    return <ErrorAlert title="Error" message={`Error al cargar los datos del club: ${error}`} />
   }
 
   if (hasNoClubs) {

@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server"
 import { getTournamentGames, getTournamentRounds } from "@/lib/gameUtils"
 
 import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ErrorAlert } from "@/components/error-alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -333,11 +333,7 @@ export default async function EditarTorneoPage({ params }: PageProps) {
         </div>
       </div>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      {error && <ErrorAlert message={error} />}
 
       {tournament && !isAuthorized && (
         <Card>

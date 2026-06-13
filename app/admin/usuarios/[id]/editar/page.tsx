@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ErrorAlert } from "@/components/error-alert"
 import { UserEditForm } from "@/components/user-edit-form"
 
 // Mark this page as dynamic since it requires server-side authentication
@@ -193,11 +193,7 @@ export default async function EditarUsuarioPage({
   if (error) {
     return (
       <div className="flex flex-col gap-8 p-8">
-        <Alert>
-          <span className="text-red-600 mr-2">⚠️</span>
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <ErrorAlert title="Error" message={error} />
       </div>
     )
   }

@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Plus, AlertCircle } from "lucide-react"
+import { Plus } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { getTournamentParticipantCount } from "@/lib/tournamentUtils"
 
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 import { Button } from "@/components/ui/button"
 import { TournamentsTable } from "@/components/tournaments-table"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ErrorAlert } from "@/components/error-alert"
 
 // Tournament type based on the API response format
 interface Tournament {
@@ -183,10 +183,7 @@ export default async function AdminTorneosPage() {
   if (error) {
     return (
       <div className="flex flex-col gap-8 p-8">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <ErrorAlert message={error} />
       </div>
     )
   }
