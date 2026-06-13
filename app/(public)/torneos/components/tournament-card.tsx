@@ -14,7 +14,7 @@ import {
   getPaceDisplay,
   getRoundsDisplay,
   getTimeDisplay,
-  getTournamentStatusText,
+  TOURNAMENT_STATUS_TEXT,
 } from "@/lib/tournamentUtils"
 import { TOURNAMENT_STATUS, type TournamentStatus } from "@/lib/utils/constants"
 
@@ -112,7 +112,7 @@ export function TournamentCard({
 
           <InfoRow icon={Trophy}>
             <span className={cn("text-sm font-medium px-2 py-1 rounded-full", STATUS_BADGE_STYLES[status])}>
-              {getTournamentStatusText(torneo)}
+              {TOURNAMENT_STATUS_TEXT[status]}
             </span>
           </InfoRow>
         </div>
