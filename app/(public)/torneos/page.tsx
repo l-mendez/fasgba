@@ -1,16 +1,20 @@
+import { unstable_cache } from "next/cache"
+
 import { ErrorAlert } from "@/components/error-alert"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { Metadata } from "next"
 import {
   type TournamentDisplay,
-  getAllTournamentsForDisplay,
+  getAllTournamentsWithDates,
+  transformTournamentToDisplay,
   sortTournamentsByDate,
 } from "@/lib/tournamentUtils"
 import { TournamentsTabs } from "./components/tournaments-tabs"
 import { PageHero } from "@/components/page-hero"
 
-// Force dynamic rendering for SSR
-export const dynamic = 'force-dynamic'
+// Static content (ISR) — revalidate periodically. Public listing read via the
+// non-cookie admin client so the page can be statically prerendered.
+export const revalidate = 300
 
 // Generate metadata for better link previews
 export const metadata: Metadata = {
@@ -53,11 +57,18 @@ export const metadata: Metadata = {
   },
 }
 
+// Cache the raw (JSON-serializable) tournament rows. Display transformation
+// produces Date objects, so it must run AFTER the cache, not inside it.
+const getCachedTournaments = unstable_cache(
+  () => getAllTournamentsWithDates(createAdminClient()),
+  ['torneos-list'],
+  { revalidate: 300, tags: ['torneos'] }
+)
+
 // Carga los torneos en el servidor, ordenados por fecha ascendente.
 async function getTorneos(): Promise<{ tournaments: TournamentDisplay[]; error: string | null }> {
   try {
-    const supabase = await createClient()
-    const tournamentsData = await getAllTournamentsForDisplay(supabase)
+    const tournamentsData = (await getCachedTournaments()).map(transformTournamentToDisplay)
     return { tournaments: sortTournamentsByDate(tournamentsData, 'asc'), error: null }
   } catch (err) {
     console.error('Error loading tournaments:', err)

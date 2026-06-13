@@ -4,7 +4,9 @@ import { Award, BookOpen, Calendar, GraduationCap, Mail, Phone, User, Clock } fr
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { createClient } from "@/lib/supabase/server"
+import { unstable_cache } from "next/cache"
+
+import { createAdminClient } from "@/lib/supabase/admin"
 import { PageHero } from "@/components/page-hero"
 
 export const revalidate = 60
@@ -23,7 +25,7 @@ interface ArbitroWithClub {
 
 async function fetchArbitros(): Promise<ArbitroWithClub[]> {
   try {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     const { data, error } = await supabase
       .from('arbitros')
@@ -51,6 +53,12 @@ async function fetchArbitros(): Promise<ArbitroWithClub[]> {
     return []
   }
 }
+
+const getCachedArbitros = unstable_cache(
+  (): Promise<ArbitroWithClub[]> => fetchArbitros(),
+  ['arbitraje-list'],
+  { revalidate: 60, tags: ['arbitros'] }
+)
 
 function getPhotoUrl(photo: string | null): string | null {
   if (!photo) return null
@@ -89,7 +97,7 @@ const cursos = [
 ]
 
 export default async function ArbitrajePage() {
-  const arbitros = await fetchArbitros()
+  const arbitros = await getCachedArbitros()
 
   return (
     <>

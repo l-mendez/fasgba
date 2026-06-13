@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageHero } from "@/components/page-hero"
 
-// Force dynamic rendering for SSR
-export const dynamic = 'force-dynamic'
+// Static content — prerender and revalidate periodically
+export const revalidate = 300
 
 export const metadata: Metadata = {
   title: 'Historia',
