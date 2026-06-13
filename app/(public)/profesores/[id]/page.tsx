@@ -6,7 +6,7 @@ import { notFound } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { getProfesorById } from "@/lib/profesorUtils"
-import { createClient } from "@/lib/supabase/client"
+import { getImageUrlNullable } from "@/lib/imageUtils"
 
 export const revalidate = 60
 
@@ -62,14 +62,7 @@ export default async function ProfesorDetailPage({ params }: PageProps) {
     notFound()
   }
 
-  const getImageUrl = (fotoPath: string | null) => {
-    if (!fotoPath) return null
-    const supabase = createClient()
-    const { data } = supabase.storage.from('images').getPublicUrl(fotoPath)
-    return data.publicUrl
-  }
-
-  const imageUrl = getImageUrl(profesor.foto)
+  const imageUrl = getImageUrlNullable(profesor.foto)
 
   return (
     <>
