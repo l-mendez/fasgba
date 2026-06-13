@@ -4,16 +4,13 @@ import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import { Settings, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
+import { useAuth } from "@/hooks/useAuth"
 
-interface AuthButtonsProps {
-  isAuthenticated: boolean
-  isAdmin: boolean
-  isClubAdmin: boolean
-}
-
-export function AuthButtons({ isAuthenticated, isAdmin, isClubAdmin }: AuthButtonsProps) {
+export function AuthButtons() {
+  const { isAuthenticated, isAdmin, isClubAdmin, isLoading } = useAuth()
   const supabase = createClient()
   const router = useRouter()
   const pathname = usePathname()
@@ -32,6 +29,17 @@ export function AuthButtons({ isAuthenticated, isAdmin, isClubAdmin }: AuthButto
     } catch (error) {
       console.error('Unexpected error during logout:', error)
     }
+  }
+
+  // While the session resolves, hold the layout with a fixed-size placeholder
+  // so there's no flash of logged-out state and no layout shift.
+  if (isLoading) {
+    return (
+      <div className="flex items-center space-x-4" aria-hidden="true">
+        <Skeleton className="h-10 w-[124px]" />
+        <Skeleton className="h-10 w-[112px]" />
+      </div>
+    )
   }
 
   if (!isAuthenticated) {

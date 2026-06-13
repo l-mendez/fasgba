@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getClubById, updateClub, isUserClubAdmin } from '@/lib/clubUtils'
+import { revalidateClubsCache } from '@/lib/cache/clubs'
 import { validateClubId, validateUpdateClub } from '@/lib/schemas/clubSchemas'
 import { apiSuccess, handleError, notFoundError, unauthorizedError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
@@ -58,7 +59,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       updateError.name = 'DatabaseError'
       throw updateError
     }
-    
+
+    revalidateClubsCache()
     return apiSuccess({ success: true })
   } catch (error) {
     return handleError(error)

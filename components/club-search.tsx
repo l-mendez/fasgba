@@ -20,7 +20,8 @@ export function ClubSearch() {
       params.delete('search')
     }
     
-    router.push(`/clubes?${params.toString()}`)
+    const query = params.toString()
+    router.replace(query ? `/clubes?${query}` : "/clubes", { scroll: false })
   }
 
   return (

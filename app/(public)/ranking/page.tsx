@@ -3,6 +3,7 @@ import { Metadata } from "next"
 
 import { PlayerList } from "./components/PlayerList"
 import { PageHero } from "@/components/page-hero"
+import { ErrorAlert } from "@/components/error-alert"
 import {
   getPlayers,
   getAvailableRankings,
@@ -108,17 +109,6 @@ function LoadingState() {
   );
 }
 
-function ErrorState({ message }: { message: string }) {
-  return (
-    <div className="container px-4 md:px-6">
-      <div className="rounded-md bg-red-50 p-6 text-center">
-        <h3 className="text-lg font-medium text-red-800 mb-2">Error de conexión</h3>
-        <p className="text-red-700">{message}</p>
-      </div>
-    </div>
-  );
-}
-
 export default async function RankingPage({
   searchParams,
 }: {
@@ -169,6 +159,13 @@ async function RankingContent({
     />;
   } catch (error) {
     console.error("Error fetching players:", error);
-    return <ErrorState message="Hubo un problema al cargar los datos del ranking. Por favor, intenta nuevamente más tarde." />;
+    return (
+      <div className="container px-4 md:px-6">
+        <ErrorAlert
+          title="Error de conexión"
+          message="Hubo un problema al cargar los datos del ranking. Por favor, intenta nuevamente más tarde."
+        />
+      </div>
+    );
   }
 }

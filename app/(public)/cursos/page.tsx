@@ -9,8 +9,8 @@ import { PageHero } from "@/components/page-hero"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-// Force dynamic rendering for SSR
-export const dynamic = 'force-dynamic'
+// Static content — prerender and revalidate periodically
+export const revalidate = 300
 
 // Datos de ejemplo para los cursos
 const cursos = [

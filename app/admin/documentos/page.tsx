@@ -9,7 +9,6 @@ import {
   Eye,
   Download,
   RefreshCw,
-  AlertCircle,
   CheckCircle2,
   Calendar,
   GripVertical,
@@ -26,6 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ErrorAlert } from "@/components/error-alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -679,10 +679,7 @@ export default function AdminDocumentosPage() {
 
       {/* Error Alert */}
       {errorMessage && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{errorMessage}</AlertDescription>
-        </Alert>
+        <ErrorAlert message={errorMessage} />
       )}
 
       {/* Success Alert */}

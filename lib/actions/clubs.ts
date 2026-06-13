@@ -5,6 +5,7 @@ import { requireAuthAction, mapErrorToResult, type ActionError } from '@/lib/act
 import { hasPermission, ForbiddenError } from '@/lib/middleware/auth'
 import { uploadClubImage, deleteClubImage } from '@/lib/imageUtils.server'
 import { updateClub, getClubById, isUserClubAdmin } from '@/lib/clubUtils'
+import { revalidateClubsCache } from '@/lib/cache/clubs'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
@@ -41,6 +42,7 @@ export async function uploadClubImageAction(clubId: number, formData: FormData):
     const upload = await uploadClubImage(clubId, buffer, file.name)
     const { data: { publicUrl } } = serviceClient.storage.from('images').getPublicUrl(upload.filePath)
     await updateClub(clubId, { image: upload.filePath })
+    revalidateClubsCache()
 
     return { ok: true, data: { filePath: upload.filePath, publicUrl, wasReused: upload.wasReused, replacedExisting: !!existingClub.image } }
   } catch (err) {
@@ -63,6 +65,7 @@ export async function deleteClubImageAction(clubId: number): Promise<{ ok: true;
 
     await deleteClubImage(existingClub.image)
     await updateClub(clubId, { image: null })
+    revalidateClubsCache()
     return { ok: true, data: { deletedImagePath: existingClub.image } }
   } catch (err) {
     return mapErrorToResult(err)
