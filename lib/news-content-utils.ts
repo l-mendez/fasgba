@@ -27,7 +27,7 @@ export async function processNewsContentWithDeduplication(
     }
   })
 
-  let uploadResults: Array<{ filePath: string; wasReused: boolean; originalIndex: number }> = []
+  const uploadResults: Array<{ filePath: string; wasReused: boolean; originalIndex: number }> = []
 
   if (imagesToUpload.length > 0) {
     const CHUNK_SIZE = 5
@@ -35,41 +35,43 @@ export async function processNewsContentWithDeduplication(
 
     setUploadProgress({ current: 0, total: imagesToUpload.length, isUploading: true })
 
-    for (let i = 0; i < imagesToUpload.length; i += CHUNK_SIZE) {
-      const chunk = imagesToUpload.slice(i, i + CHUNK_SIZE)
-      const chunkNumber = Math.floor(i / CHUNK_SIZE) + 1
+    try {
+      for (let i = 0; i < imagesToUpload.length; i += CHUNK_SIZE) {
+        const chunk = imagesToUpload.slice(i, i + CHUNK_SIZE)
+        const chunkNumber = Math.floor(i / CHUNK_SIZE) + 1
 
-      try {
-        const formData = new FormData()
-        chunk.forEach((imageInfo, chunkIndex) => {
-          const originalIndex = i + chunkIndex
-          formData.append(`file-${chunkIndex}`, imageInfo.file)
-          formData.append(`prefix-${chunkIndex}`, imageInfo.prefix)
-          if (imageInfo.blockIndex !== undefined) {
-            formData.append(`blockIndex-${chunkIndex}`, imageInfo.blockIndex.toString())
+        try {
+          const formData = new FormData()
+          chunk.forEach((imageInfo, chunkIndex) => {
+            const originalIndex = i + chunkIndex
+            formData.append(`file-${chunkIndex}`, imageInfo.file)
+            formData.append(`prefix-${chunkIndex}`, imageInfo.prefix)
+            if (imageInfo.blockIndex !== undefined) {
+              formData.append(`blockIndex-${chunkIndex}`, imageInfo.blockIndex.toString())
+            }
+            formData.append(`originalIndex-${chunkIndex}`, originalIndex.toString())
+          })
+
+          const uploadActionResult = await uploadNewsImagesAction(newsId, formData)
+
+          if (!uploadActionResult.ok) {
+            throw new Error(`Error uploading chunk ${chunkNumber}/${totalChunks}: ${uploadActionResult.error}`)
           }
-          formData.append(`originalIndex-${chunkIndex}`, originalIndex.toString())
-        })
 
-        const uploadActionResult = await uploadNewsImagesAction(newsId, formData)
+          uploadResults.push(...uploadActionResult.data.results)
+          setUploadProgress(prev => ({ ...prev, current: Math.min(i + CHUNK_SIZE, imagesToUpload.length) }))
 
-        if (!uploadActionResult.ok) {
-          throw new Error(`Error uploading chunk ${chunkNumber}/${totalChunks}: ${uploadActionResult.error}`)
+          if (i + CHUNK_SIZE < imagesToUpload.length) {
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+        } catch (error) {
+          console.error(`Failed to upload chunk ${chunkNumber}/${totalChunks}:`, error)
+          throw new Error(`Failed to upload images (chunk ${chunkNumber}/${totalChunks}). This often happens with large numbers of images. Try reducing the number of images or upload in smaller batches.`)
         }
-
-        uploadResults.push(...uploadActionResult.data.results)
-        setUploadProgress(prev => ({ ...prev, current: Math.min(i + CHUNK_SIZE, imagesToUpload.length) }))
-
-        if (i + CHUNK_SIZE < imagesToUpload.length) {
-          await new Promise(resolve => setTimeout(resolve, 500))
-        }
-      } catch (error) {
-        console.error(`Failed to upload chunk ${chunkNumber}/${totalChunks}:`, error)
-        throw new Error(`Failed to upload images (chunk ${chunkNumber}/${totalChunks}). This often happens with large numbers of images. Try reducing the number of images or upload in smaller batches.`)
       }
+    } finally {
+      setUploadProgress(prev => ({ ...prev, isUploading: false }))
     }
-
-    setUploadProgress(prev => ({ ...prev, isUploading: false }))
   }
 
   const featuredImageResult = uploadResults.find((_, index) =>

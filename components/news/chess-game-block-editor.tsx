@@ -108,16 +108,17 @@ export function ChessGameBlockEditor({
           </div>
           <div className="flex space-x-1">
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0">
                 {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             </CollapsibleTrigger>
-            <Button variant="ghost" size="sm" onClick={onMoveUp} disabled={index === 0} className="h-8 w-8 p-0">
+            <Button type="button" variant="ghost" size="sm" onClick={onMoveUp} disabled={index === 0} className="h-8 w-8 p-0">
               <MoveUp className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
+              type="button"
               onClick={onMoveDown}
               disabled={index === totalBlocks - 1}
               className="h-8 w-8 p-0"
@@ -127,6 +128,7 @@ export function ChessGameBlockEditor({
             <Button
               variant="ghost"
               size="sm"
+              type="button"
               onClick={onDelete}
               className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
             >

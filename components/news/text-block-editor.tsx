@@ -54,12 +54,13 @@ export function TextBlockEditor({
       <div className="flex justify-between items-center mb-2">
         <Label htmlFor={`text-block-${index}`}>Bloque de texto</Label>
         <div className="flex space-x-1">
-          <Button variant="ghost" size="sm" onClick={onMoveUp} disabled={index === 0} className="h-8 w-8 p-0">
+          <Button type="button" variant="ghost" size="sm" onClick={onMoveUp} disabled={index === 0} className="h-8 w-8 p-0">
             <MoveUp className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
+            type="button"
             onClick={onMoveDown}
             disabled={index === totalBlocks - 1}
             className="h-8 w-8 p-0"
@@ -69,6 +70,7 @@ export function TextBlockEditor({
           <Button
             variant="ghost"
             size="sm"
+            type="button"
             onClick={onDelete}
             className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
           >
