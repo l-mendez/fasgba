@@ -1,5 +1,3 @@
-"use client"
-
 interface RichTextDisplayProps {
   content: string
   className?: string
@@ -30,4 +28,4 @@ export function RichTextDisplay({ content, className = "" }: RichTextDisplayProp
       dangerouslySetInnerHTML={{ __html: content }}
     />
   )
-} 
+}

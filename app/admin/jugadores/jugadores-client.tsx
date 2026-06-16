@@ -63,6 +63,8 @@ interface PlayersManagementClientProps {
   initialClubs: Club[]
   initialStats: Stats
   initialTotalResults: number
+  showHeader?: boolean
+  showStats?: boolean
 }
 
 export function PlayersManagementClient({
@@ -70,6 +72,8 @@ export function PlayersManagementClient({
   initialClubs,
   initialStats,
   initialTotalResults,
+  showHeader = true,
+  showStats = true,
 }: PlayersManagementClientProps) {
   const [players, setPlayers] = useState<Player[]>(initialPlayers)
   const [searchTerm, setSearchTerm] = useState("")
@@ -171,51 +175,54 @@ export function PlayersManagementClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Gestión de Jugadores</h1>
-          <p className="text-muted-foreground">
-            Administra la información de todos los jugadores registrados
-          </p>
+      {showHeader ? (
+        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Gestión de Jugadores</h1>
+            <p className="text-muted-foreground">
+              Administra la información de todos los jugadores registrados
+            </p>
+          </div>
+          <Link href="/jugadores/nuevo">
+            <Button className="bg-terracotta hover:bg-terracotta/90">
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Jugador
+            </Button>
+          </Link>
         </div>
-        <Link href="/jugadores/nuevo">
-          <Button className="bg-terracotta hover:bg-terracotta/90">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Jugador
-          </Button>
-        </Link>
-      </div>
+      ) : null}
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Jugadores</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.total ?? "—"}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Con FIDE ID</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.withFideId ?? "—"}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Con Club</CardTitle>
-            <Home className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.withClub ?? "—"}</div>
-          </CardContent>
-        </Card>
-      </div>
+      {showStats ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Jugadores</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.total ?? "—"}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Con FIDE ID</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.withFideId ?? "—"}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Con Club</CardTitle>
+              <Home className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.withClub ?? "—"}</div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
 
       {/* Search and Filters */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

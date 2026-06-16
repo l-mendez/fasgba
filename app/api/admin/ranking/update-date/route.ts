@@ -1,9 +1,10 @@
 import { NextRequest } from 'next/server'
+import { revalidateRankingCache } from '@/lib/cache/ranking'
 import { requireAdmin } from '@/lib/middleware/auth'
 import { rateLimit } from '@/lib/middleware/rateLimit'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
-import { forceRankingCacheInvalidation, findPreviousPlayer } from '@/lib/rankingUtils'
+import { findPreviousPlayer } from '@/lib/rankingUtils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -288,7 +289,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Step 10: Force cache invalidation to ensure fresh data
-    forceRankingCacheInvalidation()
+    revalidateRankingCache()
     
     return apiSuccess({
       message: 'Ranking date updated successfully',
@@ -378,4 +379,4 @@ async function recalculatePlayerDifferences(players: any[], previousRankingFilen
     // Fallback: return original players
     return players
   }
-} 
+}

@@ -1,13 +1,11 @@
-"use client"
-
 import Link from "next/link"
 import { FileText, Trophy, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Club } from "../context/club-context"
+import type { ClubAdminClub } from "@/lib/club-admin/types"
 
 interface QuickActionsProps {
-  selectedClub: Club | null
+  selectedClub: ClubAdminClub | null
 }
 
 export function QuickActions({ selectedClub }: QuickActionsProps) {
@@ -45,4 +43,4 @@ export function QuickActions({ selectedClub }: QuickActionsProps) {
       )}
     </div>
   )
-} 
+}

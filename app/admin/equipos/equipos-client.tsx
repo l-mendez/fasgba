@@ -23,12 +23,93 @@ interface Club {
   name: string
 }
 
+interface CreateTeamDialogProps {
+  clubs: Club[]
+  handleCreate: () => void
+  isAddOpen: boolean
+  newTeamClubId: string
+  saving: boolean
+  setIsAddOpen: (open: boolean) => void
+  setNewTeamClubId: (clubId: string) => void
+  setTeamName: (name: string) => void
+  teamName: string
+}
+
+function CreateTeamDialog({
+  clubs,
+  handleCreate,
+  isAddOpen,
+  newTeamClubId,
+  saving,
+  setIsAddOpen,
+  setNewTeamClubId,
+  setTeamName,
+  teamName,
+}: CreateTeamDialogProps) {
+  return (
+    <Dialog open={isAddOpen} onOpenChange={(open) => {
+      setIsAddOpen(open)
+      if (!open) { setTeamName(''); setNewTeamClubId('') }
+    }}>
+      <DialogTrigger asChild>
+        <Button className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Nuevo Equipo
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Crear Equipo</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label>Club</Label>
+            <Select value={newTeamClubId} onValueChange={setNewTeamClubId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona un club" />
+              </SelectTrigger>
+              <SelectContent>
+                {clubs.map((club) => (
+                  <SelectItem key={club.id} value={club.id.toString()}>{club.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="new_team_name">Nombre del equipo</Label>
+            <Input
+              id="new_team_name"
+              placeholder="Ej: Equipo A"
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCreate} disabled={saving || !teamName.trim() || !newTeamClubId}>
+              {saving ? 'Creando...' : 'Crear'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 interface AdminEquiposClientProps {
   initialClubs: Club[]
   initialTeamsByClub: Record<number, Team[]>
+  showHeader?: boolean
+  showSummary?: boolean
 }
 
-export function AdminEquiposClient({ initialClubs, initialTeamsByClub }: AdminEquiposClientProps) {
+export function AdminEquiposClient({
+  initialClubs,
+  initialTeamsByClub,
+  showHeader = true,
+  showSummary = true,
+}: AdminEquiposClientProps) {
   const [clubs] = useState<Club[]>(initialClubs)
   const [teamsByClub, setTeamsByClub] = useState<Record<number, Team[]>>(initialTeamsByClub)
   const [loading, setLoading] = useState(false)
@@ -153,63 +234,48 @@ export function AdminEquiposClient({ initialClubs, initialTeamsByClub }: AdminEq
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-terracotta flex items-center gap-2">
-            <Shield className="h-6 w-6" />
-            Equipos
-          </h1>
-          <p className="text-muted-foreground">{totalTeams} equipo{totalTeams !== 1 ? 's' : ''} en {clubs.length} clubes</p>
-        </div>
+      {showHeader ? (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-terracotta flex items-center gap-2">
+              <Shield className="h-6 w-6" />
+              Equipos
+            </h1>
+            <p className="text-muted-foreground">{totalTeams} equipo{totalTeams !== 1 ? 's' : ''} en {clubs.length} clubes</p>
+          </div>
 
-        <Dialog open={isAddOpen} onOpenChange={(open) => {
-          setIsAddOpen(open)
-          if (!open) { setTeamName(''); setNewTeamClubId('') }
-        }}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Nuevo Equipo
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Crear Equipo</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Club</Label>
-                <Select value={newTeamClubId} onValueChange={setNewTeamClubId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un club" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clubs.map((club) => (
-                      <SelectItem key={club.id} value={club.id.toString()}>{club.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="new_team_name">Nombre del equipo</Label>
-                <Input
-                  id="new_team_name"
-                  placeholder="Ej: Equipo A"
-                  value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancelar</Button>
-                <Button onClick={handleCreate} disabled={saving || !teamName.trim() || !newTeamClubId}>
-                  {saving ? 'Creando...' : 'Crear'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          <CreateTeamDialog
+            clubs={clubs}
+            isAddOpen={isAddOpen}
+            newTeamClubId={newTeamClubId}
+            saving={saving}
+            setIsAddOpen={setIsAddOpen}
+            setNewTeamClubId={setNewTeamClubId}
+            setTeamName={setTeamName}
+            teamName={teamName}
+            handleCreate={handleCreate}
+          />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {showSummary ? (
+            <p className="text-sm text-muted-foreground">
+              {totalTeams} equipo{totalTeams !== 1 ? 's' : ''} en {clubs.length} clubes
+            </p>
+          ) : null}
+          <CreateTeamDialog
+            clubs={clubs}
+            isAddOpen={isAddOpen}
+            newTeamClubId={newTeamClubId}
+            saving={saving}
+            setIsAddOpen={setIsAddOpen}
+            setNewTeamClubId={setNewTeamClubId}
+            setTeamName={setTeamName}
+            teamName={teamName}
+            handleCreate={handleCreate}
+          />
+        </div>
+      )}
 
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={(open) => { if (!open) closeEditDialog() }}>

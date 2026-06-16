@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
@@ -6,6 +7,8 @@ import { createClient } from "@/lib/supabase/server"
 export const dynamic = 'force-dynamic'
 
 import { Button } from "@/components/ui/button"
+import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
+import { AdminPageHeader } from "@/components/admin-page-header"
 import { NewsTable } from "@/components/news-table"
 import { ErrorAlert } from "@/components/error-alert"
 
@@ -148,7 +151,30 @@ async function fetchNews(): Promise<News[]> {
   }
 }
 
-export default async function AdminNoticiasPage() {
+export default function AdminNoticiasPage() {
+  return (
+    <div className="container py-6">
+      <div className="space-y-6">
+        <AdminPageHeader
+          title="Noticias"
+          action={
+            <Button asChild className="bg-terracotta hover:bg-terracotta/90">
+              <Link href="/noticias/nueva?source=admin">
+                <Plus className="h-4 w-4 mr-2" />
+                Nueva noticia
+              </Link>
+            </Button>
+          }
+        />
+        <Suspense fallback={<AdminContentSkeleton rows={6} />}>
+          <AdminNoticiasContent />
+        </Suspense>
+      </div>
+    </div>
+  )
+}
+
+async function AdminNoticiasContent() {
   let news: News[] = []
   let error: string | null = null
 
@@ -160,26 +186,11 @@ export default async function AdminNoticiasPage() {
 
   if (error) {
     return (
-      <div className="container py-6">
+      <div>
         <ErrorAlert message={error} />
       </div>
     )
   }
 
-  return (
-    <div className="container py-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-terracotta">Noticias</h1>
-        <Button asChild className="bg-terracotta hover:bg-terracotta/90">
-          <Link href="/noticias/nueva?source=admin">
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva noticia
-          </Link>
-        </Button>
-      </div>
-
-      <NewsTable initialNews={news} />
-    </div>
-  )
+  return <NewsTable initialNews={news} />
 }
-

@@ -103,12 +103,16 @@ interface AdminDocumentosClientProps {
   initialDocuments: Documento[]
   initialTotalDocuments: number
   initialCategoryImportance: CategoryImportance
+  showFormatBadge?: boolean
+  showHeader?: boolean
 }
 
 export function AdminDocumentosClient({
   initialDocuments,
   initialTotalDocuments,
   initialCategoryImportance,
+  showFormatBadge = true,
+  showHeader = true,
 }: AdminDocumentosClientProps) {
   // Upload state
   const [file, setFile] = useState<File | null>(null)
@@ -543,15 +547,34 @@ export function AdminDocumentosClient({
 
   return (
     <div className="flex-1 space-y-6">
-      <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-          Gestión de Documentos
-        </h2>
+      {showHeader ? (
+        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+            Gestión de Documentos
+          </h2>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="w-fit">
+              <FileText className="mr-1 h-3 w-3" />
+              Archivos PDF y Excel
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSettings(true)}
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              Configuración
+            </Button>
+          </div>
+        </div>
+      ) : (
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="w-fit">
-            <FileText className="mr-1 h-3 w-3" />
-            Archivos PDF y Excel
-          </Badge>
+          {showFormatBadge ? (
+            <Badge variant="outline" className="w-fit">
+              <FileText className="mr-1 h-3 w-3" />
+              Archivos PDF y Excel
+            </Badge>
+          ) : null}
           <Button
             variant="outline"
             size="sm"
@@ -561,7 +584,7 @@ export function AdminDocumentosClient({
             Configuración
           </Button>
         </div>
-      </div>
+      )}
 
       {/* Error Alert */}
       {errorMessage && (

@@ -48,9 +48,11 @@ interface Player {
 
 interface ClubPlayersManagementProps {
   initialPlayers: Player[]
+  showHeader?: boolean
+  showStats?: boolean
 }
 
-export function ClubPlayersManagement({ initialPlayers }: ClubPlayersManagementProps) {
+export function ClubPlayersManagement({ initialPlayers, showHeader = true, showStats = true }: ClubPlayersManagementProps) {
   const { clubesAdministrados } = useClubContext()
   const [players, setPlayers] = useState<Player[]>(initialPlayers)
   const [searchTerm, setSearchTerm] = useState("")
@@ -121,55 +123,58 @@ export function ClubPlayersManagement({ initialPlayers }: ClubPlayersManagementP
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Gestión de Jugadores</h1>
-          <p className="text-muted-foreground">
-            Administra los jugadores de tus clubes
-          </p>
+      {showHeader ? (
+        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Gestión de Jugadores</h1>
+            <p className="text-muted-foreground">
+              Administra los jugadores de tus clubes
+            </p>
+          </div>
+          <Link href="/jugadores/nuevo">
+            <Button className="bg-terracotta hover:bg-terracotta/90">
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Jugador
+            </Button>
+          </Link>
         </div>
-        <Link href="/jugadores/nuevo">
-          <Button className="bg-terracotta hover:bg-terracotta/90">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Jugador
-          </Button>
-        </Link>
-      </div>
+      ) : null}
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Jugadores</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{players.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Con FIDE ID</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {players.filter(p => p.fide_id).length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Con Club</CardTitle>
-            <Home className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {players.filter(p => p.club).length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {showStats ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Jugadores</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{players.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Con FIDE ID</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {players.filter(p => p.fide_id).length}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Con Club</CardTitle>
+              <Home className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {players.filter(p => p.club).length}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
 
       {/* Filters */}
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">

@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
@@ -7,6 +8,8 @@ import { getTournamentParticipantCount } from "@/lib/tournamentUtils"
 export const dynamic = 'force-dynamic'
 
 import { Button } from "@/components/ui/button"
+import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
+import { AdminPageHeader } from "@/components/admin-page-header"
 import { TournamentsTable } from "@/components/tournaments-table"
 import { ErrorAlert } from "@/components/error-alert"
 
@@ -170,7 +173,29 @@ async function fetchTournaments(): Promise<Tournament[]> {
   }
 }
 
-export default async function AdminTorneosPage() {
+export default function AdminTorneosPage() {
+  return (
+    <div className="flex flex-col gap-8 p-8">
+      <AdminPageHeader
+        title="Torneos"
+        subtitle="Gestiona los torneos y competiciones de FASGBA."
+        action={
+          <Button asChild>
+            <Link href="/torneos/nuevo">
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Torneo
+            </Link>
+          </Button>
+        }
+      />
+      <Suspense fallback={<AdminContentSkeleton rows={6} />}>
+        <AdminTorneosContent />
+      </Suspense>
+    </div>
+  )
+}
+
+async function AdminTorneosContent() {
   let tournaments: Tournament[] = []
   let error: string | null = null
 
@@ -182,29 +207,11 @@ export default async function AdminTorneosPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-8 p-8">
+      <div className="flex flex-col gap-8">
         <ErrorAlert message={error} />
       </div>
     )
   }
 
-  return (
-    <div className="flex flex-col gap-8 p-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Torneos</h1>
-          <p className="text-muted-foreground">Gestiona los torneos y competiciones de FASGBA.</p>
-        </div>
-        <Button asChild>
-                      <Link href="/torneos/nuevo">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Torneo
-          </Link>
-        </Button>
-      </div>
-
-      <TournamentsTable initialTournaments={tournaments} />
-    </div>
-  )
+  return <TournamentsTable initialTournaments={tournaments} />
 }
-

@@ -1,6 +1,9 @@
+import { Suspense } from "react"
 import Link from "next/link"
 import { Award, FileText, FolderOpen, GraduationCap, Home, Shield, Trophy, Users } from "lucide-react"
 
+import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
+import { AdminPageHeader } from "@/components/admin-page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { getArgentinaDateInputValue } from "@/lib/dateUtils"
@@ -137,18 +140,22 @@ function countUniqueTournamentIds(rows: Array<{ tournament_id: number | null }> 
   return new Set(rows?.map((row) => row.tournament_id).filter(Boolean)).size
 }
 
-export default async function AdminDashboard() {
+export default function AdminDashboard() {
+  return (
+    <div className="flex-1 space-y-4">
+      <AdminPageHeader title="Dashboard" />
+      <Suspense fallback={<AdminContentSkeleton stats={4} rows={3} filters={false} />}>
+        <AdminDashboardContent />
+      </Suspense>
+    </div>
+  )
+}
+
+async function AdminDashboardContent() {
   const stats = await getDashboardStats()
 
   return (
-    <div className="flex-1 space-y-4">
-      <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h2>
-        <div className="flex items-center space-x-2">
-          
-        </div>
-      </div>
-
+    <>
       <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -326,6 +333,6 @@ export default async function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </>
   )
 }
