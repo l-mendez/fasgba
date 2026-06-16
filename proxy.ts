@@ -4,7 +4,7 @@ import { updateSession } from '@/lib/supabase/middleware'
 const ALLOWED_COUNTRY = 'AR'
 
 // Paths that should skip session middleware for better caching
-const CACHEABLE_PATHS = ['/noticias', '/clubes', '/ranking', '/torneos']
+const CACHEABLE_PATHS = ['/noticias', '/clubes', '/ranking', '/torneos', '/documentos']
 
 // Public API routes that can be cached at CDN level
 const CACHEABLE_API_PATHS = ['/api/clubs', '/api/news', '/api/tournaments', '/api/ranking']
