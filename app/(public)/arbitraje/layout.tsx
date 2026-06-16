@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Arbitraje',
-  description: 'Información sobre arbitraje de ajedrez y certificaciones en FASGBA',
+  description: 'Listado de árbitros oficiales de ajedrez en FASGBA',
 }
 
 export default function ArbitrajeLayout({
