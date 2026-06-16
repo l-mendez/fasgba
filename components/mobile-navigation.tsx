@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { CastleIcon as ChessKnight, Menu, User, Settings, Trophy, Home, FileText, FolderOpen, GraduationCap, Shield, LogOut, BarChart3, Award } from "lucide-react"
+import { CastleIcon as ChessKnight, Menu, User, Settings, Trophy, FileText, FolderOpen, GraduationCap, Shield, LogOut, BarChart3, Award } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -51,14 +51,6 @@ export function MobileNavigation() {
           </Link>
         </div>
         <nav className="flex flex-col space-y-4 mt-6">
-          <Link
-            href="/"
-            className="flex items-center text-muted-foreground hover:text-amber"
-            onClick={() => setIsOpen(false)}
-          >
-            <Home className="mr-2 h-5 w-5 text-amber" />
-            <span>Inicio</span>
-          </Link>
           <Link
             href="/torneos"
             className="flex items-center text-muted-foreground hover:text-amber"

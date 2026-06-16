@@ -215,7 +215,7 @@ export default function TournamentClient({
                     {tournament.inscription_details && (
                       <div>
                         <p className="text-muted-foreground mb-2">Detalles de inscripción:</p>
-                        <p className="text-sm leading-relaxed">{tournament.inscription_details}</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{tournament.inscription_details}</p>
                       </div>
                     )}
                     

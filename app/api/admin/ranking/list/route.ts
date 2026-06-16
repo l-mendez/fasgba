@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
         
         // For same month/year, sort by creation time (most recent first)
         // This ensures higher numbered versions (created later) come first
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
+        return new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime();
       })
 
     // Handle duplicate months by adding (2), (3), etc. based on creation order

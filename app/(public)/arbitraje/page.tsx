@@ -7,7 +7,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { unstable_cache } from "next/cache"
 
 import { createAdminClient } from "@/lib/supabase/admin"
-import { PageHero } from "@/components/page-hero"
 
 export const revalidate = 60
 
@@ -101,10 +100,6 @@ export default async function ArbitrajePage() {
 
   return (
     <>
-      <PageHero
-        title="Arbitraje"
-        subtitle="Árbitros oficiales y cursos de formación de la Federación de Ajedrez del Sur del Gran Buenos Aires"
-      />
       <section className="w-full py-12 md:py-24 lg:py-32">
         <div className="container px-4 md:px-6">
           <div className="mb-10">

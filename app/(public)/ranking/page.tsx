@@ -2,7 +2,6 @@ import { Suspense } from "react"
 import { Metadata } from "next"
 
 import { PlayerList } from "./components/PlayerList"
-import { PageHero } from "@/components/page-hero"
 import type { Player } from "@/lib/rankingUtils"
 
 // Re-export Player type for any consumers
@@ -65,10 +64,6 @@ function LoadingState() {
 export default function RankingPage() {
   return (
     <>
-      <PageHero
-        title="Ranking FASGBA"
-        subtitle="Clasificación oficial de jugadores de la Federación de Ajedrez del Sur del Gran Buenos Aires"
-      />
       <section className="w-full py-12 md:py-24 lg:py-32">
         <Suspense fallback={<LoadingState />}>
           <PlayerList />
