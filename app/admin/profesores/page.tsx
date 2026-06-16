@@ -1,17 +1,17 @@
 import Link from "next/link"
 import { Plus } from "lucide-react"
-import { createClient } from "@supabase/supabase-js"
 
 import { Button } from "@/components/ui/button"
 import { ProfesoresTable } from "@/components/profesores-table"
+import { requireAdminAction } from "@/lib/actions/auth"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export const dynamic = 'force-dynamic'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
 async function getProfesores() {
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
+  await requireAdminAction()
+
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('profesores')
     .select('*, clubs(name)')

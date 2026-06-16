@@ -11,7 +11,6 @@ import {
   Phone,
 } from "lucide-react"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -39,6 +38,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { apiCall } from "@/lib/utils/apiClient"
 
 interface ArbitroRow {
   id: number
@@ -49,40 +49,6 @@ interface ArbitroRow {
   club_name: string | null
   phone: string | null
   bio: string | null
-}
-
-async function getAuthToken(): Promise<string | null> {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  return session?.access_token || null
-}
-
-async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
-  const token = await getAuthToken()
-
-  if (!token) {
-    throw new Error('No authentication token available')
-  }
-
-  const response = await fetch(endpoint, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...options.headers,
-    },
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
-  }
-
-  if (response.status === 204) {
-    return null
-  }
-
-  return response.json()
 }
 
 async function deleteArbitro(arbitroId: number): Promise<void> {

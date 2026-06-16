@@ -8,7 +8,7 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { createClient } from "@/lib/supabase/client"
+import { apiCall } from "@/lib/utils/apiClient"
 
 interface FormData {
   name: string
@@ -16,39 +16,6 @@ interface FormData {
   telephone: string
   mail: string
   schedule: string
-}
-
-// Helper function to make authenticated API calls
-async function apiCall(endpoint: string, options: RequestInit = {}) {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  if (!session) {
-    throw new Error('No hay sesión activa')
-  }
-
-  const url = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`
-  const config: RequestInit = {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-      ...options.headers
-    },
-    ...options
-  }
-
-  const response = await fetch(url, config)
-  
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
-    throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
-  }
-  
-  if (response.status === 204) {
-    return null // No content
-  }
-  
-  return response.json()
 }
 
 export default function NuevoClubPage() {
@@ -95,7 +62,7 @@ export default function NuevoClubPage() {
         schedule: formData.schedule.trim() || null,
       }
 
-      await apiCall('/clubs', {
+      await apiCall('/api/clubs', {
         method: 'POST',
         body: JSON.stringify(clubData)
       })
