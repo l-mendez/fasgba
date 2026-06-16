@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import { ChevronDown, Edit, Eye, MoreHorizontal, Search, Trash2, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
-import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
+import { apiCall } from "@/lib/utils/apiClient"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -53,18 +54,89 @@ interface News {
 
 interface NewsTableProps {
   initialNews: News[]
+  initialTotal: number
+  pageSize: number
+  clubs: { id: number; name: string }[]
 }
 
-export function NewsTable({ initialNews }: NewsTableProps) {
+export function NewsTable({ initialNews, initialTotal, pageSize, clubs }: NewsTableProps) {
   const [news, setNews] = useState<News[]>(initialNews)
+  const [total, setTotal] = useState(initialTotal)
   const [searchTerm, setSearchTerm] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
   const [selectedClubFilter, setSelectedClubFilter] = useState<number | null | 'all'>('all')
   const [selectedDateFilter, setSelectedDateFilter] = useState<string>('')
   const [newsToDelete, setNewsToDelete] = useState<number | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [sortBy, setSortBy] = useState<string | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
-  const [originalOrder, setOriginalOrder] = useState<News[]>(initialNews)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(initialNews.length < initialTotal)
+
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const skipInitialFetchRef = useRef(true)
+
+  const clubParam =
+    selectedClubFilter === 'all' ? 'all' : selectedClubFilter === null ? 'fasgba' : String(selectedClubFilter)
+
+  // Server-side search/filter/pagination. Sorting stays client-side over the
+  // loaded rows (getSortedNews) since it can't span pages that aren't loaded.
+  const fetchNews = useCallback(
+    async (pageNum: number, search: string, club: string, date: string, append: boolean) => {
+      try {
+        const params = new URLSearchParams({ page: String(pageNum), limit: String(pageSize) })
+        if (search) params.set('search', search)
+        if (club !== 'all') params.set('club', club)
+        if (date) params.set('date', date)
+
+        const data = await apiCall(`/api/news?${params}`)
+        const fetched: News[] = data.news || []
+        setNews(prev => (append ? [...prev, ...fetched] : fetched))
+        setTotal(data.total || 0)
+        setHasMore(pageNum < data.totalPages)
+        setPage(pageNum)
+      } catch {
+        toast.error('Error al cargar las noticias')
+      }
+    },
+    [pageSize]
+  )
+
+  // Debounce the search input
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // Reset to the first page and refetch whenever search or filters change
+  useEffect(() => {
+    if (skipInitialFetchRef.current) {
+      skipInitialFetchRef.current = false
+      return
+    }
+    setIsLoading(true)
+    fetchNews(1, debouncedSearch, clubParam, selectedDateFilter, false).finally(() => setIsLoading(false))
+  }, [debouncedSearch, clubParam, selectedDateFilter, fetchNews])
+
+  // Infinite scroll: load the next page when the sentinel comes into view
+  useEffect(() => {
+    if (!sentinelRef.current) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoading && !isLoadingMore) {
+          setIsLoadingMore(true)
+          fetchNews(page + 1, debouncedSearch, clubParam, selectedDateFilter, true).finally(() =>
+            setIsLoadingMore(false)
+          )
+        }
+      },
+      { rootMargin: '200px' }
+    )
+    observer.observe(sentinelRef.current)
+    return () => observer.disconnect()
+  }, [hasMore, isLoading, isLoadingMore, page, debouncedSearch, clubParam, selectedDateFilter, fetchNews])
 
   // Delete news function
   const deleteNews = async (newsId: number) => {
@@ -93,9 +165,7 @@ export function NewsTable({ initialNews }: NewsTableProps) {
 
   const getSortedNews = (newsToSort: News[]) => {
     if (!sortBy || sortOrder === 'original') {
-      return originalOrder.filter(newsItem => 
-        newsToSort.some(filtered => filtered.id === newsItem.id)
-      )
+      return newsToSort
     }
 
     return [...newsToSort].sort(
@@ -140,7 +210,7 @@ export function NewsTable({ initialNews }: NewsTableProps) {
       
       // Update local state
       setNews(prevNews => prevNews.filter(item => item.id !== newsToDelete))
-      setOriginalOrder(prevOriginal => prevOriginal.filter(item => item.id !== newsToDelete))
+      setTotal(t => Math.max(0, t - 1))
       setShowDeleteDialog(false)
       setNewsToDelete(null)
     } catch (err) {
@@ -149,56 +219,8 @@ export function NewsTable({ initialNews }: NewsTableProps) {
     }
   }
 
-  const filteredNews = news.filter(newsItem => {
-    const search = searchTerm.toLowerCase().trim()
-    
-    // Apply club filter
-    if (selectedClubFilter !== 'all') {
-      if (selectedClubFilter === null) {
-        // FASGBA filter - club_id should be null
-        if (newsItem.club_id !== null) return false
-      } else {
-        // Specific club filter - club_id should match
-        if (newsItem.club_id !== selectedClubFilter) return false
-      }
-    }
-    
-    // Apply date filter
-    if (selectedDateFilter) {
-      if (getDateInputValue(newsItem.date) < selectedDateFilter) return false
-    }
-    
-    // Apply text search (only if there's a search term)
-    if (search) {
-      return newsItem.title.toLowerCase().includes(search) ||
-             newsItem.extract.toLowerCase().includes(search) ||
-             newsItem.club?.name?.toLowerCase().includes(search) ||
-             newsItem.author_name?.toLowerCase().includes(search)
-    }
-    
-    return true
-  })
-
-  // Get unique clubs for filter options
-  const getUniqueClubs = () => {
-    const clubs = news.reduce((acc, newsItem) => {
-      if (newsItem.club && !acc.some(club => club.id === newsItem.club!.id)) {
-        acc.push(newsItem.club)
-      }
-      return acc
-    }, [] as Array<{ id: number; name: string }>)
-    
-    return clubs.sort((a, b) => a.name.localeCompare(b.name))
-  }
-
-  // Apply sorting to filtered news
-  const sortedAndFilteredNews = getSortedNews(filteredNews)
-
-  // Render a growing window; resets whenever the search/filter/sort changes.
-  const { visibleItems: visibleNews, sentinelRef, hasMore } = useInfiniteScroll(
-    sortedAndFilteredNews,
-    { pageSize: 20, resetKey: `${searchTerm}|${selectedClubFilter}|${selectedDateFilter}|${sortBy}|${sortOrder}` }
-  )
+  // Sort the loaded rows client-side (search/filter/pagination are server-side).
+  const sortedNews = getSortedNews(news)
 
   return (
     <div className="space-y-6">
@@ -216,9 +238,9 @@ export function NewsTable({ initialNews }: NewsTableProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="w-full sm:w-auto">
-                {selectedClubFilter === 'all' ? 'Todos los clubes' : 
-                 selectedClubFilter === null ? 'FASGBA' : 
-                 getUniqueClubs().find(club => club.id === selectedClubFilter)?.name || 'Club'}
+                {selectedClubFilter === 'all' ? 'Todos los clubes' :
+                 selectedClubFilter === null ? 'FASGBA' :
+                 clubs.find(club => club.id === selectedClubFilter)?.name || 'Club'}
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -232,7 +254,7 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                 FASGBA
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              {getUniqueClubs().map((club) => (
+              {clubs.map((club) => (
                 <DropdownMenuItem key={club.id} onClick={() => setSelectedClubFilter(club.id)}>
                   {club.name}
                 </DropdownMenuItem>
@@ -345,14 +367,14 @@ export function NewsTable({ initialNews }: NewsTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedAndFilteredNews.length === 0 ? (
+            {news.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-6">
-                  No se encontraron noticias
+                  {isLoading ? 'Cargando…' : 'No se encontraron noticias'}
                 </TableCell>
               </TableRow>
             ) : (
-              visibleNews.map((item) => (
+              sortedNews.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{item.title}</TableCell>
                   <TableCell>{item.club?.name || FEDERATION_NAME}</TableCell>
@@ -438,12 +460,12 @@ export function NewsTable({ initialNews }: NewsTableProps) {
 
       {/* Mobile Card View - Hidden on desktop */}
       <div className="md:hidden space-y-4">
-        {sortedAndFilteredNews.length === 0 ? (
+        {news.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            No se encontraron noticias
+            {isLoading ? 'Cargando…' : 'No se encontraron noticias'}
           </div>
         ) : (
-          visibleNews.map((item) => (
+          sortedNews.map((item) => (
             <div key={item.id} className="bg-card rounded-lg border p-4 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
@@ -531,16 +553,16 @@ export function NewsTable({ initialNews }: NewsTableProps) {
       </div>
 
       <div ref={sentinelRef} className="h-1" />
-      {hasMore && (
+      {isLoadingMore && (
         <div className="flex items-center justify-center py-4">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">Cargando más...</span>
         </div>
       )}
 
-      {sortedAndFilteredNews.length > 0 && (
+      {total > 0 && (
         <div className="text-sm text-muted-foreground">
-          Mostrando {visibleNews.length} de {sortedAndFilteredNews.length} noticias
+          Mostrando {news.length} de {total} noticias
         </div>
       )}
 
