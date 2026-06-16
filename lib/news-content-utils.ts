@@ -5,7 +5,7 @@ interface UploadProgressUpdater {
   (update: { current: number; total: number; isUploading: boolean } | ((prev: { current: number; total: number; isUploading: boolean }) => { current: number; total: number; isUploading: boolean })): void
 }
 
-export async function processNewsContentWithDeduplication(
+export async function processNewsContent(
   blocks: NewsBlockContent[],
   featuredImage: File | null,
   newsId: number,

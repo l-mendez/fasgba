@@ -6,9 +6,6 @@ import {
   createEmptyChessGameBlock,
   type NewsBlockContent,
   type ImageAlignment,
-  type TextBlockContent,
-  type ImageBlockContent,
-  type ChessGameBlockContent,
 } from "@/components/news/types"
 
 export function useNewsContentBlocks(
@@ -50,124 +47,83 @@ export function useNewsContentBlocks(
   }, [setBlocks])
 
   const updateTextBlock = useCallback((index: number, newContent: string) => {
-    setBlocks(prev => {
-      const updated = [...prev]
-      if (updated[index].type === NEWS_BLOCK_TYPES.TEXT) {
-        (updated[index] as TextBlockContent).content = newContent
-      }
-      return updated
-    })
+    setBlocks(prev => prev.map((block, i) =>
+      i === index && block.type === NEWS_BLOCK_TYPES.TEXT
+        ? { ...block, content: newContent }
+        : block
+    ))
   }, [setBlocks])
 
   const updateImageFile = useCallback((index: number, file: File, imageUrl: string) => {
-    setBlocks(prev => {
-      const updated = [...prev]
-      if (updated[index].type === NEWS_BLOCK_TYPES.IMAGE) {
-        const imageBlock = updated[index] as ImageBlockContent
-        imageBlock.content = { ...imageBlock.content, file, imageUrl }
-      }
-      return updated
-    })
+    setBlocks(prev => prev.map((block, i) =>
+      i === index && block.type === NEWS_BLOCK_TYPES.IMAGE
+        ? { ...block, content: { ...block.content, file, imageUrl } }
+        : block
+    ))
   }, [setBlocks])
 
   const updateImageCaption = useCallback((index: number, caption: string) => {
-    setBlocks(prev => {
-      const updated = [...prev]
-      if (updated[index].type === NEWS_BLOCK_TYPES.IMAGE) {
-        const imageBlock = updated[index] as ImageBlockContent
-        imageBlock.content = { ...imageBlock.content, caption }
-      }
-      return updated
-    })
+    setBlocks(prev => prev.map((block, i) =>
+      i === index && block.type === NEWS_BLOCK_TYPES.IMAGE
+        ? { ...block, content: { ...block.content, caption } }
+        : block
+    ))
   }, [setBlocks])
 
   const updateImageAlignment = useCallback((index: number, alignment: ImageAlignment) => {
-    setBlocks(prev => {
-      const updated = [...prev]
-      if (updated[index].type === NEWS_BLOCK_TYPES.IMAGE) {
-        const imageBlock = updated[index] as ImageBlockContent
-        imageBlock.content = { ...imageBlock.content, alignment }
-      }
-      return updated
-    })
+    setBlocks(prev => prev.map((block, i) =>
+      i === index && block.type === NEWS_BLOCK_TYPES.IMAGE
+        ? { ...block, content: { ...block.content, alignment } }
+        : block
+    ))
   }, [setBlocks])
 
   const updateChessGamePgn = useCallback((index: number, newPgn: string) => {
-    setBlocks(prev => {
-      const updated = [...prev]
-      if (updated[index].type === NEWS_BLOCK_TYPES.CHESS_GAME) {
-        const chessBlock = updated[index] as ChessGameBlockContent
-        chessBlock.content = { ...chessBlock.content, pgn: newPgn }
-      }
-      return updated
-    })
+    setBlocks(prev => prev.map((block, i) =>
+      i === index && block.type === NEWS_BLOCK_TYPES.CHESS_GAME
+        ? { ...block, content: { ...block.content, pgn: newPgn } }
+        : block
+    ))
   }, [setBlocks])
 
   const updateChessGameWhitePlayer = useCallback((index: number, newValue: string) => {
-    setBlocks(prev => {
-      const updated = [...prev]
-      if (updated[index].type === NEWS_BLOCK_TYPES.CHESS_GAME) {
-        const chessBlock = updated[index] as ChessGameBlockContent
-        chessBlock.content = {
-          ...chessBlock.content,
-          whitePlayer: { ...chessBlock.content.whitePlayer, value: newValue },
-        }
-      }
-      return updated
-    })
+    setBlocks(prev => prev.map((block, i) =>
+      i === index && block.type === NEWS_BLOCK_TYPES.CHESS_GAME
+        ? { ...block, content: { ...block.content, whitePlayer: { ...block.content.whitePlayer, value: newValue } } }
+        : block
+    ))
   }, [setBlocks])
 
   const updateChessGameBlackPlayer = useCallback((index: number, newValue: string) => {
-    setBlocks(prev => {
-      const updated = [...prev]
-      if (updated[index].type === NEWS_BLOCK_TYPES.CHESS_GAME) {
-        const chessBlock = updated[index] as ChessGameBlockContent
-        chessBlock.content = {
-          ...chessBlock.content,
-          blackPlayer: { ...chessBlock.content.blackPlayer, value: newValue },
-        }
-      }
-      return updated
-    })
+    setBlocks(prev => prev.map((block, i) =>
+      i === index && block.type === NEWS_BLOCK_TYPES.CHESS_GAME
+        ? { ...block, content: { ...block.content, blackPlayer: { ...block.content.blackPlayer, value: newValue } } }
+        : block
+    ))
   }, [setBlocks])
 
   const updateChessGameWhitePlayerType = useCallback((index: number, newType: string) => {
-    setBlocks(prev => {
-      const updated = [...prev]
-      if (updated[index].type === NEWS_BLOCK_TYPES.CHESS_GAME) {
-        const chessBlock = updated[index] as ChessGameBlockContent
-        chessBlock.content = {
-          ...chessBlock.content,
-          whitePlayer: { type: newType, value: "" },
-        }
-      }
-      return updated
-    })
+    setBlocks(prev => prev.map((block, i) =>
+      i === index && block.type === NEWS_BLOCK_TYPES.CHESS_GAME
+        ? { ...block, content: { ...block.content, whitePlayer: { type: newType, value: "" } } }
+        : block
+    ))
   }, [setBlocks])
 
   const updateChessGameBlackPlayerType = useCallback((index: number, newType: string) => {
-    setBlocks(prev => {
-      const updated = [...prev]
-      if (updated[index].type === NEWS_BLOCK_TYPES.CHESS_GAME) {
-        const chessBlock = updated[index] as ChessGameBlockContent
-        chessBlock.content = {
-          ...chessBlock.content,
-          blackPlayer: { type: newType, value: "" },
-        }
-      }
-      return updated
-    })
+    setBlocks(prev => prev.map((block, i) =>
+      i === index && block.type === NEWS_BLOCK_TYPES.CHESS_GAME
+        ? { ...block, content: { ...block.content, blackPlayer: { type: newType, value: "" } } }
+        : block
+    ))
   }, [setBlocks])
 
   const updateChessGameResult = useCallback((index: number, newResult: string) => {
-    setBlocks(prev => {
-      const updated = [...prev]
-      if (updated[index].type === NEWS_BLOCK_TYPES.CHESS_GAME) {
-        const chessBlock = updated[index] as ChessGameBlockContent
-        chessBlock.content = { ...chessBlock.content, result: newResult }
-      }
-      return updated
-    })
+    setBlocks(prev => prev.map((block, i) =>
+      i === index && block.type === NEWS_BLOCK_TYPES.CHESS_GAME
+        ? { ...block, content: { ...block.content, result: newResult } }
+        : block
+    ))
   }, [setBlocks])
 
   return {

@@ -14,7 +14,7 @@ import { ErrorAlert } from "@/components/error-alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { updateNewsAction } from "@/lib/actions/news"
 import { getArgentinaDateInputValue } from "@/lib/dateUtils"
-import { processNewsContentWithDeduplication } from "@/lib/news-content-utils"
+import { processNewsContent } from "@/lib/news-content-utils"
 import { NEWS_CATEGORIES, createEmptyTextBlock, type NewsBlockContent } from "@/components/news/types"
 import { NewsContentBlocksEditor } from "@/components/news/news-content-blocks-editor"
 import { useNewsContentBlocks } from "@/components/news/use-news-content-blocks"
@@ -115,7 +115,7 @@ export function NewNewsForm({ userClubs, isAdmin, defaultEntityId }: NewNewsForm
       const createdNews = await response.json()
       const newsId = createdNews.id
 
-      const { processedContent, featuredImagePath } = await processNewsContentWithDeduplication(
+      const { processedContent, featuredImagePath } = await processNewsContent(
         contentBlocks,
         formData.image,
         newsId,
