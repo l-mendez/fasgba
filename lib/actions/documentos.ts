@@ -2,6 +2,7 @@
 
 import { requireAdminAction, mapErrorToResult, type ActionError } from '@/lib/actions/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { revalidateDocumentosCache } from '@/lib/cache/documentos'
 import { MAX_FILE_SIZE, isValidCategory, generateStorageFilename, isAllowedMimeType } from '@/lib/documentosUtils'
 
 type UploadResult =
@@ -80,6 +81,7 @@ export async function uploadDocumentoAction(formData: FormData): Promise<UploadR
       return { ok: false, error: 'Error al guardar el documento: ' + dbError.message, code: 'INTERNAL' }
     }
 
+    revalidateDocumentosCache()
     return { ok: true, data: { documento, message: 'Documento subido exitosamente' } }
   } catch (err) {
     return mapErrorToResult(err)

@@ -1,13 +1,12 @@
 'use server'
 
-import { revalidatePath, updateTag } from 'next/cache'
-
 import { createClient } from '@/lib/supabase/server'
 import { requireAuthAction, mapErrorToResult, type ActionError } from '@/lib/actions/auth'
 import { ForbiddenError } from '@/lib/middleware/auth'
 import { canUserEditNews, getNewsById, updateNews, deleteNews } from '@/lib/newsUtils'
 import { validateUpdateNews } from '@/lib/schemas/newsSchemas'
 import { uploadImagesWithDeduplication } from '@/lib/imageUtils.server'
+import { revalidateNewsCache } from '@/lib/cache/news'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
@@ -19,13 +18,6 @@ type BatchUploadResult =
   | { ok: true; data: { results: Array<{ filePath: string; publicUrl: string; wasReused: boolean; originalIndex: number }> } }
   | ActionError
 type DeleteResult = { ok: true } | ActionError
-
-function revalidateNewsPages(newsId: number) {
-  updateTag('news')
-  revalidatePath('/')
-  revalidatePath('/noticias')
-  revalidatePath(`/noticias/${newsId}`)
-}
 
 export async function uploadNewsImageAction(newsId: number, formData: FormData): Promise<UploadResult> {
   try {
@@ -76,7 +68,7 @@ export async function updateNewsAction(newsId: number, input: unknown): Promise<
 
     const validated = validateUpdateNews(input)
     await updateNews(newsId, validated)
-    revalidateNewsPages(newsId)
+    revalidateNewsCache(newsId)
     return { ok: true }
   } catch (err) {
     return mapErrorToResult(err)
@@ -135,7 +127,7 @@ export async function deleteNewsAction(newsId: number): Promise<{ ok: true } | A
     if (!(await canUserEditNews(newsId, user.id))) throw new ForbiddenError('You do not have permission to delete this news item')
 
     await deleteNews(newsId)
-    revalidateNewsPages(newsId)
+    revalidateNewsCache(newsId)
     return { ok: true }
   } catch (err) {
     return mapErrorToResult(err)

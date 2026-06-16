@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/middleware/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { revalidateDocumentosCache } from '@/lib/cache/documentos'
 import {
   apiSuccess,
   handleError,
@@ -66,6 +67,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return validationError('Error al eliminar el documento: ' + deleteError.message)
     }
 
+    revalidateDocumentosCache()
     return apiSuccess({
       success: true,
       message: `Documento "${documento.name}" eliminado exitosamente`,
@@ -123,6 +125,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return validationError('Error al actualizar el documento: ' + updateError.message)
     }
 
+    revalidateDocumentosCache()
     return apiSuccess({
       success: true,
       documento,

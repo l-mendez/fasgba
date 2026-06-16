@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getArbitroById, updateArbitro, deleteArbitro } from '@/lib/arbitroUtils'
+import { revalidateArbitrosCache } from '@/lib/cache/arbitros'
 import { requireAdmin } from '@/lib/middleware/auth'
 import { validateArbitroId, validateUpdateArbitro } from '@/lib/schemas/arbitroSchemas'
 import { apiSuccess, noContent, handleError, notFoundError } from '@/lib/utils/apiResponse'
@@ -51,6 +52,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       throw updateError
     }
 
+    revalidateArbitrosCache()
     return apiSuccess({ success: true })
   } catch (error) {
     return handleError(error)
@@ -77,6 +79,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       throw deleteError
     }
 
+    revalidateArbitrosCache()
     return noContent()
   } catch (error) {
     return handleError(error)

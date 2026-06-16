@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getClubNews, getClubById } from '@/lib/clubUtils'
 import { createNews } from '@/lib/newsUtils'
+import { revalidateNewsCache } from '@/lib/cache/news'
 import { validateClubId, validateClubNewsQuery } from '@/lib/schemas/clubSchemas'
 import { validateCreateNews } from '@/lib/schemas/newsSchemas'
 import { apiSuccess, handleError, notFoundError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
@@ -101,7 +102,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const createdNews = await createNews(newsData)
-    
+    revalidateNewsCache(createdNews.id)
+
     return apiSuccess(createdNews, 201)
   } catch (error) {
     return handleError(error)

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getTournamentById, updateTournament, deleteTournament } from '@/lib/tournamentUtils'
+import { revalidateTorneosCache } from '@/lib/cache/torneos'
 import { validateTournamentId, validateUpdateTournament } from '@/lib/schemas/tournamentSchemas'
 import { apiSuccess, handleError, notFoundError, unauthorizedError, noContent, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
@@ -137,13 +138,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const validatedData = validateUpdateTournament(body)
     
     const success = await updateTournament(serverSupabase, tournamentId, validatedData)
-    
+
     if (!success) {
       const updateError = new Error(ERROR_MESSAGES.UPDATE_FAILED)
       updateError.name = 'DatabaseError'
       throw updateError
     }
-    
+
+    revalidateTorneosCache()
     return apiSuccess({ success: true })
   } catch (error) {
     return handleError(error)
@@ -181,13 +183,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
     
     const success = await deleteTournament(serverSupabase, tournamentId)
-    
+
     if (!success) {
       const deleteError = new Error(ERROR_MESSAGES.DELETION_FAILED)
       deleteError.name = 'DatabaseError'
       throw deleteError
     }
-    
+
+    revalidateTorneosCache()
     return noContent()
   } catch (error) {
     return handleError(error)
@@ -406,7 +409,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       response.cascade_details = cascadeDetails
       response.message = 'Tournament updated successfully. Tournament type change required deletion of existing games and registrations.'
     }
-    
+
+    revalidateTorneosCache()
     return apiSuccess(response)
   } catch (error) {
     return handleError(error)
