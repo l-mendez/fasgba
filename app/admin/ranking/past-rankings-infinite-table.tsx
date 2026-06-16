@@ -166,7 +166,7 @@ export function PastRankingsInfiniteTable({ initialData }: PastRankingsInfiniteT
           {loadError ? (
             <p className="text-sm text-destructive">{loadError}</p>
           ) : null}
-          {hasMore && nextPage ? (
+          {nextPage ? (
             <Button
               type="button"
               variant="outline"
@@ -178,6 +178,8 @@ export function PastRankingsInfiniteTable({ initialData }: PastRankingsInfiniteT
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   Cargando más rankings...
                 </>
+              ) : loadError ? (
+                "Reintentar"
               ) : (
                 "Cargar más"
               )}

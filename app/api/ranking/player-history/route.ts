@@ -12,8 +12,7 @@ export async function GET(request: NextRequest) {
       return validationError('playerId o name es requerido')
     }
 
-    const cacheKey = playerId ? `id:${playerId}` : `name:${playerName.toLowerCase()}`
-    const history = await getCachedRankingHistory(cacheKey, playerId, playerName)
+    const history = await getCachedRankingHistory(playerId, playerName)
 
     return apiSuccess({ playerId, history }, 200, RANKING_CACHE_HEADERS)
   } catch (error) {

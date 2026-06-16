@@ -60,7 +60,7 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
   const [selectedMonth, setSelectedMonth] = useState((currentDate.getMonth() + 1).toString())
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString())
 
-  const generateFilename = () => {
+  const generatedFilename = useMemo(() => {
     const baseFilename = `ranking-${selectedMonth.padStart(2, "0")}-${selectedYear}`
     let filename = baseFilename
     let counter = 2
@@ -71,7 +71,7 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
     }
 
     return filename
-  }
+  }, [selectedMonth, selectedYear, existingRankingNames])
 
   const resetUploadMessages = () => {
     setUploadStatus("idle")
@@ -139,7 +139,7 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
         body: JSON.stringify({
           tempJsonPath,
           tempAnalyticsPath,
-          filename: generateFilename(),
+          filename: generatedFilename,
         }),
       })
 
@@ -148,7 +148,7 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
       setUploadStatus("idle")
       setTempJsonPath(null)
       setTempAnalyticsPath(null)
-      setSuccessMessage(`Ranking "${generateFilename()}" guardado exitosamente. El ranking ya está disponible en el sistema.`)
+      setSuccessMessage(`Ranking "${generatedFilename}" guardado exitosamente. El ranking ya está disponible en el sistema.`)
       router.refresh()
     } catch (error) {
       console.error("Save error:", error)
@@ -231,7 +231,7 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
         <div className="space-y-2">
           <Label>Nombre del archivo</Label>
           <div className="flex items-center h-10 px-3 py-2 border border-input bg-background rounded-md text-sm">
-            <code className="text-muted-foreground">{generateFilename()}</code>
+            <code className="text-muted-foreground">{generatedFilename}</code>
           </div>
         </div>
       </div>
@@ -320,12 +320,12 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
                 {isSaving ? (
                   <>
                     <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Guardando como {generateFilename()}...
+                    Guardando como {generatedFilename}...
                   </>
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />
-                    Guardar como {generateFilename()}
+                    Guardar como {generatedFilename}
                   </>
                 )}
               </Button>
@@ -358,7 +358,7 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
           <CardHeader>
             <CardTitle>Vista previa del ranking</CardTitle>
             <CardDescription>
-              Revisa los datos antes de guardar los cambios como {generateFilename()}.
+              Revisa los datos antes de guardar los cambios como {generatedFilename}.
             </CardDescription>
           </CardHeader>
           <CardContent>

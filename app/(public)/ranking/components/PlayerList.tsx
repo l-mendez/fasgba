@@ -166,7 +166,14 @@ function PaginationControls({
   );
 }
 
-export function PlayerList() {
+interface PlayerListProps {
+  // The latest ranking's players, rendered server-side (see page.tsx).
+  initialPlayers: Player[];
+  // The available-ranking options for the selector, most-recent-first.
+  availableRankings: AvailableRanking[];
+}
+
+export function PlayerList({ initialPlayers, availableRankings }: PlayerListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -176,9 +183,13 @@ export function PlayerList() {
   const activeFilter = normalizeActiveFilter(searchParams.get("active"));
   const sortBy = normalizeSortBy(searchParams.get("sortBy"));
 
-  const [availableRankings, setAvailableRankings] = useState<AvailableRanking[]>([]);
-  const [players, setPlayers] = useState<Player[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const latestFilename = availableRankings[0]?.filename || "";
+  // The server already rendered the latest ranking; only a past selection needs
+  // a client fetch of that specific file.
+  const isLatest = !rankingParam || rankingParam === latestFilename;
+
+  const [players, setPlayers] = useState<Player[] | null>(initialPlayers);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState(search);
@@ -189,30 +200,20 @@ export function PlayerList() {
     setSearchTerm(search);
   }, [search]);
 
-  // Load the list of available rankings once (for the selector).
+  // Selecting a *past* ranking loads that specific file on the client; the
+  // latest ranking (the common case) is already provided via initialPlayers.
+  // Search/filter/sort/pagination then happen in-memory below.
   useEffect(() => {
-    let cancelled = false;
-    fetch("/api/ranking/list")
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((data) => {
-        if (!cancelled && Array.isArray(data)) setAvailableRankings(data);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Fetch the selected ranking's full player list whenever the selection
-  // changes. Search/filter/sort/pagination then happen in-memory below.
-  useEffect(() => {
+    if (isLatest) {
+      setPlayers(initialPlayers);
+      setLoading(false);
+      setError(false);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     setError(false);
-    const url = rankingParam
-      ? `/api/ranking/specific?filename=${encodeURIComponent(rankingParam)}`
-      : "/api/ranking/latest";
-    fetch(url)
+    fetch(`/api/ranking/specific?filename=${encodeURIComponent(rankingParam)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data: RankingData) => {
         if (cancelled) return;
@@ -227,9 +228,9 @@ export function PlayerList() {
     return () => {
       cancelled = true;
     };
-  }, [rankingParam]);
+  }, [rankingParam, isLatest, initialPlayers]);
 
-  const currentRanking = rankingParam || availableRankings[0]?.filename;
+  const currentRanking = rankingParam || latestFilename;
 
   const { pagePlayers, totalPlayers, totalPages } = useMemo(() => {
     if (!players) return { pagePlayers: [] as Player[], totalPlayers: 0, totalPages: 1 };

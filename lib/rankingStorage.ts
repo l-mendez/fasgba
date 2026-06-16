@@ -53,6 +53,12 @@ export const RANKING_CACHE_TAG = 'ranking'
 export const ADMIN_RANKING_CACHE_TAG = 'admin-ranking'
 export const ADMIN_RANKINGS_PAGE_SIZE = 20
 
+// All cached wrappers below use `revalidate: false`: rankings change at most
+// ~monthly and every mutation calls revalidateRankingCache(), so we cache
+// indefinitely and rely on tag invalidation rather than re-reading storage on a
+// timer. The heavy "download every file" work then only runs after an actual
+// upload/edit/delete (or a deploy), not hourly.
+
 export async function listSortedRankingFiles(
   adminSupabase: ReturnType<typeof createAdminClient>
 ): Promise<RankingFile[]> {
@@ -203,7 +209,7 @@ export const getCachedAdminRankingSummaries = unstable_cache(
   ['admin-ranking-summaries'],
   {
     tags: [ADMIN_RANKING_CACHE_TAG],
-    revalidate: 60 * 60,
+    revalidate: false,
   }
 )
 
@@ -252,7 +258,7 @@ export const getCachedPublicRankingOptions = unstable_cache(
   ['public-ranking-options'],
   {
     tags: [RANKING_CACHE_TAG],
-    revalidate: 60 * 60,
+    revalidate: false,
   }
 )
 
@@ -270,7 +276,7 @@ export const getCachedLatestRankingData = unstable_cache(
   ['public-ranking-latest'],
   {
     tags: [RANKING_CACHE_TAG],
-    revalidate: 60 * 60,
+    revalidate: false,
   }
 )
 
@@ -283,7 +289,7 @@ export const getCachedSpecificRankingData = unstable_cache(
   ['public-ranking-specific'],
   {
     tags: [RANKING_CACHE_TAG],
-    revalidate: 60 * 60,
+    revalidate: false,
   }
 )
 
@@ -310,12 +316,12 @@ export const getCachedRankingAnalytics = unstable_cache(
   ['public-ranking-analytics'],
   {
     tags: [RANKING_CACHE_TAG],
-    revalidate: 60 * 60,
+    revalidate: false,
   }
 )
 
 export const getCachedRankingHistory = unstable_cache(
-  async (_playerKey: string, playerId: string, playerName: string) => {
+  async (playerId: string, playerName: string) => {
     const adminSupabase = createAdminClient()
     const rankingFiles = [...await listSortedRankingFiles(adminSupabase)].sort((a, b) => {
       const dateComparison = a.date.getTime() - b.date.getTime()
@@ -364,13 +370,15 @@ export const getCachedRankingHistory = unstable_cache(
   ['public-ranking-history'],
   {
     tags: [RANKING_CACHE_TAG],
-    revalidate: 60 * 60,
+    revalidate: false,
   }
 )
 
-// Public, shared ranking data is identical for everyone, so let the CDN serve
-// it revalidate with the origin. The origin work is cached with tags above, so
-// ranking mutations can invalidate deterministically.
+// Every public request revalidates with the origin instead of trusting a CDN
+// edge cache, because revalidateTag() can purge the Next data cache (the cached
+// wrappers above) deterministically but cannot purge edge-cached responses on
+// upload. The origin stays cheap: with revalidate:false the wrappers do zero
+// storage I/O between mutations, so this is a near-free hit, not a re-download.
 export const RANKING_CACHE_HEADERS = {
   'Cache-Control': 'public, max-age=0, must-revalidate',
 }
