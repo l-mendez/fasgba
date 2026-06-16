@@ -290,10 +290,9 @@ useEffect(() => {
               )}
             </Button>
             <Button
-              variant="outline"
+              variant="brandOutline"
               onClick={handleCancelNotifications}
               disabled={isSaving}
-              className="border-amber text-amber-dark hover:bg-amber/10"
             >
               Cancelar
             </Button>
@@ -345,8 +344,8 @@ useEffect(() => {
           }}>
             <DialogTrigger asChild>
               <Button
-                variant="outline"
-                className="flex items-center gap-2 border-amber text-amber-dark hover:bg-amber/10"
+                variant="brandOutline"
+                className="flex items-center gap-2"
               >
                 <Lock className="h-4 w-4" />
                 Cambiar contraseña
@@ -453,10 +452,10 @@ useEffect(() => {
           {/* Logout */}
           <div className="flex flex-col sm:flex-row gap-4">
             <Button
-              variant="outline"
+              variant="brandOutline"
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="flex items-center gap-2 border-amber text-amber-dark hover:bg-amber/10"
+              className="flex items-center gap-2"
             >
               {isLoggingOut ? (
                 <>

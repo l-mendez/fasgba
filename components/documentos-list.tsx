@@ -173,7 +173,7 @@ export function DocumentosList({ publicDocs }: { publicDocs: PublicDocumento[] }
           </p>
           {selected !== "todos" && (
             <Link href="/documentos">
-              <Button variant="outline" className="border-amber text-amber-dark hover:bg-amber/10">
+              <Button variant="brandOutline">
                 Ver todos los documentos
               </Button>
             </Link>

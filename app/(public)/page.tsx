@@ -371,9 +371,8 @@ export default async function Home() {
               </Button>
               <Button
                 asChild
-                variant="outline"
+                variant="brandOutline"
                 size="lg"
-                className="border-amber text-amber-dark hover:bg-amber/10 hover:text-amber-dark"
               >
                 <Link href="/clubes">Clubes Afiliados</Link>
               </Button>
@@ -416,7 +415,7 @@ export default async function Home() {
           )}
 
           <div className="mt-8 text-center">
-            <Button asChild variant="outline" className="border-amber text-amber-dark hover:bg-amber/10">
+            <Button asChild variant="brandOutline">
               <Link href="/noticias">Ver todas las noticias</Link>
             </Button>
           </div>
@@ -475,7 +474,7 @@ export default async function Home() {
           )}
 
           <div className="mt-8 text-center">
-            <Button asChild variant="outline" className="border-amber text-amber-dark hover:bg-amber/10">
+            <Button asChild variant="brandOutline">
               <Link href="/clubes">Ver todos los clubes</Link>
             </Button>
           </div>

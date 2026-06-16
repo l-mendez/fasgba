@@ -48,9 +48,8 @@ export default function NotFound() {
               </Button>
               <Button
                 asChild
-                variant="outline"
+                variant="brandOutline"
                 size="lg"
-                className="border-amber text-amber-dark hover:bg-amber/10 hover:text-amber-dark"
               >
                 <Link href="/torneos">
                   <Trophy className="mr-2 h-4 w-4" />
@@ -83,7 +82,7 @@ export default function NotFound() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Consulta los próximos torneos y competencias de ajedrez en la región.
                 </p>
-                <Button asChild variant="outline" size="sm" className="border-amber text-amber-dark hover:bg-amber/10">
+                <Button asChild variant="brandOutline" size="sm">
                   <Link href="/torneos">Ver Torneos</Link>
                 </Button>
               </div>
@@ -97,7 +96,7 @@ export default function NotFound() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Encuentra clubes afiliados a FASGBA en tu zona.
                 </p>
-                <Button asChild variant="outline" size="sm" className="border-amber text-amber-dark hover:bg-amber/10">
+                <Button asChild variant="brandOutline" size="sm">
                   <Link href="/clubes">Ver Clubes</Link>
                 </Button>
               </div>
@@ -111,7 +110,7 @@ export default function NotFound() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Consulta el ranking oficial de jugadores de la federación.
                 </p>
-                <Button asChild variant="outline" size="sm" className="border-amber text-amber-dark hover:bg-amber/10">
+                <Button asChild variant="brandOutline" size="sm">
                   <Link href="/ranking">Ver Ranking</Link>
                 </Button>
               </div>
@@ -125,7 +124,7 @@ export default function NotFound() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Mantente al día con las últimas noticias del ajedrez regional.
                 </p>
-                <Button asChild variant="outline" size="sm" className="border-amber text-amber-dark hover:bg-amber/10">
+                <Button asChild variant="brandOutline" size="sm">
                   <Link href="/noticias">Ver Noticias</Link>
                 </Button>
               </div>
@@ -159,4 +158,4 @@ export default function NotFound() {
       <SiteFooter />
     </div>
   )
-} 
+}

@@ -123,8 +123,7 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
           </p>
           {hasActiveFilters && (
             <Button
-              variant="outline"
-              className="border-amber text-amber-dark hover:bg-amber/10"
+              variant="brandOutline"
               onClick={handleClear}
             >
               Limpiar filtros

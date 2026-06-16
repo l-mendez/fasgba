@@ -234,7 +234,7 @@ export default function CursoDetailPage({ params }: { params: { id: string } }) 
       {/* Contenido principal */}
       <div className="container px-4 md:px-6 -mt-20 relative z-10">
         <div className="mx-auto max-w-5xl bg-background rounded-lg border border-amber/20 shadow-lg p-6 md:p-10">
-          <Button asChild variant="outline" size="sm" className="mb-6 border-amber text-amber-dark hover:bg-amber/10">
+          <Button asChild variant="brandOutline" size="sm" className="mb-6">
             <Link href="/cursos">
               <ChevronLeft className="mr-1 h-4 w-4" />
               Volver a cursos
@@ -327,8 +327,7 @@ export default function CursoDetailPage({ params }: { params: { id: string } }) 
                       <div className="flex justify-between">
                         <DialogClose asChild>
                           <Button
-                            variant="outline"
-                            className="border-amber text-amber-dark hover:bg-amber/10 hover:text-amber-dark"
+                            variant="brandOutline"
                           >
                             Cancelar
                           </Button>
@@ -518,8 +517,7 @@ export default function CursoDetailPage({ params }: { params: { id: string } }) 
                         <div className="flex justify-between">
                           <DialogClose asChild>
                             <Button
-                              variant="outline"
-                              className="border-amber text-amber-dark hover:bg-amber/10 hover:text-amber-dark"
+                              variant="brandOutline"
                             >
                               Cancelar
                             </Button>
@@ -683,4 +681,3 @@ export default function CursoDetailPage({ params }: { params: { id: string } }) 
     </>
   )
 }
-
