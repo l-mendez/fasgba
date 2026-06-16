@@ -39,7 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { createClient } from "@/lib/supabase/client"
+import { apiCall } from "@/lib/utils/apiClient"
 import { toast } from "sonner"
 
 interface Profesor {
@@ -97,24 +97,9 @@ export function ProfesoresTable({ profesores: initialProfesores }: ProfesoresTab
 
     setIsDeleting(true)
     try {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (!session) {
-        throw new Error('No hay sesión activa')
-      }
-
-      const response = await fetch(`/api/profesores/${deleteId}`, {
+      await apiCall(`/api/profesores/${deleteId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
       })
-
-      if (!response.ok && response.status !== 204) {
-        const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
-        throw new Error(errorData.error || 'Error al eliminar el profesor')
-      }
 
       setProfesores(prev => prev.filter(p => p.id !== deleteId))
       toast.success("Profesor eliminado correctamente")

@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { createClient } from "@/lib/supabase/client"
+import { apiCall } from "@/lib/utils/apiClient"
 
 // Updated interface to include additional user metadata
 interface UserWithPermissions {
@@ -39,41 +39,6 @@ interface UserWithPermissions {
   isAdmin: boolean
   isClubAdmin: boolean
   adminClubs: string[]
-}
-
-// API utility functions
-async function getAuthToken(): Promise<string | null> {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  return session?.access_token || null
-}
-
-async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
-  const token = await getAuthToken()
-  
-  if (!token) {
-    throw new Error('No authentication token available')
-  }
-
-  const response = await fetch(endpoint, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...options.headers,
-    },
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
-  }
-
-  if (response.status === 204) {
-    return null
-  }
-
-  return response.json()
 }
 
 // Add delete user function

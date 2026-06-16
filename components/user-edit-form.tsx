@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { createClient } from "@/lib/supabase/client"
+import { apiCall } from "@/lib/utils/apiClient"
 
 interface Club {
   id: number
@@ -37,12 +37,6 @@ interface ClubAdmin {
   }
 }
 
-async function getAuthToken(): Promise<string | null> {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  return session?.access_token || null
-}
-
 interface UserEditFormProps {
   user: UserWithPermissions
   clubs: Club[]
@@ -66,27 +60,13 @@ export function UserEditForm({ user, clubs, clubsAdmin }: UserEditFormProps) {
       setError(null)
       setSuccess(null)
 
-      const token = await getAuthToken()
-      if (!token) {
-        throw new Error('No authentication token available')
-      }
-
-      const res = await fetch(`/api/admin/users/${user.id}/permissions`, {
+      await apiCall(`/api/admin/users/${user.id}/permissions`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           isAdmin: permissions.isAdmin,
           clubAdminIds: permissions.selectedClubAdmins,
         }),
       })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Error al actualizar los permisos')
-      }
 
       setSuccess("Permisos actualizados correctamente")
 
