@@ -9,14 +9,21 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { ErrorAlert } from "@/components/error-alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { ImageUpload } from "@/components/ui/image-upload"
-import { updateNewsAction, uploadNewsImagesAction } from "@/lib/actions/news"
+import { updateNewsAction } from "@/lib/actions/news"
 import { getDateInputValue } from "@/lib/dateUtils"
+import { processImageUploadsInChunks } from "@/lib/news-content-utils"
+import {
+  NEWS_CATEGORIES,
+  normalizeStoredNewsBlocks,
+  type EditableNewsBlock,
+  type StoredImageBlockContent,
+} from "@/components/news/types"
+import { NewsContentBlocksEditorSimple } from "@/components/news/news-content-blocks-editor-simple"
+import { useEditableNewsBlocks } from "@/components/news/use-news-content-blocks"
 
 interface News {
   id: number
@@ -41,123 +48,29 @@ interface EditNewsFormProps {
   redirectPath: string
 }
 
-// Helper function para hacer llamadas a la API
-async function apiCall(endpoint: string, options: RequestInit = {}) {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  if (!session) {
-    throw new Error('No hay sesión activa')
-  }
-
-  const url = `/api${endpoint}`
-  const config: RequestInit = {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-      ...options.headers
-    },
-    ...options
-  }
-
-  const response = await fetch(url, config)
-  
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
-    throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
-  }
-  
-  if (response.status === 204) {
-    return null // No content
-  }
-  
-  return response.json()
-}
-
 export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormProps) {
   const router = useRouter()
-  const [news, setNews] = useState(() => {
-    return {
-      ...initialNews,
-      date: getDateInputValue(initialNews.date)
-    }
-  })
+  const [news, setNews] = useState(() => ({
+    ...initialNews,
+    date: getDateInputValue(initialNews.date),
+  }))
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [uploadProgress, setUploadProgress] = useState<{
-    current: number
-    total: number
-    isUploading: boolean
-  }>({ current: 0, total: 0, isUploading: false })
+  const [uploadProgress, setUploadProgress] = useState({
+    current: 0,
+    total: 0,
+    isUploading: false,
+  })
   const [category, setCategory] = useState<string>(() => {
-    // Set category from the first tag if it exists and matches our predefined categories
-    const predefinedCategories = ["torneos", "resultados", "institucional", "clases", "eventos", "partidas", "entrevistas"]
+    const predefinedCategories = NEWS_CATEGORIES.map(c => c.value)
     const firstTag = initialNews.tags?.[0]
-    return firstTag && predefinedCategories.includes(firstTag) ? firstTag : ""
+    return firstTag && predefinedCategories.includes(firstTag as typeof predefinedCategories[number]) ? firstTag : ""
   })
-  const [contentBlocks, setContentBlocks] = useState<any[]>(() => {
-    // Try to parse the text content as JSON to get the structured blocks
-    try {
-      let parsedContent
-      try {
-        parsedContent = JSON.parse(initialNews.text)
-      } catch (e) {
-        parsedContent = null
-      }
-      
-      if (Array.isArray(parsedContent)) {
-        // Normalize content blocks to handle legacy formats
-        const normalizedBlocks = parsedContent.map(block => {
-          // Handle legacy chess blocks
-          if (block.type === 'chess') {
-            return {
-              type: 'chess_game',
-              content: {
-                pgn: block.pgn || '',
-                whitePlayer: { type: 'custom', value: 'Blanco' },
-                blackPlayer: { type: 'custom', value: 'Negro' }
-              }
-            }
-          }
-          // Handle chess_game blocks that might have incomplete structure
-          if (block.type === 'chess_game') {
-            return {
-              ...block,
-              content: {
-                pgn: block.content?.pgn || '',
-                whitePlayer: block.content?.whitePlayer || { type: 'custom', value: 'Blanco' },
-                blackPlayer: block.content?.blackPlayer || { type: 'custom', value: 'Negro' },
-                result: block.content?.result || '1-0'
-              }
-            }
-          }
-          // Handle image blocks - convert URLs to proper structure for display
-          if (block.type === 'image') {
-            const imageUrl = block.url || block.content?.src || block.content?.url || null
-            return {
-              type: 'image',
-              content: {
-                url: imageUrl,
-                caption: block.caption || block.content?.caption || '',
-                filePath: block.content?.src || null // Store the file path for deletion
-              }
-            }
-          }
-          return block
-        })
-        
-        return normalizedBlocks
-      } else {
-        // If it's not an array, create a single text block
-        return [{ type: 'text', content: String(initialNews.text) }]
-      }
-    } catch (e) {
-      // If parsing fails, treat it as a single text block
-      return [{ type: 'text', content: String(initialNews.text) }]
-    }
-  })
+  const [contentBlocks, setContentBlocks] = useState<EditableNewsBlock[]>(() =>
+    normalizeStoredNewsBlocks(initialNews.text)
+  )
+  const blockActions = useEditableNewsBlocks(contentBlocks, setContentBlocks)
 
-  // Function to get public URL from file path
   const getPublicUrl = (filePath: string) => {
     if (!filePath) return null
     const supabase = createClient()
@@ -167,138 +80,70 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
     return publicUrl
   }
 
-  // Function to process multiple image uploads in chunks (for bulk operations)
-  const processImageUploadsInChunks = async (imageFiles: File[], newsId: number) => {
-    const CHUNK_SIZE = 5 // Upload 5 images at a time
-    const totalChunks = Math.ceil(imageFiles.length / CHUNK_SIZE)
-    let uploadResults: Array<{ filePath: string; publicUrl: string }> = []
-    
-    if (imageFiles.length === 0) return uploadResults
-    
-    setUploadProgress({ current: 0, total: imageFiles.length, isUploading: true })
-
-    try {
-      for (let i = 0; i < imageFiles.length; i += CHUNK_SIZE) {
-        const chunk = imageFiles.slice(i, i + CHUNK_SIZE)
-        const chunkNumber = Math.floor(i / CHUNK_SIZE) + 1
-
-        try {
-          const formData = new FormData()
-          chunk.forEach((file, chunkIndex) => {
-            formData.append(`file-${chunkIndex}`, file)
-            formData.append(`prefix-${chunkIndex}`, `block-${i + chunkIndex}`)
-          })
-
-          const uploadActionResult = await uploadNewsImagesAction(Number(newsId), formData)
-
-          if (!uploadActionResult.ok) {
-            throw new Error(`Error uploading chunk ${chunkNumber}/${totalChunks}: ${uploadActionResult.error}`)
-          }
-
-          const processedResults = uploadActionResult.data.results.map((result) => ({
-            filePath: result.filePath,
-            publicUrl: result.publicUrl,
-          }))
-
-          uploadResults.push(...processedResults)
-          
-          // Update progress
-          setUploadProgress(prev => ({ ...prev, current: Math.min(i + CHUNK_SIZE, imageFiles.length) }))
-          
-          // Add delay between chunks
-          if (i + CHUNK_SIZE < imageFiles.length) {
-            await new Promise(resolve => setTimeout(resolve, 500))
-          }
-          
-        } catch (error) {
-          console.error(`Failed to upload chunk ${chunkNumber}/${totalChunks}:`, error)
-          throw new Error(`Failed to upload images (chunk ${chunkNumber}/${totalChunks}). Try reducing the number of images or upload in smaller batches.`)
-        }
-      }
-      
-      return uploadResults
-    } finally {
-      setUploadProgress(prev => ({ ...prev, isUploading: false }))
-    }
-  }
-
-  // Function to add multiple image blocks at once (for bulk operations)
   const addMultipleImageBlocks = async (files: File[]) => {
     if (files.length === 0) return
-    
-    // Warn users about large uploads
+
     if (files.length > 20) {
       const proceed = confirm(
         `Estás intentando subir ${files.length} imágenes. Esto puede tomar varios minutos y podría fallar con conexiones lentas. ¿Deseas continuar?`
       )
       if (!proceed) return
     }
-    
-    // Validate file sizes
+
+    let validFiles = files
     const oversizedFiles = files.filter(file => file.size > 5 * 1024 * 1024)
     if (oversizedFiles.length > 0) {
       setError(`${oversizedFiles.length} archivo(s) exceden el límite de 5MB y serán omitidos.`)
-      files = files.filter(file => file.size <= 5 * 1024 * 1024)
+      validFiles = files.filter(file => file.size <= 5 * 1024 * 1024)
     }
-    
-    if (files.length === 0) {
+
+    if (validFiles.length === 0) {
       setError('No hay archivos válidos para subir.')
       return
     }
-    
+
     try {
-      setError(null) // Clear any previous errors
-      
-      // Process uploads in chunks
-      const uploadResults = await processImageUploadsInChunks(files, news.id)
-      
-      // Create new image blocks with the uploaded images
-      const newImageBlocks = uploadResults.map((result, index) => ({
+      setError(null)
+      const uploadResults = await processImageUploadsInChunks(validFiles, news.id, setUploadProgress)
+
+      const newImageBlocks: StoredImageBlockContent[] = uploadResults.map((result) => ({
         type: 'image',
         content: {
           url: result.publicUrl,
           caption: '',
-          filePath: result.filePath
-        }
+          filePath: result.filePath,
+        },
       }))
-      
-      // Add all new blocks to the content
+
       setContentBlocks(prev => [...prev, ...newImageBlocks])
-      
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Error al subir las imágenes'
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al subir las imágenes'
       setError(errorMessage)
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!news) return
 
     try {
       setIsSaving(true)
       setError(null)
 
-      // Convert content blocks to JSON string
-      const contentJson = JSON.stringify(contentBlocks)
-
       const updateData = {
         title: news.title,
         date: news.date,
         extract: news.extract,
-        text: contentJson, // Save the structured content
+        text: JSON.stringify(contentBlocks),
         tags: category ? [category] : [],
-        club_id: news.club_id, // Keep the original club_id
-        image: news.image // Include the featured image path
+        club_id: news.club_id,
+        image: news.image,
       }
-      
-      // Use the server action to update news
+
       const result = await updateNewsAction(news.id, updateData)
       if (!result.ok) {
         throw new Error(result.error)
       }
 
-      // Add a small delay to ensure the update is completed before redirecting
       setTimeout(() => {
         router.push(redirectPath)
         router.refresh()
@@ -311,99 +156,36 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
     }
   }
 
-  // Function to add a new content block
-  const addContentBlock = (type: string) => {
-    let newBlock
-    switch (type) {
-      case 'text':
-        newBlock = { type: 'text', content: '' }
-        break
-      case 'image':
-        newBlock = { 
-          type: 'image', 
-          content: {
-            url: null,
-            caption: '',
-            filePath: null
-          }
-        }
-        break
-      case 'chess_game':
-        newBlock = { 
-          type: 'chess_game', 
-          content: {
-            pgn: '',
-            whitePlayer: { type: 'custom', value: '' },
-            blackPlayer: { type: 'custom', value: '' },
-            result: '1-0'
-          }
-        }
-        break
-      default:
-        return
-    }
-    setContentBlocks([...contentBlocks, newBlock])
-  }
-
-  // Function to update a content block
-  const updateContentBlock = (index: number, updatedBlock: any) => {
-    const updatedBlocks = [...contentBlocks]
-    updatedBlocks[index] = updatedBlock
-    setContentBlocks(updatedBlocks)
-  }
-
-  // Function to remove a content block
-  const removeContentBlock = (index: number) => {
-    setContentBlocks(contentBlocks.filter((_, i) => i !== index))
-  }
-
-  // Function to move a block up or down
-  const moveBlock = (index: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && index > 0) {
-      const newBlocks = [...contentBlocks]
-      ;[newBlocks[index], newBlocks[index - 1]] = [newBlocks[index - 1], newBlocks[index]]
-      setContentBlocks(newBlocks)
-    } else if (direction === 'down' && index < contentBlocks.length - 1) {
-      const newBlocks = [...contentBlocks]
-      ;[newBlocks[index], newBlocks[index + 1]] = [newBlocks[index + 1], newBlocks[index]]
-      setContentBlocks(newBlocks)
-    }
-  }
-
-  // Handler for featured image upload
-  const handleFeaturedImageUpload = (filePath: string, publicUrl: string) => {
+  const handleFeaturedImageUpload = (filePath: string, _publicUrl: string) => {
     setNews({ ...news, image: filePath })
   }
 
-  // Handler for featured image removal
   const handleFeaturedImageRemove = () => {
     setNews({ ...news, image: null })
   }
 
-  // Handler for content block image upload
   const handleBlockImageUpload = (index: number, filePath: string, publicUrl: string) => {
-    const updatedBlock = {
-      ...contentBlocks[index],
+    const block = contentBlocks[index] as StoredImageBlockContent
+    blockActions.updateContentBlock(index, {
+      ...block,
       content: {
-        ...contentBlocks[index].content,
+        ...block.content,
         url: publicUrl,
-        filePath: filePath
-      }
-    }
-    updateContentBlock(index, updatedBlock)
+        filePath,
+      },
+    })
   }
 
-  // Handler for content block image removal
-  const handleBlockImageRemove = (index: number, filePath: string) => {
-    const updatedBlock = {
-      ...contentBlocks[index],
+  const handleBlockImageRemove = (index: number) => {
+    const block = contentBlocks[index] as StoredImageBlockContent
+    blockActions.updateContentBlock(index, {
+      ...block,
       content: {
-        ...contentBlocks[index].content,
+        ...block.content,
         url: null,
-        filePath: null
-      }
-    }
-    updateContentBlock(index, updatedBlock)
+        filePath: null,
+      },
+    })
   }
 
   return (
@@ -436,11 +218,11 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Subiendo imágenes...</AlertTitle>
           <AlertDescription>
-            Procesando {uploadProgress.current} de {uploadProgress.total} imágenes. 
+            Procesando {uploadProgress.current} de {uploadProgress.total} imágenes.
             Por favor, no cierre esta ventana.
             <div className="mt-2 bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+              <div
+                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
               />
             </div>
@@ -491,18 +273,13 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
                 <SelectValue placeholder="Seleccionar categoría" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="torneos" className="!py-1.5">Torneos</SelectItem>
-                <SelectItem value="resultados" className="!py-1.5">Resultados</SelectItem>
-                <SelectItem value="institucional" className="!py-1.5">Institucional</SelectItem>
-                <SelectItem value="clases" className="!py-1.5">Clases</SelectItem>
-                <SelectItem value="eventos" className="!py-1.5">Eventos</SelectItem>
-                <SelectItem value="partidas" className="!py-1.5">Partidas</SelectItem>
-                <SelectItem value="entrevistas" className="!py-1.5">Entrevistas</SelectItem>
+                {NEWS_CATEGORIES.map(({ value, label }) => (
+                  <SelectItem key={value} value={value} className="!py-1.5">{label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Featured Image Upload */}
           <ImageUpload
             newsId={news.id.toString()}
             currentImage={news.image ? getPublicUrl(news.image) ?? undefined : undefined}
@@ -515,155 +292,30 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
 
           <div className="grid gap-2">
             <Label className="text-sm md:text-sm font-medium">Contenido</Label>
-            <div className="border rounded-md p-3 md:p-4 space-y-3 md:space-y-4">
-              {contentBlocks.map((block, index) => (
-                <div key={index} className="border rounded-md p-3 md:p-4 relative">
-                  <div className="absolute right-2 top-2 flex space-x-1">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => moveBlock(index, 'up')} 
-                      disabled={index === 0} 
-                      type="button"
-                      className="h-7 w-7 md:h-8 md:w-8 p-0 text-xs"
-                    >
-                      ↑
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => moveBlock(index, 'down')} 
-                      disabled={index === contentBlocks.length - 1} 
-                      type="button"
-                      className="h-7 w-7 md:h-8 md:w-8 p-0 text-xs"
-                    >
-                      ↓
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-destructive h-7 w-7 md:h-8 md:w-8 p-0 text-xs" 
-                      onClick={() => removeContentBlock(index)} 
-                      type="button"
-                    >
-                      ×
-                    </Button>
-                  </div>
-                  
-                  {block.type === 'text' && (
-                    <div className="pt-8 md:pt-6">
-                      <RichTextEditor
-                        content={block.content}
-                        onChange={(content) => updateContentBlock(index, { ...block, content })}
-                        placeholder="Escribe el contenido aquí..."
-                      />
-                    </div>
-                  )}
-                  
-                  {block.type === 'image' && (
-                    <div className="pt-8 md:pt-6 space-y-2">
-                      <ImageUpload
-                        newsId={news.id.toString()}
-                        currentImage={block.content?.url}
-                        currentImagePath={block.content?.filePath}
-                        onImageUpload={(filePath, publicUrl) => handleBlockImageUpload(index, filePath, publicUrl)}
-                        onImageRemove={(filePath) => handleBlockImageRemove(index, filePath)}
-                        label="Imagen del bloque"
-                        placeholder="Haz clic para subir una imagen"
-                      />
-                      <Input
-                        placeholder="Pie de foto (opcional)"
-                        value={block.content?.caption || ''}
-                        onChange={(e) => updateContentBlock(index, { 
-                          ...block, 
-                          content: { ...block.content, caption: e.target.value }
-                        })}
-                        className="text-sm md:text-base"
-                      />
-                    </div>
-                  )}
-                  
-                  {block.type === 'chess_game' && block.content && (
-                    <div className="pt-8 md:pt-6 space-y-2">
-                      <Textarea
-                        placeholder="PGN (notación)"
-                        value={block.content.pgn || ''}
-                        onChange={(e) => updateContentBlock(index, { ...block, content: { ...block.content, pgn: e.target.value } })}
-                        className="min-h-[100px] md:min-h-[120px] text-sm md:text-base"
-                      />
-                      <Input
-                        placeholder="Jugador blanco"
-                        value={block.content.whitePlayer?.value || ''}
-                        onChange={(e) => updateContentBlock(index, { ...block, content: { ...block.content, whitePlayer: { ...block.content.whitePlayer, value: e.target.value } } })}
-                        className="text-sm md:text-base"
-                      />
-                      <Input
-                        placeholder="Jugador negro"
-                        value={block.content.blackPlayer?.value || ''}
-                        onChange={(e) => updateContentBlock(index, { ...block, content: { ...block.content, blackPlayer: { ...block.content.blackPlayer, value: e.target.value } } })}
-                        className="text-sm md:text-base"
-                      />
-                      <div className="space-y-2">
-                        <Label htmlFor={`result-${index}`} className="text-sm md:text-sm font-medium">Resultado</Label>
-                        <Select 
-                          value={block.content.result || "1-0"} 
-                          onValueChange={(value) => updateContentBlock(index, { ...block, content: { ...block.content, result: value } })}
-                        >
-                          <SelectTrigger id={`result-${index}`} className="text-sm md:text-base">
-                            <SelectValue placeholder="Seleccionar resultado" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1-0">1-0 (Ganan las blancas)</SelectItem>
-                            <SelectItem value="0-1">0-1 (Ganan las negras)</SelectItem>
-                            <SelectItem value="1/2-1/2">1/2-1/2 (Tablas)</SelectItem>
-                            <SelectItem value="*">* (Partida en curso)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="mt-2 p-2 border rounded-md bg-muted">
-                        <p className="text-xs md:text-sm text-muted-foreground">Vista previa del tablero no disponible en el editor</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-              
-              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mt-4">
-                <Button type="button" variant="outline" onClick={() => addContentBlock('text')} size="sm" className="text-sm w-full sm:w-auto">
-                  + Texto
-                </Button>
-                <Button type="button" variant="outline" onClick={() => addContentBlock('image')} size="sm" className="text-sm w-full sm:w-auto">
-                  + Imagen
-                </Button>
-                <Button type="button" variant="outline" onClick={() => addContentBlock('chess_game')} size="sm" className="text-sm w-full sm:w-auto">
-                  + Partida de ajedrez
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => document.getElementById('bulk-image-upload')?.click()} 
-                  size="sm" 
-                  className="text-sm w-full sm:w-auto"
-                  disabled={uploadProgress.isUploading}
-                >
-                  + Múltiples Imágenes
-                </Button>
-                <input
-                  id="bulk-image-upload"
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || [])
-                    if (files.length > 0) {
-                      addMultipleImageBlocks(files)
-                      e.target.value = '' // Reset input
-                    }
-                  }}
-                />
-              </div>
-            </div>
+            <NewsContentBlocksEditorSimple
+              blocks={contentBlocks}
+              blockActions={blockActions}
+              imageMode="upload"
+              newsId={news.id.toString()}
+              onBlockImageUpload={handleBlockImageUpload}
+              onBlockImageRemove={handleBlockImageRemove}
+              onBulkImageUpload={() => document.getElementById('bulk-image-upload')?.click()}
+              isUploading={uploadProgress.isUploading}
+            />
+            <input
+              id="bulk-image-upload"
+              type="file"
+              multiple
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files || [])
+                if (files.length > 0) {
+                  addMultipleImageBlocks(files)
+                  e.target.value = ''
+                }
+              }}
+            />
           </div>
 
           {news.club && (

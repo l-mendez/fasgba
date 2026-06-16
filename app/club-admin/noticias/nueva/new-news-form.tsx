@@ -9,11 +9,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
 import { ErrorAlert } from "@/components/error-alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { getArgentinaDateInputValue } from "@/lib/dateUtils"
+import {
+  NEWS_CATEGORIES,
+  createEmptyTextBlock,
+  type EditableNewsBlock,
+} from "@/components/news/types"
+import { NewsContentBlocksEditorSimple } from "@/components/news/news-content-blocks-editor-simple"
+import { useEditableNewsBlocks } from "@/components/news/use-news-content-blocks"
 
 interface Club {
   id: number
@@ -32,11 +37,10 @@ interface NewNewsFormProps {
   clubs: Club[]
 }
 
-// Helper function para hacer llamadas a la API
 async function apiCall(endpoint: string, options: RequestInit = {}) {
   const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
-  
+
   if (!session) {
     throw new Error('No hay sesión activa')
   }
@@ -46,22 +50,22 @@ async function apiCall(endpoint: string, options: RequestInit = {}) {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.access_token}`,
-      ...options.headers
+      ...options.headers,
     },
-    ...options
+    ...options,
   }
 
   const response = await fetch(url, config)
-  
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
     throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
   }
-  
+
   if (response.status === 204) {
-    return null // No content
+    return null
   }
-  
+
   return response.json()
 }
 
@@ -71,14 +75,13 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
     title: "",
     date: getArgentinaDateInputValue(),
     extract: "",
-    club_id: selectedClub.id
+    club_id: selectedClub.id,
   })
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [category, setCategory] = useState<string>("")
-  const [contentBlocks, setContentBlocks] = useState<any[]>([
-    { type: 'text', content: '' } // Start with one text block
-  ])
+  const [contentBlocks, setContentBlocks] = useState<EditableNewsBlock[]>([createEmptyTextBlock()])
+  const blockActions = useEditableNewsBlocks(contentBlocks, setContentBlocks)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -87,25 +90,20 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
       setIsSaving(true)
       setError(null)
 
-      // Convert content blocks to JSON string
-      const contentJson = JSON.stringify(contentBlocks)
-
       const newsData = {
         title: formData.title,
         date: formData.date,
         extract: formData.extract,
-        text: contentJson, // Save the structured content
+        text: JSON.stringify(contentBlocks),
         tags: category ? [category] : [],
-        club_id: formData.club_id
+        club_id: formData.club_id,
       }
-      
-      // Use the API to create news
+
       await apiCall(`/clubs/${formData.club_id}/news`, {
         method: 'POST',
-        body: JSON.stringify(newsData)
+        body: JSON.stringify(newsData),
       })
 
-      // Add a small delay to ensure the creation is completed before redirecting
       setTimeout(() => {
         router.push('/club-admin/noticias')
         router.refresh()
@@ -115,58 +113,6 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
       setError(errorMessage)
     } finally {
       setIsSaving(false)
-    }
-  }
-
-  // Function to add a new content block
-  const addContentBlock = (type: string) => {
-    let newBlock
-    switch (type) {
-      case 'text':
-        newBlock = { type: 'text', content: '' }
-        break
-      case 'image':
-        newBlock = { type: 'image', url: '', caption: '' }
-        break
-      case 'chess_game':
-        newBlock = { 
-          type: 'chess_game', 
-          content: {
-            pgn: '',
-            whitePlayer: { type: 'custom', value: '' },
-            blackPlayer: { type: 'custom', value: '' },
-            result: '1-0'
-          }
-        }
-        break
-      default:
-        return
-    }
-    setContentBlocks([...contentBlocks, newBlock])
-  }
-
-  // Function to update a content block
-  const updateContentBlock = (index: number, updatedBlock: any) => {
-    const updatedBlocks = [...contentBlocks]
-    updatedBlocks[index] = updatedBlock
-    setContentBlocks(updatedBlocks)
-  }
-
-  // Function to remove a content block
-  const removeContentBlock = (index: number) => {
-    setContentBlocks(contentBlocks.filter((_, i) => i !== index))
-  }
-
-  // Function to move a block up or down
-  const moveBlock = (index: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && index > 0) {
-      const newBlocks = [...contentBlocks]
-      ;[newBlocks[index], newBlocks[index - 1]] = [newBlocks[index - 1], newBlocks[index]]
-      setContentBlocks(newBlocks)
-    } else if (direction === 'down' && index < contentBlocks.length - 1) {
-      const newBlocks = [...contentBlocks]
-      ;[newBlocks[index], newBlocks[index + 1]] = [newBlocks[index + 1], newBlocks[index]]
-      setContentBlocks(newBlocks)
     }
   }
 
@@ -232,114 +178,28 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
                 <SelectValue placeholder="Seleccionar categoría" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="torneos" className="!py-1.5">Torneos</SelectItem>
-                <SelectItem value="resultados" className="!py-1.5">Resultados</SelectItem>
-                <SelectItem value="institucional" className="!py-1.5">Institucional</SelectItem>
-                <SelectItem value="clases" className="!py-1.5">Clases</SelectItem>
-                <SelectItem value="eventos" className="!py-1.5">Eventos</SelectItem>
-                <SelectItem value="partidas" className="!py-1.5">Partidas</SelectItem>
-                <SelectItem value="entrevistas" className="!py-1.5">Entrevistas</SelectItem>
+                {NEWS_CATEGORIES.map(({ value, label }) => (
+                  <SelectItem key={value} value={value} className="!py-1.5">{label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="grid gap-2">
             <Label>Contenido</Label>
-            <div className="border rounded-md p-4 space-y-4">
-              {contentBlocks.map((block, index) => (
-                <div key={index} className="border rounded-md p-4 relative">
-                  <div className="absolute right-2 top-2 flex space-x-2">
-                    <Button variant="ghost" size="sm" onClick={() => moveBlock(index, 'up')} disabled={index === 0} type="button">↑</Button>
-                    <Button variant="ghost" size="sm" onClick={() => moveBlock(index, 'down')} disabled={index === contentBlocks.length - 1} type="button">↓</Button>
-                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => removeContentBlock(index)} type="button">×</Button>
-                  </div>
-                  
-                  {block.type === 'text' && (
-                    <div className="pt-6">
-                      <RichTextEditor
-                        content={block.content}
-                        onChange={(content) => updateContentBlock(index, { ...block, content })}
-                        placeholder="Escribe el contenido aquí..."
-                      />
-                    </div>
-                  )}
-                  
-                  {block.type === 'image' && (
-                    <div className="pt-6 space-y-2">
-                      <Input
-                        placeholder="URL de la imagen"
-                        value={block.url}
-                        onChange={(e) => updateContentBlock(index, { ...block, url: e.target.value })}
-                      />
-                      <Input
-                        placeholder="Pie de foto (opcional)"
-                        value={block.caption}
-                        onChange={(e) => updateContentBlock(index, { ...block, caption: e.target.value })}
-                      />
-                      {block.url && (
-                        <div className="mt-2">
-                          <img src={block.url} alt={block.caption} className="max-h-48 object-contain" />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {block.type === 'chess_game' && block.content && (
-                    <div className="pt-6 space-y-2">
-                      <Textarea
-                        placeholder="PGN (notación)"
-                        value={block.content.pgn || ''}
-                        onChange={(e) => updateContentBlock(index, { ...block, content: { ...block.content, pgn: e.target.value } })}
-                        className="min-h-[100px]"
-                      />
-                      <Input
-                        placeholder="Jugador blanco"
-                        value={block.content.whitePlayer?.value || ''}
-                        onChange={(e) => updateContentBlock(index, { ...block, content: { ...block.content, whitePlayer: { ...block.content.whitePlayer, value: e.target.value } } })}
-                      />
-                      <Input
-                        placeholder="Jugador negro"
-                        value={block.content.blackPlayer?.value || ''}
-                        onChange={(e) => updateContentBlock(index, { ...block, content: { ...block.content, blackPlayer: { ...block.content.blackPlayer, value: e.target.value } } })}
-                      />
-                      <div className="space-y-2">
-                        <Label htmlFor={`result-${index}`}>Resultado</Label>
-                        <Select 
-                          value={block.content.result || "1-0"} 
-                          onValueChange={(value) => updateContentBlock(index, { ...block, content: { ...block.content, result: value } })}
-                        >
-                          <SelectTrigger id={`result-${index}`}>
-                            <SelectValue placeholder="Seleccionar resultado" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1-0">1-0 (Ganan las blancas)</SelectItem>
-                            <SelectItem value="0-1">0-1 (Ganan las negras)</SelectItem>
-                            <SelectItem value="1/2-1/2">1/2-1/2 (Tablas)</SelectItem>
-                            <SelectItem value="*">* (Partida en curso)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="mt-2 p-2 border rounded-md bg-muted">
-                        <p className="text-sm text-muted-foreground">Vista previa del tablero no disponible en el editor</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-              
-              <div className="flex space-x-2 mt-4">
-                <Button type="button" variant="outline" onClick={() => addContentBlock('text')}>+ Texto</Button>
-                <Button type="button" variant="outline" onClick={() => addContentBlock('image')}>+ Imagen</Button>
-                <Button type="button" variant="outline" onClick={() => addContentBlock('chess_game')}>+ Partida de ajedrez</Button>
-              </div>
-            </div>
+            <NewsContentBlocksEditorSimple
+              blocks={contentBlocks}
+              blockActions={blockActions}
+              imageMode="url"
+              layout="stack"
+            />
           </div>
 
           {clubs.length > 1 && (
             <div className="grid gap-2">
               <Label htmlFor="club">Club</Label>
-              <Select 
-                value={formData.club_id.toString()} 
+              <Select
+                value={formData.club_id.toString()}
                 onValueChange={(value) => setFormData({ ...formData, club_id: parseInt(value) })}
               >
                 <SelectTrigger id="club">
