@@ -5,7 +5,6 @@ import { unstable_cache } from "next/cache"
 import { getAllClubs, type Club } from "@/lib/clubUtils"
 import { ClubSearch } from "@/components/club-search"
 import { ClubsGrid } from "@/components/clubs-grid"
-import { PageHero } from "@/components/page-hero"
 
 // The directory is identical for everyone, so cache it and refresh every 5
 // minutes (or via the 'clubs' tag). Per-user follow state and search are
@@ -64,10 +63,6 @@ export default async function ClubesPage() {
 
   return (
     <>
-      <PageHero
-        title="Clubes Afiliados"
-        subtitle="Conoce los clubes que forman parte de la Federación de Ajedrez del Sur del Gran Buenos Aires"
-      />
       <section className="w-full py-12 md:py-24 lg:py-32">
         <div className="container px-4 md:px-6">
           <div className="mb-10">

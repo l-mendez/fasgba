@@ -439,7 +439,7 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
                   <FormItem>
                     <FormLabel>Horarios</FormLabel>
                     <FormControl>
-                      <Textarea 
+                      <Textarea
                         placeholder="Ej: Lunes a Viernes: 9:00 - 22:00, Sábados: 9:00 - 18:00"
                         className="resize-none"
                         rows={3}
@@ -454,7 +454,7 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
                   </FormItem>
                 )}
               />
-              
+
               <div className="flex justify-end space-x-4">
                 <Button
                   type="button"

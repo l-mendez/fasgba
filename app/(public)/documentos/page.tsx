@@ -3,7 +3,6 @@ import { unstable_cache } from "next/cache"
 
 import { createAdminClient } from "@/lib/supabase/admin"
 import { DocumentosList, type PublicDocumento } from "@/components/documentos-list"
-import { PageHero } from "@/components/page-hero"
 
 // ISR: Revalidate every 5 minutes (300 seconds). Only PUBLIC documents are
 // fetched/shipped here so the static output never contains protected
@@ -49,11 +48,6 @@ export default async function DocumentosPage() {
 
   return (
     <>
-      <PageHero
-        title="Documentos"
-        subtitle="Documentos oficiales de la Federación de Ajedrez del Sur del Gran Buenos Aires"
-      />
-
       <section className="w-full py-12 md:py-24 lg:py-32">
         <Suspense fallback={<div className="container px-4 md:px-6 min-h-[400px]" />}>
           <DocumentosList publicDocs={publicDocs} />

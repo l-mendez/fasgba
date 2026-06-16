@@ -5,7 +5,6 @@ import { Metadata } from "next"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { getAllProfesores, type ProfesorWithClub } from "@/lib/profesorUtils"
-import { PageHero } from "@/components/page-hero"
 import { createClient } from "@/lib/supabase/client"
 
 export const revalidate = 60
@@ -149,10 +148,6 @@ async function ProfesoresList() {
 export default function ProfesoresPage() {
   return (
     <>
-      <PageHero
-        title="Profesores de Ajedrez"
-        subtitle="Conoce a los profesores de ajedrez asociados a FASGBA. Clases presenciales y virtuales."
-      />
       <section className="w-full py-12 md:py-24 lg:py-32">
         <div className="container px-4 md:px-6">
           <div className="mb-10">

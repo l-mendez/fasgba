@@ -31,7 +31,9 @@ yarn-error.log*
 next-env.d.ts
 public/*.pdf
 public/*.xlsx
+.prghostrc.json
 
-
-# screenshots
+# local dev artifacts (screenshots, recordings, skill scratch files)
 .prg-screenshots/
+.superpowers/
+*.webm

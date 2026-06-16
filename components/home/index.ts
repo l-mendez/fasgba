@@ -1,0 +1,5 @@
+export { HomeClubsSection } from "./clubs-section"
+export { HomeFaqSection } from "./faq-section"
+export { HomeNewsSection } from "./news-section"
+export { HomeSectionDivider } from "./section-divider"
+export { HomeTournamentsSection } from "./tournaments-section"

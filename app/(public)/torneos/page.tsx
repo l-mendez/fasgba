@@ -10,7 +10,6 @@ import {
   sortTournamentsByDate,
 } from "@/lib/tournamentUtils"
 import { TournamentsTabs } from "./components/tournaments-tabs"
-import { PageHero } from "@/components/page-hero"
 
 // Static content (ISR) — revalidate periodically. Public listing read via the
 // non-cookie admin client so the page can be statically prerendered.
@@ -84,11 +83,6 @@ export default async function TorneosPage() {
 
   return (
     <>
-      <PageHero
-        title="Torneos FASGBA"
-        subtitle="Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires"
-      />
-
         <section className="w-full py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">
             {error && <ErrorAlert message={error} className="mb-6" />}

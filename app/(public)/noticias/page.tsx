@@ -2,7 +2,6 @@ import { Metadata } from "next"
 import { unstable_cache } from "next/cache"
 
 import { NewsList } from "@/components/news-list"
-import { PageHero } from "@/components/page-hero"
 import { getAllNews, getAllNewsTags } from "@/lib/newsUtils"
 import { getAllClubs } from "@/lib/clubUtils"
 import type { NewsDisplay } from "@/lib/newsUtils"
@@ -99,11 +98,6 @@ export default async function NoticiasPage() {
 
   return (
     <>
-      <PageHero
-        title="Noticias"
-        subtitle="Mantenete al día con las últimas novedades del ajedrez en la región sur de Buenos Aires"
-      />
-
       <section className="w-full py-12 md:py-24 lg:py-32">
         <div className="container px-4 md:px-6">
           <NewsList allNews={allNews} tags={tags} clubs={clubs} />
