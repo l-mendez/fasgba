@@ -2,7 +2,6 @@ import { NextRequest, after } from 'next/server'
 import { sendBroadcast } from '@/lib/notifications/sendBroadcast'
 import { createClient } from '@supabase/supabase-js'
 import { createNews } from '@/lib/newsUtils'
-import { fetchAdminNewsPage } from '@/lib/adminNews'
 import { revalidateNewsCache } from '@/lib/cache/news'
 import { validateCreateNews } from '@/lib/schemas/newsSchemas'
 import { apiSuccess, handleError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
@@ -12,41 +11,6 @@ import { ERROR_MESSAGES } from '@/lib/utils/constants'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-// GET /api/news - paginated admin news listing with search/filters
-export async function GET(request: NextRequest) {
-  try {
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return unauthorizedError(ERROR_MESSAGES.UNAUTHORIZED)
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.substring(7))
-    if (authError || !user) {
-      return unauthorizedError(ERROR_MESSAGES.UNAUTHORIZED)
-    }
-
-    const { data: admin } = await supabase.from('admins').select('auth_id').eq('auth_id', user.id).single()
-    if (!admin) {
-      return forbiddenError('Solo los administradores pueden ver esta información')
-    }
-
-    const { searchParams } = new URL(request.url)
-    const result = await fetchAdminNewsPage({
-      page: parseInt(searchParams.get('page') || '1', 10),
-      limit: parseInt(searchParams.get('limit') || '20', 10),
-      search: searchParams.get('search') || '',
-      club: searchParams.get('club') || 'all',
-      date: searchParams.get('date') || '',
-      sortBy: searchParams.get('sortBy') === 'title' ? 'title' : 'date',
-      order: searchParams.get('order') === 'asc' ? 'asc' : 'desc',
-    })
-
-    return apiSuccess(result)
-  } catch (error) {
-    return handleError(error)
-  }
-}
 
 export async function POST(request: NextRequest) {
   try {
