@@ -4,6 +4,7 @@ import { Award, FileText, FolderOpen, GraduationCap, Home, Shield, Trophy, Users
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { getArgentinaDateInputValue } from "@/lib/dateUtils"
+import { requireAdminAction } from "@/lib/actions/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 // Mark this page as dynamic since it requires server-side authentication
@@ -27,6 +28,8 @@ interface DashboardStats {
 
 // Server-side function to fetch dashboard statistics
 async function getDashboardStats(): Promise<DashboardStats> {
+  await requireAdminAction()
+
   try {
     const supabase = createAdminClient()
     

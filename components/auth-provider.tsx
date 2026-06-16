@@ -78,8 +78,19 @@ async function fetchPermissions(token: string): Promise<PermissionsResponse> {
   const res = await fetch('/api/users/me/permissions', {
     headers: { Authorization: `Bearer ${token}` },
   })
-  if (!res.ok) throw new Error('Error al obtener permisos')
+  if (!res.ok) {
+    const error = new Error('Error al obtener permisos')
+    error.name = `PermissionsError:${res.status}`
+    throw error
+  }
   return res.json() as Promise<PermissionsResponse>
+}
+
+function isAuthorizationError(err: unknown): boolean {
+  return err instanceof Error && (
+    err.name === 'PermissionsError:401' ||
+    err.name === 'PermissionsError:403'
+  )
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -109,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAdminClubsCount(data.adminClubsCount)
     }
 
-    const loadPermissions = async (token: string, userId: string) => {
+    const loadPermissions = async (token: string, userId: string, keepSnapshotOnError = false) => {
       try {
         setError(undefined)
         const data = await fetchPermissions(token)
@@ -120,13 +131,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return
         console.error('Error fetching permissions:', err)
         setError(err instanceof Error ? err.message : 'Unknown error')
-        setPermissions({
-          canEditProfile: true,
-          canViewAdmin: false,
-          canManageUsers: false,
-          canManageContent: false,
-          isAdmin: false,
-        })
+        if (!keepSnapshotOnError || isAuthorizationError(err)) {
+          setPermissions({
+            canEditProfile: true,
+            canViewAdmin: false,
+            canManageUsers: false,
+            canManageContent: false,
+            isAdmin: false,
+          })
+          setIsClubAdmin(false)
+          setIsAlumno(false)
+          setAdminClubsCount(0)
+          clearSnapshotCache()
+        }
       } finally {
         if (!cancelled) setIsLoading(false)
       }
@@ -140,9 +157,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cached) {
         applySnapshot(cached)
         setIsLoading(false)
-        return
+        loadPermissions(session.access_token, session.user.id, true)
+      } else {
+        loadPermissions(session.access_token, session.user.id)
       }
-      loadPermissions(session.access_token, session.user.id)
     }
 
     const clearAuthState = () => {
