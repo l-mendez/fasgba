@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
+import { RANKING_CACHE_HEADERS } from '@/lib/rankingStorage'
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
     if (!rankingData.players || !Array.isArray(rankingData.players)) {
       return handleError(new Error('Invalid ranking data structure'))
     }
-    return apiSuccess(rankingData)
+    return apiSuccess(rankingData, 200, RANKING_CACHE_HEADERS)
 
   } catch (error) {
     console.error('Error fetching specific ranking:', error)

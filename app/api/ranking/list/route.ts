@@ -1,89 +1,43 @@
-import { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
+import { listSortedRankingFiles, RANKING_CACHE_HEADERS } from '@/lib/rankingStorage'
 
-export async function GET(request: NextRequest) {
+const MONTH_NAMES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+]
+
+export async function GET() {
   try {
-    // Use admin client for storage operations (has service role permissions)
     const adminSupabase = createAdminClient()
-        
-    // List all ranking files
-    const { data: files, error: listError } = await adminSupabase.storage
-      .from('ranking-data')
-      .list('', {
-        limit: 100,
-        sortBy: { column: 'created_at', order: 'desc' }
-      })
+    const rankingFiles = await listSortedRankingFiles(adminSupabase)
 
-    if (listError || !files) {
-      console.error('Failed to list ranking files:', listError)
-      return handleError(new Error('Failed to list ranking files: ' + (listError?.message || 'Unknown error')))
-    }
+    // Handle duplicate months by adding (2), (3), etc. (most recent keeps the
+    // plain name since the list is already sorted most-recent-first).
+    const monthYearCounts = new Map<string, number>()
+    const processedRankings = rankingFiles.map(file => {
+      const monthYearKey = `${file.month}-${file.year}`
+      const currentCount = monthYearCounts.get(monthYearKey) || 0
+      monthYearCounts.set(monthYearKey, currentCount + 1)
 
-    // Filter and process ranking files
-    const rankingFiles = files
-      .filter(file =>
-        file.name.endsWith('.json') &&
-        !file.name.startsWith('temp/') &&
-        !file.name.includes('-analytics') &&
-        file.name.match(/^ranking-\d{2}-\d{4}/)
-      )
-      .map(file => {
-        const match = file.name.match(/^ranking-(\d{2})-(\d{4}).*\.json$/)
-        if (!match) return null
-        
-        const month = parseInt(match[1])
-        const year = parseInt(match[2])
-        const monthNames = [
-          "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-          "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-        ]
-        
-        return {
-          filename: file.name.replace('.json', ''),
-          month,
-          year,
-          date: new Date(year, month - 1),
-          created_at: file.created_at,
-          baseDisplayName: `${monthNames[month - 1]} ${year}`
-        }
-      })
-      .filter(Boolean)
-      .sort((a, b) => {
-        // First sort by chronological date (most recent first)
-        const dateComparison = (b?.date.getTime() || 0) - (a?.date.getTime() || 0);
-        if (dateComparison !== 0) return dateComparison;
-        
-        // For same month/year, sort by creation time (most recent first)
-        // This ensures higher numbered versions (created later) come first
-        return new Date(b?.created_at || 0).getTime() - new Date(a?.created_at || 0).getTime();
-      });
+      const baseDisplayName = `${MONTH_NAMES[file.month - 1]} ${file.year}`
+      const displayName = currentCount === 0
+        ? baseDisplayName
+        : `${baseDisplayName} (${currentCount + 1})`
 
-    // Handle duplicate months by adding (2), (3), etc.
-    const monthYearCounts = new Map<string, number>();
-    const processedRankings = rankingFiles.map(ranking => {
-      if (!ranking) return null;
-      const monthYearKey = `${ranking.month}-${ranking.year}`;
-      const currentCount = monthYearCounts.get(monthYearKey) || 0;
-      monthYearCounts.set(monthYearKey, currentCount + 1);
-      
-      const displayName = currentCount === 0 
-        ? ranking.baseDisplayName 
-        : `${ranking.baseDisplayName} (${currentCount + 1})`;
-      
       return {
-        filename: ranking.filename,
+        filename: file.name.replace('.json', ''),
         displayName,
-        month: ranking.month,
-        year: ranking.year,
-        date: ranking.date
-      };
-    }).filter(Boolean);
+        month: file.month,
+        year: file.year,
+        date: file.date,
+      }
+    })
 
-    return apiSuccess(processedRankings)
+    return apiSuccess(processedRankings, 200, RANKING_CACHE_HEADERS)
 
   } catch (error) {
     console.error('Error listing rankings:', error)
     return handleError(error)
   }
-} 
+}

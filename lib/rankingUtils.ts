@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { normalizePlayer, sortPlayersByRatingType, selectPlayersPage } from "@/lib/rankingDisplay"
+import { normalizePlayer } from "@/lib/rankingDisplay"
 
 // Re-exported for existing consumers that import it from this module.
 export { normalizePlayer }
@@ -586,32 +586,6 @@ export async function getAvailableRankings(): Promise<Array<{filename: string, d
 
   } catch (error) {
     console.error('Error fetching available rankings:', error);
-    throw error;
-  }
-}
-
-/**
- * Gets paginated and filtered players data
- */
-export async function getPlayers(
-  page: number = 1,
-  pageSize: number = 50,
-  search: string = '',
-  rankingFilename?: string,
-  activeFilter: 'active' | 'inactive' | 'all' = 'all',
-  sortBy: RatingType = 'standard'
-): Promise<PaginatedPlayersResponse> {
-  try {
-    const rankingData = rankingFilename
-      ? await fetchSpecificRankingData(rankingFilename)
-      : await fetchRankingData();
-
-    // Sort by the selected rating type, then search/filter/paginate.
-    const sorted = sortPlayersByRatingType(rankingData.players, sortBy);
-    return selectPlayersPage(sorted, { search, activeFilter, page, pageSize });
-
-  } catch (error) {
-    console.error('Error getting players:', error);
     throw error;
   }
 }

@@ -1,6 +1,5 @@
-// Pure, client-safe ranking transforms (no server/supabase imports), shared by
-// the server-side `getPlayers` and the client `PlayerList` island so both shape
-// and paginate the player list identically.
+// Pure, client-safe ranking transforms (no server/supabase imports) used by the
+// client `PlayerList` island to shape, filter and paginate the player list.
 
 import type { Player, RatingType, PaginatedPlayersResponse } from '@/lib/rankingUtils'
 
