@@ -1,6 +1,9 @@
+import { Suspense } from "react"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 
+import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
+import { AdminPageHeader } from "@/components/admin-page-header"
 import { Button } from "@/components/ui/button"
 import { ProfesoresTable } from "@/components/profesores-table"
 import { requireAdminAction } from "@/lib/actions/auth"
@@ -38,27 +41,30 @@ async function getProfesores() {
   }))
 }
 
-export default async function ProfesoresAdminPage() {
-  const profesores = await getProfesores()
-
+export default function ProfesoresAdminPage() {
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Profesores</h1>
-          <p className="text-muted-foreground">
-            Gestiona los profesores de ajedrez de FASGBA.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/admin/profesores/nuevo">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Profesor
-          </Link>
-        </Button>
-      </div>
-
-      <ProfesoresTable profesores={profesores} />
+      <AdminPageHeader
+        title="Profesores"
+        subtitle="Gestiona los profesores de ajedrez de FASGBA."
+        action={
+          <Button asChild>
+            <Link href="/admin/profesores/nuevo">
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Profesor
+            </Link>
+          </Button>
+        }
+      />
+      <Suspense fallback={<AdminContentSkeleton rows={5} filters={false} />}>
+        <ProfesoresContent />
+      </Suspense>
     </div>
   )
+}
+
+async function ProfesoresContent() {
+  const profesores = await getProfesores()
+
+  return <ProfesoresTable profesores={profesores} />
 }

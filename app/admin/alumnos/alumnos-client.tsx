@@ -75,12 +75,14 @@ interface AdminAlumnosClientProps {
   initialAlumnos: Alumno[]
   initialUsers: UserResult[]
   initialUsersTotal: number
+  showHeader?: boolean
 }
 
 export function AdminAlumnosClient({
   initialAlumnos,
   initialUsers,
   initialUsersTotal,
+  showHeader = true,
 }: AdminAlumnosClientProps) {
   const [alumnos, setAlumnos] = useState<Alumno[]>(initialAlumnos)
   const [loading, setLoading] = useState(false)
@@ -182,12 +184,14 @@ export function AdminAlumnosClient({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-terracotta">Alumnos</h1>
-        <p className="text-muted-foreground">
-          Gestionar alumnos de la escuela. Los alumnos pueden acceder a documentos protegidos de la sección Escuela.
-        </p>
-      </div>
+      {showHeader ? (
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Alumnos</h1>
+          <p className="text-muted-foreground">
+            Gestionar alumnos de la escuela. Los alumnos pueden acceder a documentos protegidos de la sección Escuela.
+          </p>
+        </div>
+      ) : null}
 
       {message && (
         <Alert variant={message.type === "error" ? "destructive" : "default"}>

@@ -1,5 +1,3 @@
-'use client'
-
 import { Check, Circle } from 'lucide-react'
 import { getPasswordStrength } from '@/lib/utils/passwordValidation'
 

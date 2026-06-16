@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
@@ -6,6 +7,8 @@ import { createClient } from "@/lib/supabase/server"
 export const dynamic = 'force-dynamic'
 
 import { Button } from "@/components/ui/button"
+import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
+import { AdminPageHeader } from "@/components/admin-page-header"
 import { ClubsTable } from "@/components/clubs-table"
 import { ErrorAlert } from "@/components/error-alert"
 
@@ -152,7 +155,29 @@ async function fetchClubs(): Promise<Club[]> {
   }
 }
 
-export default async function AdminClubesPage() {
+export default function AdminClubesPage() {
+  return (
+    <div className="flex flex-col gap-8 p-8 pb-16 md:pb-8">
+      <AdminPageHeader
+        title="Clubes"
+        subtitle="Gestiona los clubes afiliados a FASGBA."
+        action={
+          <Button asChild>
+            <Link href="/admin/clubes/nuevo">
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Club
+            </Link>
+          </Button>
+        }
+      />
+      <Suspense fallback={<AdminContentSkeleton rows={6} filters={false} />}>
+        <AdminClubesContent />
+      </Suspense>
+    </div>
+  )
+}
+
+async function AdminClubesContent() {
   let clubs: Club[] = []
   let error: string | null = null
 
@@ -164,28 +189,11 @@ export default async function AdminClubesPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-8 p-8">
+      <div className="flex flex-col gap-8">
         <ErrorAlert message={error} />
       </div>
     )
   }
 
-  return (
-    <div className="flex flex-col gap-8 p-8 pb-16 md:pb-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Clubes</h1>
-          <p className="text-muted-foreground">Gestiona los clubes afiliados a FASGBA.</p>
-        </div>
-        <Button asChild>
-          <Link href="/admin/clubes/nuevo">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Club
-          </Link>
-        </Button>
-      </div>
-
-      <ClubsTable initialClubs={clubs} />
-    </div>
-  )
+  return <ClubsTable initialClubs={clubs} />
 }

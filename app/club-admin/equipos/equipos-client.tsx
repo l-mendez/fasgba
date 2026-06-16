@@ -15,9 +15,71 @@ import type { ClubAdminTeam } from '@/lib/club-admin/types'
 interface ClubAdminEquiposProps {
   initialClubId: number
   initialTeams: ClubAdminTeam[]
+  showHeader?: boolean
+  showSummary?: boolean
 }
 
-export function ClubAdminEquipos({ initialClubId, initialTeams }: ClubAdminEquiposProps) {
+interface CreateTeamDialogProps {
+  handleCreate: () => void
+  isAddOpen: boolean
+  saving: boolean
+  setIsAddOpen: (open: boolean) => void
+  setTeamName: (name: string) => void
+  teamName: string
+}
+
+function CreateTeamDialog({
+  handleCreate,
+  isAddOpen,
+  saving,
+  setIsAddOpen,
+  setTeamName,
+  teamName,
+}: CreateTeamDialogProps) {
+  return (
+    <Dialog open={isAddOpen} onOpenChange={(open) => {
+      setIsAddOpen(open)
+      if (!open) setTeamName('')
+    }}>
+      <DialogTrigger asChild>
+        <Button className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Nuevo Equipo
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Crear Equipo</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="team_name">Nombre del equipo</Label>
+            <Input
+              id="team_name"
+              placeholder="Ej: Equipo A"
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCreate} disabled={saving || !teamName.trim()}>
+              {saving ? 'Creando...' : 'Crear'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export function ClubAdminEquipos({
+  initialClubId,
+  initialTeams,
+  showHeader = true,
+  showSummary = true,
+}: ClubAdminEquiposProps) {
   const { selectedClub } = useClubContext()
   const [teams, setTeams] = useState<ClubAdminTeam[]>(initialTeams)
   const [loading, setLoading] = useState(false)
@@ -122,50 +184,40 @@ export function ClubAdminEquipos({ initialClubId, initialTeams }: ClubAdminEquip
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-terracotta flex items-center gap-2">
-            <Shield className="h-6 w-6" />
-            Equipos
-          </h1>
-          <p className="text-muted-foreground">{selectedClub.name}</p>
-        </div>
+      {showHeader ? (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-terracotta flex items-center gap-2">
+              <Shield className="h-6 w-6" />
+              Equipos
+            </h1>
+            <p className="text-muted-foreground">{selectedClub.name}</p>
+          </div>
 
-        <Dialog open={isAddOpen} onOpenChange={(open) => {
-          setIsAddOpen(open)
-          if (!open) setTeamName('')
-        }}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Nuevo Equipo
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Crear Equipo</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="team_name">Nombre del equipo</Label>
-                <Input
-                  id="team_name"
-                  placeholder="Ej: Equipo A"
-                  value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancelar</Button>
-                <Button onClick={handleCreate} disabled={saving || !teamName.trim()}>
-                  {saving ? 'Creando...' : 'Crear'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          <CreateTeamDialog
+            handleCreate={handleCreate}
+            isAddOpen={isAddOpen}
+            saving={saving}
+            setIsAddOpen={setIsAddOpen}
+            setTeamName={setTeamName}
+            teamName={teamName}
+          />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {showSummary ? (
+            <p className="text-sm text-muted-foreground">{selectedClub.name}</p>
+          ) : null}
+          <CreateTeamDialog
+            handleCreate={handleCreate}
+            isAddOpen={isAddOpen}
+            saving={saving}
+            setIsAddOpen={setIsAddOpen}
+            setTeamName={setTeamName}
+            teamName={teamName}
+          />
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center p-12">

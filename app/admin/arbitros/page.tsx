@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
@@ -5,6 +6,8 @@ import { createClient } from "@/lib/supabase/server"
 export const dynamic = 'force-dynamic'
 
 import { Button } from "@/components/ui/button"
+import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
+import { AdminPageHeader } from "@/components/admin-page-header"
 import { ArbitrosTable } from "@/components/arbitros-table"
 import { ErrorAlert } from "@/components/error-alert"
 
@@ -65,7 +68,29 @@ async function fetchArbitros(): Promise<ArbitroRow[]> {
   }
 }
 
-export default async function AdminArbitrosPage() {
+export default function AdminArbitrosPage() {
+  return (
+    <div className="flex flex-col gap-8 p-8 pb-16 md:pb-8">
+      <AdminPageHeader
+        title="Árbitros"
+        subtitle="Gestiona los árbitros de FASGBA."
+        action={
+          <Button asChild>
+            <Link href="/admin/arbitros/nuevo">
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Árbitro
+            </Link>
+          </Button>
+        }
+      />
+      <Suspense fallback={<AdminContentSkeleton rows={5} filters={false} />}>
+        <AdminArbitrosContent />
+      </Suspense>
+    </div>
+  )
+}
+
+async function AdminArbitrosContent() {
   let arbitros: ArbitroRow[] = []
   let error: string | null = null
 
@@ -77,28 +102,11 @@ export default async function AdminArbitrosPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-8 p-8">
+      <div className="flex flex-col gap-8">
         <ErrorAlert message={error} />
       </div>
     )
   }
 
-  return (
-    <div className="flex flex-col gap-8 p-8 pb-16 md:pb-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Árbitros</h1>
-          <p className="text-muted-foreground">Gestiona los árbitros de FASGBA.</p>
-        </div>
-        <Button asChild>
-          <Link href="/admin/arbitros/nuevo">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Árbitro
-          </Link>
-        </Button>
-      </div>
-
-      <ArbitrosTable initialArbitros={arbitros} />
-    </div>
-  )
+  return <ArbitrosTable initialArbitros={arbitros} />
 }

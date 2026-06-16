@@ -190,6 +190,7 @@ export async function getClubDashboardInitialData() {
   recentActivity.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
   return {
+    selectedClub: context.selectedClub,
     selectedClubId: clubId,
     stats,
     recentActivity: recentActivity.slice(0, 5),
@@ -242,6 +243,7 @@ export async function getClubTeamsInitialData() {
   if (error) throw error
 
   return {
+    selectedClub,
     selectedClubId: selectedClub.id,
     teams: data || [],
   }

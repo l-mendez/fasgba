@@ -1,6 +1,7 @@
 import { NextRequest, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { revalidateRankingCache } from '@/lib/cache/ranking'
 import { requireAuth } from '@/lib/middleware/auth'
 import { apiSuccess, handleError, forbiddenError } from '@/lib/utils/apiResponse'
 import { findPreviousPlayer } from '@/lib/rankingUtils'
@@ -105,6 +106,8 @@ export async function POST(request: NextRequest) {
     const { data: urlData } = adminSupabase.storage
       .from('ranking-data')
       .getPublicUrl(finalPath)
+
+    revalidateRankingCache()
 
     after(async () => {
       try {
@@ -360,4 +363,4 @@ function calculatePlayerChangesForRecalculation(newPlayers: any[], previousPlaye
       }
     }
   })
-} 
+}

@@ -4,6 +4,7 @@ import type { User } from "@supabase/supabase-js"
 import { notFound } from "next/navigation"
 
 import { requireAdminAction } from "@/lib/actions/auth"
+import { ADMIN_RANKINGS_PAGE_SIZE, getCachedAdminRankingSummaries, paginateRankings } from "@/lib/rankingStorage"
 import { ForbiddenError, UnauthorizedError } from "@/lib/middleware/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { DOCUMENT_CATEGORIES, type DocumentCategory } from "@/lib/documentosUtils"
@@ -381,112 +382,19 @@ export async function getAdminJugadoresInitialData() {
   }
 }
 
-export async function getAdminRankingInitialData() {
+export async function getAdminRankingInitialData(
+  page: number = 1,
+  pageSize: number = ADMIN_RANKINGS_PAGE_SIZE
+) {
   await requireAdminPageAccess()
 
-  const supabase = createAdminClient()
-  const { data: files, error } = await supabase.storage
-    .from("ranking-data")
-    .list("", {
-      limit: 100,
-      sortBy: { column: "created_at", order: "desc" },
-    })
+  const rankings = await getCachedAdminRankingSummaries()
+  const paginated = paginateRankings(rankings, page, pageSize)
 
-  if (error) throw error
-
-  const monthNames = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-  ]
-
-  const rankings = await Promise.all(
-    (files || [])
-      .filter((file) =>
-        file.name.endsWith(".json") &&
-        !file.name.startsWith("temp/") &&
-        !file.name.includes("-analytics") &&
-        /^ranking-\d{2}-\d{4}/.test(file.name)
-      )
-      .map(async (file) => {
-        const match = file.name.match(/^ranking-(\d{2})-(\d{4}).*\.json$/)
-        if (!match) return null
-
-        const month = parseInt(match[1], 10)
-        const year = parseInt(match[2], 10)
-        let totalPlayers = 0
-        let lastUpdated = file.created_at ?? new Date().toISOString()
-
-        const { data: fileData } = await supabase.storage.from("ranking-data").download(file.name)
-        if (fileData) {
-          try {
-            const rankingData = JSON.parse(await fileData.text())
-            totalPlayers = rankingData.totalPlayers || rankingData.players?.length || 0
-            lastUpdated = rankingData.lastUpdated || file.created_at || lastUpdated
-          } catch (parseError) {
-            console.warn(`Could not parse ranking file ${file.name}:`, parseError)
-          }
-        }
-
-        return {
-          id: file.name.replace(".json", ""),
-          name: file.name.replace(".json", ""),
-          date: lastUpdated,
-          totalPlayers,
-          status: "archived" as const,
-          month,
-          year,
-          filePath: file.name,
-          size: file.metadata?.size || 0,
-          baseDisplayName: `${monthNames[month - 1]} ${year}`,
-          chronologicalDate: new Date(year, month - 1),
-        }
-      })
-  )
-
-  const validRankings = rankings
-    .filter((ranking): ranking is NonNullable<typeof ranking> => ranking !== null)
-    .sort((a, b) => {
-      const dateComparison = b.chronologicalDate.getTime() - a.chronologicalDate.getTime()
-      if (dateComparison !== 0) return dateComparison
-      return new Date(b.date).getTime() - new Date(a.date).getTime()
-    })
-
-  const monthYearGroups = new Map<string, typeof validRankings>()
-  validRankings.forEach((ranking) => {
-    const monthYearKey = `${ranking.month}-${ranking.year}`
-    monthYearGroups.set(monthYearKey, [...(monthYearGroups.get(monthYearKey) || []), ranking])
-  })
-
-  const processedRankings: AdminRanking[] = validRankings.map((ranking) => {
-    const monthYearKey = `${ranking.month}-${ranking.year}`
-    const sameMonthRankings = monthYearGroups.get(monthYearKey) || []
-    const displayName = sameMonthRankings.length === 1
-      ? ranking.baseDisplayName
-      : (() => {
-          const sortedSameMonth = [...sameMonthRankings].sort(
-            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-          )
-          const position = sortedSameMonth.findIndex((item) => item.name === ranking.name)
-          return position === 0 ? ranking.baseDisplayName : `${ranking.baseDisplayName} (${position + 1})`
-        })()
-
-    return {
-      id: ranking.id,
-      name: ranking.name,
-      displayName,
-      date: ranking.date,
-      totalPlayers: ranking.totalPlayers,
-      status: "archived",
-      filePath: ranking.filePath,
-      size: ranking.size,
-    }
-  })
-
-  if (processedRankings.length > 0) {
-    processedRankings[0].status = "current"
+  return {
+    ...paginated,
+    existingRankingNames: rankings.map((ranking) => ranking.name),
   }
-
-  return { rankings: processedRankings }
 }
 
 export async function getAdminDocumentosInitialData(sortOption: SortOption = "custom") {

@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { revalidateRankingCache } from '@/lib/cache/ranking'
 import { requireAuth } from '@/lib/middleware/auth'
 import { apiSuccess, handleError, forbiddenError } from '@/lib/utils/apiResponse'
-import { clearRankingCache } from '@/lib/rankingUtils'
 
 interface RankingFileInfo {
   filename: string
@@ -86,8 +86,7 @@ export async function DELETE(request: NextRequest) {
       newLatestRanking = await findNewLatestRanking(adminSupabase)
     }
 
-    // Clear ranking cache to ensure fresh data
-    clearRankingCache()
+    revalidateRankingCache()
 
     return apiSuccess({
       filename,
@@ -572,4 +571,4 @@ async function recalculateNextRankingChanges(adminSupabase: any, deletedRankingI
   } catch (error) {
     console.warn('Error recalculating next ranking:', error)
   }
-} 
+}

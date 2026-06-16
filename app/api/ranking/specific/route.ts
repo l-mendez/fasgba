@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
-import { RANKING_CACHE_HEADERS } from '@/lib/rankingStorage'
+import { getCachedSpecificRankingData, RANKING_CACHE_HEADERS } from '@/lib/rankingStorage'
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,24 +11,7 @@ export async function GET(request: NextRequest) {
       return handleError(new Error('Filename parameter is required'))
     }
 
-    // Use admin client for storage operations (has service role permissions)
-    const adminSupabase = createAdminClient()
-    
-    // Add .json extension if not present
-    const fullFilename = filename.endsWith('.json') ? filename : `${filename}.json`
-        
-    // Download the specific ranking file
-    const { data: fileData, error: downloadError } = await adminSupabase.storage
-      .from('ranking-data')
-      .download(fullFilename)
-    
-    if (downloadError || !fileData) {
-      console.error('Failed to download ranking file:', downloadError)
-      return handleError(new Error('Failed to download ranking file: ' + (downloadError?.message || 'Unknown error')))
-    }
-
-    const jsonContent = await fileData.text()
-    const rankingData = JSON.parse(jsonContent)
+    const rankingData = await getCachedSpecificRankingData(filename)
     
     // Validate data structure
     if (!rankingData.players || !Array.isArray(rankingData.players)) {
@@ -41,4 +23,4 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching specific ranking:', error)
     return handleError(error)
   }
-} 
+}

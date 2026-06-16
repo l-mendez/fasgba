@@ -141,9 +141,10 @@ const getStatusText = (status: string) => {
 interface ClubAdminTorneosProps {
   initialClubId: number
   initialTournaments: Tournament[]
+  showHeader?: boolean
 }
 
-export function ClubAdminTorneos({ initialClubId, initialTournaments }: ClubAdminTorneosProps) {
+export function ClubAdminTorneos({ initialClubId, initialTournaments, showHeader = true }: ClubAdminTorneosProps) {
   const { selectedClub } = useClubContext()
   const [torneos, setTorneos] = useState<Tournament[]>(initialTournaments)
   const [searchTerm, setSearchTerm] = useState("")
@@ -305,7 +306,7 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments }: ClubAdmi
 
   if (!selectedClub) {
     return (
-      <div className="flex flex-col gap-8 p-8">
+      <div className="flex flex-col gap-8">
         <div className="text-center">
           <h3 className="text-lg font-semibold mb-2">Selecciona un club</h3>
           <p className="text-muted-foreground">Selecciona un club para gestionar sus torneos.</p>
@@ -315,21 +316,23 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments }: ClubAdmi
   }
 
   return (
-    <div className="flex flex-col gap-8 p-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Torneos</h1>
-          <p className="text-muted-foreground">
-            Gestiona los torneos organizados por {selectedClub.name}.
-          </p>
+    <div className="flex flex-col gap-8">
+      {showHeader ? (
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-terracotta">Torneos</h1>
+            <p className="text-muted-foreground">
+              Gestiona los torneos organizados por {selectedClub.name}.
+            </p>
+          </div>
+          <Button asChild className="w-fit">
+            <Link href="/torneos/nuevo">
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Torneo
+            </Link>
+          </Button>
         </div>
-        <Button asChild className="w-fit">
-          <Link href="/torneos/nuevo">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Torneo
-          </Link>
-        </Button>
-      </div>
+      ) : null}
 
       {error && (
         <ErrorAlert title="Error" message={error} />

@@ -1,4 +1,8 @@
+import { Suspense } from "react"
+
 import { createClient } from "@/lib/supabase/server"
+import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
+import { AdminPageHeader } from "@/components/admin-page-header"
 import { UsersTable } from "@/components/users-table"
 import { ErrorAlert } from "@/components/error-alert"
 
@@ -118,7 +122,18 @@ async function fetchAllUsers(): Promise<UserWithPermissions[]> {
   }
 }
 
-export default async function UsersPage() {
+export default function UsersPage() {
+  return (
+    <div className="flex-1 space-y-4">
+      <AdminPageHeader title="Usuarios" />
+      <Suspense fallback={<AdminContentSkeleton rows={6} filters={false} />}>
+        <UsersContent />
+      </Suspense>
+    </div>
+  )
+}
+
+async function UsersContent() {
   let users: UserWithPermissions[] = []
   let error: string | null = null
 
@@ -130,22 +145,11 @@ export default async function UsersPage() {
 
   if (error) {
     return (
-      <div className="flex-1 space-y-4">
+      <div>
         <ErrorAlert message={error} />
       </div>
     )
   }
 
-  return (
-    <div className="flex-1 space-y-4">
-      <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Usuarios</h2>
-        <div className="flex items-center space-x-2">
-        </div>
-      </div>
-      
-      <UsersTable initialUsers={users} />
-    </div>
-  )
+  return <UsersTable initialUsers={users} />
 }
-
