@@ -2,6 +2,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Calendar, MapPin } from "lucide-react"
 import { ReactNode } from "react"
+import { unstable_cache } from "next/cache"
 import { createClient } from '@supabase/supabase-js'
 
 import { Button } from "@/components/ui/button"
@@ -12,8 +13,10 @@ import { getAllClubs } from "@/lib/clubUtils"
 import { getImageUrl } from "@/lib/imageUtils"
 import { formatArgentinaDateOnly, getDateInputValue } from "@/lib/dateUtils"
 
-// Force dynamic rendering for SSR
-export const dynamic = 'force-dynamic'
+// Static content (ISR) — revalidate periodically. Each fetch is wrapped in
+// unstable_cache with a tag matching the rest of the app's invalidations so a
+// future cache-bust refreshes the home page too.
+export const revalidate = 300
 
 // Create Supabase client for server-side operations (tournaments only)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -76,14 +79,17 @@ interface NoticiaProps {
   noticia: Noticia
 }
 
-// Server-side data fetching functions
-async function fetchNews(): Promise<NewsItem[]> {
-  try {
-    const { data } = await getAllNews({ 
+// Server-side data fetching functions. Each is wrapped in unstable_cache and
+// returns a plain, JSON-serializable shape (no Date objects cross the boundary).
+// Errors are caught OUTSIDE the cache so transient failures degrade gracefully
+// without being cached.
+const getCachedNews = unstable_cache(
+  async (): Promise<NewsItem[]> => {
+    const { data } = await getAllNews({
       limit: 20, // Increased limit to ensure we get enough FASGBA news after sorting
       include: ['club', 'author']
     })
-    
+
     const mappedNews = data.map(item => ({
       id: item.id,
       title: item.title,
@@ -104,21 +110,31 @@ async function fetchNews(): Promise<NewsItem[]> {
       // First, prioritize FASGBA news (club_id = null)
       if (a.club_id === null && b.club_id !== null) return -1
       if (a.club_id !== null && b.club_id === null) return 1
-      
+
       // If both are FASGBA news or both are club news, sort by date (newest first)
       return getDateInputValue(b.date).localeCompare(getDateInputValue(a.date))
     })
 
     // Return only the first 5 for homepage display
     return sortedNews.slice(0, 5)
+  },
+  ['home-news'],
+  { revalidate: 300, tags: ['news'] }
+)
+
+async function fetchNews(): Promise<NewsItem[]> {
+  try {
+    return await getCachedNews()
   } catch (error) {
     console.error('Error fetching news:', error)
     return []
   }
 }
 
-async function fetchTournaments(): Promise<Tournament[]> {
-  try {
+// Filtering/sorting use Date objects (start_date/getTime), so they run INSIDE
+// the cache; only the already-mapped, Date-free Tournament[] is cached.
+const getCachedTournaments = unstable_cache(
+  async (): Promise<Tournament[]> => {
     const allTournaments = await getAllTournamentsForDisplay(supabase)
     const upcoming = allTournaments.filter(t => t.is_upcoming)
 
@@ -147,17 +163,33 @@ async function fetchTournaments(): Promise<Tournament[]> {
       created_by_club_id: t.created_by_club_id,
       formatted_start_date: t.formatted_start_date,
     }))
+  },
+  ['home-tournaments'],
+  { revalidate: 300, tags: ['torneos'] }
+)
+
+async function fetchTournaments(): Promise<Tournament[]> {
+  try {
+    return await getCachedTournaments()
   } catch (error) {
     console.error('Error fetching tournaments:', error)
     return []
   }
 }
 
-async function fetchClubs(): Promise<Club[]> {
-  try {
+const getCachedClubs = unstable_cache(
+  async (): Promise<Club[]> => {
     const clubs = await getAllClubs()
     // Limit the results to 6 after fetching
     return (clubs as Club[]).slice(0, 6)
+  },
+  ['home-clubs'],
+  { revalidate: 300, tags: ['clubs'] }
+)
+
+async function fetchClubs(): Promise<Club[]> {
+  try {
+    return await getCachedClubs()
   } catch (error) {
     console.error('Error fetching clubs:', error)
     return []
