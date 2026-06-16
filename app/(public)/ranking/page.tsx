@@ -1,22 +1,12 @@
-import { Suspense } from "react";
+import { Suspense } from "react"
 import { Metadata } from "next"
 
 import { PlayerList } from "./components/PlayerList"
 import { PageHero } from "@/components/page-hero"
-import { ErrorAlert } from "@/components/error-alert"
-import {
-  getPlayers,
-  getAvailableRankings,
-  type PaginatedPlayersResponse,
-  type Player,
-  type RatingType,
-} from "@/lib/rankingUtils"
+import type { Player } from "@/lib/rankingUtils"
 
 // Re-export Player type for any consumers
 export type { Player }
-
-// ISR: Revalidate every 5 minutes (300 seconds)
-export const revalidate = 300
 
 export const metadata: Metadata = {
   title: 'Ranking FASGBA - Clasificación Oficial de Jugadores',
@@ -58,46 +48,6 @@ export const metadata: Metadata = {
   },
 }
 
-interface ApiResponse {
-  players: Player[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-  currentRanking?: string;
-  availableRankings?: Array<{filename: string, displayName: string, month: number, year: number, date: Date}>;
-}
-
-async function getPlayersData(
-  page: number = 1,
-  pageSize: number = 50,
-  search: string = '',
-  ranking?: string,
-  activeFilter: 'active' | 'inactive' | 'all' = 'active',
-  sortBy: RatingType = 'standard'
-): Promise<ApiResponse> {
-  try {
-    if (ranking) {
-      const { clearRankingCache } = await import('@/lib/rankingUtils');
-      clearRankingCache();
-    }
-
-    const [data, availableRankings]: [PaginatedPlayersResponse, Array<{filename: string, displayName: string, month: number, year: number, date: Date}>] = await Promise.all([
-      getPlayers(page, pageSize, search, ranking, activeFilter, sortBy),
-      getAvailableRankings()
-    ]);
-
-    return {
-      ...data,
-      currentRanking: ranking || (availableRankings.length > 0 ? availableRankings[0].filename : undefined),
-      availableRankings
-    };
-  } catch (error) {
-    console.error('Error fetching players:', error);
-    throw new Error(`Failed to fetch data: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-}
-
 function LoadingState() {
   return (
     <div className="container px-4 md:px-6">
@@ -109,63 +59,21 @@ function LoadingState() {
   );
 }
 
-export default async function RankingPage({
-  searchParams,
-}: {
-  searchParams: { page?: string; search?: string; ranking?: string; active?: string; sortBy?: string };
-}) {
+// The ranking data is identical for everyone, so the page is a static shell and
+// PlayerList (client) fetches the selected ranking from the CDN-cacheable
+// /api/ranking endpoints, keeping search/filter/sort/pagination on the client.
+export default function RankingPage() {
   return (
     <>
       <PageHero
         title="Ranking FASGBA"
         subtitle="Clasificación oficial de jugadores de la Federación de Ajedrez del Sur del Gran Buenos Aires"
       />
-        <section className="w-full py-12 md:py-24 lg:py-32">
-          <Suspense fallback={<LoadingState />}>
-            <RankingContent searchParams={searchParams} />
-          </Suspense>
-        </section>
+      <section className="w-full py-12 md:py-24 lg:py-32">
+        <Suspense fallback={<LoadingState />}>
+          <PlayerList />
+        </Suspense>
+      </section>
     </>
   );
-}
-
-async function RankingContent({
-  searchParams,
-}: {
-  searchParams: { page?: string; search?: string; ranking?: string; active?: string; sortBy?: string };
-}) {
-  const params = await Promise.resolve(searchParams);
-  const page = parseInt(params.page || '1');
-  const pageSize = 50;
-  const search = params.search || '';
-  const ranking = params.ranking || '';
-  const activeParamRaw = (params.active || 'active').toLowerCase();
-  const activeFilter: 'active' | 'inactive' | 'all' =
-    activeParamRaw === 'inactive' ? 'inactive' : activeParamRaw === 'all' ? 'all' : 'active';
-  const sortBy: RatingType =
-    params.sortBy === 'rapid' ? 'rapid' : params.sortBy === 'blitz' ? 'blitz' : 'standard';
-
-  try {
-    const data = await getPlayersData(page, pageSize, search, ranking || undefined, activeFilter, sortBy);
-    return <PlayerList
-      key={`${data.currentRanking || 'latest'}-${page}-${search}-${activeFilter}-${sortBy}`}
-      players={data.players}
-      currentPage={data.page}
-      totalPages={data.totalPages}
-      totalPlayers={data.total}
-      currentRanking={data.currentRanking}
-      availableRankings={data.availableRankings || []}
-      sortBy={sortBy}
-    />;
-  } catch (error) {
-    console.error("Error fetching players:", error);
-    return (
-      <div className="container px-4 md:px-6">
-        <ErrorAlert
-          title="Error de conexión"
-          message="Hubo un problema al cargar los datos del ranking. Por favor, intenta nuevamente más tarde."
-        />
-      </div>
-    );
-  }
 }
