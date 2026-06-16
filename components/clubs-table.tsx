@@ -18,9 +18,12 @@ import {
   Search,
   ChevronDown,
   User,
-  Edit
+  Edit,
+  Loader2
 } from "lucide-react"
 import Link from "next/link"
+
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -192,6 +195,12 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
   // Apply sorting to filtered clubs
   const sortedAndFilteredClubes = getSortedClubes(filteredClubes)
 
+  // Render a growing window; resets whenever the search/filter/sort changes.
+  const { visibleItems: visibleClubes, sentinelRef, hasMore } = useInfiniteScroll(
+    sortedAndFilteredClubes,
+    { resetKey: `${searchTerm}|${selectedDelegadoFilter}|${sortBy}|${sortOrder}` }
+  )
+
   // Function to delete a club
   const handleDeleteClub = async () => {
     if (!clubToDelete) return
@@ -350,7 +359,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedAndFilteredClubes.map((club) => (
+                visibleClubes.map((club) => (
                   <TableRow key={club.id}>
                     <TableCell className="font-medium">{club.name}</TableCell>
                     <TableCell>{club.address || "Sin dirección"}</TableCell>
@@ -418,7 +427,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
             </div>
           ) : (
             <div className="space-y-4">
-              {sortedAndFilteredClubes.map((club) => (
+              {visibleClubes.map((club) => (
                 <div key={club.id} className="bg-card rounded-lg border p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
@@ -493,6 +502,14 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
             </div>
           )}
         </div>
+
+        <div ref={sentinelRef} className="h-1" />
+        {hasMore && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-sm text-muted-foreground">Cargando más...</span>
+          </div>
+        )}
       </>
 
       {/* Dialog for deleting a club */}

@@ -4,6 +4,8 @@ import { useState } from "react"
 import Link from "next/link"
 import { ChevronDown, Search, GraduationCap, Loader2, Shield } from "lucide-react"
 
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -219,6 +221,12 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
   // Apply sorting to filtered users
   const sortedAndFilteredUsers = getSortedUsers(filteredUsers)
 
+  // Render a growing window; resets whenever the search/sort changes.
+  const { visibleItems: visibleUsers, sentinelRef, hasMore } = useInfiniteScroll(
+    sortedAndFilteredUsers,
+    { resetKey: `${searchQuery}|${sortBy}|${sortOrder}` }
+  )
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-center">
@@ -341,7 +349,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedAndFilteredUsers.map((user) => (
+                visibleUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="min-w-0 max-w-0 md:min-w-auto md:max-w-none">
                       <div className="truncate pr-2 md:pr-0">{user.email}</div>
@@ -441,11 +449,18 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
             </TableBody>
           </Table>
         </div>
+        <div ref={sentinelRef} className="h-1" />
+        {hasMore && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-sm text-muted-foreground">Cargando más...</span>
+          </div>
+        )}
       </div>
-      
+
       <div className="text-sm text-muted-foreground">
-        Mostrando {sortedAndFilteredUsers.length} de {users.length} usuarios registrados
+        Mostrando {visibleUsers.length} de {sortedAndFilteredUsers.length} {searchQuery ? 'usuarios encontrados' : 'usuarios registrados'}
       </div>
     </div>
   )
-} 
+}

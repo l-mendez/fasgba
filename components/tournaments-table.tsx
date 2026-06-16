@@ -4,6 +4,8 @@ import { useState } from "react"
 import Link from "next/link"
 import { ChevronDown, Edit, Eye, MoreHorizontal, Plus, Search, Trash2, Users, Loader2, AlertCircle } from "lucide-react"
 
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -227,6 +229,12 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
 
   // Apply sorting to filtered tournaments
   const sortedAndFilteredTorneos = getSortedTorneos(filteredTorneos)
+
+  // Render a growing window; resets whenever the search/filter/sort changes.
+  const { visibleItems: visibleTorneos, sentinelRef, hasMore } = useInfiniteScroll(
+    sortedAndFilteredTorneos,
+    { resetKey: `${searchTerm}|${selectedClubFilter}|${selectedStatusFilter}|${sortBy}|${sortOrder}` }
+  )
 
   // Función para eliminar un torneo
   const handleDeleteTorneo = async () => {
@@ -471,7 +479,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedAndFilteredTorneos.map((torneo) => (
+                visibleTorneos.map((torneo) => (
                   <TableRow key={torneo.id}>
                     <TableCell className="font-medium">{torneo.title}</TableCell>
                     <TableCell>
@@ -547,7 +555,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
             </div>
           ) : (
             <div className="space-y-4">
-              {sortedAndFilteredTorneos.map((torneo) => (
+              {visibleTorneos.map((torneo) => (
                 <div key={torneo.id} className="bg-card rounded-lg border p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
@@ -626,6 +634,14 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
             </div>
           )}
         </div>
+
+        <div ref={sentinelRef} className="h-1" />
+        {hasMore && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-sm text-muted-foreground">Cargando más...</span>
+          </div>
+        )}
       </>
 
       {/* Diálogo de confirmación para eliminar torneo */}
