@@ -7,57 +7,61 @@ import { Badge } from "@/components/ui/badge"
 import { ErrorAlert } from "@/components/error-alert"
 import { useClubContext } from "../context/club-context"
 import { QuickActions } from "./quick-actions"
-import { apiCall } from "../context/club-context"
+import { apiCall } from "@/lib/utils/apiClient"
+import type { ClubAdminActivityItem, ClubAdminStats } from "@/lib/club-admin/types"
 
-interface ClubStats {
-  noticias: number
-  torneos: number
-  torneosActivos: number
-  seguidores: number
-  crecimientoSeguidores: number
+interface DashboardContentProps {
+  initialClubId: number
+  initialStats: ClubAdminStats
+  initialRecentActivity: ClubAdminActivityItem[]
 }
 
-interface ActivityItem {
-  type: 'news' | 'tournament' | 'follower'
-  title: string
-  date: string
-  description?: string
-  author?: string
+const emptyStats: ClubAdminStats = {
+  noticias: 0,
+  torneos: 0,
+  torneosActivos: 0,
+  seguidores: 0,
+  crecimientoSeguidores: 0,
 }
 
-export function DashboardContent() {
+export function DashboardContent({
+  initialClubId,
+  initialStats,
+  initialRecentActivity,
+}: DashboardContentProps) {
   const { selectedClub } = useClubContext()
-  const [stats, setStats] = useState<ClubStats>({
-    noticias: 0,
-    torneos: 0,
-    torneosActivos: 0,
-    seguidores: 0,
-    crecimientoSeguidores: 0,
+  const [statsByClub, setStatsByClub] = useState<Record<number, ClubAdminStats>>({
+    [initialClubId]: initialStats,
   })
-  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
+  const [activityByClub, setActivityByClub] = useState<Record<number, ClubAdminActivityItem[]>>({
+    [initialClubId]: initialRecentActivity,
+  })
+  const [stats, setStats] = useState<ClubAdminStats>(initialStats)
+  const [recentActivity, setRecentActivity] = useState<ClubAdminActivityItem[]>(initialRecentActivity)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Fetch club statistics
   const fetchClubStats = async (clubId: number) => {
+    if (statsByClub[clubId]) {
+      setStats(statsByClub[clubId])
+      setRecentActivity(activityByClub[clubId] || [])
+      return
+    }
+
     try {
       setIsLoading(true)
       setError(null)
       
-      const data = await apiCall(`/clubs/${clubId}/stats`)
+      const data = await apiCall(`/api/clubs/${clubId}/stats`)
       setStats(data.stats)
       setRecentActivity(data.recentActivity)
+      setStatsByClub((current) => ({ ...current, [clubId]: data.stats }))
+      setActivityByClub((current) => ({ ...current, [clubId]: data.recentActivity }))
     } catch (err) {
       console.error('Error fetching club stats:', err)
       setError(err instanceof Error ? err.message : 'Error al cargar estadísticas')
-      // Set default values on error
-      setStats({
-        noticias: 0,
-        torneos: 0,
-        torneosActivos: 0,
-        seguidores: 0,
-        crecimientoSeguidores: 0,
-      })
+      setStats(emptyStats)
       setRecentActivity([])
     } finally {
       setIsLoading(false)
@@ -69,7 +73,7 @@ export function DashboardContent() {
     if (selectedClub) {
       fetchClubStats(selectedClub.id)
     }
-  }, [selectedClub])
+  }, [selectedClub?.id])
 
   if (!selectedClub) {
     return (
