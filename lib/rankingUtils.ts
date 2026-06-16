@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/client"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { normalizePlayer, sortPlayersByRatingType, selectPlayersPage } from "@/lib/rankingDisplay"
+
+// Re-exported for existing consumers that import it from this module.
+export { normalizePlayer }
 
 export type RatingType = 'standard' | 'rapid' | 'blitz';
 
@@ -79,28 +83,6 @@ export interface PaginatedPlayersResponse {
   page: number;
   pageSize: number;
   totalPages: number;
-}
-
-/**
- * Normalizes a player from old format (no ratings) to new format
- */
-export function normalizePlayer(player: any): Player {
-  if (player.ratings) {
-    return player as Player;
-  }
-  return {
-    ...player,
-    ratings: {
-      standard: player.points || 0,
-      rapid: null,
-      blitz: null,
-    },
-    positions: {
-      standard: player.position,
-      rapid: 0,
-      blitz: 0,
-    },
-  };
 }
 
 /**
@@ -201,30 +183,6 @@ export function computePositionsByRatingType(players: Player[]): Player[] {
       },
     };
   });
-}
-
-/**
- * Sorts players by a specific rating type and assigns position accordingly
- */
-function sortPlayersByRatingType(players: Player[], sortBy: RatingType): Player[] {
-  const withRating = players.filter(p => p.ratings[sortBy] !== null && p.ratings[sortBy] !== 0);
-  const withoutRating = players.filter(p => p.ratings[sortBy] === null || p.ratings[sortBy] === 0);
-
-  withRating.sort((a, b) => (b.ratings[sortBy] || 0) - (a.ratings[sortBy] || 0));
-
-  // Assign positions based on sort order
-  const sorted = withRating.map((player, index) => ({
-    ...player,
-    position: index + 1,
-  }));
-
-  // Players without this rating go to the end
-  const rest = withoutRating.map((player, index) => ({
-    ...player,
-    position: sorted.length + index + 1,
-  }));
-
-  return [...sorted, ...rest];
 }
 
 /**
@@ -648,36 +606,9 @@ export async function getPlayers(
       ? await fetchSpecificRankingData(rankingFilename)
       : await fetchRankingData();
 
-    // Sort by the selected rating type
-    let players = sortPlayersByRatingType(rankingData.players, sortBy);
-
-    // Filter by search term if provided
-    const searchedPlayers = search
-      ? players.filter(player =>
-          player.name.toLowerCase().includes(search.toLowerCase()) ||
-          player.club.toLowerCase().includes(search.toLowerCase())
-        )
-      : players;
-
-    // Filter by activeness
-    const filteredPlayers = activeFilter === 'active'
-      ? searchedPlayers.filter(p => p.active)
-      : activeFilter === 'inactive'
-        ? searchedPlayers.filter(p => !p.active)
-        : searchedPlayers;
-
-    // Calculate pagination
-    const startIndex = (page - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const paginatedPlayers = filteredPlayers.slice(startIndex, endIndex);
-
-    return {
-      players: paginatedPlayers,
-      total: filteredPlayers.length,
-      page,
-      pageSize,
-      totalPages: Math.ceil(filteredPlayers.length / pageSize)
-    };
+    // Sort by the selected rating type, then search/filter/paginate.
+    const sorted = sortPlayersByRatingType(rankingData.players, sortBy);
+    return selectPlayersPage(sorted, { search, activeFilter, page, pageSize });
 
   } catch (error) {
     console.error('Error getting players:', error);

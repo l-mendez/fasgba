@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
@@ -35,22 +35,36 @@ import {
 } from "@/components/ui/select";
 import { RatingTypeSelector } from "./RatingTypeSelector";
 import { PlayerDetailSheet } from "./PlayerDetailSheet";
-import type { Player, RatingType } from "@/lib/rankingUtils";
+import { ErrorAlert } from "@/components/error-alert";
+import {
+  normalizePlayer,
+  sortPlayersByRatingType,
+  selectPlayersPage,
+} from "@/lib/rankingDisplay";
+import type { Player, RatingType, RankingData } from "@/lib/rankingUtils";
 
-interface PlayerListProps {
-  players: Player[];
-  currentPage: number;
-  totalPages: number;
-  totalPlayers: number;
-  currentRanking?: string;
-  availableRankings?: Array<{
-    filename: string;
-    displayName: string;
-    month: number;
-    year: number;
-    date: Date;
-  }>;
-  sortBy: RatingType;
+const PAGE_SIZE = 50;
+
+interface AvailableRanking {
+  filename: string;
+  displayName: string;
+  month: number;
+  year: number;
+  date: string | Date;
+}
+
+function parsePositiveInt(value: string | null, fallback: number): number {
+  if (!value || !/^[1-9]\d*$/.test(value)) return fallback;
+  return Number(value);
+}
+
+function normalizeActiveFilter(value: string | null): "active" | "inactive" | "all" {
+  const v = (value || "active").toLowerCase();
+  return v === "inactive" ? "inactive" : v === "all" ? "all" : "active";
+}
+
+function normalizeSortBy(value: string | null): RatingType {
+  return value === "rapid" ? "rapid" : value === "blitz" ? "blitz" : "standard";
 }
 
 interface PaginationControlsProps {
@@ -152,31 +166,86 @@ function PaginationControls({
   );
 }
 
-export function PlayerList({
-  players,
-  currentPage,
-  totalPages,
-  totalPlayers,
-  currentRanking,
-  availableRankings,
-  sortBy,
-}: PlayerListProps) {
+export function PlayerList() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState(
-    searchParams.get("search") || ""
-  );
-  const activeFilter = (searchParams.get("active") || "active") as
-    | "active"
-    | "inactive"
-    | "all";
 
+  const rankingParam = searchParams.get("ranking") || "";
+  const page = parsePositiveInt(searchParams.get("page"), 1);
+  const search = searchParams.get("search") || "";
+  const activeFilter = normalizeActiveFilter(searchParams.get("active"));
+  const sortBy = normalizeSortBy(searchParams.get("sortBy"));
+
+  const [availableRankings, setAvailableRankings] = useState<AvailableRanking[]>([]);
+  const [players, setPlayers] = useState<Player[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const [searchTerm, setSearchTerm] = useState(search);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
   useEffect(() => {
-    setSearchTerm(searchParams.get("search") || "");
-  }, [searchParams]);
+    setSearchTerm(search);
+  }, [search]);
+
+  // Load the list of available rankings once (for the selector).
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/ranking/list")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => {
+        if (!cancelled && Array.isArray(data)) setAvailableRankings(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Fetch the selected ranking's full player list whenever the selection
+  // changes. Search/filter/sort/pagination then happen in-memory below.
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
+    const url = rankingParam
+      ? `/api/ranking/specific?filename=${encodeURIComponent(rankingParam)}`
+      : "/api/ranking/latest";
+    fetch(url)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: RankingData) => {
+        if (cancelled) return;
+        setPlayers((data.players || []).map(normalizePlayer));
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError(true);
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [rankingParam]);
+
+  const currentRanking = rankingParam || availableRankings[0]?.filename;
+
+  const { pagePlayers, totalPlayers, totalPages } = useMemo(() => {
+    if (!players) return { pagePlayers: [] as Player[], totalPlayers: 0, totalPages: 1 };
+    const sorted = sortPlayersByRatingType(players, sortBy);
+    const result = selectPlayersPage(sorted, {
+      search,
+      activeFilter,
+      page,
+      pageSize: PAGE_SIZE,
+    });
+    return {
+      pagePlayers: result.players,
+      totalPlayers: result.total,
+      totalPages: Math.max(1, result.totalPages),
+    };
+  }, [players, sortBy, search, activeFilter, page]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,10 +260,10 @@ export function PlayerList({
     router.replace(`?${params.toString()}`, { scroll: false });
   };
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = (nextPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("page", page.toString());
-    router.push(`?${params.toString()}`, { scroll: false });
+    params.set("page", nextPage.toString());
+    router.replace(`?${params.toString()}`, { scroll: false });
   };
 
   const handleRankingChange = (rankingFilename: string) => {
@@ -293,32 +362,45 @@ export function PlayerList({
         )}
       </div>
 
-      <div className="mb-6">
-        <PaginationControls
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={handlePageChange}
+      {error ? (
+        <ErrorAlert
+          title="Error de conexión"
+          message="Hubo un problema al cargar los datos del ranking. Por favor, intenta nuevamente más tarde."
         />
-      </div>
-
-      <div className="space-y-4">
-        <RankingTable
-          players={players}
-          sortBy={sortBy}
-          onPlayerClick={handlePlayerClick}
-        />
-      </div>
-
-      <div className="mt-6">
-        <div className="mb-2 text-sm text-muted-foreground text-center">
-          Mostrando {players.length} de {totalPlayers} jugadores
+      ) : loading && !players ? (
+        <div className="animate-pulse space-y-4">
+          <div className="h-96 bg-muted rounded-md w-full" />
         </div>
-        <PaginationControls
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={handlePageChange}
-        />
-      </div>
+      ) : (
+        <>
+          <div className="mb-6">
+            <PaginationControls
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <RankingTable
+              players={pagePlayers}
+              sortBy={sortBy}
+              onPlayerClick={handlePlayerClick}
+            />
+          </div>
+
+          <div className="mt-6">
+            <div className="mb-2 text-sm text-muted-foreground text-center">
+              Mostrando {pagePlayers.length} de {totalPlayers} jugadores
+            </div>
+            <PaginationControls
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        </>
+      )}
 
       <PlayerDetailSheet
         player={selectedPlayer}
