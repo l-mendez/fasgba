@@ -192,8 +192,7 @@ export function NewsFilters({
         <Sheet>
           <SheetTrigger asChild>
             <Button
-              variant="outline"
-              className="border-amber text-amber-dark hover:bg-amber/10"
+              variant="brandOutline"
             >
               <Filter className="h-4 w-4 mr-2" />
               Filtros

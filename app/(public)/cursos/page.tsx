@@ -411,7 +411,7 @@ export default function CursosPage() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input type="search" placeholder="Buscar curso..." className="pl-8 w-full md:w-[250px]" />
               </div>
-              <Button variant="outline" className="border-amber text-amber-dark hover:bg-amber/10">
+              <Button variant="brandOutline">
                 <Filter className="mr-2 h-4 w-4" />
                 Filtros
               </Button>
@@ -664,7 +664,7 @@ export default function CursosPage() {
               <Button asChild size="lg" className="bg-terracotta hover:bg-terracotta/90 text-white">
                 <Link href="/cursos#todos">Ver todos los cursos</Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-amber text-amber-dark hover:bg-amber/10">
+              <Button asChild variant="brandOutline" size="lg">
                 <Link href="/contacto">Consultas</Link>
               </Button>
             </div>
@@ -674,4 +674,3 @@ export default function CursosPage() {
     </>
   )
 }
-

@@ -42,8 +42,7 @@ export function NewsPagination({
   return (
     <div className="mt-10 flex items-center justify-center gap-2">
       <Button
-        variant="outline"
-        className="border-amber text-amber-dark hover:bg-amber/10"
+        variant="brandOutline"
         disabled={currentPage === 1}
         onClick={() => onPageChange(currentPage - 1)}
       >
@@ -66,8 +65,7 @@ export function NewsPagination({
       ))}
 
       <Button
-        variant="outline"
-        className="border-amber text-amber-dark hover:bg-amber/10"
+        variant="brandOutline"
         disabled={currentPage === totalPages}
         onClick={() => onPageChange(currentPage + 1)}
       >
