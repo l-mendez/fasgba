@@ -14,7 +14,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-05-16-follow-aware-email-notifications-design.md`
 
-**Note on testing:** the project has no unit-test framework today. Adding one is out of scope (would over-extend the PR). Verification is `npm run type-check`, then a manual smoke test that uses the new `notification_log` table as the assertion surface (Task 9).
+**Note on testing:** the project has no unit-test framework today. Adding one is out of scope (would over-extend the PR). Verification is `pnpm run type-check`, then a manual smoke test that uses the new `notification_log` table as the assertion surface (Task 9).
 
 ---
 
@@ -155,7 +155,7 @@ export interface BroadcastResult {
 - [ ] **Step 2: Type-check**
 
 ```bash
-npm run type-check
+pnpm run type-check
 ```
 
 Expected: passes (file has no runtime code yet).
@@ -225,7 +225,7 @@ export function shouldIncludeUser(
 - [ ] **Step 2: Type-check**
 
 ```bash
-npm run type-check
+pnpm run type-check
 ```
 
 Expected: passes.
@@ -372,7 +372,7 @@ function rankingHtml(p: { monthName: string; url: string; unsubscribeUrl: string
 - [ ] **Step 2: Type-check**
 
 ```bash
-npm run type-check
+pnpm run type-check
 ```
 
 Expected: passes.
@@ -537,7 +537,7 @@ async function logBroadcast(
 - [ ] **Step 2: Type-check**
 
 ```bash
-npm run type-check
+pnpm run type-check
 ```
 
 Expected: passes.
@@ -608,7 +608,7 @@ import { sendBroadcast } from '@/lib/notifications/sendBroadcast'
 - [ ] **Step 2: Type-check**
 
 ```bash
-npm run type-check
+pnpm run type-check
 ```
 
 Expected: passes.
@@ -676,7 +676,7 @@ import { sendBroadcast } from '@/lib/notifications/sendBroadcast'
 - [ ] **Step 2: Type-check**
 
 ```bash
-npm run type-check
+pnpm run type-check
 ```
 
 Expected: passes.
@@ -759,7 +759,7 @@ rm app/api/notifications/email/route.ts
 - [ ] **Step 3: Type-check + lint**
 
 ```bash
-npm run type-check && npm run lint
+pnpm run type-check && pnpm run lint
 ```
 
 Expected: both pass.
@@ -780,7 +780,7 @@ git commit -m "feat(notifications): wire ranking confirm + remove old endpoint"
 - [ ] **Step 1: Start the dev server**
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 - [ ] **Step 2: Verify SMTP creds load**
@@ -788,7 +788,7 @@ npm run dev
 In another terminal:
 
 ```bash
-npm run test:email
+pnpm run test:email
 ```
 
 Expected: `✅ Test email sent successfully!` and a `messageId`. If this fails, `NO_REPLY_PASSWORD` is missing/wrong — stop and fix env before continuing.

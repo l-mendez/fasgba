@@ -6,7 +6,7 @@
  * y mejoras implementadas en la plataforma.
  * 
  * Uso:
- *   npx tsx scripts/send-admin-update.ts
+ *   pnpm exec tsx scripts/send-admin-update.ts
  * 
  * Requisitos:
  *   - Variables de entorno configuradas (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NO_REPLY_PASSWORD)

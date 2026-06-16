@@ -66,7 +66,7 @@ LIMIT 20;
 
 ## Endpoints
 
-- `POST /api/notifications/email/test` — SMTP health probe. Sends a single test mail to confirm credentials work. Used by `scripts/test-email.js` (`npm run test:email`).
+- `POST /api/notifications/email/test` — SMTP health probe. Sends a single test mail to confirm credentials work. Used by `scripts/test-email.js` (`pnpm run test:email`).
 
 The old broadcast endpoint (`POST /api/notifications/email`) was removed once all callers switched to the in-process library.
 
@@ -83,4 +83,4 @@ NEXT_PUBLIC_SITE_URL=<production origin, used only to build absolute URLs in ema
 
 1. **No emails fire.** Check `notification_log` first — there should be a row per news/tournament/ranking action. No rows → `sendBroadcast` never ran (check server logs for `[sendBroadcast] failed`). Rows with `status='error'` → see `error_message`. Rows with `status='no_recipients'` → preference filter excluded everyone.
 2. **Followers not getting club news.** Confirm the user's `user_metadata.notifications.noticias` (or `torneos`) is set to `clubes` or `fasgba-y-clubes`, and they have a row in `user_follows_club` for that club.
-3. **SMTP auth fails.** Run `npm run test:email`. If it fails, rotate the Zoho app password and update `NO_REPLY_PASSWORD`.
+3. **SMTP auth fails.** Run `pnpm run test:email`. If it fails, rotate the Zoho app password and update `NO_REPLY_PASSWORD`.

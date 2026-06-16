@@ -27,7 +27,7 @@ async function testEmail() {
   } catch (error) {
     console.error('❌ Error testing email system:', error.message);
     console.log('\n💡 Make sure:');
-    console.log('   • The server is running (npm run dev)');
+    console.log('   • The server is running (pnpm dev)');
     console.log('   • The email credentials are configured correctly');
     console.log('   • You have internet connection');
   }
