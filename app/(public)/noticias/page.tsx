@@ -1,4 +1,4 @@
-import { Suspense } from "react"
+import { Metadata } from "next"
 import { unstable_cache } from "next/cache"
 
 import { NewsList } from "@/components/news-list"
@@ -13,11 +13,56 @@ import type { Club } from "@/lib/clubUtils"
 // the client (see NewsList), keeping this page statically cacheable.
 export const revalidate = 300
 
+// Upper bound on rows shipped to the client. The dataset is small, so a single
+// generous cap fetches the entire catalog in one request.
+const MAX_NEWS = 5000
+
+// Generate metadata for better link previews
+export const metadata: Metadata = {
+  title: 'Noticias - FASGBA',
+  description: 'Últimas novedades del ajedrez en la región sur de Buenos Aires. Noticias de la Federación de Ajedrez del Sur del Gran Buenos Aires y sus clubes afiliados.',
+  keywords: ['FASGBA', 'noticias', 'ajedrez', 'novedades', 'federación', 'Buenos Aires', 'torneos'],
+  openGraph: {
+    title: 'Noticias - FASGBA',
+    description: 'Últimas novedades del ajedrez en la región sur de Buenos Aires. Noticias de la Federación de Ajedrez del Sur del Gran Buenos Aires y sus clubes afiliados.',
+    url: 'https://fasgba.com/noticias',
+    siteName: 'FASGBA',
+    images: [
+      {
+        url: 'https://fasgba.com/images/fasgba-logo.png',
+        width: 1200,
+        height: 630,
+        alt: 'Noticias FASGBA',
+      }
+    ],
+    locale: 'es_AR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Noticias - FASGBA',
+    description: 'Últimas novedades del ajedrez en la región sur de Buenos Aires.',
+    images: ['https://fasgba.com/images/fasgba-logo.png'],
+    creator: '@FASGBA',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+}
+
 // Ship the full news catalog as card metadata. The heavy article body (`text`)
 // is dropped here so the client payload stays small.
 const getCachedAllNews = unstable_cache(
   async (): Promise<NewsDisplay[]> => {
-    const { data } = await getAllNews({ limit: 5000, include: ["club"] })
+    const { data } = await getAllNews({ limit: MAX_NEWS, include: ["club"] })
     return data.map((item) => ({ ...item, text: "" }))
   },
   ["noticias-all-news"],
@@ -61,9 +106,7 @@ export default async function NoticiasPage() {
 
       <section className="w-full py-12 md:py-24 lg:py-32">
         <div className="container px-4 md:px-6">
-          <Suspense fallback={<div className="min-h-[400px]" />}>
-            <NewsList allNews={allNews} tags={tags} clubs={clubs} />
-          </Suspense>
+          <NewsList allNews={allNews} tags={tags} clubs={clubs} />
         </div>
       </section>
     </>

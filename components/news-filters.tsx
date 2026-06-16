@@ -1,12 +1,9 @@
 'use client'
 
-import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Filter, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { buildNoticiasUrl } from "@/lib/newsDisplay"
 import {
   Select,
   SelectContent,
@@ -34,72 +31,68 @@ interface NewsFiltersProps {
   selectedTag: string
   selectedClub: string
   hasActiveFilters: boolean
+  onTagChange: (tag: string) => void
+  onClubChange: (club: string) => void
+  onClear: () => void
 }
 
-export function NewsFilters({ 
-  tags, 
-  clubs, 
-  selectedTag, 
-  selectedClub, 
-  hasActiveFilters 
+export function NewsFilters({
+  tags,
+  clubs,
+  selectedTag,
+  selectedClub,
+  hasActiveFilters,
+  onTagChange,
+  onClubChange,
+  onClear,
 }: NewsFiltersProps) {
-  const router = useRouter()
-
   const capitalize = (value: string) => (value ? value.charAt(0).toUpperCase() + value.slice(1) : value)
 
-  // Build the URL for changing one filter; the other filter is preserved and
-  // the page resets to 1 (buildNoticiasUrl omits page when it's the default).
-  const createFilterUrl = (key: 'tag' | 'club', value: string) =>
-    buildNoticiasUrl({
-      tag: key === 'tag' ? value : selectedTag,
-      club: key === 'club' ? value : selectedClub,
-    })
-
-  // Mobile filter content component
-  const FilterContent = () => (
+  // Mobile filter content (a plain element, not a nested component, so it
+  // doesn't remount on every render).
+  const filterContent = (
     <div className="space-y-6">
       {/* Clear filters */}
       {hasActiveFilters && (
-        <Link href="/noticias" replace scroll={false}>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="w-full"
-          >
-            Limpiar filtros
-          </Button>
-        </Link>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={onClear}
+        >
+          Limpiar filtros
+        </Button>
       )}
 
       {/* Tag filter */}
       <div>
         <h3 className="font-medium text-sm mb-3 text-foreground">Categorías</h3>
         <div className="flex flex-wrap gap-2">
-          <Link href={createFilterUrl('tag', 'all')} replace scroll={false}>
+          <button type="button" onClick={() => onTagChange('all')}>
             <Badge
               variant={selectedTag === 'all' ? 'default' : 'secondary'}
               className={`cursor-pointer transition-colors ${
-                selectedTag === 'all' 
-                  ? 'bg-terracotta hover:bg-terracotta-dark text-white' 
+                selectedTag === 'all'
+                  ? 'bg-terracotta hover:bg-terracotta-dark text-white'
                   : 'hover:bg-gray-200'
               }`}
             >
               Todas
             </Badge>
-          </Link>
+          </button>
           {tags.map((tag) => (
-            <Link key={tag} href={createFilterUrl('tag', tag)} replace scroll={false}>
+            <button key={tag} type="button" onClick={() => onTagChange(tag)}>
               <Badge
                 variant={selectedTag === tag ? 'default' : 'secondary'}
                 className={`cursor-pointer transition-colors ${
-                  selectedTag === tag 
-                    ? 'bg-terracotta hover:bg-terracotta-dark text-white' 
+                  selectedTag === tag
+                    ? 'bg-terracotta hover:bg-terracotta-dark text-white'
                     : 'hover:bg-gray-200'
                 }`}
               >
                 {capitalize(tag)}
               </Badge>
-            </Link>
+            </button>
           ))}
         </div>
       </div>
@@ -107,12 +100,7 @@ export function NewsFilters({
       {/* Club filter */}
       <div>
         <h3 className="font-medium text-sm mb-3 text-foreground">Clubes</h3>
-        <Select 
-          value={selectedClub} 
-          onValueChange={(value) => {
-            router.replace(createFilterUrl('club', value), { scroll: false })
-          }}
-        >
+        <Select value={selectedClub} onValueChange={onClubChange}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Seleccionar club" />
           </SelectTrigger>
@@ -137,7 +125,7 @@ export function NewsFilters({
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-2">Categorías</h3>
           <div className="flex flex-wrap gap-2">
-            <Link href={createFilterUrl('tag', 'all')} replace scroll={false}>
+            <button type="button" onClick={() => onTagChange('all')}>
               <Badge
                 variant={selectedTag === 'all' ? 'default' : 'outline'}
                 className={`cursor-pointer ${
@@ -148,9 +136,9 @@ export function NewsFilters({
               >
                 Todas
               </Badge>
-            </Link>
+            </button>
             {tags.map((tag) => (
-              <Link key={tag} href={createFilterUrl('tag', tag)} replace scroll={false}>
+              <button key={tag} type="button" onClick={() => onTagChange(tag)}>
                 <Badge
                   variant={selectedTag === tag ? 'default' : 'outline'}
                   className={`cursor-pointer ${
@@ -161,7 +149,7 @@ export function NewsFilters({
                 >
                   {capitalize(tag)}
                 </Badge>
-              </Link>
+              </button>
             ))}
           </div>
         </div>
@@ -169,12 +157,7 @@ export function NewsFilters({
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-2">Club</h3>
           <div className="flex items-center gap-4">
-            <Select 
-              value={selectedClub} 
-              onValueChange={(value) => {
-                router.replace(createFilterUrl('club', value), { scroll: false })
-              }}
-            >
+            <Select value={selectedClub} onValueChange={onClubChange}>
               <SelectTrigger className="w-[250px] border-amber/20 focus:ring-amber focus:border-amber">
                 <SelectValue placeholder="Seleccionar club" />
               </SelectTrigger>
@@ -188,18 +171,17 @@ export function NewsFilters({
                 ))}
               </SelectContent>
             </Select>
-            
+
             {hasActiveFilters && (
-              <Link href="/noticias" replace scroll={false}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Limpiar
-                </Button>
-              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                onClick={onClear}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Limpiar
+              </Button>
             )}
           </div>
         </div>
@@ -230,11 +212,11 @@ export function NewsFilters({
               </SheetDescription>
             </SheetHeader>
             <div className="mt-6">
-              <FilterContent />
+              {filterContent}
             </div>
           </SheetContent>
         </Sheet>
       </div>
     </>
   )
-} 
+}

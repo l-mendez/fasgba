@@ -1,35 +1,23 @@
 'use client'
 
-import Link from "next/link"
-import { useSearchParams } from "next/navigation"
-
 import { Button } from "@/components/ui/button"
-import { buildNoticiasUrl } from "@/lib/newsDisplay"
 
 interface NewsPaginationProps {
   currentPage: number
   totalPages: number
+  onPageChange: (page: number) => void
 }
 
-export function NewsPagination({ 
-  currentPage, 
-  totalPages
+export function NewsPagination({
+  currentPage,
+  totalPages,
+  onPageChange,
 }: NewsPaginationProps) {
-  const urlSearchParams = useSearchParams()
-  
-  // Build the URL for a given page, preserving the active tag/club filters.
-  const createPageUrl = (page: number) =>
-    buildNoticiasUrl({
-      tag: urlSearchParams.get('tag') ?? 'all',
-      club: urlSearchParams.get('club') ?? 'all',
-      page,
-    })
-
   // Generate array of page numbers to show
   const getPageNumbers = () => {
     const pages: number[] = []
     const maxPagesToShow = 5
-    
+
     if (totalPages <= maxPagesToShow) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i)
@@ -47,56 +35,44 @@ export function NewsPagination({
         pages.push(i)
       }
     }
-    
+
     return pages
   }
 
   return (
     <div className="mt-10 flex items-center justify-center gap-2">
-      <Link
-        href={createPageUrl(currentPage - 1)}
-        replace
-        scroll={false}
-        className={currentPage === 1 ? 'pointer-events-none' : ''}
+      <Button
+        variant="outline"
+        className="border-amber text-amber-dark hover:bg-amber/10"
+        disabled={currentPage === 1}
+        onClick={() => onPageChange(currentPage - 1)}
       >
-        <Button
-          variant="outline"
-          className="border-amber text-amber-dark hover:bg-amber/10"
-          disabled={currentPage === 1}
-        >
-          Anterior
-        </Button>
-      </Link>
-      
+        Anterior
+      </Button>
+
       {getPageNumbers().map((pageNum) => (
-        <Link key={pageNum} href={createPageUrl(pageNum)} replace scroll={false}>
-          <Button
-            variant="outline"
-            className={
-              currentPage === pageNum
-                ? "border-amber bg-amber/10 text-amber-dark hover:bg-amber/20"
-                : "border-amber/20 text-muted-foreground hover:border-amber hover:text-amber-dark hover:bg-amber/10"
-            }
-          >
-            {pageNum}
-          </Button>
-        </Link>
-      ))}
-      
-      <Link
-        href={createPageUrl(currentPage + 1)}
-        replace
-        scroll={false}
-        className={currentPage === totalPages ? 'pointer-events-none' : ''}
-      >
         <Button
+          key={pageNum}
           variant="outline"
-          className="border-amber text-amber-dark hover:bg-amber/10"
-          disabled={currentPage === totalPages}
+          className={
+            currentPage === pageNum
+              ? "border-amber bg-amber/10 text-amber-dark hover:bg-amber/20"
+              : "border-amber/20 text-muted-foreground hover:border-amber hover:text-amber-dark hover:bg-amber/10"
+          }
+          onClick={() => onPageChange(pageNum)}
         >
-          Siguiente
+          {pageNum}
         </Button>
-      </Link>
+      ))}
+
+      <Button
+        variant="outline"
+        className="border-amber text-amber-dark hover:bg-amber/10"
+        disabled={currentPage === totalPages}
+        onClick={() => onPageChange(currentPage + 1)}
+      >
+        Siguiente
+      </Button>
     </div>
   )
-} 
+}

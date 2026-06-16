@@ -1,8 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
-import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { NewsFilters } from "@/components/news-filters"
@@ -12,12 +10,6 @@ import type { NewsDisplay } from "@/lib/newsUtils"
 import type { Club } from "@/lib/clubUtils"
 
 const ITEMS_PER_PAGE = 9
-
-// Parses ?page into a strict positive integer, defaulting invalid values to 1.
-function parsePage(value: string | null): number {
-  if (!value || !/^[1-9]\d*$/.test(value)) return 1
-  return Number(value)
-}
 
 function matchesClub(news: NewsDisplay, club: string): boolean {
   if (club === "all") return true
@@ -42,18 +34,29 @@ interface NewsListProps {
 }
 
 // Client island: filters/paginates the full news catalog so the page itself can
-// stay statically cached. Filter state lives in the URL (read here, written by
-// NewsFilters/NewsPagination), keeping links shareable.
+// stay statically prerendered. Filter state is local (useState), so the default
+// unfiltered view renders into the static HTML — good for SEO and first paint.
 export function NewsList({ allNews, tags, clubs }: NewsListProps) {
-  const searchParams = useSearchParams()
-  const rawTag = searchParams.get("tag") ?? "all"
-  const rawClub = searchParams.get("club") ?? "all"
+  const [selectedTag, setSelectedTag] = useState("all")
+  const [selectedClub, setSelectedClub] = useState("all")
+  const [currentPage, setCurrentPage] = useState(1)
 
-  const selectedTag = rawTag === "all" || tags.includes(rawTag) ? rawTag : "all"
-  const selectedClub =
-    rawClub === "all" || rawClub === "fasgba" || clubs.some((c) => c.id.toString() === rawClub)
-      ? rawClub
-      : "all"
+  // Seed filters from the URL once on mount so deep links from news-card tag
+  // badges (/noticias?tag=foo) still land on a filtered view. State is local
+  // afterwards, keeping the page statically prerenderable (no useSearchParams).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const tag = params.get("tag")
+    const club = params.get("club")
+    if (tag && (tag === "all" || tags.includes(tag))) setSelectedTag(tag)
+    if (
+      club &&
+      (club === "all" || club === "fasgba" || clubs.some((c) => c.id.toString() === club))
+    ) {
+      setSelectedClub(club)
+    }
+  }, [tags, clubs])
+
   const hasActiveFilters = selectedTag !== "all" || selectedClub !== "all"
 
   const filtered = useMemo(() => {
@@ -68,11 +71,22 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
 
   const total = filtered.length
   const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE))
-  const currentPage = Math.min(parsePage(searchParams.get("page")), totalPages)
-  const currentNews = filtered.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  )
+  const page = Math.min(currentPage, totalPages)
+  const currentNews = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
+
+  const handleTagChange = (tag: string) => {
+    setSelectedTag(tag)
+    setCurrentPage(1)
+  }
+  const handleClubChange = (club: string) => {
+    setSelectedClub(club)
+    setCurrentPage(1)
+  }
+  const handleClear = () => {
+    setSelectedTag("all")
+    setSelectedClub("all")
+    setCurrentPage(1)
+  }
 
   return (
     <>
@@ -88,6 +102,9 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
             selectedTag={selectedTag}
             selectedClub={selectedClub}
             hasActiveFilters={hasActiveFilters}
+            onTagChange={handleTagChange}
+            onClubChange={handleClubChange}
+            onClear={handleClear}
           />
         </div>
       </div>
@@ -105,14 +122,13 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
               : "No hay noticias disponibles en este momento."}
           </p>
           {hasActiveFilters && (
-            <Link href="/noticias">
-              <Button
-                variant="outline"
-                className="border-amber text-amber-dark hover:bg-amber/10"
-              >
-                Limpiar filtros
-              </Button>
-            </Link>
+            <Button
+              variant="outline"
+              className="border-amber text-amber-dark hover:bg-amber/10"
+              onClick={handleClear}
+            >
+              Limpiar filtros
+            </Button>
           )}
         </div>
       ) : (
@@ -124,7 +140,11 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
           </div>
 
           {totalPages > 1 && (
-            <NewsPagination currentPage={currentPage} totalPages={totalPages} />
+            <NewsPagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           )}
         </>
       )}
