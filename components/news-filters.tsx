@@ -60,7 +60,7 @@ export function NewsFilters({
     <div className="space-y-6">
       {/* Clear filters */}
       {hasActiveFilters && (
-        <Link href="/noticias" scroll={false}>
+        <Link href="/noticias" replace scroll={false}>
           <Button 
             variant="outline" 
             size="sm"
@@ -75,7 +75,7 @@ export function NewsFilters({
       <div>
         <h3 className="font-medium text-sm mb-3 text-foreground">Categorías</h3>
         <div className="flex flex-wrap gap-2">
-          <Link href={createFilterUrl('tag', 'all')} scroll={false}>
+          <Link href={createFilterUrl('tag', 'all')} replace scroll={false}>
             <Badge
               variant={selectedTag === 'all' ? 'default' : 'secondary'}
               className={`cursor-pointer transition-colors ${
@@ -88,7 +88,7 @@ export function NewsFilters({
             </Badge>
           </Link>
           {tags.map((tag) => (
-            <Link key={tag} href={createFilterUrl('tag', tag)} scroll={false}>
+            <Link key={tag} href={createFilterUrl('tag', tag)} replace scroll={false}>
               <Badge
                 variant={selectedTag === tag ? 'default' : 'secondary'}
                 className={`cursor-pointer transition-colors ${
@@ -137,7 +137,7 @@ export function NewsFilters({
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-2">Categorías</h3>
           <div className="flex flex-wrap gap-2">
-            <Link href={createFilterUrl('tag', 'all')} scroll={false}>
+            <Link href={createFilterUrl('tag', 'all')} replace scroll={false}>
               <Badge
                 variant={selectedTag === 'all' ? 'default' : 'outline'}
                 className={`cursor-pointer ${
@@ -150,7 +150,7 @@ export function NewsFilters({
               </Badge>
             </Link>
             {tags.map((tag) => (
-              <Link key={tag} href={createFilterUrl('tag', tag)} scroll={false}>
+              <Link key={tag} href={createFilterUrl('tag', tag)} replace scroll={false}>
                 <Badge
                   variant={selectedTag === tag ? 'default' : 'outline'}
                   className={`cursor-pointer ${
@@ -190,7 +190,7 @@ export function NewsFilters({
             </Select>
             
             {hasActiveFilters && (
-              <Link href="/noticias" scroll={false}>
+              <Link href="/noticias" replace scroll={false}>
                 <Button
                   variant="outline"
                   size="sm"

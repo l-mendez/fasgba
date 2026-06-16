@@ -55,6 +55,8 @@ export function NewsPagination({
     <div className="mt-10 flex items-center justify-center gap-2">
       <Link
         href={createPageUrl(currentPage - 1)}
+        replace
+        scroll={false}
         className={currentPage === 1 ? 'pointer-events-none' : ''}
       >
         <Button
@@ -67,7 +69,7 @@ export function NewsPagination({
       </Link>
       
       {getPageNumbers().map((pageNum) => (
-        <Link key={pageNum} href={createPageUrl(pageNum)}>
+        <Link key={pageNum} href={createPageUrl(pageNum)} replace scroll={false}>
           <Button
             variant="outline"
             className={
@@ -83,6 +85,8 @@ export function NewsPagination({
       
       <Link
         href={createPageUrl(currentPage + 1)}
+        replace
+        scroll={false}
         className={currentPage === totalPages ? 'pointer-events-none' : ''}
       >
         <Button
