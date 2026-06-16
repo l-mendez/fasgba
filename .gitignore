@@ -31,3 +31,7 @@ yarn-error.log*
 next-env.d.ts
 public/*.pdf
 public/*.xlsx
+
+
+# screenshots
+.prg-screenshots/
