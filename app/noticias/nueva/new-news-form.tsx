@@ -3,37 +3,21 @@
 import React, { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { 
-  ArrowLeft, 
-  Save, 
-  Plus, 
-  ChevronDown, 
-  ChevronUp, 
-  Trash2, 
-  MoveUp, 
-  MoveDown,
-  ImageIcon,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  AlertCircle
-} from "lucide-react"
-import { DiamondIcon as ChessIcon } from "lucide-react"
+import { ArrowLeft, Save, AlertCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { ErrorAlert } from "@/components/error-alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { RichTextEditor } from "@/components/ui/rich-text-editor"
-import { updateNewsAction, uploadNewsImagesAction } from "@/lib/actions/news"
+import { updateNewsAction } from "@/lib/actions/news"
 import { getArgentinaDateInputValue } from "@/lib/dateUtils"
+import { processNewsContentWithDeduplication } from "@/lib/news-content-utils"
+import { NEWS_CATEGORIES, createEmptyTextBlock, type NewsBlockContent } from "@/components/news/types"
+import { NewsContentBlocksEditor } from "@/components/news/news-content-blocks-editor"
+import { useNewsContentBlocks } from "@/components/news/use-news-content-blocks"
 
 interface Club {
   id: number
@@ -61,476 +45,7 @@ interface NewNewsFormProps {
   defaultEntityType: 'fasgba' | 'club'
 }
 
-// Block types
-const BLOCK_TYPES = {
-  TEXT: "text",
-  CHESS_GAME: "chess_game",
-  IMAGE: "image",
-} as const
-
-const IMAGE_ALIGNMENTS = {
-  LEFT: "left",
-  CENTER: "center",
-  RIGHT: "right",
-} as const
-
-type BlockType = typeof BLOCK_TYPES[keyof typeof BLOCK_TYPES]
-type ImageAlignment = typeof IMAGE_ALIGNMENTS[keyof typeof IMAGE_ALIGNMENTS]
-
-interface TextBlockContent {
-  type: typeof BLOCK_TYPES.TEXT
-  content: string
-}
-
-interface ImageBlockContent {
-  type: typeof BLOCK_TYPES.IMAGE
-  content: {
-    file: File | null
-    imageUrl: string | null
-    caption: string
-    alignment: ImageAlignment
-  }
-}
-
-interface ChessGameBlockContent {
-  type: typeof BLOCK_TYPES.CHESS_GAME
-  content: {
-    pgn: string
-    whitePlayer: { type: string; value: string }
-    blackPlayer: { type: string; value: string }
-    result?: string
-  }
-}
-
-type BlockContent = TextBlockContent | ImageBlockContent | ChessGameBlockContent
-
-// Player selector component
-const PlayerSelector = ({ 
-  label, 
-  type, 
-  value, 
-  onChange, 
-  onTypeChange 
-}: {
-  label: string
-  type: string
-  value: string
-  onChange: (value: string) => void
-  onTypeChange: (type: string) => void
-}) => {
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <div className="flex flex-col space-y-3 p-3 border rounded-md">
-        <RadioGroup value={type} onValueChange={onTypeChange} className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="custom" id={`custom-${label}`} />
-            <Label htmlFor={`custom-${label}`}>Nombre personalizado</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="anonymous" id={`anonymous-${label}`} />
-            <Label htmlFor={`anonymous-${label}`}>Anónimo</Label>
-          </div>
-        </RadioGroup>
-
-        {type === "custom" && (
-          <Input placeholder="Nombre del jugador" value={value || ""} onChange={(e) => onChange(e.target.value)} />
-        )}
-
-        {type === "anonymous" && <p className="text-sm text-muted-foreground">El jugador aparecerá como "Anónimo"</p>}
-      </div>
-    </div>
-  )
-}
-
-// Text block component
-const TextBlock = ({ 
-  value, 
-  onChange, 
-  onDelete, 
-  onMoveUp, 
-  onMoveDown, 
-  index, 
-  totalBlocks 
-}: {
-  value: string
-  onChange: (value: string) => void
-  onDelete: () => void
-  onMoveUp: () => void
-  onMoveDown: () => void
-  index: number
-  totalBlocks: number
-}) => {
-  return (
-    <div className="border rounded-md p-4 mb-4">
-      <div className="flex justify-between items-center mb-2">
-        <Label htmlFor={`text-block-${index}`}>Bloque de texto</Label>
-        <div className="flex space-x-1">
-          <Button variant="ghost" size="sm" onClick={onMoveUp} disabled={index === 0} className="h-8 w-8 p-0">
-            <MoveUp className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onMoveDown}
-            disabled={index === totalBlocks - 1}
-            className="h-8 w-8 p-0"
-          >
-            <MoveDown className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onDelete}
-            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-      <RichTextEditor
-        content={value}
-        onChange={onChange}
-        placeholder="Escribe el contenido aquí..."
-      />
-    </div>
-  )
-}
-
-// Image block component
-const ImageBlock = ({
-  value,
-  onImageChange,
-  onCaptionChange,
-  onAlignmentChange,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
-  index,
-  totalBlocks,
-}: {
-  value: ImageBlockContent['content']
-  onImageChange: (file: File, imageUrl: string) => void
-  onCaptionChange: (caption: string) => void
-  onAlignmentChange: (alignment: ImageAlignment) => void
-  onDelete: () => void
-  onMoveUp: () => void
-  onMoveDown: () => void
-  index: number
-  totalBlocks: number
-}) => {
-  const [isOpen, setIsOpen] = useState(true)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [preview, setPreview] = useState(value.imageUrl || null)
-
-  const handleImageClick = () => {
-    fileInputRef.current?.click()
-  }
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    const imageUrl = URL.createObjectURL(file)
-    setPreview(imageUrl)
-    onImageChange(file, imageUrl)
-  }
-
-  return (
-    <div className="border rounded-md p-4 mb-4">
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <div className="flex justify-between items-center mb-2">
-          <div className="flex items-center">
-            <ImageIcon className="h-5 w-5 mr-2" />
-            <Label>Imagen</Label>
-          </div>
-          <div className="flex space-x-1">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </Button>
-            </CollapsibleTrigger>
-            <Button variant="ghost" size="sm" onClick={onMoveUp} disabled={index === 0} className="h-8 w-8 p-0">
-              <MoveUp className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onMoveDown}
-              disabled={index === totalBlocks - 1}
-              className="h-8 w-8 p-0"
-            >
-              <MoveDown className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onDelete}
-              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        <CollapsibleContent className="space-y-4">
-          <div
-            className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
-            onClick={handleImageClick}
-          >
-            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
-
-            {preview ? (
-              <div className="relative mx-auto">
-                <div
-                  className={`mx-auto ${
-                    value.alignment === IMAGE_ALIGNMENTS.LEFT
-                      ? "mr-auto ml-0"
-                      : value.alignment === IMAGE_ALIGNMENTS.RIGHT
-                        ? "ml-auto mr-0"
-                        : "mx-auto"
-                  }`}
-                >
-                  <img
-                    src={preview}
-                    alt="Vista previa"
-                    className="max-h-[300px] max-w-full object-contain rounded-md"
-                  />
-                </div>
-                <div className="mt-2 text-sm text-muted-foreground">Haz clic para cambiar la imagen</div>
-              </div>
-            ) : (
-              <div className="py-8">
-                <ImageIcon className="h-12 w-12 mx-auto text-gray-400" />
-                <p className="mt-2 text-sm font-medium">Haz clic para subir una imagen</p>
-                <p className="text-xs text-muted-foreground mt-1">PNG, JPG o GIF (máx. 5MB)</p>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor={`caption-${index}`}>Pie de foto</Label>
-            <Input
-              id={`caption-${index}`}
-              value={value.caption}
-              onChange={(e) => onCaptionChange(e.target.value)}
-              placeholder="Añade un pie de foto o descripción..."
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Alineación</Label>
-            <ToggleGroup
-              type="single"
-              value={value.alignment}
-              onValueChange={(val: string) => {
-                if (val) onAlignmentChange(val as ImageAlignment)
-              }}
-              className="justify-start"
-            >
-              <ToggleGroupItem value={IMAGE_ALIGNMENTS.LEFT} aria-label="Alinear a la izquierda">
-                <AlignLeft className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value={IMAGE_ALIGNMENTS.CENTER} aria-label="Centrar">
-                <AlignCenter className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value={IMAGE_ALIGNMENTS.RIGHT} aria-label="Alinear a la derecha">
-                <AlignRight className="h-4 w-4" />
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
-  )
-}
-
-// Chess game block component
-const ChessGameBlock = ({
-  value,
-  onPgnChange,
-  onWhitePlayerChange,
-  onBlackPlayerChange,
-  onWhitePlayerTypeChange,
-  onBlackPlayerTypeChange,
-  onResultChange,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
-  index,
-  totalBlocks,
-}: {
-  value: ChessGameBlockContent['content']
-  onPgnChange: (pgn: string) => void
-  onWhitePlayerChange: (value: string) => void
-  onBlackPlayerChange: (value: string) => void
-  onWhitePlayerTypeChange: (type: string) => void
-  onBlackPlayerTypeChange: (type: string) => void
-  onResultChange: (result: string) => void
-  onDelete: () => void
-  onMoveUp: () => void
-  onMoveDown: () => void
-  index: number
-  totalBlocks: number
-}) => {
-  const [isOpen, setIsOpen] = useState(true)
-
-  return (
-    <div className="border rounded-md p-4 mb-4">
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <div className="flex justify-between items-center mb-2">
-          <div className="flex items-center">
-            <ChessIcon className="h-5 w-5 mr-2" />
-            <Label>Partida de ajedrez</Label>
-          </div>
-          <div className="flex space-x-1">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </Button>
-            </CollapsibleTrigger>
-            <Button variant="ghost" size="sm" onClick={onMoveUp} disabled={index === 0} className="h-8 w-8 p-0">
-              <MoveUp className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onMoveDown}
-              disabled={index === totalBlocks - 1}
-              className="h-8 w-8 p-0"
-            >
-              <MoveDown className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onDelete}
-              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        <CollapsibleContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor={`pgn-${index}`}>Notación PGN de la partida</Label>
-            <Textarea
-              id={`pgn-${index}`}
-              value={value.pgn}
-              onChange={(e) => onPgnChange(e.target.value)}
-              placeholder="Pegue aquí la notación PGN de la partida..."
-              className="font-mono text-sm"
-              rows={6}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <PlayerSelector
-              label="Jugador con blancas"
-              type={value.whitePlayer.type}
-              value={value.whitePlayer.value}
-              onChange={(newValue) => onWhitePlayerChange(newValue)}
-              onTypeChange={(newType) => onWhitePlayerTypeChange(newType)}
-            />
-
-            <PlayerSelector
-              label="Jugador con negras"
-              type={value.blackPlayer.type}
-              value={value.blackPlayer.value}
-              onChange={(newValue) => onBlackPlayerChange(newValue)}
-              onTypeChange={(newType) => onBlackPlayerTypeChange(newType)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor={`result-${index}`}>Resultado</Label>
-            <Select value={value.result || "1-0"} onValueChange={onResultChange}>
-              <SelectTrigger id={`result-${index}`}>
-                <SelectValue placeholder="Seleccionar resultado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1-0">1-0 (Ganan las blancas)</SelectItem>
-                <SelectItem value="0-1">0-1 (Ganan las negras)</SelectItem>
-                <SelectItem value="1/2-1/2">1/2-1/2 (Tablas)</SelectItem>
-                <SelectItem value="*">* (Partida en curso)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
-  )
-}
-
-// Add block button component
-const AddBlockButton = ({ 
-  onAddTextBlock, 
-  onAddChessGameBlock, 
-  onAddImageBlock 
-}: {
-  onAddTextBlock: () => void
-  onAddChessGameBlock: () => void
-  onAddImageBlock: () => void
-}) => {
-  const [isOpen, setIsOpen] = useState(false)
-
-  return (
-    <div className="flex justify-center my-4">
-      <div className="relative">
-        <Button 
-          variant="outline" 
-          onClick={() => setIsOpen(!isOpen)} 
-          className="flex items-center"
-          type="button"
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          Añadir bloque
-          <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-        </Button>
-
-        {isOpen && (
-          <div className="absolute z-10 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <button
-              className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center text-gray-900 dark:text-gray-100"
-              onClick={() => {
-                onAddTextBlock()
-                setIsOpen(false)
-              }}
-              type="button"
-            >
-              <span>Texto</span>
-            </button>
-            <button
-              className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center text-gray-900 dark:text-gray-100"
-              onClick={() => {
-                onAddImageBlock()
-                setIsOpen(false)
-              }}
-              type="button"
-            >
-              <ImageIcon className="mr-2 h-4 w-4" />
-              <span>Imagen</span>
-            </button>
-            <button
-              className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center text-gray-900 dark:text-gray-100"
-              onClick={() => {
-                onAddChessGameBlock()
-                setIsOpen(false)
-              }}
-              type="button"
-            >
-              <ChessIcon className="mr-2 h-4 w-4" />
-              <span>Partida de ajedrez</span>
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, defaultEntityType }: NewNewsFormProps) {
+export function NewNewsForm({ userClubs, isAdmin, defaultEntityId }: NewNewsFormProps) {
   const router = useRouter()
   const [formData, setFormData] = useState({
     title: "",
@@ -540,20 +55,17 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
     image: null as File | null,
     imagePreview: null as string | null,
     category: "",
-    contentBlocks: [
-      { type: BLOCK_TYPES.TEXT, content: "" } as TextBlockContent,
-    ] as BlockContent[]
   })
+  const [contentBlocks, setContentBlocks] = useState<NewsBlockContent[]>([createEmptyTextBlock()])
+  const blockActions = useNewsContentBlocks(contentBlocks, setContentBlocks)
+
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [uploadProgress, setUploadProgress] = useState<{
-    current: number
-    total: number
-    isUploading: boolean
-  }>({ current: 0, total: 0, isUploading: false })
-  // Synchronous guard against double-submit: React state updates don't paint
-  // disabled=true until the event loop yields, so a fast double-click can fire
-  // handleSubmit twice before the button is disabled.
+  const [uploadProgress, setUploadProgress] = useState({
+    current: 0,
+    total: 0,
+    isUploading: false,
+  })
   const isSubmittingRef = useRef(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -565,32 +77,27 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
       setIsSaving(true)
       setError(null)
 
-      // Get session for authentication
       const supabase = createClient()
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      
+
       if (sessionError || !session?.access_token) {
         throw new Error('No estás autenticado. Por favor, inicia sesión nuevamente.')
       }
 
-      // Create news item first (without images) to get the news ID
       const initialNewsData = {
         title: formData.title,
         date: formData.date,
         extract: formData.extract,
-        text: JSON.stringify([]), // Temporary empty content
+        text: JSON.stringify([]),
         tags: formData.category ? [formData.category] : [],
-        club_id: formData.club_id
+        club_id: formData.club_id,
       }
-      
-      // Determine the API endpoint based on permissions
+
       let apiEndpoint = '/api/news'
       if (!isAdmin && formData.club_id) {
-        // Club admins use the club-specific endpoint
         apiEndpoint = `/api/clubs/${formData.club_id}/news`
       }
 
-      // Call the API to create news (initially without images)
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
@@ -608,28 +115,24 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
       const createdNews = await response.json()
       const newsId = createdNews.id
 
-      // Now process images with the news ID for organized storage
       const { processedContent, featuredImagePath } = await processNewsContentWithDeduplication(
-        formData.contentBlocks, 
-        formData.image, 
+        contentBlocks,
+        formData.image,
         newsId,
-        session
+        setUploadProgress
       )
 
-      // Update the news item with processed content and images
       const updateResult = await updateNewsAction(newsId, {
         text: JSON.stringify(processedContent),
-        image: featuredImagePath
+        image: featuredImagePath,
       })
 
       if (!updateResult.ok) {
         throw new Error(updateResult.error)
       }
 
-      // Determine redirect path based on user type
       const redirectPath = isAdmin ? '/admin/noticias' : '/club-admin/noticias'
-      
-      // Add a small delay to ensure the creation is completed before redirecting
+
       setTimeout(() => {
         router.push(redirectPath)
         router.refresh()
@@ -643,132 +146,6 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
     }
   }
 
-  // Function to process content blocks with deduplication and organized storage
-  const processNewsContentWithDeduplication = async (
-    blocks: BlockContent[], 
-    featuredImage: File | null, 
-    newsId: number,
-    session: any // Add session parameter
-  ) => {
-    // Collect all images to upload
-    const imagesToUpload: { file: File; prefix: string; blockIndex?: number }[] = []
-
-    // Add featured image if exists
-    if (featuredImage) {
-      imagesToUpload.push({ file: featuredImage, prefix: 'featured' })
-    }
-
-    // Add block images
-    blocks.forEach((block, index) => {
-      if (block.type === BLOCK_TYPES.IMAGE && block.content.file) {
-        imagesToUpload.push({ 
-          file: block.content.file, 
-          prefix: `block-${index}`, 
-          blockIndex: index 
-        })
-      }
-    })
-
-    // Upload images in chunks to prevent timeouts and large payloads
-    let uploadResults: Array<{ filePath: string; wasReused: boolean; originalIndex: number }> = []
-    
-    if (imagesToUpload.length > 0) {
-      const CHUNK_SIZE = 5 // Upload 5 images at a time
-      const totalChunks = Math.ceil(imagesToUpload.length / CHUNK_SIZE)
-      
-      setUploadProgress({ current: 0, total: imagesToUpload.length, isUploading: true })
-      
-      for (let i = 0; i < imagesToUpload.length; i += CHUNK_SIZE) {
-        const chunk = imagesToUpload.slice(i, i + CHUNK_SIZE)
-        const chunkNumber = Math.floor(i / CHUNK_SIZE) + 1
-        
-        try {
-          const formData = new FormData()
-          chunk.forEach((imageInfo, chunkIndex) => {
-            const originalIndex = i + chunkIndex
-            formData.append(`file-${chunkIndex}`, imageInfo.file)
-            formData.append(`prefix-${chunkIndex}`, imageInfo.prefix)
-            if (imageInfo.blockIndex !== undefined) {
-              formData.append(`blockIndex-${chunkIndex}`, imageInfo.blockIndex.toString())
-            }
-            formData.append(`originalIndex-${chunkIndex}`, originalIndex.toString())
-          })
-
-          const uploadActionResult = await uploadNewsImagesAction(Number(newsId), formData)
-
-          if (!uploadActionResult.ok) {
-            throw new Error(`Error uploading chunk ${chunkNumber}/${totalChunks}: ${uploadActionResult.error}`)
-          }
-
-          uploadResults.push(...uploadActionResult.data.results)
-          
-          // Update progress
-          setUploadProgress(prev => ({ ...prev, current: Math.min(i + CHUNK_SIZE, imagesToUpload.length) }))
-          
-          // Add a small delay between chunks to reduce server load
-          if (i + CHUNK_SIZE < imagesToUpload.length) {
-            await new Promise(resolve => setTimeout(resolve, 500)) // Increased delay
-          }
-          
-        } catch (error) {
-          console.error(`Failed to upload chunk ${chunkNumber}/${totalChunks}:`, error)
-          throw new Error(`Failed to upload images (chunk ${chunkNumber}/${totalChunks}). This often happens with large numbers of images. Try reducing the number of images or upload in smaller batches.`)
-        }
-      }
-      
-      setUploadProgress(prev => ({ ...prev, isUploading: false }))
-    }
-
-    // Find featured image path
-    const featuredImageResult = uploadResults.find((result, index) => 
-      imagesToUpload[index].prefix === 'featured'
-    )
-    const featuredImagePath = featuredImageResult?.filePath || null
-
-    // Process content blocks with uploaded image paths
-    const processedBlocks = blocks.map((block, index) => {
-      if (block.type === BLOCK_TYPES.TEXT) {
-        return {
-          id: `block-${index}`,
-          type: block.type,
-          content: block.content
-        }
-      } 
-      else if (block.type === BLOCK_TYPES.IMAGE) {
-        // Find the corresponding upload result
-        const uploadResult = uploadResults.find((result, uploadIndex) => 
-          imagesToUpload[uploadIndex].blockIndex === index
-        )
-        
-        return {
-          id: `block-${index}`,
-          type: block.type,
-          content: {
-            src: uploadResult?.filePath || null,
-            caption: block.content.caption,
-            alignment: block.content.alignment
-          }
-        }
-      } 
-      else if (block.type === BLOCK_TYPES.CHESS_GAME) {
-        return {
-          id: `block-${index}`,
-          type: block.type,
-          content: {
-            pgn: block.content.pgn,
-            whitePlayer: block.content.whitePlayer,
-            blackPlayer: block.content.blackPlayer,
-            result: block.content.result
-          }
-        }
-      }
-      
-      return null
-    }).filter(block => block !== null)
-
-    return { processedContent: processedBlocks, featuredImagePath }
-  }
-
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -776,199 +153,9 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
       setFormData(prev => ({
         ...prev,
         image: file,
-        imagePreview: imageUrl
+        imagePreview: imageUrl,
       }))
     }
-  }
-
-  // Block management functions
-  const addTextBlock = () => {
-    setFormData(prev => ({
-      ...prev,
-      contentBlocks: [...prev.contentBlocks, { type: BLOCK_TYPES.TEXT, content: "" } as TextBlockContent]
-    }))
-  }
-
-  const addImageBlock = () => {
-    setFormData(prev => ({
-      ...prev,
-      contentBlocks: [...prev.contentBlocks, {
-        type: BLOCK_TYPES.IMAGE,
-        content: {
-          file: null,
-          imageUrl: null,
-          caption: "",
-          alignment: IMAGE_ALIGNMENTS.CENTER,
-        },
-      } as ImageBlockContent]
-    }))
-  }
-
-  const addChessGameBlock = () => {
-    setFormData(prev => ({
-      ...prev,
-      contentBlocks: [...prev.contentBlocks, {
-        type: BLOCK_TYPES.CHESS_GAME,
-        content: {
-          pgn: "",
-          whitePlayer: { type: "custom", value: "" },
-          blackPlayer: { type: "custom", value: "" },
-          result: "1-0"
-        },
-      } as ChessGameBlockContent]
-    }))
-  }
-
-  const updateTextBlock = (index: number, newContent: string) => {
-    const updatedBlocks = [...formData.contentBlocks]
-    if (updatedBlocks[index].type === BLOCK_TYPES.TEXT) {
-      (updatedBlocks[index] as TextBlockContent).content = newContent
-    }
-    setFormData(prev => ({ ...prev, contentBlocks: updatedBlocks }))
-  }
-
-  const updateImageFile = (index: number, file: File, imageUrl: string) => {
-    const updatedBlocks = [...formData.contentBlocks]
-    if (updatedBlocks[index].type === BLOCK_TYPES.IMAGE) {
-      const imageBlock = updatedBlocks[index] as ImageBlockContent
-      imageBlock.content = {
-        ...imageBlock.content,
-        file: file,
-        imageUrl: imageUrl,
-      }
-    }
-    setFormData(prev => ({ ...prev, contentBlocks: updatedBlocks }))
-  }
-
-  const updateImageCaption = (index: number, caption: string) => {
-    const updatedBlocks = [...formData.contentBlocks]
-    if (updatedBlocks[index].type === BLOCK_TYPES.IMAGE) {
-      const imageBlock = updatedBlocks[index] as ImageBlockContent
-      imageBlock.content = {
-        ...imageBlock.content,
-        caption: caption,
-      }
-    }
-    setFormData(prev => ({ ...prev, contentBlocks: updatedBlocks }))
-  }
-
-  const updateImageAlignment = (index: number, alignment: ImageAlignment) => {
-    const updatedBlocks = [...formData.contentBlocks]
-    if (updatedBlocks[index].type === BLOCK_TYPES.IMAGE) {
-      const imageBlock = updatedBlocks[index] as ImageBlockContent
-      imageBlock.content = {
-        ...imageBlock.content,
-        alignment: alignment,
-      }
-    }
-    setFormData(prev => ({ ...prev, contentBlocks: updatedBlocks }))
-  }
-
-  const updateChessGamePgn = (index: number, newPgn: string) => {
-    const updatedBlocks = [...formData.contentBlocks]
-    if (updatedBlocks[index].type === BLOCK_TYPES.CHESS_GAME) {
-      const chessBlock = updatedBlocks[index] as ChessGameBlockContent
-      chessBlock.content = {
-        ...chessBlock.content,
-        pgn: newPgn,
-      }
-    }
-    setFormData(prev => ({ ...prev, contentBlocks: updatedBlocks }))
-  }
-
-  const updateChessGameWhitePlayer = (index: number, newValue: string) => {
-    const updatedBlocks = [...formData.contentBlocks]
-    if (updatedBlocks[index].type === BLOCK_TYPES.CHESS_GAME) {
-      const chessBlock = updatedBlocks[index] as ChessGameBlockContent
-      chessBlock.content = {
-        ...chessBlock.content,
-        whitePlayer: {
-          ...chessBlock.content.whitePlayer,
-          value: newValue,
-        },
-      }
-    }
-    setFormData(prev => ({ ...prev, contentBlocks: updatedBlocks }))
-  }
-
-  const updateChessGameBlackPlayer = (index: number, newValue: string) => {
-    const updatedBlocks = [...formData.contentBlocks]
-    if (updatedBlocks[index].type === BLOCK_TYPES.CHESS_GAME) {
-      const chessBlock = updatedBlocks[index] as ChessGameBlockContent
-      chessBlock.content = {
-        ...chessBlock.content,
-        blackPlayer: {
-          ...chessBlock.content.blackPlayer,
-          value: newValue,
-        },
-      }
-    }
-    setFormData(prev => ({ ...prev, contentBlocks: updatedBlocks }))
-  }
-
-  const updateChessGameWhitePlayerType = (index: number, newType: string) => {
-    const updatedBlocks = [...formData.contentBlocks]
-    if (updatedBlocks[index].type === BLOCK_TYPES.CHESS_GAME) {
-      const chessBlock = updatedBlocks[index] as ChessGameBlockContent
-      chessBlock.content = {
-        ...chessBlock.content,
-        whitePlayer: {
-          type: newType,
-          value: "",
-        },
-      }
-    }
-    setFormData(prev => ({ ...prev, contentBlocks: updatedBlocks }))
-  }
-
-  const updateChessGameBlackPlayerType = (index: number, newType: string) => {
-    const updatedBlocks = [...formData.contentBlocks]
-    if (updatedBlocks[index].type === BLOCK_TYPES.CHESS_GAME) {
-      const chessBlock = updatedBlocks[index] as ChessGameBlockContent
-      chessBlock.content = {
-        ...chessBlock.content,
-        blackPlayer: {
-          type: newType,
-          value: "",
-        },
-      }
-    }
-    setFormData(prev => ({ ...prev, contentBlocks: updatedBlocks }))
-  }
-
-  const updateChessGameResult = (index: number, newResult: string) => {
-    const updatedBlocks = [...formData.contentBlocks]
-    if (updatedBlocks[index].type === BLOCK_TYPES.CHESS_GAME) {
-      const chessBlock = updatedBlocks[index] as ChessGameBlockContent
-      chessBlock.content = {
-        ...chessBlock.content,
-        result: newResult,
-      }
-    }
-    setFormData(prev => ({ ...prev, contentBlocks: updatedBlocks }))
-  }
-
-  const deleteBlock = (index: number) => {
-    const updatedBlocks = formData.contentBlocks.filter((_, i) => i !== index)
-    setFormData(prev => ({ ...prev, contentBlocks: updatedBlocks }))
-  }
-
-  const moveBlockUp = (index: number) => {
-    if (index === 0) return
-    const updatedBlocks = [...formData.contentBlocks]
-    const temp = updatedBlocks[index]
-    updatedBlocks[index] = updatedBlocks[index - 1]
-    updatedBlocks[index - 1] = temp
-    setFormData(prev => ({ ...prev, contentBlocks: updatedBlocks }))
-  }
-
-  const moveBlockDown = (index: number) => {
-    if (index === formData.contentBlocks.length - 1) return
-    const updatedBlocks = [...formData.contentBlocks]
-    const temp = updatedBlocks[index]
-    updatedBlocks[index] = updatedBlocks[index + 1]
-    updatedBlocks[index + 1] = temp
-    setFormData(prev => ({ ...prev, contentBlocks: updatedBlocks }))
   }
 
   const backPath = isAdmin ? '/admin/noticias' : '/club-admin/noticias'
@@ -995,11 +182,11 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Subiendo imágenes...</AlertTitle>
           <AlertDescription>
-            Procesando {uploadProgress.current} de {uploadProgress.total} imágenes. 
+            Procesando {uploadProgress.current} de {uploadProgress.total} imágenes.
             Por favor, no cierre esta ventana.
             <div className="mt-2 bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+              <div
+                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
               />
             </div>
@@ -1044,9 +231,9 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
             />
             {formData.imagePreview && (
               <div className="mt-2">
-                <img 
-                  src={formData.imagePreview} 
-                  alt="Vista previa" 
+                <img
+                  src={formData.imagePreview}
+                  alt="Vista previa"
                   className="max-h-[150px] rounded-md object-cover"
                 />
               </div>
@@ -1055,45 +242,37 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
 
           <div className="grid gap-2">
             <Label htmlFor="category">Categoría</Label>
-            <Select 
-              value={formData.category} 
+            <Select
+              value={formData.category}
               onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
             >
               <SelectTrigger id="category">
                 <SelectValue placeholder="Seleccionar categoría" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="torneos">Torneos</SelectItem>
-                <SelectItem value="resultados">Resultados</SelectItem>
-                <SelectItem value="institucional">Institucional</SelectItem>
-                <SelectItem value="clases">Clases</SelectItem>
-                <SelectItem value="eventos">Eventos</SelectItem>
-                <SelectItem value="partidas">Partidas</SelectItem>
-                <SelectItem value="entrevistas">Entrevistas</SelectItem>
+                {NEWS_CATEGORIES.map(({ value, label }) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Entity selection - unified for all users */}
           <div className="grid gap-2">
             <Label htmlFor="entity">Entidad</Label>
-            <Select 
-              value={formData.club_id?.toString() ?? 'fasgba'} 
-              onValueChange={(value) => setFormData(prev => ({ 
-                ...prev, 
-                club_id: value === 'fasgba' ? null : parseInt(value) 
+            <Select
+              value={formData.club_id?.toString() ?? 'fasgba'}
+              onValueChange={(value) => setFormData(prev => ({
+                ...prev,
+                club_id: value === 'fasgba' ? null : parseInt(value),
               }))}
             >
               <SelectTrigger id="entity">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {/* FASGBA option - only for site admins */}
                 {isAdmin && (
                   <SelectItem value="fasgba">FASGBA (Federación)</SelectItem>
                 )}
-                
-                {/* Show clubs that the user is admin of */}
                 {userClubs.map((club) => (
                   <SelectItem key={club.id} value={club.id.toString()}>
                     {club.name}
@@ -1102,8 +281,8 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
               </SelectContent>
             </Select>
             <div className="text-xs text-muted-foreground">
-              {formData.club_id ? 
-                `La noticia estará asociada a ${userClubs.find((c: Club) => c.id === formData.club_id)?.name}` :
+              {formData.club_id ?
+                `La noticia estará asociada a ${userClubs.find((c) => c.id === formData.club_id)?.name}` :
                 'La noticia estará asociada a la Federación FASGBA'
               }
             </div>
@@ -1111,64 +290,7 @@ export function NewNewsForm({ user, userClubs, isAdmin, defaultEntityId, default
 
           <div className="grid gap-2">
             <Label>Contenido</Label>
-            <div className="border rounded-md p-4 space-y-4">
-              {formData.contentBlocks.map((block, index) => {
-                if (block.type === BLOCK_TYPES.TEXT) {
-                  return (
-                    <TextBlock
-                      key={`text-${index}`}
-                      value={block.content}
-                      onChange={(newContent) => updateTextBlock(index, newContent)}
-                      onDelete={() => deleteBlock(index)}
-                      onMoveUp={() => moveBlockUp(index)}
-                      onMoveDown={() => moveBlockDown(index)}
-                      index={index}
-                      totalBlocks={formData.contentBlocks.length}
-                    />
-                  )
-                } else if (block.type === BLOCK_TYPES.IMAGE) {
-                  return (
-                    <ImageBlock
-                      key={`image-${index}`}
-                      value={block.content}
-                      onImageChange={(file, imageUrl) => updateImageFile(index, file, imageUrl)}
-                      onCaptionChange={(caption) => updateImageCaption(index, caption)}
-                      onAlignmentChange={(alignment) => updateImageAlignment(index, alignment)}
-                      onDelete={() => deleteBlock(index)}
-                      onMoveUp={() => moveBlockUp(index)}
-                      onMoveDown={() => moveBlockDown(index)}
-                      index={index}
-                      totalBlocks={formData.contentBlocks.length}
-                    />
-                  )
-                } else if (block.type === BLOCK_TYPES.CHESS_GAME) {
-                  return (
-                    <ChessGameBlock
-                      key={`chess-${index}`}
-                      value={block.content}
-                      onPgnChange={(newPgn) => updateChessGamePgn(index, newPgn)}
-                      onWhitePlayerChange={(newValue) => updateChessGameWhitePlayer(index, newValue)}
-                      onBlackPlayerChange={(newValue) => updateChessGameBlackPlayer(index, newValue)}
-                      onWhitePlayerTypeChange={(newType) => updateChessGameWhitePlayerType(index, newType)}
-                      onBlackPlayerTypeChange={(newType) => updateChessGameBlackPlayerType(index, newType)}
-                      onResultChange={(newResult) => updateChessGameResult(index, newResult)}
-                      onDelete={() => deleteBlock(index)}
-                      onMoveUp={() => moveBlockUp(index)}
-                      onMoveDown={() => moveBlockDown(index)}
-                      index={index}
-                      totalBlocks={formData.contentBlocks.length}
-                    />
-                  )
-                }
-                return null
-              })}
-              
-              <AddBlockButton
-                onAddTextBlock={addTextBlock}
-                onAddImageBlock={addImageBlock}
-                onAddChessGameBlock={addChessGameBlock}
-              />
-            </div>
+            <NewsContentBlocksEditor blocks={contentBlocks} blockActions={blockActions} />
           </div>
         </div>
       </form>
