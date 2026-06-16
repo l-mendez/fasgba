@@ -197,7 +197,7 @@ export function NewsTable({ initialNews }: NewsTableProps) {
   // Render a growing window; resets whenever the search/filter/sort changes.
   const { visibleItems: visibleNews, sentinelRef, hasMore } = useInfiniteScroll(
     sortedAndFilteredNews,
-    { resetKey: `${searchTerm}|${selectedClubFilter}|${selectedDateFilter}|${sortBy}|${sortOrder}` }
+    { pageSize: 20, resetKey: `${searchTerm}|${selectedClubFilter}|${selectedDateFilter}|${sortBy}|${sortOrder}` }
   )
 
   return (
@@ -535,6 +535,12 @@ export function NewsTable({ initialNews }: NewsTableProps) {
         <div className="flex items-center justify-center py-4">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">Cargando más...</span>
+        </div>
+      )}
+
+      {sortedAndFilteredNews.length > 0 && (
+        <div className="text-sm text-muted-foreground">
+          Mostrando {visibleNews.length} de {sortedAndFilteredNews.length} noticias
         </div>
       )}
 
