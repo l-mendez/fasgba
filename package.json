@@ -2,6 +2,7 @@
   "name": "chess-club-api",
   "version": "1.0.0",
   "description": "Chess Club Management API built with Next.js and Supabase",
+  "packageManager": "pnpm@10.15.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,10 +13,10 @@
     "db:push": "supabase db push --linked",
     "db:push:dry-run": "supabase db push --dry-run --linked",
     "db:types": "supabase gen types typescript --linked --schema public > lib/database.types.ts",
-    "migrate:ranking": "npx tsx scripts/migrate-ranking-to-supabase.ts",
-    "setup:storage": "npx tsx scripts/setup-storage-buckets.ts",
+    "migrate:ranking": "pnpm exec tsx scripts/migrate-ranking-to-supabase.ts",
+    "setup:storage": "pnpm exec tsx scripts/setup-storage-buckets.ts",
     "test:email": "node scripts/test-email.js",
-    "send:admin-update": "npx tsx scripts/send-admin-update.ts"
+    "send:admin-update": "pnpm exec tsx scripts/send-admin-update.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
@@ -95,6 +96,13 @@
     "serialize-javascript": "^7.0.3",
     "vite": "^7.3.2",
     "postcss": "^8.5.10"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
+    ]
   },
   "engines": {
     "node": ">=20.9.0"

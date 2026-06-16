@@ -1,0 +1,11 @@
+"$schema" = "https://conductor.build/schemas/settings.repo.schema.json"
+
+[prompts]
+create_pr = "always update to the latest changes on master without rebasing."
+general = "keep commit messages concise. be sure to always try to reutilize code, not over extend PRs and keep files short. Prioritize UX for all features, provide multiple ways of performing tasks. All pages must be responsive"
+
+[scripts]
+archive = "rm -rf node_modules"
+run = "pnpm dev --port $CONDUCTOR_PORT"
+run_mode = "concurrent"
+setup = 'pnpm install && command -v supabase >/dev/null 2>&1 && mkdir -p supabase/.temp && printf %s uxtfxazbikfqcnnmhufh > supabase/.temp/project-ref && if [ -n "${SUPABASE_DB_PASSWORD:-}" ]; then supabase link --project-ref uxtfxazbikfqcnnmhufh --password "$SUPABASE_DB_PASSWORD"; else supabase link --project-ref uxtfxazbikfqcnnmhufh; fi'

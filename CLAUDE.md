@@ -11,17 +11,17 @@ school documents, and admin/club-admin workflows.
 ## Commands
 
 ```bash
-npm run dev              # Development server
-npm run build            # Production build
-npm run lint             # ESLint
-npm run type-check       # TypeScript validation
-npm run db:status        # Supabase local/remote migration status
-npm run db:push:dry-run  # Preview pending remote migrations
-npm run db:push          # Apply pending remote migrations
-npm run db:types         # Regenerate lib/database.types.ts from Supabase
-npm run migrate:ranking  # Migrate ranking data
-npm run send:admin-update # Send admin update emails
-npm run test:email       # Test email configuration
+pnpm dev                  # Development server
+pnpm run build            # Production build
+pnpm run lint             # ESLint
+pnpm run type-check       # TypeScript validation
+pnpm run db:status        # Supabase local/remote migration status
+pnpm run db:push:dry-run  # Preview pending remote migrations
+pnpm run db:push          # Apply pending remote migrations
+pnpm run db:types         # Regenerate lib/database.types.ts from Supabase
+pnpm run migrate:ranking  # Migrate ranking data
+pnpm run send:admin-update  # Send admin update emails
+pnpm run test:email       # Test email configuration
 ```
 
 ## Tech Stack

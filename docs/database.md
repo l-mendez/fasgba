@@ -25,20 +25,20 @@ supabase migration new descriptive_name
 Check pending migrations against the linked remote:
 
 ```bash
-npm run db:status
-npm run db:push:dry-run
+pnpm run db:status
+pnpm run db:push:dry-run
 ```
 
 Apply migrations:
 
 ```bash
-npm run db:push
+pnpm run db:push
 ```
 
 Regenerate TypeScript types after schema changes:
 
 ```bash
-npm run db:types
+pnpm run db:types
 ```
 
 Commit the migration and the regenerated `lib/database.types.ts` together.

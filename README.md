@@ -17,8 +17,8 @@ documents, and authenticated admin workflows.
 ## Setup
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 Required environment variables:
@@ -37,14 +37,14 @@ workspaces automatically when the Supabase CLI is available.
 ## Common Commands
 
 ```bash
-npm run dev              # local dev server
-npm run build            # production build
-npm run lint             # ESLint
-npm run type-check       # TypeScript validation
-npm run db:status        # local/remote migration status
-npm run db:push:dry-run  # preview pending remote migrations
-npm run db:push          # apply pending remote migrations
-npm run db:types         # regenerate Supabase database types
+pnpm dev                  # local dev server
+pnpm run build            # production build
+pnpm run lint             # ESLint
+pnpm run type-check       # TypeScript validation
+pnpm run db:status        # local/remote migration status
+pnpm run db:push:dry-run  # preview pending remote migrations
+pnpm run db:push          # apply pending remote migrations
+pnpm run db:types         # regenerate Supabase database types
 ```
 
 ## Database

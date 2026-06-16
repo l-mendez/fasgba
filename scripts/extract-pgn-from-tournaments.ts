@@ -177,7 +177,7 @@ async function getMatchGames(tournamentId: number): Promise<MatchGame[]> {
 
   // Filter by tournament_id through round
   const filteredGames: MatchGame[] = []
-  for (const game of data || []) {
+  for (const game of (data || []) as unknown as MatchGame[]) {
     if (game.pgn && game.pgn.trim() !== '' && game.match?.round) {
       // Check if this round belongs to our tournament
       const { data: roundData } = await supabase
@@ -224,7 +224,7 @@ async function main() {
   }
 
   let totalGames = 0
-  const tournamentsWithGames: { name: string; gameCount: number }[] = []
+  const tournamentsWithGames: { title: string; gameCount: number }[] = []
 
   for (const tournament of tournaments as Tournament[]) {
     console.log(`\nProcessing: ${tournament.title} (${tournament.tournament_type})`)
@@ -250,7 +250,7 @@ async function main() {
     }
 
     console.log(`  Found ${games.length} games with PGN`)
-    tournamentsWithGames.push({ name: tournament.title, gameCount: games.length })
+    tournamentsWithGames.push({ title: tournament.title, gameCount: games.length })
 
     for (const game of games) {
       if (!game.pgn) continue
