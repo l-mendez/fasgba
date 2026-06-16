@@ -2,7 +2,6 @@
 
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { ArrowLeft, Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -19,54 +18,21 @@ import {
 } from "@/components/news/types"
 import { NewsContentBlocksEditorSimple } from "@/components/news/news-content-blocks-editor-simple"
 import { useEditableNewsBlocks } from "@/components/news/use-news-content-blocks"
+import { apiCall } from "@/lib/utils/apiClient"
 
 interface Club {
   id: number
   name: string
-  description?: string
-  location?: string
-  website?: string
-  email?: string
-  phone?: string
-  created_at: string
-  updated_at: string
+  address: string | null
+  telephone: string | null
+  mail: string | null
+  schedule: string | null
+  image: string | null
 }
 
 interface NewNewsFormProps {
   selectedClub: Club
   clubs: Club[]
-}
-
-async function apiCall(endpoint: string, options: RequestInit = {}) {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-
-  if (!session) {
-    throw new Error('No hay sesión activa')
-  }
-
-  const url = `/api${endpoint}`
-  const config: RequestInit = {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-      ...options.headers,
-    },
-    ...options,
-  }
-
-  const response = await fetch(url, config)
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
-    throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
-  }
-
-  if (response.status === 204) {
-    return null
-  }
-
-  return response.json()
 }
 
 export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
@@ -99,7 +65,7 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
         club_id: formData.club_id,
       }
 
-      await apiCall(`/clubs/${formData.club_id}/news`, {
+      await apiCall(`/api/clubs/${formData.club_id}/news`, {
         method: 'POST',
         body: JSON.stringify(newsData),
       })

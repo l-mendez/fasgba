@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ChevronDown, Edit, Eye, MoreHorizontal, Search, Trash2, Loader2 } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,6 +28,8 @@ import { ErrorAlert } from "@/components/error-alert"
 import { deleteNewsAction } from "@/lib/actions/news"
 import { formatArgentinaDateOnly, getDateInputValue } from "@/lib/dateUtils"
 import { compareBy } from "@/lib/sortUtils"
+import { apiCall } from "@/lib/utils/apiClient"
+import { useClubContext } from "../context/club-context"
 
 // Define el tipo para noticias según la API
 interface ClubNews {
@@ -46,54 +47,9 @@ interface ClubNews {
   author_email?: string
 }
 
-interface Club {
-  id: number
-  name: string
-  description?: string
-  location?: string
-  website?: string
-  email?: string
-  phone?: string
-  created_at: string
-  updated_at: string
-}
-
 interface NoticiasContentProps {
   initialNews: ClubNews[]
-  selectedClub: Club | null
-}
-
-// Helper function para hacer llamadas a la API
-async function apiCall(endpoint: string, options: RequestInit = {}) {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  if (!session) {
-    throw new Error('No hay sesión activa')
-  }
-
-  const url = `/api${endpoint}`
-  const config: RequestInit = {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-      ...options.headers
-    },
-    ...options
-  }
-
-  const response = await fetch(url, config)
-  
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
-    throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
-  }
-  
-  if (response.status === 204) {
-    return null // No content
-  }
-  
-  return response.json()
+  initialClubId: number
 }
 
 // Helper functions for data processing
@@ -167,8 +123,12 @@ const getStatusText = (status: string) => {
   }
 }
 
-export function NoticiasContent({ initialNews, selectedClub }: NoticiasContentProps) {
+export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentProps) {
+  const { selectedClub } = useClubContext()
   const [noticias, setNoticias] = useState<ClubNews[]>(initialNews)
+  const [newsByClub, setNewsByClub] = useState<Record<number, ClubNews[]>>({
+    [initialClubId]: initialNews,
+  })
   const [searchTerm, setSearchTerm] = useState("")
   const [noticiaToDelete, setNoticiaToDelete] = useState<number | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -182,19 +142,27 @@ export function NoticiasContent({ initialNews, selectedClub }: NoticiasContentPr
   // Cargar noticias del club seleccionado usando la API
   const loadNews = async () => {
     if (!selectedClub) return
+
+    if (newsByClub[selectedClub.id]) {
+      setNoticias(newsByClub[selectedClub.id])
+      setOriginalOrder(newsByClub[selectedClub.id])
+      return
+    }
     
     try {
       setIsLoading(true)
       setError(null)
       
-      const newsData = await apiCall(`/clubs/${selectedClub.id}/news`)
+      const newsData = await apiCall(`/api/clubs/${selectedClub.id}/news`)
       
       if (newsData && Array.isArray(newsData)) {
         setNoticias(newsData)
         setOriginalOrder(newsData)
+        setNewsByClub((current) => ({ ...current, [selectedClub.id]: newsData }))
       } else {
         setNoticias([])
         setOriginalOrder([])
+        setNewsByClub((current) => ({ ...current, [selectedClub.id]: [] }))
       }
     } catch (err) {
       console.error('Error loading news:', err)
@@ -211,7 +179,7 @@ export function NoticiasContent({ initialNews, selectedClub }: NoticiasContentPr
     if (selectedClub) {
       loadNews()
     }
-  }, [selectedClub])
+  }, [selectedClub?.id])
 
   // Sorting functions
   const handleSort = (field: string) => {

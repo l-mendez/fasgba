@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronDown, AlertCircle, Building2 } from "lucide-react"
+import { AlertCircle, Building2 } from "lucide-react"
 import {
   Select,
   SelectContent,

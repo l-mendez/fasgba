@@ -8,7 +8,7 @@ import * as z from "zod"
 import { Loader2, Save, Upload, X, ImageIcon, CheckCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
-import { apiCall } from "@/app/club-admin/context/club-context"
+import { apiCall } from "@/lib/utils/apiClient"
 import { uploadClubImageAction, deleteClubImageAction } from "@/lib/actions/clubs"
 import { Button } from "@/components/ui/button"
 import {
@@ -204,7 +204,7 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
       }
       
       // Update club information
-      await apiCall(`/clubs/${club.id}/settings`, {
+      await apiCall(`/api/clubs/${club.id}/settings`, {
         method: 'PUT',
         body: JSON.stringify(cleanedData),
       })

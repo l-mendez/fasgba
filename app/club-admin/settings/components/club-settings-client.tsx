@@ -2,24 +2,14 @@
 
 import { useClubContext } from "@/app/club-admin/context/club-context"
 import { ClubSettingsForm } from "./club-settings-form"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ErrorAlert } from "@/components/error-alert"
-import { Loader2 } from "lucide-react"
 
 export function ClubSettingsClient() {
   const { selectedClub, isLoading, error, hasNoClubs } = useClubContext()
 
   if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <div className="flex items-center space-x-2">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span>Cargando configuración...</span>
-          </div>
-        </CardContent>
-      </Card>
-    )
+    return null
   }
 
   if (error) {

@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { useClubContext } from "../context/club-provider"
+import { useClubContext } from "../context/club-context"
 
 export function NewNewsButton() {
   const { selectedClub } = useClubContext()
