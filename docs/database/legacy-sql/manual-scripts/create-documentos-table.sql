@@ -1,3 +1,6 @@
+-- Legacy archive only. Do not run directly.
+-- Create a new Supabase CLI migration under supabase/migrations instead.
+
 -- Migration: Create documentos table
 -- Run this in Supabase SQL Editor
 

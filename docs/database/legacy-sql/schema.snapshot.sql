@@ -1,3 +1,6 @@
+-- Legacy archive only. Do not run directly.
+-- Create a new Supabase CLI migration under supabase/migrations instead.
+
 -- Enable extensions (Optional: for text search, UUIDs, etc.)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 

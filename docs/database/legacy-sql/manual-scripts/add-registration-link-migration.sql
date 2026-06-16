@@ -1,3 +1,6 @@
+-- Legacy archive only. Do not run directly.
+-- Create a new Supabase CLI migration under supabase/migrations instead.
+
 -- Migration: Add registration_link column to tournaments table
 -- This migration adds support for external registration links (e.g., Google Forms)
 -- Run this SQL in your Supabase SQL editor or via psql

@@ -1,3 +1,6 @@
+-- Legacy archive only. Do not run directly.
+-- Create a new Supabase CLI migration under supabase/migrations instead.
+
 -- Migration: Add teams entity between clubs and tournament participation
 -- Run this in Supabase SQL editor as a single transaction
 

@@ -1,3 +1,6 @@
+-- Legacy archive only. Do not run directly.
+-- Create a new Supabase CLI migration under supabase/migrations instead.
+
 -- Convert news.date from TIMESTAMP to DATE.
 --
 -- A news date is an editor-chosen calendar day with no meaningful time-of-day.

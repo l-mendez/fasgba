@@ -30,30 +30,21 @@ export async function GET(request: NextRequest) {
       return handleError(authError)
     }
 
-    // Fetch public.users for club info (safe separate query)
+    // Add club-admin context for search/display. User identity stays in
+    // Supabase Auth; there is no canonical public users table.
     let clubMap: Record<string, string> = {}
     try {
-      const { data: publicUsers } = await supabase
-        .from('users')
-        .select('auth_id, club_id')
-        .not('auth_id', 'is', null)
-        .not('club_id', 'is', null)
+      const { data: clubAdmins } = await supabase
+        .from('club_admins')
+        .select('auth_id, clubs(name)')
 
-      if (publicUsers && publicUsers.length > 0) {
-        const clubIds = [...new Set(publicUsers.map(u => u.club_id).filter(Boolean))]
-        if (clubIds.length > 0) {
-          const { data: clubs } = await supabase
-            .from('clubs')
-            .select('id, name')
-            .in('id', clubIds)
-
-          const clubNameMap: Record<number, string> = {}
-          clubs?.forEach(c => { clubNameMap[c.id] = c.name })
-          publicUsers.forEach(u => {
-            if (u.auth_id && u.club_id && clubNameMap[u.club_id]) {
-              clubMap[u.auth_id] = clubNameMap[u.club_id]
-            }
-          })
+      for (const row of clubAdmins || []) {
+        const club = Array.isArray(row.clubs) ? row.clubs[0] : row.clubs
+        const clubName = club?.name
+        if (clubName) {
+          clubMap[row.auth_id] = clubMap[row.auth_id]
+            ? `${clubMap[row.auth_id]}, ${clubName}`
+            : clubName
         }
       }
     } catch {

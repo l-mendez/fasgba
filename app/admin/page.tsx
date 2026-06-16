@@ -1,9 +1,10 @@
 import Link from "next/link"
-import { Award, FileText, FolderOpen, GraduationCap, Home, Plus, Shield, Trophy, Users, AlertCircle } from "lucide-react"
+import { Award, FileText, FolderOpen, GraduationCap, Home, Shield, Trophy, Users } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/server"
+import { getArgentinaDateInputValue } from "@/lib/dateUtils"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 // Mark this page as dynamic since it requires server-side authentication
 export const dynamic = 'force-dynamic'
@@ -27,19 +28,17 @@ interface DashboardStats {
 // Server-side function to fetch dashboard statistics
 async function getDashboardStats(): Promise<DashboardStats> {
   try {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
     
     // Get current date information
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const today = getArgentinaDateInputValue(now)
     
     // Fetch all statistics in parallel
     const [
-      usersCount,
-      usersThisMonth,
-      usersToday,
-      verifiedUsers,
+      usersResult,
       newsCount,
       newsThisMonth,
       clubsCount,
@@ -48,26 +47,8 @@ async function getDashboardStats(): Promise<DashboardStats> {
       activeTournaments,
       upcomingTournaments
     ] = await Promise.all([
-      // Total users
-      supabase.from('profiles').select('*', { count: 'exact', head: true }),
-      
-      // Users this month
-      supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', startOfMonth.toISOString()),
-      
-      // Users today
-      supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', startOfToday.toISOString()),
-      
-      // Verified users (assuming email_verified field exists)
-      supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('email_verified', true),
+      // Auth users are stored in Supabase Auth, not in a public profiles table.
+      supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
       
       // Total news
       supabase.from('news').select('*', { count: 'exact', head: true }),
@@ -90,36 +71,43 @@ async function getDashboardStats(): Promise<DashboardStats> {
       // Total tournaments
       supabase.from('tournaments').select('*', { count: 'exact', head: true }),
       
-      // Active tournaments (assuming status field exists)
+      // Tournaments with an event date today
       supabase
-        .from('tournaments')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active'),
+        .from('tournamentdates')
+        .select('tournament_id')
+        .eq('event_date', today),
       
-      // Upcoming tournaments
+      // Upcoming tournament dates
       supabase
-        .from('tournaments')
-        .select('*', { count: 'exact', head: true })
-        .gte('start_date', now.toISOString())
+        .from('tournamentdates')
+        .select('tournament_id')
+        .gte('event_date', today)
     ])
 
+    if (usersResult.error) {
+      throw usersResult.error
+    }
+
     // Calculate growth percentage
-    const totalUsers = usersCount.count || 0
-    const newUsersThisMonth = usersThisMonth.count || 0
+    const authUsers = usersResult.data.users || []
+    const totalUsers = authUsers.length
+    const newUsersThisMonth = authUsers.filter((user) => new Date(user.created_at) >= startOfMonth).length
+    const newUsersToday = authUsers.filter((user) => new Date(user.created_at) >= startOfToday).length
+    const verifiedUsers = authUsers.filter((user) => Boolean(user.email_confirmed_at)).length
     const growthRate = totalUsers > 0 ? ((newUsersThisMonth / totalUsers) * 100).toFixed(1) : "0"
 
     return {
       usuarios: totalUsers,
       usuariosNuevos: newUsersThisMonth,
-      usuariosNuevosHoy: usersToday.count || 0,
-      usuariosVerificados: verifiedUsers.count || 0,
+      usuariosNuevosHoy: newUsersToday,
+      usuariosVerificados: verifiedUsers,
       noticias: newsCount.count || 0,
       noticiasEstesMes: newsThisMonth.count || 0,
       clubes: clubsCount.count || 0,
       clubesConContacto: clubsWithContact.count || 0,
       torneos: tournamentsCount.count || 0,
-      torneosActivos: activeTournaments.count || 0,
-      torneosProximos: upcomingTournaments.count || 0,
+      torneosActivos: countUniqueTournamentIds(activeTournaments.data),
+      torneosProximos: countUniqueTournamentIds(upcomingTournaments.data),
       crecimientoMensual: `${growthRate}%`
     }
   } catch (error) {
@@ -140,6 +128,10 @@ async function getDashboardStats(): Promise<DashboardStats> {
       crecimientoMensual: "0%"
     }
   }
+}
+
+function countUniqueTournamentIds(rows: Array<{ tournament_id: number | null }> | null): number {
+  return new Set(rows?.map((row) => row.tournament_id).filter(Boolean)).size
 }
 
 export default async function AdminDashboard() {
@@ -334,4 +326,3 @@ export default async function AdminDashboard() {
     </div>
   )
 }
-
