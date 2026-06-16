@@ -100,27 +100,25 @@ async function fetchNews(): Promise<News[]> {
       .filter((id): id is string => id !== null)
     )]
 
-    // Fetch author information from Supabase Auth
+    // Fetch author information from Supabase Auth in parallel (deduped by id)
     const authorMap = new Map<string, { email: string; name?: string }>()
-    
-    for (const authId of authorIds) {
+
+    await Promise.all(authorIds.map(async (authId) => {
       try {
         const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(authId)
-        
+
         if (!userError && userData.user) {
+          const nombre = userData.user.user_metadata?.nombre || ''
+          const apellido = userData.user.user_metadata?.apellido || ''
           authorMap.set(authId, {
             email: userData.user.email || 'email@no-disponible.com',
-            name: (() => {
-              const nombre = userData.user.user_metadata?.nombre || ''
-              const apellido = userData.user.user_metadata?.apellido || ''
-              return nombre && apellido ? `${nombre} ${apellido}` : (nombre || apellido || undefined)
-            })()
+            name: nombre && apellido ? `${nombre} ${apellido}` : (nombre || apellido || undefined),
           })
         }
       } catch (error) {
         console.warn(`Failed to fetch user data for ${authId}:`, error)
       }
-    }
+    }))
 
     // Transform the news data to match our News interface
     const transformedNews: News[] = newsData.map((item: any) => {

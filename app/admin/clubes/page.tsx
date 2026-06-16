@@ -73,82 +73,49 @@ async function fetchClubs(): Promise<Club[]> {
       return []
     }
 
-    // Fetch admin counts and delegado information for each club
-    const clubsWithStats = await Promise.all(
-      clubsData.map(async (club) => {
-        try {
-          // Get admin count for this club using service role client
-          const { count: adminCount, error: adminCountError } = await supabaseAdmin
-            .from('club_admins')
-            .select('*', { count: 'exact', head: true })
-            .eq('club_id', club.id)
+    // Fetch every club_admin row once, then derive per-club admin counts and the
+    // first admin (delegado) in memory — avoids 3 queries per club (N+1).
+    const adminCountByClub = new Map<number, number>()
+    const firstAdminByClub = new Map<number, string>()
 
-          if (adminCountError) {
-            console.warn(`Could not fetch admin count for club ${club.id}, using 0 as default:`, {
-              message: adminCountError.message || 'Unknown error',
-              code: adminCountError.code || 'No code'
-            })
-            // Don't continue processing if there's an error, just use defaults
-            return {
-              ...club,
-              adminCount: 0,
-              delegado: undefined
-            }
-          }
+    const { data: clubAdmins, error: clubAdminsError } = await supabaseAdmin
+      .from('club_admins')
+      .select('club_id, auth_id')
 
-          // Get the first admin (delegado) for this club using service role client
-          const { data: clubAdminsData, error: clubAdminsError } = await supabaseAdmin
-            .from('club_admins')
-            .select('auth_id')
-            .eq('club_id', club.id)
-            .limit(1)
+    if (clubAdminsError) {
+      console.warn('Could not fetch club admins, using defaults:', clubAdminsError.message)
+    } else {
+      for (const { club_id, auth_id } of clubAdmins || []) {
+        adminCountByClub.set(club_id, (adminCountByClub.get(club_id) || 0) + 1)
+        if (!firstAdminByClub.has(club_id)) firstAdminByClub.set(club_id, auth_id)
+      }
+    }
 
-          if (clubAdminsError) {
-            console.warn(`Could not fetch club admins for club ${club.id}, using defaults:`, {
-              message: clubAdminsError.message || 'Unknown error',
-              code: clubAdminsError.code || 'No code'
-            })
-            // Continue with what we have
-            return {
-              ...club,
-              adminCount: adminCount || 0,
-              delegado: undefined
-            }
-          }
+    // Resolve delegado emails for the unique first-admins once, in parallel.
+    const delegadoIds = [...new Set(firstAdminByClub.values())]
+    const emailByAuthId = new Map<string, string>()
 
-          let delegado: string | undefined = undefined
-
-          if (clubAdminsData && clubAdminsData.length > 0) {
-            try {
-              const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(clubAdminsData[0].auth_id)
-              
-              if (!userError && userData.user) {
-                delegado = userData.user.email || undefined
-              } else if (userError) {
-                console.warn(`Failed to fetch user data for admin ${clubAdminsData[0].auth_id}:`, userError.message)
-              }
-            } catch (error) {
-              console.warn(`Failed to fetch user data for admin ${clubAdminsData[0].auth_id}:`, error)
-            }
-          }
-
-          return {
-            ...club,
-            adminCount: adminCount || 0,
-            delegado
-          }
-        } catch (error) {
-          console.warn(`Error processing club ${club.id}, using defaults:`, error instanceof Error ? error.message : 'Unknown error')
-          return {
-            ...club,
-            adminCount: 0,
-            delegado: undefined
-          }
+    await Promise.all(delegadoIds.map(async (authId) => {
+      try {
+        const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(authId)
+        if (!userError && userData.user?.email) {
+          emailByAuthId.set(authId, userData.user.email)
+        } else if (userError) {
+          console.warn(`Failed to fetch user data for admin ${authId}:`, userError.message)
         }
-      })
-    )
+      } catch (error) {
+        console.warn(`Failed to fetch user data for admin ${authId}:`, error)
+      }
+    }))
 
-    return clubsWithStats
+    return clubsData.map((club) => {
+      const firstAdmin = firstAdminByClub.get(club.id)
+      return {
+        ...club,
+        adminCount: adminCountByClub.get(club.id) || 0,
+        delegado: firstAdmin ? emailByAuthId.get(firstAdmin) : undefined,
+      }
+    })
   } catch (error) {
     console.error('Error fetching clubs:', error)
     throw error
