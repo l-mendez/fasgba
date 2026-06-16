@@ -2,6 +2,7 @@ import { NextRequest, after } from 'next/server'
 import { sendBroadcast } from '@/lib/notifications/sendBroadcast'
 import { createClient } from '@supabase/supabase-js'
 import { createNews } from '@/lib/newsUtils'
+import { revalidateNewsCache } from '@/lib/cache/news'
 import { validateCreateNews } from '@/lib/schemas/newsSchemas'
 import { apiSuccess, handleError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
@@ -55,7 +56,8 @@ export async function POST(request: NextRequest) {
     }
 
     const createdNews = await createNews(newsData)
-    
+    revalidateNewsCache(createdNews.id)
+
     // Run broadcast after the response is sent so the 201 isn't blocked
     // by SMTP latency. `after()` is reliable in serverless (unlike bare
     // fire-and-forget which can be killed when the response returns).

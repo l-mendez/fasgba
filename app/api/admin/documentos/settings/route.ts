@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/middleware/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { revalidateDocumentosCache } from '@/lib/cache/documentos'
 import {
   apiSuccess,
   handleError,
@@ -108,6 +109,7 @@ export async function POST(request: NextRequest) {
       return validationError('Error al actualizar la configuración')
     }
 
+    revalidateDocumentosCache()
     return apiSuccess({
       success: true,
       message: 'Configuración actualizada exitosamente',

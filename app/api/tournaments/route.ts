@@ -2,6 +2,7 @@ import { NextRequest, after } from 'next/server'
 import { sendBroadcast } from '@/lib/notifications/sendBroadcast'
 import { createClient } from '@/lib/supabase/server'
 import { createTournament } from '@/lib/tournamentUtils'
+import { revalidateTorneosCache } from '@/lib/cache/torneos'
 import { validateCreateTournament } from '@/lib/schemas/tournamentSchemas'
 import { apiSuccess, handleError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
@@ -64,7 +65,8 @@ export async function POST(request: NextRequest) {
 
     // Create the tournament
     const newTournament = await createTournament(supabase, validatedData)
-    
+    revalidateTorneosCache()
+
     after(async () => {
       try {
         await sendBroadcast({ type: 'tournament_created', tournamentId: newTournament.id })

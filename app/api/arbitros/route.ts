@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getAllArbitros, createArbitro } from '@/lib/arbitroUtils'
+import { revalidateArbitrosCache } from '@/lib/cache/arbitros'
 import { requireAdmin } from '@/lib/middleware/auth'
 import { validateCreateArbitro } from '@/lib/schemas/arbitroSchemas'
 import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
@@ -35,6 +36,7 @@ export async function POST(request: NextRequest) {
       phone: validatedData.phone || null,
     })
 
+    revalidateArbitrosCache()
     return apiSuccess(newArbitro, 201)
   } catch (error) {
     return handleError(error)
