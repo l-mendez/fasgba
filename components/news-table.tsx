@@ -2,9 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ChevronDown, Edit, Eye, MoreHorizontal, Search, Trash2, Loader2 } from "lucide-react"
-
-import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
+import { ChevronDown, Edit, Eye, MoreHorizontal, Search, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -194,12 +192,6 @@ export function NewsTable({ initialNews }: NewsTableProps) {
   // Apply sorting to filtered news
   const sortedAndFilteredNews = getSortedNews(filteredNews)
 
-  // Render a growing window; resets whenever the search/filter/sort changes.
-  const { visibleItems: visibleNews, sentinelRef, hasMore } = useInfiniteScroll(
-    sortedAndFilteredNews,
-    { pageSize: 20, resetKey: `${searchTerm}|${selectedClubFilter}|${selectedDateFilter}|${sortBy}|${sortOrder}` }
-  )
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 mb-6 md:flex-row md:items-center">
@@ -352,7 +344,7 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              visibleNews.map((item) => (
+              sortedAndFilteredNews.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{item.title}</TableCell>
                   <TableCell>{item.club?.name || FEDERATION_NAME}</TableCell>
@@ -443,7 +435,7 @@ export function NewsTable({ initialNews }: NewsTableProps) {
             No se encontraron noticias
           </div>
         ) : (
-          visibleNews.map((item) => (
+          sortedAndFilteredNews.map((item) => (
             <div key={item.id} className="bg-card rounded-lg border p-4 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
@@ -529,20 +521,6 @@ export function NewsTable({ initialNews }: NewsTableProps) {
           ))
         )}
       </div>
-
-      <div ref={sentinelRef} className="h-1" />
-      {hasMore && (
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-sm text-muted-foreground">Cargando más...</span>
-        </div>
-      )}
-
-      {sortedAndFilteredNews.length > 0 && (
-        <div className="text-sm text-muted-foreground">
-          Mostrando {visibleNews.length} de {sortedAndFilteredNews.length} noticias
-        </div>
-      )}
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>

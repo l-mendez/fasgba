@@ -1,10 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Loader2 } from "lucide-react"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
 import {
   type TournamentDisplay,
   getTournamentStatus,
@@ -49,37 +47,6 @@ function EmptyState({ message }: { message: string }) {
   )
 }
 
-// Renders a tab's tournaments with infinite scroll so long lists (e.g. past
-// tournaments) reveal a page at a time instead of all at once.
-function TournamentsGrid({
-  tournaments,
-  status,
-}: {
-  tournaments: TournamentDisplay[]
-  status: TournamentStatus
-}) {
-  const { visibleItems, sentinelRef, hasMore } = useInfiniteScroll(tournaments, {
-    resetKey: `${status}|${tournaments.length}`,
-  })
-
-  return (
-    <>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {visibleItems.map((torneo) => (
-          <TournamentCard key={torneo.id} torneo={torneo} status={status} />
-        ))}
-      </div>
-      <div ref={sentinelRef} className="h-1" />
-      {hasMore && (
-        <div className="flex items-center justify-center py-6">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-sm text-muted-foreground">Cargando más...</span>
-        </div>
-      )}
-    </>
-  )
-}
-
 export function TournamentsTabs({ tournaments }: { tournaments: TournamentDisplay[] }) {
   // The server HTML buckets tournaments using the flags baked at render time.
   // Under ISR that snapshot can be up to `revalidate` stale, so once mounted we
@@ -115,7 +82,11 @@ export function TournamentsTabs({ tournaments }: { tournaments: TournamentDispla
           {tournaments.length === 0 ? (
             <EmptyState message={emptyMessage} />
           ) : (
-            <TournamentsGrid tournaments={tournaments} status={status} />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {tournaments.map((torneo) => (
+                <TournamentCard key={torneo.id} torneo={torneo} status={status} />
+              ))}
+            </div>
           )}
         </TabsContent>
       ))}

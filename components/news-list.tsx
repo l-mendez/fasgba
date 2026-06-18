@@ -1,14 +1,15 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { NewsFilters } from "@/components/news-filters"
+import { NewsPagination } from "@/components/news-pagination"
 import { NewsCard } from "@/components/news-card"
-import { useInfiniteScroll } from "@/hooks/useInfiniteScroll"
 import type { NewsDisplay } from "@/lib/newsUtils"
 import type { Club } from "@/lib/clubUtils"
+
+const ITEMS_PER_PAGE = 9
 
 function matchesClub(news: NewsDisplay, club: string): boolean {
   if (club === "all") return true
@@ -38,6 +39,7 @@ interface NewsListProps {
 export function NewsList({ allNews, tags, clubs }: NewsListProps) {
   const [selectedTag, setSelectedTag] = useState("all")
   const [selectedClub, setSelectedClub] = useState("all")
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Seed filters from the URL once on mount so deep links from news-card tag
   // badges (/noticias?tag=foo) still land on a filtered view. State is local
@@ -68,18 +70,22 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
   }, [allNews, selectedTag, selectedClub])
 
   const total = filtered.length
+  const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE))
+  const page = Math.min(currentPage, totalPages)
+  const currentNews = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
 
-  // Reveal a page at a time as the reader scrolls; resets on filter change.
-  const { visibleItems: currentNews, sentinelRef, hasMore } = useInfiniteScroll(filtered, {
-    pageSize: 9,
-    resetKey: `${selectedTag}|${selectedClub}`,
-  })
-
-  const handleTagChange = (tag: string) => setSelectedTag(tag)
-  const handleClubChange = (club: string) => setSelectedClub(club)
+  const handleTagChange = (tag: string) => {
+    setSelectedTag(tag)
+    setCurrentPage(1)
+  }
+  const handleClubChange = (club: string) => {
+    setSelectedClub(club)
+    setCurrentPage(1)
+  }
   const handleClear = () => {
     setSelectedTag("all")
     setSelectedClub("all")
+    setCurrentPage(1)
   }
 
   return (
@@ -132,12 +138,12 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
             ))}
           </div>
 
-          <div ref={sentinelRef} className="h-1" />
-          {hasMore && (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-sm text-muted-foreground">Cargando más...</span>
-            </div>
+          {totalPages > 1 && (
+            <NewsPagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           )}
         </>
       )}
