@@ -98,10 +98,36 @@ async function fetchTournaments(): Promise<Tournament[]> {
       return []
     }
 
+    // Participant counts: batch the common (individual) tournaments into a
+    // single query and count in memory; team tournaments stay per-tournament
+    // (rare, and need a multi-step club/player lookup). Avoids 1-2 queries per
+    // row (N+1).
+    const participantsByTournament = new Map<number, number>()
+
+    const teamTournaments = tournamentsData.filter((t: any) => t.tournament_type === 'team')
+    const individualIds = tournamentsData
+      .filter((t: any) => t.tournament_type !== 'team')
+      .map((t: any) => t.id)
+
+    if (individualIds.length > 0) {
+      const { data: registrations } = await supabase
+        .from('tournament_registrations')
+        .select('tournament_id')
+        .in('tournament_id', individualIds)
+
+      for (const { tournament_id } of registrations || []) {
+        participantsByTournament.set(tournament_id, (participantsByTournament.get(tournament_id) || 0) + 1)
+      }
+    }
+
+    await Promise.all(teamTournaments.map(async (t: any) => {
+      const count = await getTournamentParticipantCount(supabase, t.id, t.tournament_type)
+      participantsByTournament.set(t.id, count)
+    }))
+
     // Transform the tournaments data to match our Tournament interface
     const now = new Date()
-    const transformedTournaments: Tournament[] = await Promise.all(
-      tournamentsData.map(async (tournament: any) => {
+    const transformedTournaments: Tournament[] = tournamentsData.map((tournament: any) => {
         // Get dates from tournamentdates array
         const eventDates = tournament.tournamentdates?.map((date: any) => new Date(date.event_date)) || []
         eventDates.sort((a: Date, b: Date) => a.getTime() - b.getTime()) // Sort dates
@@ -131,12 +157,8 @@ async function fetchTournaments(): Promise<Tournament[]> {
         // Format dates for display
         const formatted_start_date = startDate.toLocaleDateString('es-AR')
         const formatted_end_date = endDate ? endDate.toLocaleDateString('es-AR') : null
-        
-        const participants = await getTournamentParticipantCount(
-          supabase,
-          tournament.id,
-          tournament.tournament_type
-        )
+
+        const participants = participantsByTournament.get(tournament.id) || 0
 
         return {
           id: tournament.id.toString(),
@@ -164,7 +186,6 @@ async function fetchTournaments(): Promise<Tournament[]> {
           club: tournament.clubs ? { id: tournament.clubs.id, name: tournament.clubs.name } : null
         }
       })
-    )
 
     return transformedTournaments
   } catch (error) {
