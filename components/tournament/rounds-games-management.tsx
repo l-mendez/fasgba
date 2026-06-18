@@ -2,41 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Trash2, Edit, Plus, Users, User, AlertCircle, Calendar, Crown } from 'lucide-react'
+import { Plus, Users, User, Calendar, Crown } from 'lucide-react'
 import { GameDisplay } from '@/lib/gameUtils-client'
 import { toast } from 'sonner'
 import { apiCall } from '@/lib/utils/apiClient'
 import { RoundFormDialog } from './round-form-dialog'
-import { Round, Team } from './types'
-
-interface Player {
-  id: number
-  full_name: string
-  fide_id?: string
-  rating?: number
-  team?: {
-    id: number
-    name: string
-  }
-  club?: {
-    id: number
-    name: string
-  }
-}
-
-interface Match {
-  id: number
-  team_a: { id: number; name: string }
-  team_b: { id: number; name: string }
-}
+import { GameFormDialog } from './game-form-dialog'
+import { MatchFormDialog } from './match-form-dialog'
+import { RoundsList } from './rounds-list'
+import { MatchesList } from './matches-list'
+import { GamesList } from './games-list'
+import { GameFormData, Match, Player, Round, Team } from './types'
 
 interface RoundsGamesManagementProps {
   tournamentId: string
@@ -46,29 +24,17 @@ interface RoundsGamesManagementProps {
   onGameUpdate?: () => void
 }
 
-interface GameFormData {
-  white_player_id: number
-  black_player_id: number
-  board_number?: number
-  result: '1-0' | '0-1' | '1/2-1/2' | '*'
-  pgn?: string
-  game_date?: string
-  game_time?: string
-  match_id?: number
-}
-
-export default function RoundsGamesManagement({ 
-  tournamentId, 
-  tournamentType, 
-  games: initialGames, 
+export default function RoundsGamesManagement({
+  tournamentId,
+  tournamentType,
+  games: initialGames,
   rounds: initialRounds,
-  onGameUpdate 
+  onGameUpdate
 }: RoundsGamesManagementProps) {
   // State for games
   const [games, setGames] = useState<GameDisplay[]>(initialGames)
   const [players, setPlayers] = useState<Player[]>([])
   const [matches, setMatches] = useState<Match[]>([])
-  const [clubs, setClubs] = useState<{ id: number; name: string }[]>([])
   const [selectedRound, setSelectedRound] = useState<number>(initialRounds[0]?.id || 0)
   const [isAddGameDialogOpen, setIsAddGameDialogOpen] = useState(false)
   const [isEditGameDialogOpen, setIsEditGameDialogOpen] = useState(false)
@@ -88,7 +54,6 @@ export default function RoundsGamesManagement({
   const [teams, setTeams] = useState<Team[]>([])
   const [isAddRoundDialogOpen, setIsAddRoundDialogOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [fetchingRounds, setFetchingRounds] = useState(false)
   const [fetchingTeams, setFetchingTeams] = useState(false)
 
   // State for match management
@@ -116,20 +81,6 @@ export default function RoundsGamesManagement({
     } catch (error) {
       console.error('Error fetching players:', error)
       toast.error('Error al cargar jugadores')
-    }
-  }
-
-  const fetchClubs = async () => {
-    try {
-      const data = await apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
-      const registeredTeams = data.teams || []
-      const teamsList = registeredTeams.map((reg: any) => ({
-        id: reg.teams.id,
-        name: reg.teams.name
-      }))
-      setClubs(teamsList)
-    } catch (error) {
-      console.error('Error fetching teams:', error)
     }
   }
 
@@ -194,22 +145,18 @@ export default function RoundsGamesManagement({
 
   useEffect(() => {
     if (tournamentType === 'team') {
-      fetchClubs()
       fetchTeams()
     }
   }, [tournamentType])
 
   const fetchRounds = async () => {
     try {
-      setFetchingRounds(true)
       const data = await apiCall(`/api/tournaments/${tournamentId}/rounds`)
       const roundsData = data.rounds || []
       setRounds(roundsData)
     } catch (error) {
       console.error('Error fetching rounds:', error)
       toast.error('Error al cargar rondas')
-    } finally {
-      setFetchingRounds(false)
     }
   }
 
@@ -244,7 +191,7 @@ export default function RoundsGamesManagement({
       toast.success('Partida agregada exitosamente')
       setIsAddGameDialogOpen(false)
       resetGameForm()
-      
+
       await fetchGames()
       onGameUpdate?.()
     } catch (error) {
@@ -299,7 +246,7 @@ export default function RoundsGamesManagement({
       setIsEditGameDialogOpen(false)
       setEditingGame(null)
       resetGameForm()
-      
+
       await fetchGames()
       onGameUpdate?.()
     } catch (error) {
@@ -391,7 +338,7 @@ export default function RoundsGamesManagement({
       setIsEditMatchDialogOpen(false)
       setEditingMatch(null)
       resetMatchForm()
-      
+
       // Refresh data
       await Promise.all([
         fetchMatches(selectedRound),
@@ -419,7 +366,7 @@ export default function RoundsGamesManagement({
       })
 
       toast.success('Enfrentamiento eliminado exitosamente')
-      
+
       // Refresh data
       await Promise.all([
         fetchMatches(selectedRound),
@@ -480,64 +427,16 @@ export default function RoundsGamesManagement({
     })
   }
 
-  const getResultBadgeClass = (result: string) => {
-    switch (result) {
-      case '1-0': return 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200'
-      case '0-1': return 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200'
-      case '1/2-1/2': return 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200'
-      default: return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
-    }
-  }
-
   const currentRoundGames = games.filter(game => {
     // Find the round from the current tournament that matches the selected round ID
     const selectedRoundData = rounds.find(r => r.id === selectedRound)
     if (!selectedRoundData) {
       return false
     }
-    
+
     // Only show games that match the round number of the selected round from this tournament
     return game.round === selectedRoundData.round_number
   })
-
-  const sortedRounds = [...rounds].sort((a, b) => a.round_number - b.round_number)
-
-  // White/black dropdowns are filtered to whichever team plays that color on this board.
-  // Team A plays white on odd boards, team B on even (standard alternating colors).
-  const getWhitePlayerOptions = (): Player[] => {
-    if (tournamentType !== 'team' || !gameFormData.match_id || !gameFormData.board_number) {
-      return players
-    }
-    const selectedMatch = matches.find(m => m.id === gameFormData.match_id)
-    if (!selectedMatch) return []
-    const isOddBoard = gameFormData.board_number % 2 === 1
-    const whiteTeamId = isOddBoard ? selectedMatch.team_a.id : selectedMatch.team_b.id
-    return players.filter(p => p.team?.id === whiteTeamId)
-  }
-
-  const getBlackPlayerOptions = (): Player[] => {
-    if (tournamentType !== 'team' || !gameFormData.match_id || !gameFormData.board_number) {
-      return players
-    }
-    const selectedMatch = matches.find(m => m.id === gameFormData.match_id)
-    if (!selectedMatch) return []
-    const isOddBoard = gameFormData.board_number % 2 === 1
-    const blackTeamId = isOddBoard ? selectedMatch.team_b.id : selectedMatch.team_a.id
-    return players.filter(p => p.team?.id === blackTeamId)
-  }
-
-  const getSelectedMatchInfo = () => {
-    if (!gameFormData.match_id) return null
-    const selectedMatch = matches.find(m => m.id === gameFormData.match_id)
-    if (!selectedMatch) return null
-
-    const isOddBoard = (gameFormData.board_number || 1) % 2 === 1
-    return {
-      whiteTeam: isOddBoard ? selectedMatch.team_a.name : selectedMatch.team_b.name,
-      blackTeam: isOddBoard ? selectedMatch.team_b.name : selectedMatch.team_a.name,
-      isOddBoard
-    }
-  }
 
   return (
     <div className="space-y-8">
@@ -569,7 +468,7 @@ export default function RoundsGamesManagement({
               {rounds.length} {rounds.length === 1 ? 'ronda' : 'rondas'}
             </Badge>
           </div>
-          
+
           <Button
             onClick={() => setIsAddRoundDialogOpen(true)}
             className="flex items-center gap-2"
@@ -590,67 +489,14 @@ export default function RoundsGamesManagement({
           />
         </div>
 
-        {/* Rounds List - Compact Design */}
-        {rounds.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p className="text-lg font-medium mb-2">No hay rondas creadas</p>
-            <p className="text-sm">Agrega la primera ronda para comenzar a organizar las partidas</p>
-          </div>
-        ) : (
-          <div className="flex flex-wrap gap-3">
-            {sortedRounds.map((round) => {
-              const roundGames = games.filter(game => {
-                const gameRoundId = rounds.find(r => r.round_number === game.round)?.id
-                return gameRoundId === round.id
-              })
-              
-              return (
-                <div
-                  key={round.id}
-                  className={`flex items-center gap-3 p-3 border rounded-lg transition-colors cursor-pointer ${
-                    selectedRound === round.id 
-                      ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800' 
-                      : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
-                  }`}
-                  onClick={() => setSelectedRound(round.id)}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className={`p-2 rounded-full ${
-                      selectedRound === round.id 
-                        ? 'bg-blue-100 dark:bg-blue-900' 
-                        : 'bg-gray-100 dark:bg-gray-800'
-                    }`}>
-                      <Calendar className={`h-4 w-4 ${
-                        selectedRound === round.id 
-                          ? 'text-blue-600 dark:text-blue-400' 
-                          : 'text-gray-600 dark:text-gray-400'
-                      }`} />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">Ronda {round.round_number}</p>
-                      <p className="text-xs text-gray-500">
-                        {roundGames.length} {roundGames.length === 1 ? 'partida' : 'partidas'}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeleteRound(round.id, round.round_number)
-                    }}
-                    disabled={loading}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 ml-auto"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              )
-            })}
-          </div>
-        )}
+        <RoundsList
+          rounds={rounds}
+          games={games}
+          selectedRound={selectedRound}
+          onSelectRound={setSelectedRound}
+          loading={loading}
+          onDeleteRound={handleDeleteRound}
+        />
       </div>
 
       <Separator />
@@ -672,60 +518,13 @@ export default function RoundsGamesManagement({
               </div>
             </div>
 
-            {/* Matches List */}
-            {matches.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium mb-2">No hay enfrentamientos en esta ronda</p>
-                <p className="text-sm">Los enfrentamientos se configuran al crear la ronda</p>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {matches.map((match) => (
-                  <Card key={match.id}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">
-                          {match.team_a.name} vs {match.team_b.name}
-                        </CardTitle>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditMatchDialog(match)}
-                            disabled={loading}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteMatch(match)}
-                            disabled={loading}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-                        <span>Equipo A: {match.team_a.name}</span>
-                        <span>vs</span>
-                        <span>Equipo B: {match.team_b.name}</span>
-                      </div>
-                      <div className="mt-2 text-xs text-gray-500">
-                        {(() => {
-                          const matchGames = games.filter(game => game.matchId === match.id)
-                          return `${matchGames.length} ${matchGames.length === 1 ? 'partida' : 'partidas'}`
-                        })()}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+            <MatchesList
+              matches={matches}
+              games={games}
+              loading={loading}
+              onEditMatch={openEditMatchDialog}
+              onDeleteMatch={handleDeleteMatch}
+            />
           </div>
 
           <Separator />
@@ -751,534 +550,67 @@ export default function RoundsGamesManagement({
           </div>
 
           {selectedRound > 0 && (
-            <Dialog open={isAddGameDialogOpen} onOpenChange={setIsAddGameDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Nueva Partida
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Agregar Nueva Partida</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pr-2">
-                  {tournamentType === 'team' && (
-                    <div className="p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg">
-                      <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-2">
-                        Información sobre Partidas por Equipos
-                      </p>
-                      <p className="text-sm text-blue-700 dark:text-blue-300">
-                        En torneos por equipos, las partidas se organizan por enfrentamientos entre clubes. 
-                        Cada enfrentamiento puede tener múltiples partidas individuales.
-                      </p>
-                    </div>
-                  )}
-
-                  {tournamentType === 'team' && (
-                    <div>
-                      <Label htmlFor="match">Enfrentamiento *</Label>
-                      <Select value={gameFormData.match_id?.toString() || ''} onValueChange={(value) => {
-                        const matchId = parseInt(value)
-                        setGameFormData(prev => ({
-                          ...prev,
-                          match_id: matchId,
-                          white_player_id: 0,
-                          black_player_id: 0
-                        }))
-                      }}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar enfrentamiento" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {matches.map((match) => (
-                            <SelectItem key={match.id} value={match.id.toString()}>
-                              {match.team_a.name} vs {match.team_b.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {matches.length === 0 && (
-                        <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-950/50 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                          <div className="flex items-start gap-2">
-                            <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-                            <div>
-                              <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
-                                No hay enfrentamientos configurados
-                              </p>
-                              <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                                Para torneos por equipos, primero debes configurar los enfrentamientos entre clubes 
-                                al crear la ronda.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      {gameFormData.match_id && (
-                        <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-md">
-                          <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-1">
-                            Asignación de Colores por Mesa
-                          </p>
-                          {(() => {
-                            const matchInfo = getSelectedMatchInfo()
-                            return matchInfo ? (
-                              <p className="text-sm text-blue-700 dark:text-blue-300">
-                                Mesa {gameFormData.board_number || 1}: <strong>{matchInfo.whiteTeam}</strong> juega con blancas, <strong>{matchInfo.blackTeam}</strong> juega con negras
-                              </p>
-                            ) : null
-                          })()}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="white_player">Jugador Blancas *</Label>
-                      <Select value={gameFormData.white_player_id.toString()} onValueChange={(value) => 
-                        setGameFormData(prev => ({ ...prev, white_player_id: parseInt(value) }))
-                      }>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar jugador" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getWhitePlayerOptions().map((player) => (
-                            <SelectItem key={player.id} value={player.id.toString()}>
-                              {player.full_name} {player.rating && `(${player.rating})`}
-                              {player.club && ` - ${player.club.name}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="black_player">Jugador Negras *</Label>
-                      <Select value={gameFormData.black_player_id.toString()} onValueChange={(value) => 
-                        setGameFormData(prev => ({ ...prev, black_player_id: parseInt(value) }))
-                      }>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar jugador" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getBlackPlayerOptions().map((player) => (
-                            <SelectItem key={player.id} value={player.id.toString()}>
-                              {player.full_name} {player.rating && `(${player.rating})`}
-                              {player.club && ` - ${player.club.name}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="board_number">Número de Mesa</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={gameFormData.board_number || ''}
-                        onChange={(e) => {
-                          const boardNumber = parseInt(e.target.value) || 1
-                          setGameFormData(prev => ({ 
-                            ...prev, 
-                            board_number: boardNumber,
-                            // Reset player selections when board changes (affects color assignment)
-                            ...(tournamentType === 'team' && prev.match_id && {
-                              white_player_id: 0,
-                              black_player_id: 0
-                            })
-                          }))
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="result">Resultado</Label>
-                      <Select value={gameFormData.result} onValueChange={(value: '1-0' | '0-1' | '1/2-1/2' | '*') => 
-                        setGameFormData(prev => ({ ...prev, result: value }))
-                      }>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="*">Sin resultado</SelectItem>
-                          <SelectItem value="1-0">1-0 (Ganan blancas)</SelectItem>
-                          <SelectItem value="0-1">0-1 (Ganan negras)</SelectItem>
-                          <SelectItem value="1/2-1/2">1/2-1/2 (Tablas)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="game_date">Fecha</Label>
-                      <Input
-                        type="date"
-                        value={gameFormData.game_date || ''}
-                        onChange={(e) => setGameFormData(prev => ({ ...prev, game_date: e.target.value }))}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="game_time">Hora</Label>
-                      <Input
-                        type="time"
-                        value={gameFormData.game_time || ''}
-                        onChange={(e) => setGameFormData(prev => ({ ...prev, game_time: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="pgn">PGN</Label>
-                    <Textarea
-                      placeholder="Notación de la partida..."
-                      value={gameFormData.pgn || ''}
-                      onChange={(e) => setGameFormData(prev => ({ ...prev, pgn: e.target.value }))}
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-white dark:bg-gray-950 border-t mt-6 -mx-6 px-6 py-4">
-                    <Button variant="outline" onClick={() => setIsAddGameDialogOpen(false)}>
-                      Cancelar
-                    </Button>
-                    <Button 
-                      onClick={handleAddGame} 
-                      disabled={loading || (tournamentType === 'team' && matches.length === 0)}
-                    >
-                      {loading ? 'Agregando...' : 'Agregar Partida'}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <Button className="flex items-center gap-2" onClick={() => setIsAddGameDialogOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Nueva Partida
+            </Button>
           )}
         </div>
 
-        {/* Games List */}
-        {selectedRound === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Crown className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p className="text-lg font-medium mb-2">Selecciona una ronda</p>
-            <p className="text-sm">Elige una ronda para ver y gestionar sus partidas</p>
-          </div>
-        ) : currentRoundGames.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Crown className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p className="text-lg font-medium mb-2">No hay partidas en esta ronda</p>
-            <p className="text-sm">Agrega la primera partida para comenzar</p>
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {currentRoundGames.map((game) => (
-              <Card key={game.id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <CardTitle className="text-base">
-                        Mesa {game.board || 'N/A'}
-                      </CardTitle>
-                      <Badge className={getResultBadgeClass(game.result)}>
-                        {game.result === '*' ? 'En juego' : game.result}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditGameDialog(game)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteGame(game)}
-                        disabled={loading}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="font-medium">{game.white}</p>
-                      {game.whiteRating && (
-                        <p className="text-sm text-gray-500">Rating: {game.whiteRating}</p>
-                      )}
-                      {game.whiteTeam && (
-                        <p className="text-sm text-blue-600 dark:text-blue-400">{game.whiteTeam}</p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium">{game.black}</p>
-                      {game.blackRating && (
-                        <p className="text-sm text-gray-500">Rating: {game.blackRating}</p>
-                      )}
-                      {game.blackTeam && (
-                        <p className="text-sm text-blue-600 dark:text-blue-400">{game.blackTeam}</p>
-                      )}
-                    </div>
-                  </div>
-                  {(game.date || game.time) && (
-                    <div className="mt-2 text-sm text-gray-500">
-                      {game.date} {game.time}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Edit Game Dialog */}
-        <Dialog open={isEditGameDialogOpen} onOpenChange={setIsEditGameDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Editar Partida</DialogTitle>
-            </DialogHeader>
-            {editingGame && (
-              <div className="space-y-4 pr-2">
-                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Partida Original:</p>
-                    <p className="font-medium">Blancas: {editingGame.white}</p>
-                    {editingGame.whiteRating && (
-                      <p className="text-sm text-gray-500">Rating: {editingGame.whiteRating}</p>
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium">Negras: {editingGame.black}</p>
-                    {editingGame.blackRating && (
-                      <p className="text-sm text-gray-500">Rating: {editingGame.blackRating}</p>
-                    )}
-                  </div>
-                </div>
-
-                {tournamentType === 'team' && gameFormData.match_id && (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-md">
-                    <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-1">
-                      Asignación de Colores por Mesa
-                    </p>
-                    {(() => {
-                      const matchInfo = getSelectedMatchInfo()
-                      return matchInfo ? (
-                        <p className="text-sm text-blue-700 dark:text-blue-300">
-                          Mesa {gameFormData.board_number || 1}: <strong>{matchInfo.whiteTeam}</strong> juega con blancas, <strong>{matchInfo.blackTeam}</strong> juega con negras
-                        </p>
-                      ) : null
-                    })()}
-                  </div>
-                )}
-
-                {/* Player Selection */}
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="edit_white_player">Jugador Blancas *</Label>
-                    <Select 
-                      value={gameFormData.white_player_id.toString()} 
-                      onValueChange={(value) => 
-                        setGameFormData(prev => ({ ...prev, white_player_id: parseInt(value) }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar jugador" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getWhitePlayerOptions().map((player) => (
-                          <SelectItem key={player.id} value={player.id.toString()}>
-                            {player.full_name} {player.rating && `(${player.rating})`}
-                            {player.club && ` - ${player.club.name}`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="edit_black_player">Jugador Negras *</Label>
-                    <Select 
-                      value={gameFormData.black_player_id.toString()} 
-                      onValueChange={(value) => 
-                        setGameFormData(prev => ({ ...prev, black_player_id: parseInt(value) }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar jugador" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getBlackPlayerOptions().map((player) => (
-                          <SelectItem key={player.id} value={player.id.toString()}>
-                            {player.full_name} {player.rating && `(${player.rating})`}
-                            {player.club && ` - ${player.club.name}`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="result">Resultado</Label>
-                    <Select value={gameFormData.result} onValueChange={(value: '1-0' | '0-1' | '1/2-1/2' | '*') => 
-                      setGameFormData(prev => ({ ...prev, result: value }))
-                    }>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="*">Sin resultado</SelectItem>
-                        <SelectItem value="1-0">1-0 (Ganan blancas)</SelectItem>
-                        <SelectItem value="0-1">0-1 (Ganan negras)</SelectItem>
-                        <SelectItem value="1/2-1/2">1/2-1/2 (Tablas)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="game_date">Fecha</Label>
-                    <Input
-                      type="date"
-                      value={gameFormData.game_date || ''}
-                      onChange={(e) => setGameFormData(prev => ({ ...prev, game_date: e.target.value }))}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="game_time">Hora</Label>
-                    <Input
-                      type="time"
-                      value={gameFormData.game_time || ''}
-                      onChange={(e) => setGameFormData(prev => ({ ...prev, game_time: e.target.value }))}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="pgn">PGN</Label>
-                  <Textarea
-                    placeholder="Notación de la partida..."
-                    value={gameFormData.pgn || ''}
-                    onChange={(e) => setGameFormData(prev => ({ ...prev, pgn: e.target.value }))}
-                    rows={4}
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-white dark:bg-gray-950 border-t mt-6 -mx-6 px-6 py-4">
-                  <Button variant="outline" onClick={() => setIsEditGameDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleEditGame} disabled={loading}>
-                    {loading ? 'Guardando...' : 'Guardar Cambios'}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Match Dialog */}
-        <Dialog open={isEditMatchDialogOpen} onOpenChange={setIsEditMatchDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Editar Enfrentamiento</DialogTitle>
-            </DialogHeader>
-            {editingMatch && (
-              <div className="space-y-4">
-                <div className="p-4 bg-yellow-50 dark:bg-yellow-950/50 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
-                        ⚠️ Advertencia Importante
-                      </p>
-                      <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                        Al modificar este enfrentamiento, <strong>todas las partidas</strong> asociadas 
-                        a este enfrentamiento serán eliminadas automáticamente para mantener la coherencia 
-                        de los datos.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Enfrentamiento Original:</p>
-                  <p className="font-medium">
-                    {editingMatch.team_a.name} vs {editingMatch.team_b.name}
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="edit_club_a">Equipo A *</Label>
-                    <Select 
-                      value={matchFormData.team_a_id.toString()} 
-                      onValueChange={(value) => 
-                        setMatchFormData(prev => ({ ...prev, team_a_id: parseInt(value) }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar Equipo A" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {teams.map((team) => (
-                          <SelectItem key={team.id} value={team.id.toString()}>
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="edit_club_b">Equipo B *</Label>
-                    <Select 
-                      value={matchFormData.team_b_id.toString()} 
-                      onValueChange={(value) => 
-                        setMatchFormData(prev => ({ ...prev, team_b_id: parseInt(value) }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar Equipo B" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {teams.map((team) => (
-                          <SelectItem key={team.id} value={team.id.toString()}>
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      setIsEditMatchDialogOpen(false)
-                      setEditingMatch(null)
-                      resetMatchForm()
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleEditMatch} disabled={loading}>
-                    {loading ? 'Guardando...' : 'Guardar Cambios'}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        <GamesList
+          selectedRound={selectedRound}
+          games={currentRoundGames}
+          loading={loading}
+          onEditGame={openEditGameDialog}
+          onDeleteGame={handleDeleteGame}
+        />
       </div>
+
+      {/* Add Game Dialog */}
+      <GameFormDialog
+        mode="add"
+        open={isAddGameDialogOpen}
+        onOpenChange={setIsAddGameDialogOpen}
+        tournamentType={tournamentType}
+        gameFormData={gameFormData}
+        setGameFormData={setGameFormData}
+        matches={matches}
+        players={players}
+        loading={loading}
+        onSubmit={handleAddGame}
+      />
+
+      {/* Edit Game Dialog */}
+      <GameFormDialog
+        mode="edit"
+        open={isEditGameDialogOpen}
+        onOpenChange={setIsEditGameDialogOpen}
+        tournamentType={tournamentType}
+        gameFormData={gameFormData}
+        setGameFormData={setGameFormData}
+        matches={matches}
+        players={players}
+        editingGame={editingGame}
+        loading={loading}
+        onSubmit={handleEditGame}
+      />
+
+      {/* Edit Match Dialog */}
+      <MatchFormDialog
+        open={isEditMatchDialogOpen}
+        onOpenChange={setIsEditMatchDialogOpen}
+        editingMatch={editingMatch}
+        teams={teams}
+        matchFormData={matchFormData}
+        setMatchFormData={setMatchFormData}
+        loading={loading}
+        onSubmit={handleEditMatch}
+        onCancel={() => {
+          setIsEditMatchDialogOpen(false)
+          setEditingMatch(null)
+          resetMatchForm()
+        }}
+      />
     </div>
   )
 }
