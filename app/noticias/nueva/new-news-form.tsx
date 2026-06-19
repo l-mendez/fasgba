@@ -3,9 +3,8 @@
 import React, { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { ArrowLeft, Save, AlertCircle } from "lucide-react"
+import { AlertCircle } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -18,6 +17,7 @@ import { processNewsContent } from "@/lib/news-content-utils"
 import { NEWS_CATEGORIES, createEmptyTextBlock, type NewsBlockContent } from "@/components/news/types"
 import { NewsContentBlocksEditor } from "@/components/news/news-content-blocks-editor"
 import { useNewsContentBlocks } from "@/components/news/use-news-content-blocks"
+import { NewsFormHeader } from "@/components/news/news-form-header"
 
 interface Club {
   id: number
@@ -162,20 +162,14 @@ export function NewNewsForm({ userClubs, isAdmin, defaultEntityId }: NewNewsForm
 
   return (
     <div className="flex flex-col gap-8 p-8">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push(backPath)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-terracotta">Nueva Noticia</h1>
-          </div>
-        </div>
-        <Button onClick={handleSubmit} disabled={isSaving}>
-          <Save className="mr-2 h-4 w-4" />
-          {isSaving ? 'Creando...' : 'Crear Noticia'}
-        </Button>
-      </div>
+      <NewsFormHeader
+        title="Nueva Noticia"
+        saveLabel="Crear Noticia"
+        savingLabel="Creando..."
+        isSaving={isSaving}
+        onBack={() => router.push(backPath)}
+        onSubmit={handleSubmit}
+      />
 
       {uploadProgress.isUploading && (
         <Alert>
