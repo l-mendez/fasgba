@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { apiSuccess, handleError, notFoundError, validationError, unauthorizedError, forbiddenError, noContent } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { z } from 'zod'
-import { isUserClubAdmin } from '@/lib/clubUtils'
+import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
 
 // Create a Supabase client for server-side operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -29,54 +29,6 @@ const updateMatchSchema = z.object({
   path: ['team_b_id']
 })
 
-// Helper auth function
-async function authenticateAndAuthorize(request: NextRequest, tournamentId: number) {
-  const authHeader = request.headers.get('authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new Error('UNAUTHORIZED')
-  }
-  const token = authHeader.substring(7)
-  const { data: { user }, error: authError } = await serverSupabase.auth.getUser(token)
-  if (authError || !user) {
-    throw new Error('UNAUTHORIZED')
-  }
-
-  // Site admin?
-  const { data: admin, error: adminError } = await serverSupabase
-    .from('admins')
-    .select('auth_id')
-    .eq('auth_id', user.id)
-    .single()
-
-  const isSiteAdmin = !adminError && !!admin
-  if (isSiteAdmin) return user
-
-  // If not site admin, must be club admin of tournament club
-  const { data: tournament, error: tErr } = await serverSupabase
-    .from('tournaments')
-    .select('created_by_club_id')
-    .eq('id', tournamentId)
-    .single()
-
-  if (tErr || !tournament) {
-    throw new Error('TOURNAMENT_NOT_FOUND')
-  }
-
-  if (tournament.created_by_club_id) {
-    const permitted = await isUserClubAdmin(tournament.created_by_club_id, user.id)
-    if (!permitted) throw new Error('FORBIDDEN')
-  } else {
-    // Tournament without club: user must admin at least one club
-    const { data: userClubs, error: clubsErr } = await serverSupabase
-      .from('club_admins')
-      .select('club_id')
-      .eq('auth_id', user.id)
-    if (clubsErr || !userClubs || userClubs.length === 0) {
-      throw new Error('FORBIDDEN')
-    }
-  }
-  return user
-}
 
 // PATCH /api/tournaments/[id]/rounds/[roundId]/matches/[matchId] - Update a match
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
