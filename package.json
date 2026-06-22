@@ -89,7 +89,7 @@
     "dotenv": "^16.5.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.0.0",
-    "postcss": "^8.5.10",
+    "postcss": "^8.5.15",
     "tailwindcss": "^4.2.1",
     "tsx": "^4.19.4",
     "typescript": "^5.0.0"
@@ -97,7 +97,7 @@
   "overrides": {
     "serialize-javascript": "^7.0.3",
     "vite": "^7.3.2",
-    "postcss": "^8.5.10"
+    "postcss": "^8.5.15"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
