@@ -92,7 +92,7 @@
     "postcss": "^8.5.10",
     "tailwindcss": "^4.2.1",
     "tsx": "^4.19.4",
-    "typescript": "^5.0.0"
+    "typescript": "^6.0.3"
   },
   "overrides": {
     "serialize-javascript": "^7.0.3",
