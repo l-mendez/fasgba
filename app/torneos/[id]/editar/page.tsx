@@ -285,7 +285,7 @@ export default async function EditarTorneoPage({ params }: PageProps) {
         parseInt(id, 10),
         (tournament.tournament_type as 'individual' | 'team') || 'individual'
       )
-      // Flatten the games into a single array for the GameManagement component
+      // Flatten the games into a single array for the rounds & games management UI
       initialGames = Object.values(gamesByRound).flat()
     } catch (gamesError) {
       console.error('Error prefetching tournament games:', gamesError)
