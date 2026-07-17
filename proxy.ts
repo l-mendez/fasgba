@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
-const ALLOWED_COUNTRY = 'AR'
+const ALLOWED_COUNTRIES = new Set(['AR', 'BR'])
 
 // Paths that should skip session middleware for better caching
 const CACHEABLE_PATHS = ['/noticias', '/clubes', '/ranking', '/torneos', '/documentos']
@@ -26,7 +26,7 @@ function createBlockedResponse(): NextResponse {
 <body>
   <div class="container">
     <h1>Acceso restringido</h1>
-    <p>Este sitio está disponible únicamente para usuarios en Argentina.</p>
+    <p>Este sitio está disponible únicamente para usuarios en Argentina y Brasil.</p>
   </div>
 </body>
 </html>`
@@ -41,7 +41,7 @@ export async function proxy(request: NextRequest) {
   // Geo-blocking: Vercel sets x-vercel-ip-country on all requests (free tier).
   // Header is absent in local dev — allow those requests through.
   const country = request.headers.get('x-vercel-ip-country')
-  if (country && country !== ALLOWED_COUNTRY) {
+  if (country && !ALLOWED_COUNTRIES.has(country)) {
     return createBlockedResponse()
   }
 
