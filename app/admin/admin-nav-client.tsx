@@ -8,6 +8,7 @@ import {
   BarChart3,
   FileText,
   FolderOpen,
+  Globe,
   GraduationCap,
   Home,
   LayoutDashboard,
@@ -99,6 +100,12 @@ const navItems: Array<{
     label: "Árbitros",
     icon: Award,
     isActive: (pathname) => pathname.startsWith("/admin/arbitros"),
+  },
+  {
+    href: "/admin/paises",
+    label: "Países",
+    icon: Globe,
+    isActive: (pathname) => pathname.startsWith("/admin/paises"),
   },
 ]
 
