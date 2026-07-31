@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import Link from "next/link"
-import { Award, FileText, FolderOpen, GraduationCap, Home, Shield, Trophy, Users } from "lucide-react"
+import { Award, FileText, FolderOpen, Globe, GraduationCap, Home, Shield, Trophy, Users } from "lucide-react"
 
 import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
 import { AdminPageHeader } from "@/components/admin-page-header"
@@ -327,6 +327,12 @@ async function AdminDashboardContent() {
                 <Link href="/admin/arbitros">
                   <Award className="mr-2 h-4 w-4" />
                   Gestionar árbitros
+                </Link>
+              </Button>
+              <Button asChild className="w-full justify-start" variant="outline">
+                <Link href="/admin/paises">
+                  <Globe className="mr-2 h-4 w-4" />
+                  Gestionar países
                 </Link>
               </Button>
             </div>
