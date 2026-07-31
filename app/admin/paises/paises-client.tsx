@@ -67,13 +67,18 @@ export function AdminPaisesClient({ initialOverview, initialLogs }: PaisesClient
     return () => clearInterval(interval)
   }, [hasCooldowns])
 
+  // Never surfaced as an error: the change already succeeded, this only re-syncs.
   const refresh = async () => {
-    const [nextOverview, nextLogs] = await Promise.all([
-      apiCall('/api/admin/countries'),
-      apiCall('/api/admin/countries/logs'),
-    ])
-    setOverview(nextOverview)
-    setLogs(nextLogs.logs)
+    try {
+      const [nextOverview, nextLogs] = await Promise.all([
+        apiCall('/api/admin/countries'),
+        apiCall('/api/admin/countries/logs'),
+      ])
+      setOverview(nextOverview)
+      setLogs(nextLogs.logs)
+    } catch {
+      toast.info('No se pudo actualizar la vista. Recargá la página.')
+    }
   }
 
   const applyToggle = async (country: CountryAccessOverviewItem, enabled: boolean) => {
