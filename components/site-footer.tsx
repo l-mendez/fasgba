@@ -1,6 +1,7 @@
 import Link from "next/link"
-import { CastleIcon as ChessKnight, Facebook, Instagram, Mail, MapPin, Phone, Twitter } from "lucide-react"
+import { CastleIcon as ChessKnight, Mail, Phone } from "lucide-react"
 
+import { Facebook, Instagram } from "@/components/icons/social-icons"
 import { Button } from "@/components/ui/button"
 
 export function SiteFooter() {
