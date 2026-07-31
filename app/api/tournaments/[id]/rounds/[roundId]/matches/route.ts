@@ -140,7 +140,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       validated = createMatchSchema.parse(body)
     } catch (zErr) {
       if (zErr instanceof z.ZodError) {
-        const msg = zErr.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+        const msg = zErr.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
         return validationError(`Validation error: ${msg}`)
       }
       throw zErr

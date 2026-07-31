@@ -145,7 +145,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return apiSuccess(player)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessage = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
+      const errorMessage = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
       return validationError(`Validation error: ${errorMessage}`)
     }
     return handleError(error)

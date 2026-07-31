@@ -66,7 +66,7 @@ export const tournamentQuerySchema = z.object({
       throw new Error('Page must be a positive number')
     }
     return num
-  }).optional().default('1'),
+  }).optional().default(1),
   
   limit: z.string().transform((val) => {
     const num = parseInt(val, 10)
@@ -74,7 +74,7 @@ export const tournamentQuerySchema = z.object({
       throw new Error(`Limit must be between 1 and ${API_CONSTANTS.MAX_PAGE_SIZE}`)
     }
     return num
-  }).optional().default(String(API_CONSTANTS.DEFAULT_PAGE_SIZE)),
+  }).optional().default(API_CONSTANTS.DEFAULT_PAGE_SIZE),
   
   orderBy: z.enum(API_CONSTANTS.TOURNAMENT_ORDER_BY).optional().default('start_date'),
   
@@ -99,7 +99,7 @@ export const singleTournamentQuerySchema = z.object({
 export function validateTournamentId(id: string): number {
   const result = tournamentIdSchema.safeParse({ id })
   if (!result.success) {
-    throw new Error(result.error.errors[0]?.message || 'Invalid tournament ID')
+    throw new Error(result.error.issues[0]?.message || 'Invalid tournament ID')
   }
   return result.data.id
 }
@@ -107,7 +107,7 @@ export function validateTournamentId(id: string): number {
 export function validateCreateTournament(data: unknown) {
   const result = createTournamentSchema.safeParse(data)
   if (!result.success) {
-    const errorMessage = result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
+    const errorMessage = result.error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
     throw new Error(`Validation error: ${errorMessage}`)
   }
   return result.data
@@ -116,7 +116,7 @@ export function validateCreateTournament(data: unknown) {
 export function validateUpdateTournament(data: unknown) {
   const result = updateTournamentSchema.safeParse(data)
   if (!result.success) {
-    const errorMessage = result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
+    const errorMessage = result.error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
     throw new Error(`Validation error: ${errorMessage}`)
   }
   return result.data
@@ -126,7 +126,7 @@ export function validateTournamentQuery(searchParams: URLSearchParams) {
   const params = Object.fromEntries(searchParams.entries())
   const result = tournamentQuerySchema.safeParse(params)
   if (!result.success) {
-    const errorMessage = result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
+    const errorMessage = result.error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
     throw new Error(`Query validation error: ${errorMessage}`)
   }
   return result.data
@@ -136,7 +136,7 @@ export function validateSingleTournamentQuery(searchParams: URLSearchParams) {
   const params = Object.fromEntries(searchParams.entries())
   const result = singleTournamentQuerySchema.safeParse(params)
   if (!result.success) {
-    const errorMessage = result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
+    const errorMessage = result.error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
     throw new Error(`Query validation error: ${errorMessage}`)
   }
   return result.data

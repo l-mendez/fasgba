@@ -8,7 +8,7 @@ export const arbitroSchema = z.object({
   club_id: z.number().int().positive().nullable(),
   birth_year: z.number().int().min(1900).max(new Date().getFullYear()).nullable(),
   bio: z.string().max(2000, 'La reseña es demasiado larga').nullable(),
-  email: z.string().email('Email inválido').max(255).nullable().optional().or(z.literal('')).transform(v => v || null),
+  email: z.email('Email inválido').max(255).nullable().optional().or(z.literal('')).transform(v => v || null),
   phone: z.string().max(50, 'Teléfono demasiado largo').nullable().optional().or(z.literal('')).transform(v => v || null),
 })
 
@@ -31,7 +31,7 @@ export function validateCreateArbitro(data: unknown) {
     return createArbitroSchema.parse(data)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error(`Validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      const validationError = new Error(`Validation failed: ${error.issues.map(e => e.message).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }
@@ -44,7 +44,7 @@ export function validateUpdateArbitro(data: unknown) {
     return updateArbitroSchema.parse(data)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error(`Validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      const validationError = new Error(`Validation failed: ${error.issues.map(e => e.message).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }

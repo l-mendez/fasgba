@@ -87,7 +87,7 @@ export function validateNewsId(id: string): number {
     return newsIdSchema.parse(id)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error(`News ID validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      const validationError = new Error(`News ID validation failed: ${error.issues.map(e => e.message).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }
@@ -100,7 +100,7 @@ export function validateCreateNews(data: unknown) {
     return createNewsSchema.parse(data)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error(`Create news validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      const validationError = new Error(`Create news validation failed: ${error.issues.map(e => e.message).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }
@@ -113,7 +113,7 @@ export function validateUpdateNews(data: unknown) {
     return updateNewsSchema.parse(data)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error(`Update news validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      const validationError = new Error(`Update news validation failed: ${error.issues.map(e => e.message).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }
@@ -137,7 +137,7 @@ export function validateNewsQuery(searchParams: URLSearchParams) {
     return newsQuerySchema.parse(params)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error(`Query validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      const validationError = new Error(`Query validation failed: ${error.issues.map(e => e.message).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }

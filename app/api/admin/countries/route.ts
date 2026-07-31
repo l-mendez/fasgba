@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     const result = toggleSchema.safeParse(await request.json())
     if (!result.success) {
-      return validationError(result.error.errors[0]?.message || 'Datos inválidos')
+      return validationError(result.error.issues[0]?.message || 'Datos inválidos')
     }
 
     const code = result.data.country_code.toUpperCase()

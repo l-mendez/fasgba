@@ -6,7 +6,7 @@ export const clubSchema = z.object({
   name: z.string().min(1, 'Club name is required').max(255, 'Club name too long'),
   address: z.string().max(500, 'Address too long').nullable(),
   telephone: z.string().max(50, 'Telephone too long').nullable(),
-  mail: z.string().email('Invalid email format').max(255, 'Email too long').nullable(),
+  mail: z.email('Invalid email format').max(255, 'Email too long').nullable(),
   schedule: z.string().max(500, 'Schedule too long').nullable(),
   image: z.string().nullable(),
 })
@@ -57,7 +57,7 @@ export function validateCreateClub(data: unknown) {
     return createClubSchema.parse(data)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error(`Validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      const validationError = new Error(`Validation failed: ${error.issues.map(e => e.message).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }
@@ -70,7 +70,7 @@ export function validateUpdateClub(data: unknown) {
     return updateClubSchema.parse(data)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error(`Validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      const validationError = new Error(`Validation failed: ${error.issues.map(e => e.message).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }
@@ -88,7 +88,7 @@ export function validateClubQuery(searchParams: URLSearchParams) {
     return clubQuerySchema.parse(params)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error(`Query validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      const validationError = new Error(`Query validation failed: ${error.issues.map(e => e.message).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }
@@ -130,7 +130,7 @@ export function validateClubNewsQuery(searchParams: URLSearchParams) {
     return clubNewsQuerySchema.parse(params)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error(`Query validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      const validationError = new Error(`Query validation failed: ${error.issues.map(e => e.message).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }

@@ -24,7 +24,7 @@ export const updatePasswordSchema = z.object({
       const result = validatePassword(password)
       if (!result.valid) {
         for (const error of result.errors) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, message: error })
+          ctx.addIssue({ code: 'custom', message: error })
         }
       }
     }),
@@ -53,7 +53,7 @@ export function validateUpdateUserProfile(data: unknown) {
     return updateUserProfileSchema.parse(data)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error(`Validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      const validationError = new Error(`Validation failed: ${error.issues.map(e => e.message).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }
@@ -66,7 +66,7 @@ export function validateUpdatePassword(data: unknown) {
     return updatePasswordSchema.parse(data)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error(`Validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      const validationError = new Error(`Validation failed: ${error.issues.map(e => e.message).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }
@@ -92,7 +92,7 @@ export function validateFileUpload(file: any) {
     return fileUploadSchema.parse({ file }).file
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error(`File validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      const validationError = new Error(`File validation failed: ${error.issues.map(e => e.message).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }
