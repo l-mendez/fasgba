@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
-const ALLOWED_COUNTRIES = new Set(['AR', 'BR'])
+const ALLOWED_COUNTRIES = new Set(['AR', 'BR', 'CO'])
 
 // Paths that should skip session middleware for better caching
 const CACHEABLE_PATHS = ['/noticias', '/clubes', '/ranking', '/torneos', '/documentos']
@@ -26,7 +26,7 @@ function createBlockedResponse(): NextResponse {
 <body>
   <div class="container">
     <h1>Acceso restringido</h1>
-    <p>Este sitio está disponible únicamente para usuarios en Argentina y Brasil.</p>
+    <p>Este sitio no está disponible en tu región.</p>
   </div>
 </body>
 </html>`
