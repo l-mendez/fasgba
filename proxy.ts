@@ -1,13 +1,75 @@
-import { type NextRequest, NextResponse } from 'next/server'
+import { type NextFetchEvent, type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
-const ALLOWED_COUNTRIES = new Set(['AR', 'BR', 'CO'])
+// Countries are managed from /admin/paises (public.country_access). This list
+// is only used until the first successful fetch, or if Supabase is unreachable.
+const FALLBACK_ALLOWED_COUNTRIES = new Set(['AR', 'BR', 'CO'])
+const ALLOWLIST_TTL_MS = 60_000
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 // Paths that should skip session middleware for better caching
 const CACHEABLE_PATHS = ['/noticias', '/clubes', '/ranking', '/torneos', '/documentos']
 
 // Public API routes that can be cached at CDN level
 const CACHEABLE_API_PATHS = ['/api/clubs', '/api/news', '/api/tournaments', '/api/ranking']
+
+let cachedAllowedCountries: Set<string> | null = null
+let allowlistFetchedAt = 0
+
+function supabaseHeaders(): Record<string, string> {
+  return {
+    apikey: SUPABASE_ANON_KEY as string,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+  }
+}
+
+/**
+ * Enabled country codes, cached per edge instance for 60s. On failure the last
+ * known list is kept (or the fallback), so the site never becomes unreachable.
+ */
+async function getAllowedCountries(): Promise<Set<string>> {
+  const isFresh = cachedAllowedCountries && Date.now() - allowlistFetchedAt < ALLOWLIST_TTL_MS
+  if (isFresh) return cachedAllowedCountries as Set<string>
+
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return cachedAllowedCountries ?? FALLBACK_ALLOWED_COUNTRIES
+  }
+
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/country_access?select=country_code&enabled=eq.true`,
+      { headers: supabaseHeaders(), cache: 'no-store' }
+    )
+
+    if (!response.ok) throw new Error(`country_access fetch failed: ${response.status}`)
+
+    const rows: Array<{ country_code: string }> = await response.json()
+    const codes = new Set(rows.map((row) => row.country_code))
+    codes.add('AR') // Argentina is always allowed.
+    cachedAllowedCountries = codes
+  } catch {
+    cachedAllowedCountries = cachedAllowedCountries ?? FALLBACK_ALLOWED_COUNTRIES
+  }
+
+  // Stamped on failure too so a broken fetch isn't retried on every request.
+  allowlistFetchedAt = Date.now()
+  return cachedAllowedCountries
+}
+
+/** Fire-and-forget per-country daily counters. */
+function recordTraffic(country: string, blocked: boolean, event?: NextFetchEvent): void {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return
+
+  const pending = fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_country_traffic`, {
+    method: 'POST',
+    headers: { ...supabaseHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_country: country, p_blocked: blocked }),
+  }).catch(() => {})
+
+  event?.waitUntil?.(pending)
+}
 
 function createBlockedResponse(): NextResponse {
   const html = `<!DOCTYPE html>
@@ -37,12 +99,23 @@ function createBlockedResponse(): NextResponse {
   })
 }
 
-export async function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest, event?: NextFetchEvent) {
   // Geo-blocking: Vercel sets x-vercel-ip-country on all requests (free tier).
   // Header is absent in local dev — allow those requests through.
   const country = request.headers.get('x-vercel-ip-country')
-  if (country && !ALLOWED_COUNTRIES.has(country)) {
-    return createBlockedResponse()
+
+  if (country) {
+    const allowedCountries = await getAllowedCountries()
+
+    if (!allowedCountries.has(country)) {
+      recordTraffic(country, true, event)
+      return createBlockedResponse()
+    }
+
+    // Only page views are counted, to keep the volume of RPC calls sane.
+    if (request.headers.get('sec-fetch-dest') === 'document') {
+      recordTraffic(country, false, event)
+    }
   }
 
   const { pathname } = request.nextUrl
