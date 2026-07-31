@@ -144,6 +144,72 @@ export type Database = {
         }
         Relationships: []
       }
+      country_access: {
+        Row: {
+          country_code: string
+          enabled: boolean
+          updated_at: string
+          updated_by_email: string | null
+        }
+        Insert: {
+          country_code: string
+          enabled?: boolean
+          updated_at?: string
+          updated_by_email?: string | null
+        }
+        Update: {
+          country_code?: string
+          enabled?: boolean
+          updated_at?: string
+          updated_by_email?: string | null
+        }
+        Relationships: []
+      }
+      country_access_log: {
+        Row: {
+          action: string
+          changed_by_email: string | null
+          country_code: string
+          created_at: string
+          id: number
+        }
+        Insert: {
+          action: string
+          changed_by_email?: string | null
+          country_code: string
+          created_at?: string
+          id?: number
+        }
+        Update: {
+          action?: string
+          changed_by_email?: string | null
+          country_code?: string
+          created_at?: string
+          id?: number
+        }
+        Relationships: []
+      }
+      country_traffic_daily: {
+        Row: {
+          allowed_count: number
+          blocked_count: number
+          country_code: string
+          day: string
+        }
+        Insert: {
+          allowed_count?: number
+          blocked_count?: number
+          country_code: string
+          day?: string
+        }
+        Update: {
+          allowed_count?: number
+          blocked_count?: number
+          country_code?: string
+          day?: string
+        }
+        Relationships: []
+      }
       course_creators: {
         Row: {
           course_id: number
@@ -986,6 +1052,10 @@ export type Database = {
       can_manage_tournament: {
         Args: { target_tournament_id: number; user_id: string }
         Returns: boolean
+      }
+      increment_country_traffic: {
+        Args: { p_blocked: boolean; p_country: string }
+        Returns: undefined
       }
       is_any_club_admin: { Args: { user_id: string }; Returns: boolean }
       is_club_admin: {

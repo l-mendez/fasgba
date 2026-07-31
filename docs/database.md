@@ -60,6 +60,22 @@ are scoped by RLS helpers such as `is_site_admin`, `is_club_admin`, and
 Server routes still perform authorization checks for UX and clear errors. RLS is
 the database backstop for direct Supabase client access.
 
+## Country Access
+
+Geo-blocking is data-driven and managed from `/admin/paises`:
+
+- `country_access`: allowlist of ISO alpha-2 codes. Public `select` policy so the
+  edge proxy can read it with the anon key; a missing row means blocked. The
+  `protect_argentina` trigger prevents disabling or deleting `AR`, even for the
+  service role.
+- `country_access_log`: audit trail of every toggle. Service-role only, and its
+  latest row per country is the source of truth for the 5-minute toggle cooldown.
+- `country_traffic_daily`: per-country daily allowed/blocked counters, written by
+  the `increment_country_traffic` RPC (`security definer`, granted to `anon`).
+
+`proxy.ts` caches the enabled codes for 60 seconds per edge instance and falls
+back to the last known list, so a Supabase outage never blocks the site.
+
 ## Types And DTOs
 
 Use three layers deliberately:

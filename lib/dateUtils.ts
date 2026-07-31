@@ -89,3 +89,28 @@ export function formatArgentinaCalendarDate(
   const pinned = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12))
   return formatInArgentina(pinned, options)
 }
+
+const RELATIVE_UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
+  ['year', 365 * 24 * 60 * 60 * 1000],
+  ['month', 30 * 24 * 60 * 60 * 1000],
+  ['day', 24 * 60 * 60 * 1000],
+  ['hour', 60 * 60 * 1000],
+  ['minute', 60 * 1000],
+]
+
+const relativeFormatter = new Intl.RelativeTimeFormat('es', { numeric: 'auto' })
+
+/**
+ * Formats an instant relative to now in Spanish, e.g. "hace 5 minutos".
+ */
+export function formatRelativeTimeEs(isoTimestamp: string, now: number = Date.now()) {
+  const diff = new Date(isoTimestamp).getTime() - now
+
+  for (const [unit, ms] of RELATIVE_UNITS) {
+    if (Math.abs(diff) >= ms) {
+      return relativeFormatter.format(Math.round(diff / ms), unit)
+    }
+  }
+
+  return relativeFormatter.format(Math.round(diff / 1000), 'second')
+}

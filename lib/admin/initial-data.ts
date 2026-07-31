@@ -4,6 +4,7 @@ import type { User } from "@supabase/supabase-js"
 import { notFound } from "next/navigation"
 
 import { requireAdminAction } from "@/lib/actions/auth"
+import { buildCountriesOverview, fetchCountryLogs } from "@/lib/admin/countryAccess"
 import { ADMIN_RANKINGS_PAGE_SIZE, getCachedAdminRankingSummaries, paginateRankings } from "@/lib/rankingStorage"
 import { ForbiddenError, UnauthorizedError } from "@/lib/middleware/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -428,4 +429,16 @@ export async function getAdminDocumentosInitialData(sortOption: SortOption = "cu
     totalDocuments: documentsResult.count || 0,
     categoryImportance,
   }
+}
+
+export async function getAdminPaisesInitialData() {
+  await requireAdminPageAccess()
+
+  const supabase = createAdminClient()
+  const [overview, logs] = await Promise.all([
+    buildCountriesOverview(supabase),
+    fetchCountryLogs(supabase),
+  ])
+
+  return { overview, logs }
 }
