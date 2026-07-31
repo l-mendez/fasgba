@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowDownWideNarrow, Ban, Globe, Loader2, Search } from 'lucide-react'
+import { ArrowDownWideNarrow, Ban, Globe, History, Loader2, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { CountryRow } from '@/app/admin/paises/country-row'
@@ -20,6 +20,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -156,7 +157,7 @@ export function AdminPaisesClient({ initialOverview, initialLogs }: PaisesClient
           </Badge>
         </div>
 
-        <PaisesMap countries={overview.countries} />
+        <PaisesMap countries={overview.countries} now={now} onToggle={handleToggle} />
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="relative flex-1">
@@ -189,6 +190,20 @@ export function AdminPaisesClient({ initialOverview, initialLogs }: PaisesClient
             <ArrowDownWideNarrow className="h-4 w-4" />
             Más bloqueados primero
           </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <History className="h-4 w-4" />
+                Historial
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Historial de cambios</DialogTitle>
+              </DialogHeader>
+              <PaisesLogs logs={logs} countries={overview.countries} onLogsChange={setLogs} />
+            </DialogContent>
+          </Dialog>
         </div>
 
         {continent !== 'all' && (
@@ -236,8 +251,6 @@ export function AdminPaisesClient({ initialOverview, initialLogs }: PaisesClient
             ))}
           </div>
         )}
-
-        <PaisesLogs logs={logs} countries={overview.countries} onLogsChange={setLogs} />
 
         <AlertDialog open={!!pendingChange} onOpenChange={(open) => !open && setPendingChange(null)}>
           <AlertDialogContent>

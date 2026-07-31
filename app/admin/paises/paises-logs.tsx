@@ -1,12 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { History, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { CountryAccessLogItem, CountryAccessOverviewItem } from '@/lib/admin/countryAccess'
 import { formatArgentinaDate } from '@/lib/dateUtils'
@@ -44,33 +43,27 @@ export function PaisesLogs({ logs, countries, onLogsChange }: PaisesLogsProps) {
   const changedCountries = countries.filter((item) => item.updatedAt)
 
   return (
-    <Card>
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <History className="h-4 w-4" />
-          Historial de cambios
-        </CardTitle>
-        <Select
-          value={country}
-          onValueChange={(value) => {
-            setCountry(value)
-            load(value, 0)
-          }}
-        >
-          <SelectTrigger className="sm:w-64">
-            <SelectValue placeholder="Todos los países" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los países</SelectItem>
-            {changedCountries.map((item) => (
-              <SelectItem key={item.code} value={item.code}>
-                {item.flag} {item.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <div className="space-y-3">
+      <Select
+        value={country}
+        onValueChange={(value) => {
+          setCountry(value)
+          load(value, 0)
+        }}
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Todos los países" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Todos los países</SelectItem>
+          {changedCountries.map((item) => (
+            <SelectItem key={item.code} value={item.code}>
+              {item.flag} {item.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <div className="max-h-[55vh] space-y-3 overflow-y-auto pr-1">
         {logs.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             Todavía no hay cambios registrados.
@@ -112,7 +105,7 @@ export function PaisesLogs({ logs, countries, onLogsChange }: PaisesLogsProps) {
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Cargar más'}
           </Button>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
