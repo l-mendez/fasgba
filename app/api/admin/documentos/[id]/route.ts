@@ -96,7 +96,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const updateResult = updateDocumentoSchema.safeParse(body)
 
     if (!updateResult.success) {
-      return validationError(updateResult.error.errors[0]?.message || 'Datos inválidos')
+      return validationError(updateResult.error.issues[0]?.message || 'Datos inválidos')
     }
 
     const adminSupabase = createAdminClient()

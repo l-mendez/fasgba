@@ -9,7 +9,7 @@ export const documentoIdSchema = z.string().transform((val, ctx) => {
   const num = parseInt(val, 10)
   if (isNaN(num) || num <= 0) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'El ID del documento debe ser un número positivo',
     })
     return z.NEVER
@@ -23,9 +23,7 @@ export const createDocumentoSchema = z.object({
     .string()
     .min(1, 'El nombre del documento es requerido')
     .max(255, 'El nombre no puede superar los 255 caracteres'),
-  category: z.enum(categoryValues, {
-    errorMap: () => ({ message: 'Categoría no válida' }),
-  }),
+  category: z.enum(categoryValues, { error: 'Categoría no válida' }),
 })
 
 // Schema for updating a document (partial)
@@ -35,9 +33,7 @@ export const updateDocumentoSchema = z.object({
     .min(1, 'El nombre del documento es requerido')
     .max(255, 'El nombre no puede superar los 255 caracteres')
     .optional(),
-  category: z.enum(categoryValues, {
-    errorMap: () => ({ message: 'Categoría no válida' }),
-  }).optional(),
+  category: z.enum(categoryValues, { error: 'Categoría no válida' }).optional(),
   sort_order: z.number().int().min(0).optional(),
   importance_level: z.number().int().min(0).max(100).optional(),
 }).refine((data) => Object.keys(data).length > 0, {

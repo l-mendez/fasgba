@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     const result = bulkSchema.safeParse(await request.json())
     if (!result.success) {
-      return validationError(result.error.errors[0]?.message || 'Datos inválidos')
+      return validationError(result.error.issues[0]?.message || 'Datos inválidos')
     }
 
     const { continent, enabled } = result.data

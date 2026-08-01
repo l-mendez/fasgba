@@ -36,7 +36,7 @@ const clubSettingsSchema = z.object({
   name: z.string().min(1, "El nombre del club es requerido").max(255, "El nombre es muy largo"),
   address: z.string().max(500, "La dirección es muy larga").optional().nullable(),
   telephone: z.string().max(50, "El teléfono es muy largo").optional().nullable(),
-  mail: z.string().email("Formato de email inválido").max(255, "El email es muy largo").optional().nullable().or(z.literal("")),
+  mail: z.email("Formato de email inválido").max(255, "El email es muy largo").optional().nullable().or(z.literal("")),
   schedule: z.string().max(500, "El horario es muy largo").optional().nullable(),
 })
 

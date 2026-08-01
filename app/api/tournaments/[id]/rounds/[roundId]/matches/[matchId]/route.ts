@@ -73,7 +73,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       validated = updateMatchSchema.parse(body)
     } catch (zErr) {
       if (zErr instanceof z.ZodError) {
-        const msg = zErr.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+        const msg = zErr.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
         return validationError(`Validation error: ${msg}`)
       }
       throw zErr

@@ -9,7 +9,7 @@ export const profesorSchema = z.object({
   modalidad: z.enum(['presencial', 'virtual', 'ambos']),
   zona: z.string().max(255, 'Zona demasiado larga').nullable(),
   biografia: z.string().nullable(),
-  email: z.string().email('Email no válido').max(255).nullable().or(z.literal('')).transform(v => v || null),
+  email: z.email('Email no válido').max(255).nullable().or(z.literal('')).transform(v => v || null),
   telefono: z.string().max(50, 'Teléfono demasiado largo').nullable().or(z.literal('')).transform(v => v || null),
   tarifa_horaria: z.string().max(100, 'Tarifa demasiado larga').nullable().or(z.literal('')).transform(v => v || null),
 })
@@ -33,7 +33,7 @@ export function validateCreateProfesor(data: unknown) {
     return createProfesorSchema.parse(data)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error(`Validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      const validationError = new Error(`Validation failed: ${error.issues.map(e => e.message).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }
@@ -46,7 +46,7 @@ export function validateUpdateProfesor(data: unknown) {
     return updateProfesorSchema.parse(data)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const validationError = new Error(`Validation failed: ${error.errors.map(e => e.message).join(', ')}`)
+      const validationError = new Error(`Validation failed: ${error.issues.map(e => e.message).join(', ')}`)
       validationError.name = 'ValidationError'
       throw validationError
     }

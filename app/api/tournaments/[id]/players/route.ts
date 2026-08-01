@@ -312,7 +312,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return apiSuccess(player, 201)
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessage = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
+      const errorMessage = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
       return validationError(`Validation error: ${errorMessage}`)
     }
     return handleError(error)
@@ -486,7 +486,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessage = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
+      const errorMessage = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ')
       return validationError(`Validation error: ${errorMessage}`)
     }
     return handleError(error)
