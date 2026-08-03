@@ -100,7 +100,7 @@ importers:
         version: 2.111.0
       '@tailwindcss/typography':
         specifier: ^0.5.19
-        version: 0.5.19(tailwindcss@4.3.0)
+        version: 0.5.19(tailwindcss@4.3.3)
       '@tiptap/extension-link':
         specifier: ^3.29.2
         version: 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)
@@ -205,8 +205,8 @@ importers:
         specifier: ^8.5.24
         version: 8.5.24
       tailwindcss:
-        specifier: ^4.2.1
-        version: 4.3.0
+        specifier: ^4.3.3
+        version: 4.3.3
       tsx:
         specifier: ^4.19.4
         version: 4.22.1
@@ -3510,9 +3510,6 @@ packages:
   tailwind-merge@3.6.0:
     resolution: {integrity: sha512-uxL7qAVQriqRQPAyK3pj66VqskWqoZ37PW94jwOTwNfq/z9oyu1V+eqrZqtR2+fCiXdYOZe/Modt8GtvqNzu+w==}
 
-  tailwindcss@4.3.0:
-    resolution: {integrity: sha512-y6nxMGB1nMW9R6k96e5gdIFzcfL/gTJRNaqGes1YvkLnPVXzWgbqFF2yLC0T8G774n24cx3Pe8XrKoniCOAH+Q==}
-
   tailwindcss@4.3.3:
     resolution: {integrity: sha512-gOhV3P7ufE62QDGg1zVaTgCR+EtPv92k2nIhVcVKcLmxT1sUBsQGhnZj175j+MqRt4zLF7ic+sCYjfhxMxj7YQ==}
 
@@ -4992,10 +4989,10 @@ snapshots:
       postcss: 8.5.24
       tailwindcss: 4.3.3
 
-  '@tailwindcss/typography@0.5.19(tailwindcss@4.3.0)':
+  '@tailwindcss/typography@0.5.19(tailwindcss@4.3.3)':
     dependencies:
       postcss-selector-parser: 6.0.10
-      tailwindcss: 4.3.0
+      tailwindcss: 4.3.3
 
   '@tiptap/core@3.29.2(@tiptap/pm@3.29.2)':
     dependencies:
@@ -7075,8 +7072,6 @@ snapshots:
   supports-preserve-symlinks-flag@1.0.0: {}
 
   tailwind-merge@3.6.0: {}
-
-  tailwindcss@4.3.0: {}
 
   tailwindcss@4.3.3: {}
 
