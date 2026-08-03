@@ -19,6 +19,16 @@ updates:
       supabase:
         patterns:
           - "@supabase/*"
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "@radix-ui/*"
+          - "@tiptap/*"
+          - "@supabase/*"
 
   - package-ecosystem: github-actions
     directory: /
