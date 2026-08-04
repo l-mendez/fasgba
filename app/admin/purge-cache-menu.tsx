@@ -103,7 +103,7 @@ export function PurgeCacheMenu() {
           {/* Confirmation only here: purging everything regenerates the whole site.
               The dialog is a sibling of the menu, not a child of this item, because a
               Radix dialog nested in a menu item loses focus when the menu closes. */}
-          <DropdownMenuItem onSelect={() => setIsConfirmingAll(true)}>
+          <DropdownMenuItem disabled={isPurging} onSelect={() => setIsConfirmingAll(true)}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Actualizar todo
           </DropdownMenuItem>
@@ -111,7 +111,11 @@ export function PurgeCacheMenu() {
           {CACHE_SCOPES.map((scope) => {
             const { label, icon: Icon } = SCOPE_META[scope]
             return (
-              <DropdownMenuItem key={scope} onSelect={() => purge(scope, label)}>
+              <DropdownMenuItem
+                key={scope}
+                disabled={isPurging}
+                onSelect={() => purge(scope, label)}
+              >
                 <Icon className="mr-2 h-4 w-4" />
                 {label}
               </DropdownMenuItem>
