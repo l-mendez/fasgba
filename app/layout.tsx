@@ -3,7 +3,8 @@ import './globals.css'
 import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider } from '@/components/auth-provider'
 import { ThemeProvider } from '@/components/theme-provider'
-import { Toaster } from '@/components/ui/toaster'
+import { Toaster as SonnerToaster } from '@/components/ui/sonner'
+import { Toaster as ShadcnToaster } from '@/components/ui/toaster'
 
 export const metadata: Metadata = {
   title: {
@@ -35,7 +36,9 @@ export default function RootLayout({
         >
           <AuthProvider>
             {children}
-            <Toaster />
+            {/* Both toast systems are in use: `useToast` (Radix) and `toast()` from sonner. */}
+            <ShadcnToaster />
+            <SonnerToaster />
             <Analytics />
           </AuthProvider>
         </ThemeProvider>
