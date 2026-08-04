@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button"
 import { getProfesorById } from "@/lib/profesorUtils"
 import { getImageUrlNullable } from "@/lib/imageUtils"
 
-// No time-based revalidation: revalidateProfesoresCache purges
-// `/profesores/${id}`. This route renders on demand today, so the export is a
-// guard against reintroducing a per-profesor ISR timer.
+// No time-based revalidation. The build marks this route dynamic (rendered per
+// request), so there is no ISR entry to expire today; the export guards against
+// reintroducing a per-profesor timer if it ever becomes prerenderable.
+// revalidateProfesoresCache(id) and revalidateClubsCache (for the joined club
+// name) already purge `/profesores/${id}`, so that path is covered either way.
 export const revalidate = false
 
 interface PageProps {
