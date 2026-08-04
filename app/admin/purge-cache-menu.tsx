@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import {
   Award,
   FileText,
@@ -13,6 +13,16 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -40,6 +50,8 @@ const SCOPE_META: Record<CacheScope, { label: string; icon: LucideIcon }> = {
 
 export function PurgeCacheMenu() {
   const [isPurging, setIsPurging] = useState(false)
+  const [isConfirmingAll, setIsConfirmingAll] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const { toast } = useToast()
 
   const purge = async (scope: CacheScope | "all", label: string) => {
@@ -70,33 +82,69 @@ export function PurgeCacheMenu() {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-full justify-start" aria-busy={isPurging}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${isPurging ? "animate-spin" : ""}`} />
-          {isPurging ? "Actualizando caché..." : "Actualizar caché del sitio"}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64">
-        <DropdownMenuLabel className="font-normal text-xs text-muted-foreground">
-          Usalo si cambiaste datos fuera del sitio y no se ven las novedades.
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => purge("all", "todas las secciones")}>
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Actualizar todo
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        {CACHE_SCOPES.map((scope) => {
-          const { label, icon: Icon } = SCOPE_META[scope]
-          return (
-            <DropdownMenuItem key={scope} onSelect={() => purge(scope, label)}>
-              <Icon className="mr-2 h-4 w-4" />
-              {label}
-            </DropdownMenuItem>
-          )
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            ref={triggerRef}
+            variant="outline"
+            className="w-full justify-start"
+            aria-busy={isPurging}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isPurging ? "animate-spin" : ""}`} />
+            {isPurging ? "Actualizando caché..." : "Actualizar caché del sitio"}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-64">
+          <DropdownMenuLabel className="font-normal text-xs text-muted-foreground">
+            Usalo si cambiaste datos fuera del sitio y no se ven las novedades.
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {/* Confirmation only here: purging everything regenerates the whole site.
+              The dialog is a sibling of the menu, not a child of this item, because a
+              Radix dialog nested in a menu item loses focus when the menu closes. */}
+          <DropdownMenuItem onSelect={() => setIsConfirmingAll(true)}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Actualizar todo
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {CACHE_SCOPES.map((scope) => {
+            const { label, icon: Icon } = SCOPE_META[scope]
+            return (
+              <DropdownMenuItem key={scope} onSelect={() => purge(scope, label)}>
+                <Icon className="mr-2 h-4 w-4" />
+                {label}
+              </DropdownMenuItem>
+            )
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={isConfirmingAll} onOpenChange={setIsConfirmingAll}>
+        <AlertDialogContent
+          onCloseAutoFocus={(event) => {
+            // Radix would restore focus to the menu item that opened this dialog,
+            // but that item is already unmounted, so focus would land on <body>.
+            event.preventDefault()
+            triggerRef.current?.focus()
+          }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Actualizar todas las secciones?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se van a volver a generar todas las páginas del sitio, incluso las que no
+              cambiaron. Si sabés qué sección cambió, actualizá solo esa: es más rápido y
+              no recarga el sitio entero.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => purge("all", "todas las secciones")}>
+              Sí, actualizar todo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
