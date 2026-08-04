@@ -6,9 +6,11 @@ import NewsContentWrapper from "@/app/components/news-content-wrapper"
 import { getNewsById, getRelatedNews } from "@/lib/newsUtils"
 import { extractShortTextFromContentBlocks } from "@/lib/textUtils"
 
-// No time-based revalidation: revalidateNewsCache purges `/noticias/${id}` on
-// edit. This route renders on demand today, so the export is a guard against
-// reintroducing a per-article ISR timer if it ever becomes prerenderable.
+// No time-based revalidation. The build marks this route dynamic (rendered per
+// request, absent from prerender-manifest's dynamicRoutes), so there is no ISR
+// entry to expire today; the export guards against reintroducing a per-article
+// timer if it ever becomes prerenderable. revalidateNewsCache(id) already purges
+// `/noticias/${id}` on edit or delete, so that path is covered either way.
 export const revalidate = false
 
 // Define the news interface

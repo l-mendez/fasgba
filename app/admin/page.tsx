@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import Link from "next/link"
 import { Award, FileText, FolderOpen, Globe, GraduationCap, Home, Shield, Trophy, Users } from "lucide-react"
 
+import { PurgeCacheMenu } from "./purge-cache-menu"
 import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
 import { AdminPageHeader } from "@/components/admin-page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -335,6 +336,9 @@ async function AdminDashboardContent() {
                   Gestionar países
                 </Link>
               </Button>
+              <div className="mt-1 border-t pt-3">
+                <PurgeCacheMenu />
+              </div>
             </div>
           </CardContent>
         </Card>
