@@ -139,8 +139,11 @@ export function PurgeCacheMenu() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => purge("all", "todas las secciones")}>
-              Sí, actualizar todo
+            <AlertDialogAction
+              disabled={isPurging}
+              onClick={() => purge("all", "todas las secciones")}
+            >
+              {isPurging ? "Actualizando..." : "Sí, actualizar todo"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
