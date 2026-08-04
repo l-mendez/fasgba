@@ -1,7 +1,17 @@
 "use client"
 
 import { useState } from "react"
-import { Award, FileText, FolderOpen, GraduationCap, Home, ListOrdered, RefreshCw, Trophy } from "lucide-react"
+import {
+  Award,
+  FileText,
+  FolderOpen,
+  GraduationCap,
+  Home,
+  ListOrdered,
+  RefreshCw,
+  Trophy,
+  type LucideIcon,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -13,24 +23,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
+import { CACHE_SCOPES, type CacheScope } from "@/lib/cache/scopes"
 import { apiCall } from "@/lib/utils/apiClient"
 
-// Scopes must match the keys accepted by /api/admin/cache/revalidate
-const SCOPES = [
-  { value: "news", label: "Noticias", icon: FileText },
-  { value: "clubs", label: "Clubes", icon: Home },
-  { value: "torneos", label: "Torneos", icon: Trophy },
-  { value: "ranking", label: "Ranking", icon: ListOrdered },
-  { value: "profesores", label: "Profesores", icon: GraduationCap },
-  { value: "arbitros", label: "Árbitros", icon: Award },
-  { value: "documentos", label: "Documentos", icon: FolderOpen },
-] as const
+// Keyed by CacheScope, so a scope added to lib/cache/scopes.ts fails to compile
+// until it gets a label and an icon here.
+const SCOPE_META: Record<CacheScope, { label: string; icon: LucideIcon }> = {
+  news: { label: "Noticias", icon: FileText },
+  clubs: { label: "Clubes", icon: Home },
+  torneos: { label: "Torneos", icon: Trophy },
+  ranking: { label: "Ranking", icon: ListOrdered },
+  profesores: { label: "Profesores", icon: GraduationCap },
+  arbitros: { label: "Árbitros", icon: Award },
+  documentos: { label: "Documentos", icon: FolderOpen },
+}
 
 export function PurgeCacheMenu() {
   const [isPurging, setIsPurging] = useState(false)
   const { toast } = useToast()
 
-  const purge = async (scope: string, label: string) => {
+  const purge = async (scope: CacheScope | "all", label: string) => {
+    // The trigger stays enabled so Radix can return focus to it on close;
+    // re-entry is guarded here instead.
+    if (isPurging) return
     setIsPurging(true)
 
     try {
@@ -40,7 +55,7 @@ export function PurgeCacheMenu() {
       })
       toast({
         title: "Caché actualizada",
-        description: `Ya se ven los últimos cambios en ${label}.`,
+        description: `Los últimos cambios en ${label} se verán en unos segundos.`,
       })
     } catch (error) {
       console.error("Purge cache error:", error)
@@ -57,7 +72,7 @@ export function PurgeCacheMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-full justify-start" disabled={isPurging}>
+        <Button variant="outline" className="w-full justify-start" aria-busy={isPurging}>
           <RefreshCw className={`mr-2 h-4 w-4 ${isPurging ? "animate-spin" : ""}`} />
           {isPurging ? "Actualizando caché..." : "Actualizar caché del sitio"}
         </Button>
@@ -69,15 +84,18 @@ export function PurgeCacheMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => purge("all", "todas las secciones")}>
           <RefreshCw className="mr-2 h-4 w-4" />
-          Purgar todo
+          Actualizar todo
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        {SCOPES.map(({ value, label, icon: Icon }) => (
-          <DropdownMenuItem key={value} onSelect={() => purge(value, label)}>
-            <Icon className="mr-2 h-4 w-4" />
-            {label}
-          </DropdownMenuItem>
-        ))}
+        {CACHE_SCOPES.map((scope) => {
+          const { label, icon: Icon } = SCOPE_META[scope]
+          return (
+            <DropdownMenuItem key={scope} onSelect={() => purge(scope, label)}>
+              <Icon className="mr-2 h-4 w-4" />
+              {label}
+            </DropdownMenuItem>
+          )
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   )
