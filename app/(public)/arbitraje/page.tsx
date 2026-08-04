@@ -8,7 +8,8 @@ import { unstable_cache } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { PageHero } from "@/components/page-hero"
 
-export const revalidate = 60
+// Cached indefinitely, purged by revalidateArbitrosCache on mutation.
+export const revalidate = false
 
 interface ArbitroWithClub {
   id: number
@@ -56,7 +57,7 @@ async function fetchArbitros(): Promise<ArbitroWithClub[]> {
 const getCachedArbitros = unstable_cache(
   (): Promise<ArbitroWithClub[]> => fetchArbitros(),
   ['arbitraje-list'],
-  { revalidate: 60, tags: ['arbitros'] }
+  { revalidate: false, tags: ['arbitros'] }
 )
 
 function getPhotoUrl(photo: string | null): string | null {

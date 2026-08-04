@@ -7,15 +7,15 @@ import { ClubSearch } from "@/components/club-search"
 import { ClubsGrid } from "@/components/clubs-grid"
 import { PageHero } from "@/components/page-hero"
 
-// The directory is identical for everyone, so cache it and refresh every 5
-// minutes (or via the 'clubs' tag). Per-user follow state and search are
-// resolved on the client, keeping this page statically cacheable.
-export const revalidate = 300
+// The directory is identical for everyone, so cache it indefinitely and refresh
+// only via revalidateClubsCache. Per-user follow state and search are resolved
+// on the client, keeping this page statically cacheable.
+export const revalidate = false
 
 const getCachedClubs = unstable_cache(
   (): Promise<Club[]> => getAllClubs(),
   ['clubes-directory'],
-  { revalidate: 300, tags: ['clubs'] }
+  { revalidate: false, tags: ['clubs'] }
 )
 
 // Generate metadata for better link previews

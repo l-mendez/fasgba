@@ -8,7 +8,8 @@ import { getAllProfesores, type ProfesorWithClub } from "@/lib/profesorUtils"
 import { PageHero } from "@/components/page-hero"
 import { createClient } from "@/lib/supabase/client"
 
-export const revalidate = 60
+// Cached indefinitely, purged by revalidateProfesoresCache on mutation.
+export const revalidate = false
 
 export const metadata: Metadata = {
   title: 'Profesores de Ajedrez - FASGBA',

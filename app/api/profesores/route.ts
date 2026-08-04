@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createProfesor } from '@/lib/profesorUtils'
+import { revalidateProfesoresCache } from '@/lib/cache/profesores'
 import { apiSuccess, handleError, unauthorizedError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
@@ -86,6 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     const newProfesor = await createProfesor(profesorData)
+    revalidateProfesoresCache()
 
     return apiSuccess(newProfesor, 201)
   } catch (error) {

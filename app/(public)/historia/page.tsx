@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageHero } from "@/components/page-hero"
 
-// Static content — prerender and revalidate periodically
-export const revalidate = 300
+// Hardcoded content — prerender once, never revalidate.
+export const revalidate = false
 
 export const metadata: Metadata = {
   title: 'Historia',

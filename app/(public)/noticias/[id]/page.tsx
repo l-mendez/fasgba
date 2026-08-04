@@ -6,8 +6,10 @@ import NewsContentWrapper from "@/app/components/news-content-wrapper"
 import { getNewsById, getRelatedNews } from "@/lib/newsUtils"
 import { extractShortTextFromContentBlocks } from "@/lib/textUtils"
 
-// ISR: Revalidate individual news pages every 5 minutes
-export const revalidate = 300
+// No time-based revalidation: revalidateNewsCache purges `/noticias/${id}` on
+// edit. This route renders on demand today, so the export is a guard against
+// reintroducing a per-article ISR timer if it ever becomes prerenderable.
+export const revalidate = false
 
 // Define the news interface
 interface News {

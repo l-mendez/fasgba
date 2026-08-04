@@ -9,8 +9,8 @@ import { PageHero } from "@/components/page-hero"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-// Static content — prerender and revalidate periodically
-export const revalidate = 300
+// Hardcoded content — prerender once, never revalidate.
+export const revalidate = false
 
 // Datos de ejemplo para los cursos
 const cursos = [

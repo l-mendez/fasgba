@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button"
 import { getProfesorById } from "@/lib/profesorUtils"
 import { getImageUrlNullable } from "@/lib/imageUtils"
 
-export const revalidate = 60
+// No time-based revalidation: revalidateProfesoresCache purges
+// `/profesores/${id}`. This route renders on demand today, so the export is a
+// guard against reintroducing a per-profesor ISR timer.
+export const revalidate = false
 
 interface PageProps {
   params: Promise<{

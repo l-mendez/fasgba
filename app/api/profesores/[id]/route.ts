@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getProfesorById, updateProfesor, deleteProfesor } from '@/lib/profesorUtils'
 import { requireAdmin } from '@/lib/middleware/auth'
+import { revalidateProfesoresCache } from '@/lib/cache/profesores'
 import { validateProfesorId, validateUpdateProfesor } from '@/lib/schemas/profesorSchemas'
 import { apiSuccess, noContent, handleError, notFoundError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
@@ -51,6 +52,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       throw updateError
     }
 
+    revalidateProfesoresCache(id)
+
     return apiSuccess({ success: true })
   } catch (error) {
     return handleError(error)
@@ -76,6 +79,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       deleteError.name = 'DatabaseError'
       throw deleteError
     }
+
+    revalidateProfesoresCache(id)
 
     return noContent()
   } catch (error) {

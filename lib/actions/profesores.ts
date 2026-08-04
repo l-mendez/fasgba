@@ -4,6 +4,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { requireAdminAction, mapErrorToResult, type ActionError } from '@/lib/actions/auth'
 import { uploadProfesorImage, deleteProfesorImage } from '@/lib/imageUtils.server'
 import { getProfesorById, updateProfesor } from '@/lib/profesorUtils'
+import { revalidateProfesoresCache } from '@/lib/cache/profesores'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
@@ -34,6 +35,7 @@ export async function uploadProfesorImageAction(profesorId: number, formData: Fo
     const { filePath } = await uploadProfesorImage(profesorId, buffer, file.name)
     const { data: { publicUrl } } = serviceClient.storage.from('images').getPublicUrl(filePath)
     await updateProfesor(profesorId, { foto: filePath })
+    revalidateProfesoresCache(profesorId)
 
     return { ok: true, data: { filePath, publicUrl, replacedExisting: !!existing.foto } }
   } catch (err) {
