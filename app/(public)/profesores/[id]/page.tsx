@@ -11,7 +11,8 @@ import { getImageUrlNullable } from "@/lib/imageUtils"
 // No time-based revalidation. The build marks this route dynamic (rendered per
 // request), so there is no ISR entry to expire today; the export guards against
 // reintroducing a per-profesor timer if it ever becomes prerenderable.
-// revalidateProfesoresCache(id) purges `/profesores/${id}` when it needs to be.
+// revalidateProfesoresCache(id) purges `/profesores/${id}` on profesor edits;
+// the club name joined in here would also need a purge from lib/cache/clubs.ts.
 export const revalidate = false
 
 interface PageProps {
