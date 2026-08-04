@@ -13,10 +13,11 @@ import { getAllClubs } from "@/lib/clubUtils"
 import { getImageUrl } from "@/lib/imageUtils"
 import { formatArgentinaDateOnly, getDateInputValue } from "@/lib/dateUtils"
 
-// Static content (ISR) — revalidate periodically. Each fetch is wrapped in
-// unstable_cache with a tag matching the rest of the app's invalidations so a
-// future cache-bust refreshes the home page too.
-export const revalidate = 300
+// Cached indefinitely: each fetch is wrapped in unstable_cache with a tag
+// matching the rest of the app's invalidations, and lib/cache/{news,torneos,
+// clubs}.ts purge this route on mutation. Time-based revalidation would rewrite
+// the ISR entry on a timer forever, which is what blew the hosting quota.
+export const revalidate = false
 
 // Create Supabase client for server-side operations (tournaments only)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -119,7 +120,7 @@ const getCachedNews = unstable_cache(
     return sortedNews.slice(0, 5)
   },
   ['home-news'],
-  { revalidate: 300, tags: ['news'] }
+  { revalidate: false, tags: ['news'] }
 )
 
 async function fetchNews(): Promise<NewsItem[]> {
@@ -165,7 +166,7 @@ const getCachedTournaments = unstable_cache(
     }))
   },
   ['home-tournaments'],
-  { revalidate: 300, tags: ['torneos'] }
+  { revalidate: false, tags: ['torneos'] }
 )
 
 async function fetchTournaments(): Promise<Tournament[]> {
@@ -184,7 +185,7 @@ const getCachedClubs = unstable_cache(
     return (clubs as Club[]).slice(0, 6)
   },
   ['home-clubs'],
-  { revalidate: 300, tags: ['clubs'] }
+  { revalidate: false, tags: ['clubs'] }
 )
 
 async function fetchClubs(): Promise<Club[]> {

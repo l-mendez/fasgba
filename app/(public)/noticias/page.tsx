@@ -8,10 +8,11 @@ import { getAllClubs } from "@/lib/clubUtils"
 import type { NewsDisplay } from "@/lib/newsUtils"
 import type { Club } from "@/lib/clubUtils"
 
-// ISR: Revalidate every 5 minutes (300 seconds). The whole catalog is identical
-// for everyone, so it's fetched once and cached; filtering/pagination happen on
-// the client (see NewsList), keeping this page statically cacheable.
-export const revalidate = 300
+// Cached indefinitely, purged by revalidateNewsCache on mutation. The whole
+// catalog is identical for everyone, so it's fetched once and cached;
+// filtering/pagination happen on the client (see NewsList), keeping this page
+// statically cacheable.
+export const revalidate = false
 
 // Upper bound on rows shipped to the client. The dataset is small, so a single
 // generous cap fetches the entire catalog in one request.
@@ -66,19 +67,19 @@ const getCachedAllNews = unstable_cache(
     return data.map((item) => ({ ...item, text: "" }))
   },
   ["noticias-all-news"],
-  { revalidate: 300, tags: ["news"] }
+  { revalidate: false, tags: ["news"] }
 )
 
 const getCachedTags = unstable_cache(
   (): Promise<string[]> => getAllNewsTags(),
   ["news-tags"],
-  { revalidate: 300, tags: ["news"] }
+  { revalidate: false, tags: ["news"] }
 )
 
 const getCachedClubs = unstable_cache(
   (): Promise<Club[]> => getAllClubs(),
   ["clubs-list"],
-  { revalidate: 300, tags: ["clubs"] }
+  { revalidate: false, tags: ["clubs"] }
 )
 
 async function safe<T>(fn: () => Promise<T>, fallback: T, label: string): Promise<T> {

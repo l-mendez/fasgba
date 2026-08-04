@@ -5,11 +5,11 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { DocumentosList, type PublicDocumento } from "@/components/documentos-list"
 import { PageHero } from "@/components/page-hero"
 
-// ISR: Revalidate every 5 minutes (300 seconds). Only PUBLIC documents are
-// fetched/shipped here so the static output never contains protected
-// (escuela/otros) metadata. Protected categories are fetched client-side, with
-// auth, inside ProtectedSection.
-export const revalidate = 300
+// Cached indefinitely, purged by revalidateDocumentosCache on mutation. Only
+// PUBLIC documents are fetched/shipped here so the static output never contains
+// protected (escuela/otros) metadata. Protected categories are fetched
+// client-side, with auth, inside ProtectedSection.
+export const revalidate = false
 
 const PUBLIC_CATEGORIES = ["reglamentos", "actas", "minutas"]
 
@@ -32,7 +32,7 @@ const getCachedPublicDocumentos = unstable_cache(
     return (data || []) as PublicDocumento[]
   },
   ["documentos-public-list"],
-  { revalidate: 300, tags: ["documentos"] }
+  { revalidate: false, tags: ["documentos"] }
 )
 
 async function fetchPublicDocumentos(): Promise<PublicDocumento[]> {

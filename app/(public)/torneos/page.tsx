@@ -12,9 +12,10 @@ import {
 import { TournamentsTabs } from "./components/tournaments-tabs"
 import { PageHero } from "@/components/page-hero"
 
-// Static content (ISR) — revalidate periodically. Public listing read via the
-// non-cookie admin client so the page can be statically prerendered.
-export const revalidate = 300
+// Cached indefinitely, purged by revalidateTorneosCache on mutation. Public
+// listing read via the non-cookie admin client so the page can be statically
+// prerendered.
+export const revalidate = false
 
 // Generate metadata for better link previews
 export const metadata: Metadata = {
@@ -62,7 +63,7 @@ export const metadata: Metadata = {
 const getCachedTournaments = unstable_cache(
   () => getAllTournamentsWithDates(createAdminClient()),
   ['torneos-list'],
-  { revalidate: 300, tags: ['torneos'] }
+  { revalidate: false, tags: ['torneos'] }
 )
 
 // Carga los torneos en el servidor, ordenados por fecha ascendente.
