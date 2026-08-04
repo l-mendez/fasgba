@@ -7,10 +7,8 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 // directory itself) plus /arbitraje and /profesores, which render club names
 // through a `clubs(name)` join and would otherwise show a renamed or deleted
 // club forever. All four are prerendered with `revalidate = false`, so this is
-// their only invalidation path. /profesores/[id] renders the same joined club
-// name but is not purged here because it renders per request, so it can never
-// hold a stale one; it would need a purge here if it ever became prerenderable
-// (revalidateProfesoresCache only runs on profesor mutations).
+// their only invalidation path. /profesores/[id] joins the same club name but
+// is not purged here: it renders per request, so it can never hold a stale one.
 // revalidateTag with the 'max' profile works in Route Handlers, where these
 // mutations run; updateTag throws outside Server Actions.
 export function revalidateClubsCache() {
