@@ -33,7 +33,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: pnpm
 
       - name: Pull Vercel environment
@@ -45,6 +45,16 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      # A skipped build (e.g. an empty Build Command override) still exits 0 but
+      # emits no functions, which ships an empty deployment that 404s every app
+      # route. Fail loudly instead of deploying nothing.
+      - name: Verify build produced output
+        run: |
+          test -d .vercel/output/functions || {
+            echo "::error::vercel build produced no functions - the build was skipped"
+            exit 1
+          }
 
       - name: Deploy
         id: deploy
