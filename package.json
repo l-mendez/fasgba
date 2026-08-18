@@ -90,11 +90,6 @@
     "tsx": "^4.23.12",
     "typescript": "^6.0.3"
   },
-  "overrides": {
-    "serialize-javascript": "^7.0.3",
-    "vite": "^7.3.2",
-    "postcss": "^8.5.26"
-  },
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",
