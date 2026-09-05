@@ -1,62 +1,24 @@
 import { Suspense } from "react"
-import { unstable_cache } from "next/cache"
 
-import { createAdminClient } from "@/lib/supabase/admin"
-import { DocumentosList, type PublicDocumento } from "@/components/documentos-list"
+import { DocumentosList } from "@/components/documentos-list"
 import { PageHero } from "@/components/page-hero"
 
-// Cached indefinitely, purged by revalidateDocumentosCache on mutation. Only
-// PUBLIC documents are fetched/shipped here so the static output never contains
-// protected (escuela/otros) metadata. Protected categories are fetched
-// client-side, with auth, inside ProtectedSection.
+// Static shell: no document data is rendered on the server. DocumentosList
+// fetches, with the viewer's session, only the documents they may see
+// (delegados/admins, plus alumnos for Escuela).
 export const revalidate = false
 
-const PUBLIC_CATEGORIES = ["reglamentos", "actas", "minutas"]
-
-// Cached fetcher — admin client (no cookies), scoped to public categories only.
-const getCachedPublicDocumentos = unstable_cache(
-  async (): Promise<PublicDocumento[]> => {
-    const supabase = createAdminClient()
-
-    const { data, error } = await supabase
-      .from("documentos")
-      .select("id, name, category, file_path, file_size, created_at")
-      .in("category", PUBLIC_CATEGORIES)
-      .order("sort_order", { ascending: true })
-
-    if (error) {
-      console.error("Error fetching documentos:", error)
-      return []
-    }
-
-    return (data || []) as PublicDocumento[]
-  },
-  ["documentos-public-list"],
-  { revalidate: false, tags: ["documentos"] }
-)
-
-async function fetchPublicDocumentos(): Promise<PublicDocumento[]> {
-  try {
-    return await getCachedPublicDocumentos()
-  } catch (error) {
-    console.error("Error fetching documentos:", error)
-    return []
-  }
-}
-
-export default async function DocumentosPage() {
-  const publicDocs = await fetchPublicDocumentos()
-
+export default function DocumentosPage() {
   return (
     <>
       <PageHero
         title="Documentos"
-        subtitle="Documentos oficiales de la Federación de Ajedrez del Sur del Gran Buenos Aires"
+        subtitle="Documentos oficiales de la Federación. Acceso para delegados de club, administradores y alumnos de la escuela"
       />
 
       <section className="w-full py-12 md:py-24 lg:py-32">
         <Suspense fallback={<div className="container px-4 md:px-6 min-h-[400px]" />}>
-          <DocumentosList publicDocs={publicDocs} />
+          <DocumentosList />
         </Suspense>
       </section>
     </>

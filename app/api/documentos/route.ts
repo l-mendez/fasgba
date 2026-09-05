@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { requireAdmin } from '@/lib/middleware/auth'
 import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
 import { documentoQuerySchema, SORT_OPTIONS, type SortOption } from '@/lib/schemas/documentosSchemas'
 import { isValidCategory } from '@/lib/documentosUtils'
@@ -8,10 +9,12 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/documentos
- * Public endpoint to list all documents with optional category filter
+ * Admin-only paginated listing (used by the admin documentos table).
  */
 export async function GET(request: NextRequest) {
   try {
+    await requireAdmin(request)
+
     const { searchParams } = new URL(request.url)
 
     // Parse query params
@@ -32,7 +35,7 @@ export async function GET(request: NextRequest) {
     // Get sort configuration
     const sortConfig = SORT_OPTIONS[sort as SortOption] || SORT_OPTIONS['custom']
 
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     // Build query
     let query = supabase

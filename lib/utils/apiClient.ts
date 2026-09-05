@@ -1,5 +1,12 @@
 import { createClient } from "@/lib/supabase/client"
 
+export class ApiCallError extends Error {
+  constructor(message: string, public status: number) {
+    super(message)
+    this.name = 'ApiCallError'
+  }
+}
+
 // API helper function for client-side authenticated requests
 export async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
   const supabase = createClient()
@@ -40,7 +47,7 @@ export async function apiCall(endpoint: string, options: RequestInit = {}): Prom
       // Use default error message
     }
     
-    throw new Error(errorMessage)
+    throw new ApiCallError(errorMessage, response.status)
   }
   
   if (response.status === 204) {

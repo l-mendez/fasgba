@@ -1,12 +1,16 @@
 import { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAuth, isAlumno, isAnyClubAdmin } from '@/lib/middleware/auth'
-import { hasPermission } from '@/lib/middleware/auth'
+import { requireAuth, getDocumentoRoles } from '@/lib/middleware/auth'
 import { apiSuccess, handleError, notFoundError, forbiddenError, unauthorizedError } from '@/lib/utils/apiResponse'
-import { getDocumentUrl } from '@/lib/documentosUtils'
+import { canViewDocumentoCategory, getDocumentoExtension, type DocumentCategory } from '@/lib/documentosUtils'
 
-const PROTECTED_CATEGORIES = ['escuela', 'otros'] as const
-
+/**
+ * GET /api/documentos/download/[id]?download=1
+ * Returns a short-lived signed URL for the document. Every category is
+ * restricted (see canViewDocumentoCategory). With `download=1` the URL carries
+ * a Content-Disposition attachment so browsers save the file instead of
+ * navigating to it (the anchor `download` attribute is ignored cross-origin).
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,25 +23,6 @@ export async function GET(
       return notFoundError('Documento no encontrado')
     }
 
-    const supabase = createAdminClient()
-
-    const { data: documento, error } = await supabase
-      .from('documentos')
-      .select('id, category, file_path')
-      .eq('id', docId)
-      .single()
-
-    if (error || !documento) {
-      return notFoundError('Documento no encontrado')
-    }
-
-    // Public documents: return public URL
-    if (!PROTECTED_CATEGORIES.includes(documento.category as typeof PROTECTED_CATEGORIES[number])) {
-      const publicUrl = getDocumentUrl(documento.file_path)
-      return apiSuccess({ url: publicUrl })
-    }
-
-    // Protected documents: require auth
     let user
     try {
       user = await requireAuth(request)
@@ -45,27 +30,30 @@ export async function GET(
       return unauthorizedError('Iniciá sesión para acceder a este documento')
     }
 
-    const admin = await hasPermission('isAdmin', user.id)
+    const supabase = createAdminClient()
 
-    if (!admin) {
-      if (documento.category === 'escuela') {
-        const alumno = await isAlumno(user.id)
-        if (!alumno) {
-          return forbiddenError('Acceso restringido a alumnos de la escuela')
-        }
-      } else if (documento.category === 'otros') {
-        const clubAdmin = await isAnyClubAdmin(user.id)
-        if (!clubAdmin) {
-          return forbiddenError('Acceso restringido a administradores')
-        }
-      }
+    const [{ data: documento, error }, roles] = await Promise.all([
+      supabase.from('documentos').select('id, name, category, file_path').eq('id', docId).single(),
+      getDocumentoRoles(user),
+    ])
+
+    if (error || !documento) {
+      return notFoundError('Documento no encontrado')
     }
 
-    // Generate signed URL (5 minute expiry)
+    if (!canViewDocumentoCategory(documento.category as DocumentCategory, roles)) {
+      return forbiddenError('No tenés acceso a este documento')
+    }
+
+    const asDownload = new URL(request.url).searchParams.get('download') === '1'
+
+    // Signed URL (5 minute expiry)
     const { data: signedData, error: signedError } = await supabase
       .storage
       .from('documentos')
-      .createSignedUrl(documento.file_path, 300)
+      .createSignedUrl(documento.file_path, 300, {
+        download: asDownload ? `${documento.name}.${getDocumentoExtension(documento.file_path)}` : false,
+      })
 
     if (signedError || !signedData?.signedUrl) {
       return handleError(signedError || new Error('Error generando URL'))

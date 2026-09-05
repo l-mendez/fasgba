@@ -51,12 +51,14 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { apiCall } from "@/lib/utils/apiClient"
+import { openDocumento } from "@/lib/documentos-client"
 import {
   CATEGORY_COLORS,
   DOCUMENT_CATEGORIES,
   formatArgentinaDate,
   formatFileSize,
-  getDocumentUrl,
+  getDocumentoExtension,
+  isSpreadsheetExtension,
 } from "@/lib/documentosUtils"
 import { SORT_OPTIONS, type SortOption } from "@/lib/schemas/documentosSchemas"
 import type { Documento } from "./types"
@@ -113,27 +115,14 @@ export function DocumentosTable({
   const [isRenaming, setIsRenaming] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
-  const openDocument = (documento: Documento) => {
-    const url = getDocumentUrl(documento.file_path)
-    if (url) {
-      window.open(url, "_blank")
-    }
-  }
+  const openDocument = (documento: Documento) =>
+    openDocumento(documento, "view").catch((err) => setErrorMessage(err.message))
 
-  const downloadDocument = (documento: Documento) => {
-    const url = getDocumentUrl(documento.file_path)
-    if (url) {
-      const link = document.createElement("a")
-      link.href = url
-      const ext = documento.file_path?.split('.').pop() || 'pdf'
-      link.download = `${documento.name}.${ext}`
-      link.click()
-    }
-  }
+  const downloadDocument = (documento: Documento) =>
+    openDocumento(documento, "download").catch((err) => setErrorMessage(err.message))
 
   const getDocumentIcon = (documento: Documento) => {
-    const ext = documento.file_path?.split('.').pop()?.toLowerCase()
-    if (ext === 'xls' || ext === 'xlsx') {
+    if (isSpreadsheetExtension(getDocumentoExtension(documento.file_path))) {
       return <FileSpreadsheet className="h-4 w-4 text-green-600" />
     }
     return <FileText className="h-4 w-4 text-red-500" />
