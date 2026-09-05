@@ -1,8 +1,7 @@
--- Restrict documentos to authorised viewers, at the DB level as backstop for the
--- API checks in app/api/documentos/*:
---   * escuela       -> alumnos and site admins
+-- Restrict documentos rows to authorised viewers (DB backstop for the checks in
+-- app/api/documentos/*):
+--   * escuela         -> alumnos and site admins
 --   * everything else -> site admins and club admins (delegados)
--- The storage bucket becomes private; downloads go through signed URLs.
 
 begin;
 
@@ -26,25 +25,24 @@ $$;
 revoke all on function public.can_view_documento(text, uuid) from public;
 grant execute on function public.can_view_documento(text, uuid) to authenticated;
 
--- Table: replace the public read policy.
-drop policy if exists "documentos_select_policy" on public.documentos;
+alter table public.documentos enable row level security;
+
+-- Drop every existing SELECT policy (names were created by hand and may differ
+-- from the legacy SQL) before installing the restricted one.
+do $$
+declare p record;
+begin
+  for p in
+    select policyname from pg_policies
+    where schemaname = 'public' and tablename = 'documentos' and cmd = 'SELECT'
+  loop
+    execute format('drop policy %I on public.documentos', p.policyname);
+  end loop;
+end $$;
+
 create policy "documentos_select_policy" on public.documentos
   for select
   to authenticated
   using (public.can_view_documento(category, auth.uid()));
-
--- Storage: private bucket + read policy keyed on the category folder prefix
--- (uploads are stored as `<category>/<file>`; anything without a known prefix
--- falls back to the delegado/admin rule).
-update storage.buckets set public = false where id = 'documentos';
-
-drop policy if exists "documentos_select_policy" on storage.objects;
-create policy "documentos_select_policy" on storage.objects
-  for select
-  to authenticated
-  using (
-    bucket_id = 'documentos'
-    and public.can_view_documento(split_part(name, '/', 1), auth.uid())
-  );
 
 commit;

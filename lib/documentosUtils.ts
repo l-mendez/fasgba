@@ -13,6 +13,24 @@ export type DocumentCategory = keyof typeof DOCUMENT_CATEGORIES
 
 export const ALL_CATEGORIES = Object.keys(DOCUMENT_CATEGORIES) as DocumentCategory[]
 
+/** Fields shared by every documento listing (viewer page and admin table). */
+export interface DocumentoSummary {
+  id: number
+  name: string
+  category: DocumentCategory
+  file_path: string
+  file_size: number | null
+  created_at: string
+}
+
+export function getDocumentoExtension(filePath: string | null | undefined): string {
+  return filePath?.split('.').pop()?.toLowerCase() || 'pdf'
+}
+
+export function isSpreadsheetExtension(ext: string): boolean {
+  return ext === 'xls' || ext === 'xlsx'
+}
+
 export interface DocumentoViewerRoles {
   isAdmin: boolean
   isClubAdmin: boolean

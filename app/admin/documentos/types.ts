@@ -1,11 +1,6 @@
-import type { DocumentCategory } from "@/lib/documentosUtils"
+import type { DocumentCategory, DocumentoSummary } from "@/lib/documentosUtils"
 
-export interface Documento {
-  id: number
-  name: string
-  category: DocumentCategory
-  file_path: string
-  file_size: number | null
+export interface Documento extends DocumentoSummary {
   file_type?: string | null
   sort_order?: number
   importance_level?: number

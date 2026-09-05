@@ -13,7 +13,7 @@ export default function DocumentosPage() {
     <>
       <PageHero
         title="Documentos"
-        subtitle="Documentos oficiales de la Federación, disponibles para delegados de club y administradores"
+        subtitle="Documentos oficiales de la Federación. Acceso para delegados de club, administradores y alumnos de la escuela"
       />
 
       <section className="w-full py-12 md:py-24 lg:py-32">

@@ -176,13 +176,10 @@ export async function isAnyClubAdmin(userId: string): Promise<boolean> {
 /**
  * Roles that decide which documento categories a user may view.
  */
-export async function getDocumentoRoles(userId: string): Promise<DocumentoViewerRoles> {
-  const [isAdmin, isClubAdmin, alumno] = await Promise.all([
-    hasPermission('isAdmin', userId),
-    isAnyClubAdmin(userId),
-    isAlumno(userId),
-  ])
-  return { isAdmin, isClubAdmin, isAlumno: alumno }
+export async function getDocumentoRoles(user: AuthenticatedUser): Promise<DocumentoViewerRoles> {
+  if (user.permissions?.isAdmin) return { isAdmin: true, isClubAdmin: true, isAlumno: true }
+  const [isClubAdmin, alumno] = await Promise.all([isAnyClubAdmin(user.id), isAlumno(user.id)])
+  return { isAdmin: false, isClubAdmin, isAlumno: alumno }
 }
 
 /**

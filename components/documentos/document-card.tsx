@@ -1,46 +1,33 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import { FileText, FileSpreadsheet, Download, Eye, Calendar, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { useToast } from "@/hooks/use-toast"
 import {
   DOCUMENT_CATEGORIES,
   CATEGORY_COLORS,
   formatFileSize,
   formatArgentinaDate,
-  type DocumentCategory,
+  getDocumentoExtension,
+  isSpreadsheetExtension,
+  type DocumentoSummary,
 } from "@/lib/documentosUtils"
-import { getDocumentoExtension, openDocumento, type DocumentoAction } from "@/lib/documentos-client"
+import { openDocumento, type DocumentoAction } from "@/lib/documentos-client"
 
-export interface ViewerDocumento {
-  id: number
-  name: string
-  category: DocumentCategory
-  file_path: string
-  file_size: number | null
-  created_at: string
-}
-
-export function DocumentCard({ documento }: { documento: ViewerDocumento }) {
-  const { toast } = useToast()
+export function DocumentCard({ documento }: { documento: DocumentoSummary }) {
   const [loadingAction, setLoadingAction] = useState<DocumentoAction | null>(null)
-  const ext = getDocumentoExtension(documento.file_path)
-  const isExcel = ext === "xls" || ext === "xlsx"
+  const isExcel = isSpreadsheetExtension(getDocumentoExtension(documento.file_path))
 
   const handleAction = async (action: DocumentoAction) => {
     setLoadingAction(action)
     try {
       await openDocumento(documento, action)
     } catch (error) {
-      toast({
-        title: "No se pudo abrir el documento",
-        description: error instanceof Error ? error.message : "Intentá nuevamente.",
-        variant: "destructive",
-      })
+      toast.error(error instanceof Error ? error.message : "No se pudo abrir el documento")
     } finally {
       setLoadingAction(null)
     }

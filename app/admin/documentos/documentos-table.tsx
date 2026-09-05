@@ -57,6 +57,8 @@ import {
   DOCUMENT_CATEGORIES,
   formatArgentinaDate,
   formatFileSize,
+  getDocumentoExtension,
+  isSpreadsheetExtension,
 } from "@/lib/documentosUtils"
 import { SORT_OPTIONS, type SortOption } from "@/lib/schemas/documentosSchemas"
 import type { Documento } from "./types"
@@ -120,8 +122,7 @@ export function DocumentosTable({
     openDocumento(documento, "download").catch((err) => setErrorMessage(err.message))
 
   const getDocumentIcon = (documento: Documento) => {
-    const ext = documento.file_path?.split('.').pop()?.toLowerCase()
-    if (ext === 'xls' || ext === 'xlsx') {
+    if (isSpreadsheetExtension(getDocumentoExtension(documento.file_path))) {
       return <FileSpreadsheet className="h-4 w-4 text-green-600" />
     }
     return <FileText className="h-4 w-4 text-red-500" />

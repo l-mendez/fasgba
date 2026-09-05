@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth(request)
 
-    const categories = getViewableCategories(await getDocumentoRoles(user.id))
+    const categories = getViewableCategories(await getDocumentoRoles(user))
     if (categories.length === 0) {
-      return forbiddenError('Acceso restringido a delegados y administradores')
+      return forbiddenError('No tenés acceso a los documentos')
     }
 
     const supabase = createAdminClient()

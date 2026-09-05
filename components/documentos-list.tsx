@@ -1,94 +1,105 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useState, type ReactNode } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
-import { FolderOpen, Lock, LogIn } from "lucide-react"
+import { usePathname, useSearchParams } from "next/navigation"
+import { FolderOpen, Lock, LogIn, RefreshCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { DocumentCard, type ViewerDocumento } from "@/components/documentos/document-card"
+import { Skeleton } from "@/components/ui/skeleton"
+import { DocumentCard } from "@/components/documentos/document-card"
 import { useAuth } from "@/hooks/useAuth"
-import { apiCall } from "@/lib/utils/apiClient"
+import { apiCall, ApiCallError } from "@/lib/utils/apiClient"
 import {
   ALL_CATEGORIES,
   DOCUMENT_CATEGORIES,
-  getViewableCategories,
   isValidCategory,
   type DocumentCategory,
+  type DocumentoSummary,
 } from "@/lib/documentosUtils"
 
 const ACCESS_HINT =
-  "Los documentos están disponibles para delegados de club y administradores. Los alumnos de la escuela acceden a la sección Escuela."
+  "Los documentos están disponibles para delegados de club y administradores. Los alumnos de la escuela pueden ver los documentos de Escuela."
 
-// Client island: the /documentos page is a static shell. Every document is
-// fetched here with the viewer's token, so metadata never reaches anonymous
-// users or the prerendered HTML. Filtering works via badges and ?categoria=.
+type ListState =
+  | { status: "loading" | "forbidden" | "error" }
+  | { status: "ready"; docs: DocumentoSummary[] }
+
+// Client island: the /documentos page is a static shell. Documents are fetched
+// here with the viewer's session and the server decides what they may see, so
+// no metadata reaches anonymous users or the prerendered HTML. Filtering works
+// via badges and ?categoria=.
 export function DocumentosList() {
-  const { user, isLoading: authLoading, isAuthenticated, isAdmin, isClubAdmin, isAlumno } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const raw = searchParams.get("categoria") || "todos"
   const selected: "todos" | DocumentCategory = raw !== "todos" && isValidCategory(raw) ? raw : "todos"
 
-  const canView = getViewableCategories({ isAdmin, isClubAdmin, isAlumno }).length > 0
-  const userId = !authLoading && isAuthenticated && canView ? user?.id : undefined
-
-  // Keyed by user so a different sign-in never shows the previous viewer's list.
-  const [loaded, setLoaded] = useState<{ userId: string; docs: ViewerDocumento[] } | null>(null)
-  const documentos = loaded && loaded.userId === userId ? loaded.docs : null
+  const userId = user?.id
+  const [state, setState] = useState<ListState>({ status: "loading" })
+  const [attempt, setAttempt] = useState(0)
+  const retry = useCallback(() => setAttempt((n) => n + 1), [])
 
   useEffect(() => {
     if (!userId) return
     let cancelled = false
     apiCall("/api/documentos/protected")
-      .then((json) => ({ userId, docs: (json?.documentos || []) as ViewerDocumento[] }))
-      .catch(() => ({ userId, docs: [] as ViewerDocumento[] }))
-      .then((result) => {
-        if (!cancelled) setLoaded(result)
+      .then((json): ListState => ({ status: "ready", docs: json?.documentos || [] }))
+      .catch((err): ListState => ({ status: err instanceof ApiCallError && err.status === 403 ? "forbidden" : "error" }))
+      .then((next) => {
+        if (!cancelled) setState(next)
       })
     return () => {
       cancelled = true
     }
-  }, [userId])
+  }, [userId, attempt])
 
-  const grouped = useMemo(() => {
-    const map = Object.fromEntries(ALL_CATEGORIES.map((c) => [c, [] as ViewerDocumento[]])) as Record<DocumentCategory, ViewerDocumento[]>
-    for (const doc of documentos || []) map[doc.category]?.push(doc)
-    return map
-  }, [documentos])
-
-  if (authLoading || (userId && documentos === null)) {
+  if (authLoading || (userId && state.status === "loading")) {
     return (
       <div className="container px-4 md:px-6 space-y-4">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="animate-pulse h-28 bg-muted rounded-md" />
+          <Skeleton key={i} className="h-28" />
         ))}
       </div>
     )
   }
 
-  if (!isAuthenticated) {
+  if (!userId) {
+    const query = searchParams.toString()
+    const redirect = encodeURIComponent(query ? `${pathname}?${query}` : pathname)
     return (
-      <RestrictedNotice
-        title="Acceso restringido"
-        description={`Iniciá sesión para ver los documentos. ${ACCESS_HINT}`}
-        action={
-          <Button asChild variant="brand">
-            <Link href="/login">
-              <LogIn className="mr-2 h-4 w-4" />
-              Iniciar sesión
-            </Link>
-          </Button>
-        }
-      />
+      <RestrictedNotice title="Acceso restringido" description={`Iniciá sesión para ver los documentos. ${ACCESS_HINT}`}>
+        <Button asChild variant="brand">
+          <Link href={`/login?redirect=${redirect}`}>
+            <LogIn className="mr-2 h-4 w-4" />
+            Iniciar sesión
+          </Link>
+        </Button>
+      </RestrictedNotice>
     )
   }
 
-  if (!canView) {
+  if (state.status === "forbidden") {
     return <RestrictedNotice title="Tu cuenta no tiene acceso a los documentos" description={ACCESS_HINT} />
   }
 
-  const allDocs = documentos || []
+  if (state.status !== "ready") {
+    return (
+      <RestrictedNotice title="No pudimos cargar los documentos" description="Revisá tu conexión e intentá nuevamente.">
+        <Button variant="brandOutline" onClick={retry}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Reintentar
+        </Button>
+      </RestrictedNotice>
+    )
+  }
+
+  const allDocs = state.docs
+  const grouped = Object.fromEntries(
+    ALL_CATEGORIES.map((c) => [c, allDocs.filter((d) => d.category === c)])
+  ) as Record<DocumentCategory, DocumentoSummary[]>
   const visibleCategories = ALL_CATEGORIES.filter((c) => grouped[c].length > 0)
   const filteredDocs = selected === "todos" ? allDocs : grouped[selected]
 
@@ -134,7 +145,13 @@ export function DocumentosList() {
       ) : selected === "todos" ? (
         <div className="space-y-10">
           {visibleCategories.map((key) => (
-            <CategoryGrid key={key} category={key} docs={grouped[key]} />
+            <div key={key}>
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="text-xl font-semibold text-terracotta">{DOCUMENT_CATEGORIES[key]}</h2>
+                <Badge variant="secondary" className="text-xs">{grouped[key].length}</Badge>
+              </div>
+              <DocumentGrid docs={grouped[key]} />
+            </div>
           ))}
         </div>
       ) : (
@@ -144,19 +161,7 @@ export function DocumentosList() {
   )
 }
 
-function CategoryGrid({ category, docs }: { category: DocumentCategory; docs: ViewerDocumento[] }) {
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-4">
-        <h2 className="text-xl font-semibold text-terracotta">{DOCUMENT_CATEGORIES[category]}</h2>
-        <Badge variant="secondary" className="text-xs">{docs.length}</Badge>
-      </div>
-      <DocumentGrid docs={docs} />
-    </div>
-  )
-}
-
-function DocumentGrid({ docs }: { docs: ViewerDocumento[] }) {
+function DocumentGrid({ docs }: { docs: DocumentoSummary[] }) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {docs.map((documento) => (
@@ -166,14 +171,14 @@ function DocumentGrid({ docs }: { docs: ViewerDocumento[] }) {
   )
 }
 
-function RestrictedNotice({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
+function RestrictedNotice({ title, description, children }: { title: string; description: string; children?: ReactNode }) {
   return (
     <div className="container px-4 md:px-6">
       <div className="mx-auto max-w-lg text-center py-12">
         <Lock className="mx-auto h-16 w-16 text-terracotta/70 mb-4" />
         <h2 className="text-xl font-semibold mb-2">{title}</h2>
         <p className="text-muted-foreground mb-6">{description}</p>
-        {action}
+        {children}
       </div>
     </div>
   )
