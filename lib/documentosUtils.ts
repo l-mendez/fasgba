@@ -1,8 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
 import { formatArgentinaDate as formatDate } from '@/lib/dateUtils'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 // Document categories with Spanish labels
 export const DOCUMENT_CATEGORIES = {
@@ -14,6 +10,28 @@ export const DOCUMENT_CATEGORIES = {
 } as const
 
 export type DocumentCategory = keyof typeof DOCUMENT_CATEGORIES
+
+export const ALL_CATEGORIES = Object.keys(DOCUMENT_CATEGORIES) as DocumentCategory[]
+
+export interface DocumentoViewerRoles {
+  isAdmin: boolean
+  isClubAdmin: boolean
+  isAlumno: boolean
+}
+
+/**
+ * Access rules (mirrored by public.can_view_documento in the DB):
+ * - escuela: alumnos and site admins
+ * - everything else: site admins and club admins (delegados)
+ */
+export function canViewDocumentoCategory(category: DocumentCategory, roles: DocumentoViewerRoles): boolean {
+  if (roles.isAdmin) return true
+  return category === 'escuela' ? roles.isAlumno : roles.isClubAdmin
+}
+
+export function getViewableCategories(roles: DocumentoViewerRoles): DocumentCategory[] {
+  return ALL_CATEGORIES.filter((category) => canViewDocumentoCategory(category, roles))
+}
 
 // Category colors for badges
 export const CATEGORY_COLORS: Record<DocumentCategory, string> = {
@@ -56,25 +74,6 @@ export function getFileTypeInfo(mimeType: string): { extension: string; label: s
  */
 export function isAllowedMimeType(mimeType: string): boolean {
   return (ALLOWED_MIME_TYPES as readonly string[]).includes(mimeType)
-}
-
-/**
- * Get public URL for a document stored in Supabase Storage
- */
-export function getDocumentUrl(filePath: string | null): string | null {
-  if (!filePath) return null
-
-  if (filePath.startsWith('http')) {
-    return filePath
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-  const { data } = supabase.storage
-    .from('documentos')
-    .getPublicUrl(filePath)
-
-  return data.publicUrl
 }
 
 /**

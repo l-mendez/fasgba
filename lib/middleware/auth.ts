@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { User } from '@supabase/supabase-js'
+import type { DocumentoViewerRoles } from '@/lib/documentosUtils'
 
 // Create a server-side Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -170,6 +171,18 @@ export async function isAnyClubAdmin(userId: string): Promise<boolean> {
     .eq('auth_id', userId)
     .limit(1)
   return !!data && data.length > 0
+}
+
+/**
+ * Roles that decide which documento categories a user may view.
+ */
+export async function getDocumentoRoles(userId: string): Promise<DocumentoViewerRoles> {
+  const [isAdmin, isClubAdmin, alumno] = await Promise.all([
+    hasPermission('isAdmin', userId),
+    isAnyClubAdmin(userId),
+    isAlumno(userId),
+  ])
+  return { isAdmin, isClubAdmin, isAlumno: alumno }
 }
 
 /**

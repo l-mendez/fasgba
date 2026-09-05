@@ -4,7 +4,6 @@ import { z } from 'zod'
 import { requireAdmin } from '@/lib/middleware/auth'
 import { revalidateArbitrosCache } from '@/lib/cache/arbitros'
 import { revalidateClubsCache } from '@/lib/cache/clubs'
-import { revalidateDocumentosCache } from '@/lib/cache/documentos'
 import { revalidateNewsCache } from '@/lib/cache/news'
 import { revalidateProfesoresCache } from '@/lib/cache/profesores'
 import { revalidateRankingCache } from '@/lib/cache/ranking'
@@ -24,7 +23,6 @@ const INVALIDATORS: Record<CacheScope, () => void> = {
   torneos: revalidateTorneosCache,
   profesores: revalidateProfesoresCache,
   arbitros: revalidateArbitrosCache,
-  documentos: revalidateDocumentosCache,
   ranking: revalidateRankingCache,
 }
 

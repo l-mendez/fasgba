@@ -4,7 +4,6 @@ import { useRef, useState } from "react"
 import {
   Award,
   FileText,
-  FolderOpen,
   GraduationCap,
   Home,
   ListOrdered,
@@ -45,7 +44,6 @@ const SCOPE_META: Record<CacheScope, { label: string; icon: LucideIcon }> = {
   ranking: { label: "Ranking", icon: ListOrdered },
   profesores: { label: "Profesores", icon: GraduationCap },
   arbitros: { label: "Árbitros", icon: Award },
-  documentos: { label: "Documentos", icon: FolderOpen },
 }
 
 export function PurgeCacheMenu() {

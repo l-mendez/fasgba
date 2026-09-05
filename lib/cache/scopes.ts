@@ -9,7 +9,6 @@ export const CACHE_SCOPES = [
   'ranking',
   'profesores',
   'arbitros',
-  'documentos',
 ] as const
 
 export type CacheScope = (typeof CACHE_SCOPES)[number]
