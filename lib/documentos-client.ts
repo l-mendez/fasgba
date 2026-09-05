@@ -9,7 +9,10 @@ export type DocumentoAction = "view" | "download"
  * Throws on failure so callers can surface the error.
  */
 export async function openDocumento(documento: { id: number }, action: DocumentoAction): Promise<void> {
-  const tab = action === "view" ? window.open("", "_blank", "noopener,noreferrer") : null
+  // No "noopener" in the features string: that makes window.open return null.
+  // The opener is severed manually below instead.
+  const tab = action === "view" ? window.open("", "_blank") : null
+  if (tab) tab.opener = null
 
   try {
     const { url } = await apiCall(`/api/documentos/download/${documento.id}${action === "download" ? "?download=1" : ""}`)
