@@ -8,26 +8,15 @@ export async function GET(request: NextRequest) {
     const user = await requireAuth(request)
     const supabase = createAdminClient()
 
-    // Check admin status
-    const { data: adminData } = await supabase
-      .from('admins')
-      .select('auth_id')
-      .eq('auth_id', user.id)
-      .single()
+    // requireAuth already resolved admin status; fetch the remaining roles in parallel.
+    const isAdmin = user.permissions?.isAdmin ?? false
+    const [{ data: clubAdminData, count }, alumno] = await Promise.all([
+      supabase.from('club_admins').select('auth_id, club_id', { count: 'exact' }).eq('auth_id', user.id),
+      isAlumno(user.id),
+    ])
 
-    const isAdmin = !!adminData
-
-    // Check club admin status
-    const { data: clubAdminData, count } = await supabase
-      .from('club_admins')
-      .select('auth_id, club_id', { count: 'exact' })
-      .eq('auth_id', user.id)
-
-    const isClubAdmin = (count || 0) > 0
     const adminClubsCount = count || 0
-
-    // Check alumno status
-    const alumno = await isAlumno(user.id)
+    const isClubAdmin = adminClubsCount > 0
 
     return apiSuccess({
       isAdmin,
