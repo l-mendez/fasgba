@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import { getViewableCategories } from '@/lib/documentosUtils'
 
 interface UserPermissions {
   canEditProfile: boolean
@@ -26,6 +27,8 @@ export interface AuthState {
   isAdmin: boolean
   isClubAdmin: boolean
   isAlumno: boolean
+  /** True when the user can view at least one documento category. */
+  canViewDocumentos: boolean
   adminClubsCount: number
   error?: string
 }
@@ -205,14 +208,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const isAdmin = permissions?.isAdmin ?? false
+
   const value: AuthState = {
     user,
     permissions,
     isLoading,
     isAuthenticated: !!user,
-    isAdmin: permissions?.isAdmin ?? false,
+    isAdmin,
     isClubAdmin,
     isAlumno,
+    canViewDocumentos: getViewableCategories({ isAdmin, isClubAdmin, isAlumno }).length > 0,
     adminClubsCount,
     error,
   }

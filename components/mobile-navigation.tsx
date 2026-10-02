@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 
 export function MobileNavigation() {
-  const { isAuthenticated, isAdmin, isClubAdmin, isLoading } = useAuth()
+  const { isAuthenticated, isAdmin, isClubAdmin, canViewDocumentos, isLoading } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const supabase = createClient()
   const router = useRouter()
@@ -91,14 +91,16 @@ export function MobileNavigation() {
             <FileText className="mr-2 h-5 w-5 text-amber" />
             <span>Noticias</span>
           </Link>
-          <Link
-            href="/documentos"
-            className="flex items-center text-muted-foreground hover:text-amber"
-            onClick={() => setIsOpen(false)}
-          >
-            <FolderOpen className="mr-2 h-5 w-5 text-amber" />
-            <span>Documentos</span>
-          </Link>
+          {canViewDocumentos && (
+            <Link
+              href="/documentos"
+              className="flex items-center text-muted-foreground hover:text-amber"
+              onClick={() => setIsOpen(false)}
+            >
+              <FolderOpen className="mr-2 h-5 w-5 text-amber" />
+              <span>Documentos</span>
+            </Link>
+          )}
           <Link
             href="/profesores"
             className="flex items-center text-muted-foreground hover:text-amber"
