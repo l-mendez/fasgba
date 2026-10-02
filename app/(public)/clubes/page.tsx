@@ -6,6 +6,7 @@ import { getAllClubs, type Club } from "@/lib/clubUtils"
 import { ClubSearch } from "@/components/club-search"
 import { ClubsGrid } from "@/components/clubs-grid"
 import { PageHero } from "@/components/page-hero"
+import { safe } from "@/lib/utils/safe"
 
 // The directory is identical for everyone, so cache it indefinitely and refresh
 // only via revalidateClubsCache. Per-user follow state and search are resolved
@@ -60,7 +61,7 @@ export const metadata: Metadata = {
 }
 
 export default async function ClubesPage() {
-  const clubs = await getCachedClubs()
+  const clubs = await safe(getCachedClubs, [] as Club[], "Error fetching clubs:")
 
   return (
     <>

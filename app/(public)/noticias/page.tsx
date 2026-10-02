@@ -5,6 +5,7 @@ import { NewsList } from "@/components/news-list"
 import { PageHero } from "@/components/page-hero"
 import { getAllNews, getAllNewsTags } from "@/lib/newsUtils"
 import { getAllClubs } from "@/lib/clubUtils"
+import { safe } from "@/lib/utils/safe"
 import type { NewsDisplay } from "@/lib/newsUtils"
 import type { Club } from "@/lib/clubUtils"
 
@@ -81,15 +82,6 @@ const getCachedClubs = unstable_cache(
   ["clubs-list"],
   { revalidate: false, tags: ["clubs"] }
 )
-
-async function safe<T>(fn: () => Promise<T>, fallback: T, label: string): Promise<T> {
-  try {
-    return await fn()
-  } catch (error) {
-    console.error(label, error)
-    return fallback
-  }
-}
 
 export default async function NoticiasPage() {
   const [allNews, tags, clubs] = await Promise.all([
