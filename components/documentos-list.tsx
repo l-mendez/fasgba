@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 import Link from "next/link"
-import { usePathname, useSearchParams } from "next/navigation"
-import { FolderOpen, Lock, LogIn, RefreshCw } from "lucide-react"
+import { notFound, useSearchParams } from "next/navigation"
+import { FolderOpen, Lock, RefreshCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -19,9 +19,6 @@ import {
   type DocumentoSummary,
 } from "@/lib/documentosUtils"
 
-const ACCESS_HINT =
-  "Los documentos están disponibles para delegados de club y administradores. Los alumnos de la escuela pueden ver los documentos de Escuela."
-
 type ListState =
   | { status: "loading" | "forbidden" | "error" }
   | { status: "ready"; docs: DocumentoSummary[] }
@@ -32,7 +29,6 @@ type ListState =
 // via badges and ?categoria=.
 export function DocumentosList() {
   const { user, isLoading: authLoading } = useAuth()
-  const pathname = usePathname()
   const searchParams = useSearchParams()
   const raw = searchParams.get("categoria") || "todos"
   const selected: "todos" | DocumentCategory = raw !== "todos" && isValidCategory(raw) ? raw : "todos"
@@ -66,24 +62,8 @@ export function DocumentosList() {
     )
   }
 
-  if (!userId) {
-    const query = searchParams.toString()
-    const redirect = encodeURIComponent(query ? `${pathname}?${query}` : pathname)
-    return (
-      <RestrictedNotice title="Acceso restringido" description={`Iniciá sesión para ver los documentos. ${ACCESS_HINT}`}>
-        <Button asChild variant="brand">
-          <Link href={`/login?redirect=${redirect}`}>
-            <LogIn className="mr-2 h-4 w-4" />
-            Iniciar sesión
-          </Link>
-        </Button>
-      </RestrictedNotice>
-    )
-  }
-
-  if (state.status === "forbidden") {
-    return <RestrictedNotice title="Tu cuenta no tiene acceso a los documentos" description={ACCESS_HINT} />
-  }
+  // Viewers without access get a 404 rather than a hint that the page exists.
+  if (!userId || state.status === "forbidden") notFound()
 
   if (state.status !== "ready") {
     return (
