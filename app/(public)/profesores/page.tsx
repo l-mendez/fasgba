@@ -7,6 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { getAllProfesores, type ProfesorWithClub } from "@/lib/profesorUtils"
 import { PageHero } from "@/components/page-hero"
 import { createClient } from "@/lib/supabase/client"
+import { safe } from "@/lib/utils/safe"
 
 // Cached indefinitely, purged by revalidateProfesoresCache on mutation.
 export const revalidate = false
@@ -45,7 +46,7 @@ function getProfesorImageUrl(fotoPath: string | null) {
 }
 
 async function ProfesoresList() {
-  const profesores = await getAllProfesores()
+  const profesores = await safe(getAllProfesores, [] as ProfesorWithClub[], "Error fetching profesores:")
 
   if (profesores.length === 0) {
     return (

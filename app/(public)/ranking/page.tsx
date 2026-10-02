@@ -7,6 +7,7 @@ import {
   getCachedPublicRankingOptions,
 } from "@/lib/rankingStorage"
 import { normalizePlayer } from "@/lib/rankingDisplay"
+import { safe } from "@/lib/utils/safe"
 import type { Player } from "@/lib/rankingUtils"
 
 // Re-export Player type for any consumers
@@ -50,15 +51,6 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-}
-
-async function safe<T>(fn: () => Promise<T>, fallback: T, label: string): Promise<T> {
-  try {
-    return await fn()
-  } catch (error) {
-    console.error(label, error)
-    return fallback
-  }
 }
 
 // The ranking data is identical for everyone, so the page reads the cached
