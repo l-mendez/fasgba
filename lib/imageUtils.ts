@@ -1,14 +1,14 @@
+import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
 import { createClient } from '@supabase/supabase-js'
 
-// Service-role client for the storage helpers below (server only). Created
-// lazily so importing the URL helpers in client components doesn't spin up a
-// Supabase client.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = SUPABASE_SECRET_KEY
+
+// Created on first use so importing this module in the browser (for the public
+// URL helpers) never builds a secret-key client.
 let serviceClient: ReturnType<typeof createClient> | null = null
 function getServiceClient() {
-  serviceClient ??= createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  serviceClient ??= createClient(supabaseUrl, supabaseServiceKey)
   return serviceClient
 }
 
