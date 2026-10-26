@@ -1,11 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Pencil, Trash2, Search, MapPin, Users2, Mail, Phone } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Table,
@@ -22,16 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { AdminConfirmDialog } from "@/components/admin-confirm-dialog"
+import { AdminRowActions, type AdminRowAction } from "@/components/admin-row-actions"
 import { InfoPill } from "@/components/info-pill"
 import { getModalidades } from "@/lib/profesorModalidad"
 import { apiCall } from "@/lib/utils/apiClient"
@@ -67,7 +56,6 @@ function ModalidadPills({ modalidad }: { modalidad: string }) {
 }
 
 export function ProfesoresTable({ profesores: initialProfesores }: ProfesoresTableProps) {
-  const router = useRouter()
   const [profesores, setProfesores] = useState(initialProfesores)
   const [searchTerm, setSearchTerm] = useState("")
   const [modalidadFilter, setModalidadFilter] = useState("all")
@@ -95,7 +83,7 @@ export function ProfesoresTable({ profesores: initialProfesores }: ProfesoresTab
       })
 
       setProfesores(prev => prev.filter(p => p.id !== deleteId))
-      toast.success("Profesor eliminado correctamente")
+      toast.success("Profesor eliminado")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error al eliminar el profesor")
     } finally {
@@ -103,6 +91,11 @@ export function ProfesoresTable({ profesores: initialProfesores }: ProfesoresTab
       setDeleteId(null)
     }
   }
+
+  const rowActions = (profesor: Profesor): AdminRowAction[] => [
+    { label: "Editar", icon: Pencil, href: `/admin/profesores/${profesor.id}/editar` },
+    { label: "Eliminar", icon: Trash2, onSelect: () => setDeleteId(profesor.id), destructive: true },
+  ]
 
   return (
     <div className="space-y-4">
@@ -139,14 +132,16 @@ export function ProfesoresTable({ profesores: initialProfesores }: ProfesoresTab
               <TableHead>Club</TableHead>
               <TableHead>Modalidad</TableHead>
               <TableHead className="hidden lg:table-cell">Zona</TableHead>
-              <TableHead className="w-[90px]"></TableHead>
+              <TableHead className="w-[60px]">
+                <span className="sr-only">Acciones</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredProfesores.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                  No se encontraron profesores.
+                  No se encontraron profesores
                 </TableCell>
               </TableRow>
             ) : (
@@ -158,24 +153,8 @@ export function ProfesoresTable({ profesores: initialProfesores }: ProfesoresTab
                     <ModalidadPills modalidad={profesor.modalidad} />
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">{profesor.zona || "—"}</TableCell>
-                  <TableCell>
-                    <div className="flex shrink-0 justify-end gap-1">
-                      <Button asChild variant="ghost" size="icon" className="h-8 w-8" aria-label="Editar" title="Editar">
-                        <Link href={`/admin/profesores/${profesor.id}/editar`}>
-                          <Pencil className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        aria-label="Eliminar"
-                        title="Eliminar"
-                        onClick={() => setDeleteId(profesor.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                  <TableCell className="text-right">
+                    <AdminRowActions actions={rowActions(profesor)} />
                   </TableCell>
                 </TableRow>
               ))
@@ -188,30 +167,14 @@ export function ProfesoresTable({ profesores: initialProfesores }: ProfesoresTab
       <div className="md:hidden space-y-3">
         {filteredProfesores.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            No se encontraron profesores.
+            No se encontraron profesores
           </div>
         ) : (
           filteredProfesores.map((profesor) => (
             <div key={profesor.id} className="rounded-lg border p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium">{profesor.titulo}</h3>
-                <div className="flex shrink-0 justify-end gap-1">
-                  <Button asChild variant="ghost" size="icon" className="h-8 w-8" aria-label="Editar" title="Editar">
-                    <Link href={`/admin/profesores/${profesor.id}/editar`}>
-                      <Pencil className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    aria-label="Eliminar"
-                    title="Eliminar"
-                    onClick={() => setDeleteId(profesor.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="min-w-0 font-medium">{profesor.titulo}</h3>
+                <AdminRowActions actions={rowActions(profesor)} />
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-sm text-muted-foreground">
                 {profesor.club_name && (
@@ -245,27 +208,14 @@ export function ProfesoresTable({ profesores: initialProfesores }: ProfesoresTab
         )}
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar profesor</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará permanentemente el profesor y su imagen asociada.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? "Eliminando..." : "Eliminar"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AdminConfirmDialog
+        open={deleteId !== null}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="¿Eliminar profesor?"
+        description="Esta acción no se puede deshacer. También se eliminará su foto."
+        onConfirm={handleDelete}
+        pending={isDeleting}
+      />
     </div>
   )
 }

@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { BadgeCheck, Building2, ChevronDown, GraduationCap, MoreHorizontal, Search, Shield, ShieldCheck, Trash2, User } from "lucide-react"
+import { BadgeCheck, Building2, ChevronDown, GraduationCap, Search, Shield, ShieldCheck, Trash2, User } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,10 +22,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { AdminConfirmDialog } from "@/components/admin-confirm-dialog"
+import { AdminRowActions, type AdminRowAction } from "@/components/admin-row-actions"
+import { AdminSortIcon } from "@/components/admin-sort-icon"
 import { InfoPill } from "@/components/info-pill"
 import { apiCall } from "@/lib/utils/apiClient"
 
-// Updated interface to include additional user metadata
 interface UserWithPermissions {
   id: string
   email: string
@@ -39,19 +48,50 @@ interface UserWithPermissions {
   fecha_nacimiento?: string | null
   isAdmin: boolean
   isClubAdmin: boolean
+  isAlumno: boolean
   adminClubs: string[]
 }
 
-// Add delete user function
-async function deleteUser(userId: string): Promise<void> {
-  try {
-    await apiCall(`/api/auth/users/${userId}`, {
-      method: 'DELETE',
-    })
-  } catch (error) {
-    console.error('Error deleting user:', error)
-    throw error
-  }
+type RoleFilter = "all" | "admin" | "club_admin" | "alumno" | "user" | "verified"
+type SortField = "email" | "name" | "role" | "clubs" | "verified"
+
+const ROLE_FILTERS: Record<RoleFilter, (user: UserWithPermissions) => boolean> = {
+  all: () => true,
+  admin: (user) => user.isAdmin,
+  club_admin: (user) => user.isClubAdmin,
+  alumno: (user) => user.isAlumno,
+  user: (user) => !user.isAdmin && !user.isClubAdmin,
+  verified: (user) => user.emailVerified,
+}
+
+const SORT_LABELS: Record<SortField, string> = {
+  email: "Email",
+  name: "Nombre",
+  role: "Rol",
+  clubs: "Clubes",
+  verified: "Verificación",
+}
+
+const fullName = (user: UserWithPermissions) =>
+  [user.nombre, user.apellido].filter(Boolean).join(" ")
+
+function RolePills({ user }: { user: UserWithPermissions }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {user.isAdmin && <InfoPill icon={ShieldCheck}>Admin</InfoPill>}
+      {user.isClubAdmin && <InfoPill icon={Building2}>Delegado</InfoPill>}
+      {user.isAlumno && <InfoPill icon={GraduationCap}>Alumno</InfoPill>}
+      {!user.isAdmin && !user.isClubAdmin && !user.isAlumno && <InfoPill icon={User}>Usuario</InfoPill>}
+    </div>
+  )
+}
+
+function VerifiedIcon() {
+  return (
+    <span title="Email verificado" className="shrink-0">
+      <BadgeCheck className="h-4 w-4 text-amber" aria-label="Email verificado" />
+    </span>
+  )
 }
 
 interface UsersTableProps {
@@ -60,381 +100,292 @@ interface UsersTableProps {
 
 export function UsersTable({ initialUsers }: UsersTableProps) {
   const [searchQuery, setSearchQuery] = useState("")
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all")
   const [users, setUsers] = useState<UserWithPermissions[]>(initialUsers)
-  const [sortBy, setSortBy] = useState<string | null>(null)
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
-  const [originalOrder, setOriginalOrder] = useState<UserWithPermissions[]>(initialUsers)
-  const [isDeleting, setIsDeleting] = useState<string | null>(null)
-  const [addingAlumno, setAddingAlumno] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<SortField | null>(null)
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
+  const [userToDelete, setUserToDelete] = useState<UserWithPermissions | null>(null)
+  const [userToAlumno, setUserToAlumno] = useState<UserWithPermissions | null>(null)
+  const [isPending, setIsPending] = useState(false)
 
-  // Add delete user handler
-  const handleDeleteUser = async (userId: string, userEmail: string) => {
-    if (!confirm(`¿Estás seguro de que quieres eliminar al usuario ${userEmail}? Esta acción no se puede deshacer.`)) {
-      return
-    }
-
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return
+    setIsPending(true)
     try {
-      setIsDeleting(userId)
-      await deleteUser(userId)
-      
-      // Update the users list by removing the deleted user
-      const updatedUsers = users.filter(user => user.id !== userId)
-      setUsers(updatedUsers)
-      setOriginalOrder(updatedUsers)
-      
-      // Show success message (you could replace this with a toast notification)
-      alert('Usuario eliminado correctamente')
+      await apiCall(`/api/auth/users/${userToDelete.id}`, { method: "DELETE" })
+      setUsers((prev) => prev.filter((user) => user.id !== userToDelete.id))
+      toast.success("Usuario eliminado")
     } catch (error) {
-      console.error('Error deleting user:', error)
-      alert(error instanceof Error ? error.message : 'Error al eliminar el usuario')
+      toast.error(error instanceof Error ? error.message : "Error al eliminar el usuario")
     } finally {
-      setIsDeleting(null)
+      setIsPending(false)
+      setUserToDelete(null)
     }
   }
 
-  const handleAddAlumno = async (userId: string, userEmail: string) => {
+  const handleAddAlumno = async () => {
+    if (!userToAlumno) return
+    setIsPending(true)
     try {
-      setAddingAlumno(userId)
-      await apiCall('/api/admin/alumnos', {
-        method: 'POST',
-        body: JSON.stringify({ auth_id: userId }),
+      await apiCall("/api/admin/alumnos", {
+        method: "POST",
+        body: JSON.stringify({ auth_id: userToAlumno.id }),
       })
-      alert(`${userEmail} fue agregado como alumno de la escuela`)
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Error al agregar alumno')
-    } finally {
-      setAddingAlumno(null)
-    }
-  }
-
-  // Sorting functions
-  const handleSort = (field: string) => {
-    if (sortBy === field) {
-      // Cycle through: asc -> desc -> original
-      if (sortOrder === 'asc') {
-        setSortOrder('desc')
-      } else if (sortOrder === 'desc') {
-        setSortOrder('original')
-        setSortBy(null)
-      }
-    } else {
-      setSortBy(field)
-      setSortOrder('asc')
-    }
-  }
-
-  const getSortedUsers = (usersToSort: UserWithPermissions[]) => {
-    if (!sortBy || sortOrder === 'original') {
-      return originalOrder.filter(user => 
-        usersToSort.some(filtered => filtered.id === user.id)
+      setUsers((prev) =>
+        prev.map((user) => (user.id === userToAlumno.id ? { ...user, isAlumno: true } : user))
       )
+      toast.success(`${userToAlumno.email} ahora es alumno`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al agregar alumno")
+    } finally {
+      setIsPending(false)
+      setUserToAlumno(null)
     }
-
-    const sorted = [...usersToSort].sort((a, b) => {
-      let aValue: any
-      let bValue: any
-
-      switch (sortBy) {
-        case 'email':
-          aValue = a.email.toLowerCase()
-          bValue = b.email.toLowerCase()
-          break
-        case 'name':
-          // Sort by full name (nombre + apellido), fallback to email
-          const aFullName = `${a.nombre || ''} ${a.apellido || ''}`.trim().toLowerCase() || a.email.toLowerCase()
-          const bFullName = `${b.nombre || ''} ${b.apellido || ''}`.trim().toLowerCase() || b.email.toLowerCase()
-          aValue = aFullName
-          bValue = bFullName
-          break
-        case 'role':
-          // Sort by role hierarchy: Admin > Club Admin > User
-          aValue = a.isAdmin ? 2 : (a.isClubAdmin ? 1 : 0)
-          bValue = b.isAdmin ? 2 : (b.isClubAdmin ? 1 : 0)
-          break
-        case 'clubs':
-          aValue = a.adminClubs.length
-          bValue = b.adminClubs.length
-          break
-        case 'verified':
-          aValue = a.emailVerified ? 1 : 0
-          bValue = b.emailVerified ? 1 : 0
-          break
-        default:
-          return 0
-      }
-
-      if (aValue < bValue) {
-        return sortOrder === 'asc' ? -1 : 1
-      }
-      if (aValue > bValue) {
-        return sortOrder === 'asc' ? 1 : -1
-      }
-      return 0
-    })
-
-    return sorted
   }
 
-  const getSortIcon = (field: string) => {
+  // Cycle: asc -> desc -> original
+  const handleSort = (field: SortField) => {
     if (sortBy !== field) {
-      return null
+      setSortBy(field)
+      setSortOrder("asc")
+    } else if (sortOrder === "asc") {
+      setSortOrder("desc")
+    } else {
+      setSortBy(null)
     }
-    
-    if (sortOrder === 'asc') {
-      return '↑'
-    } else if (sortOrder === 'desc') {
-      return '↓'
-    }
-    
-    return null
   }
 
-  // Enhanced filtering logic to handle both text search and special filters
-  const filteredUsers = users.filter(user => {
-    const query = searchQuery.toLowerCase()
-    
-    // Handle special filter cases
-    if (query === 'admin' || query === 'administradores') {
-      return user.isAdmin
+  const sortDirection = (field: SortField) => (sortBy === field ? sortOrder : null)
+
+  const sortValue = (user: UserWithPermissions, field: SortField): string | number => {
+    switch (field) {
+      case "email":
+        return user.email.toLowerCase()
+      case "name":
+        return (fullName(user) || user.email).toLowerCase()
+      case "role":
+        return user.isAdmin ? 2 : user.isClubAdmin ? 1 : 0
+      case "clubs":
+        return user.adminClubs.length
+      case "verified":
+        return user.emailVerified ? 1 : 0
     }
-    
-    if (query === 'delegado' || query === 'delegados') {
-      return user.isClubAdmin
-    }
-    
-    if (query === 'usuario' || query === 'usuarios básicos') {
-      return !user.isAdmin && !user.isClubAdmin
-    }
-    
-    if (query === 'verificado') {
-      return user.emailVerified
-    }
-    
-    // Regular text search
-    return user.email.toLowerCase().includes(query) ||
-           (user.nombre || '').toLowerCase().includes(query) ||
-           (user.apellido || '').toLowerCase().includes(query) ||
-           user.adminClubs.some(club => club.toLowerCase().includes(query))
+  }
+
+  const query = searchQuery.trim().toLowerCase()
+  const filteredUsers = users.filter((user) => {
+    if (!ROLE_FILTERS[roleFilter](user)) return false
+    if (!query) return true
+    return (
+      user.email.toLowerCase().includes(query) ||
+      (user.nombre || "").toLowerCase().includes(query) ||
+      (user.apellido || "").toLowerCase().includes(query) ||
+      user.adminClubs.some((club) => club.toLowerCase().includes(query))
+    )
   })
 
-  // Apply sorting to filtered users
-  const sortedAndFilteredUsers = getSortedUsers(filteredUsers)
+  const sortedAndFilteredUsers = sortBy
+    ? [...filteredUsers].sort((a, b) => {
+        const aValue = sortValue(a, sortBy)
+        const bValue = sortValue(b, sortBy)
+        if (aValue === bValue) return 0
+        return (aValue < bValue ? -1 : 1) * (sortOrder === "asc" ? 1 : -1)
+      })
+    : filteredUsers
+
+  const isFiltered = query !== "" || roleFilter !== "all"
+  const emptyText = isFiltered ? "No se encontraron usuarios" : "No hay usuarios registrados"
+
+  const rowActions = (user: UserWithPermissions): AdminRowAction[] => [
+    { label: "Editar permisos", icon: Shield, href: `/admin/usuarios/${user.id}/editar` },
+    {
+      label: "Hacer alumno",
+      icon: GraduationCap,
+      onSelect: () => setUserToAlumno(user),
+      hidden: user.isAlumno,
+    },
+    {
+      label: "Eliminar",
+      icon: Trash2,
+      onSelect: () => setUserToDelete(user),
+      destructive: true,
+    },
+  ]
+
+  const sortableHead = (field: SortField, label: string, className?: string) => (
+    <TableHead
+      className={`cursor-pointer select-none whitespace-nowrap hover:bg-muted/50 ${className ?? ""}`}
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {label}
+        <AdminSortIcon direction={sortDirection(field)} />
+      </div>
+    </TableHead>
+  )
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por nombre, apellido, email o club..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-10"
           />
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as RoleFilter)}>
+            <SelectTrigger className="w-full md:w-[180px]" aria-label="Filtrar por rol">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los roles</SelectItem>
+              <SelectItem value="admin">Administradores</SelectItem>
+              <SelectItem value="club_admin">Delegados</SelectItem>
+              <SelectItem value="alumno">Alumnos</SelectItem>
+              <SelectItem value="user">Usuarios básicos</SelectItem>
+              <SelectItem value="verified">Email verificado</SelectItem>
+            </SelectContent>
+          </Select>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="w-full sm:w-auto">
-                Filtrar
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[200px]">
-              <DropdownMenuLabel>Filtrar por tipo</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSearchQuery("")}>Todos</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchQuery("admin")}>Administradores</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchQuery("delegado")}>Delegados</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchQuery("usuario")}>Usuarios básicos</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchQuery("verificado")}>Solo verificados</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-auto">
-                Ordenar
-                <ChevronDown className="ml-2 h-4 w-4" />
+                {sortBy ? SORT_LABELS[sortBy] : "Ordenar"}
+                <AdminSortIcon direction={sortBy ? sortOrder : null} />
+                <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[200px]">
               <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleSort('email')}>
-                Email {getSortIcon('email')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('name')}>
-                Nombre {getSortIcon('name')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('role')}>
-                Rol {getSortIcon('role')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('clubs')}>
-                Clubes {getSortIcon('clubs')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('verified')}>
-                Verificación {getSortIcon('verified')}
-              </DropdownMenuItem>
+              {(Object.keys(SORT_LABELS) as SortField[]).map((field) => (
+                <DropdownMenuItem key={field} onClick={() => handleSort(field)} className="justify-between">
+                  {SORT_LABELS[field]}
+                  <AdminSortIcon direction={sortDirection(field)} />
+                </DropdownMenuItem>
+              ))}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => {
-                setSortBy(null)
-                setSortOrder('original')
-              }}>
-                Orden original
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortBy(null)}>Orden original</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
-      
-      <div className="rounded-md border">
-        <div className="w-full overflow-auto">
-          <Table>
-            <TableHeader>
+
+      {/* Desktop Table */}
+      <div className="hidden rounded-md border md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {sortableHead("email", "Email")}
+              {sortableHead("name", "Nombre")}
+              {sortableHead("role", "Roles")}
+              {sortableHead("clubs", "Clubes administrados", "hidden lg:table-cell")}
+              <TableHead className="w-[60px]">
+                <span className="sr-only">Acciones</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedAndFilteredUsers.length === 0 ? (
               <TableRow>
-                <TableHead 
-                  className="min-w-0 w-full md:w-auto cursor-pointer hover:bg-muted/50 select-none"
-                  onClick={() => handleSort('email')}
-                >
-                  <div className="flex items-center gap-1">
-                    Email
-                    {getSortIcon('email') && <span className="text-xs">{getSortIcon('email')}</span>}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="hidden sm:table-cell whitespace-nowrap cursor-pointer hover:bg-muted/50 select-none"
-                  onClick={() => handleSort('name')}
-                >
-                  <div className="flex items-center gap-1">
-                    Nombre
-                    {getSortIcon('name') && <span className="text-xs">{getSortIcon('name')}</span>}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="whitespace-nowrap cursor-pointer hover:bg-muted/50 select-none"
-                  onClick={() => handleSort('role')}
-                >
-                  <div className="flex items-center gap-1">
-                    Roles
-                    {getSortIcon('role') && <span className="text-xs">{getSortIcon('role')}</span>}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="hidden md:table-cell cursor-pointer hover:bg-muted/50 select-none"
-                  onClick={() => handleSort('clubs')}
-                >
-                  <div className="flex items-center gap-1">
-                    Clubes Administrados
-                    {getSortIcon('clubs') && <span className="text-xs">{getSortIcon('clubs')}</span>}
-                  </div>
-                </TableHead>
-                <TableHead className="w-[50px] md:w-[70px]"></TableHead>
+                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                  {emptyText}
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedAndFilteredUsers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    {searchQuery ? 'No se encontraron usuarios' : 'No hay usuarios registrados'}
+            ) : (
+              sortedAndFilteredUsers.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <span className="break-all">{user.email}</span>
+                      {user.emailVerified && <VerifiedIcon />}
+                    </div>
                   </TableCell>
-                </TableRow>
-              ) : (
-                sortedAndFilteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="min-w-0 max-w-0 md:min-w-auto md:max-w-none">
-                      <div className="flex items-center gap-1.5">
-                        <span className="truncate">{user.email}</span>
-                        {user.emailVerified && (
-                          <span title="Email verificado" className="shrink-0">
-                            <BadgeCheck className="h-4 w-4 text-amber" aria-label="Email verificado" />
-                          </span>
+                  <TableCell className="whitespace-nowrap">
+                    {fullName(user) || <span className="italic text-muted-foreground">Sin nombre</span>}
+                  </TableCell>
+                  <TableCell>
+                    <RolePills user={user} />
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    {user.adminClubs.length > 0 ? (
+                      <div className="text-sm text-muted-foreground">
+                        {user.adminClubs.slice(0, 2).map((club, index) => (
+                          <div key={index}>{club}</div>
+                        ))}
+                        {user.adminClubs.length > 2 && (
+                          <div className="text-xs">+{user.adminClubs.length - 2} más</div>
                         )}
                       </div>
-                      {(user.nombre || user.apellido) && (
-                        <div className="truncate text-xs text-muted-foreground sm:hidden">
-                          {[user.nombre, user.apellido].filter(Boolean).join(" ")}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell whitespace-nowrap">
-                      <div className="truncate pr-2 md:pr-0">
-                        {user.nombre && user.apellido 
-                          ? `${user.nombre} ${user.apellido}`
-                          : user.nombre || user.apellido || (
-                            <span className="text-muted-foreground italic">Sin nombre</span>
-                          )
-                        }
-                      </div>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <div className="flex flex-col items-start gap-1 md:flex-row md:flex-wrap">
-                        {user.isAdmin && <InfoPill icon={ShieldCheck}>Admin</InfoPill>}
-                        {user.isClubAdmin && <InfoPill icon={Building2}>Delegado</InfoPill>}
-                        {!user.isAdmin && !user.isClubAdmin && <InfoPill icon={User}>Usuario</InfoPill>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {user.adminClubs.length > 0 ? (
-                        <div className="text-sm">
-                          {user.adminClubs.slice(0, 2).map((club, index) => (
-                            <div key={index} className="text-muted-foreground">
-                              {club}
-                            </div>
-                          ))}
-                          {user.adminClubs.length > 2 && (
-                            <div className="text-xs text-muted-foreground">
-                              +{user.adminClubs.length - 2} más
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Acciones" title="Acciones">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/usuarios/${user.id}/editar`}>
-                              <Shield className="mr-2 h-4 w-4" />
-                              Editar permisos
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleAddAlumno(user.id, user.email)}
-                            disabled={addingAlumno === user.id}
-                          >
-                            <GraduationCap className="mr-2 h-4 w-4" />
-                            {addingAlumno === user.id ? 'Agregando...' : 'Hacer alumno'}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => handleDeleteUser(user.id, user.email)}
-                            disabled={isDeleting === user.id}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {isDeleting === user.id ? 'Eliminando...' : 'Eliminar usuario'}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <AdminRowActions actions={rowActions(user)} />
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
-      
+
+      {/* Mobile Cards */}
+      <div className="space-y-3 md:hidden">
+        {sortedAndFilteredUsers.length === 0 ? (
+          <div className="py-8 text-center text-muted-foreground">{emptyText}</div>
+        ) : (
+          sortedAndFilteredUsers.map((user) => (
+            <div key={user.id} className="space-y-2 rounded-lg border p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate font-medium">{fullName(user) || "Sin nombre"}</h3>
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <span className="truncate">{user.email}</span>
+                    {user.emailVerified && <VerifiedIcon />}
+                  </div>
+                </div>
+                <AdminRowActions actions={rowActions(user)} />
+              </div>
+              <RolePills user={user} />
+              {user.adminClubs.length > 0 && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Building2 className="h-3.5 w-3.5 shrink-0 text-amber" />
+                  <span className="truncate">{user.adminClubs.join(", ")}</span>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
       <div className="text-sm text-muted-foreground">
         {sortedAndFilteredUsers.length} de {users.length} usuarios
       </div>
+
+      <AdminConfirmDialog
+        open={userToDelete !== null}
+        onOpenChange={(open) => !open && setUserToDelete(null)}
+        title="¿Eliminar usuario?"
+        description={userToDelete ? `Se eliminará ${userToDelete.email}. Esta acción no se puede deshacer.` : undefined}
+        onConfirm={handleDeleteUser}
+        pending={isPending}
+      />
+
+      <AdminConfirmDialog
+        open={userToAlumno !== null}
+        onOpenChange={(open) => !open && setUserToAlumno(null)}
+        title="¿Hacer alumno?"
+        description={userToAlumno ? `${userToAlumno.email} podrá acceder a los documentos de la escuela.` : undefined}
+        confirmLabel="Hacer alumno"
+        onConfirm={handleAddAlumno}
+        pending={isPending}
+        destructive={false}
+      />
     </div>
   )
-} 
+}

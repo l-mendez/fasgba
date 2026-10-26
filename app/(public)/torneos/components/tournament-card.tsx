@@ -22,6 +22,11 @@ const STATUS_ICONS: Record<TournamentStatus, LucideIcon> = {
   past: CheckCircle2,
 }
 
+// Neutral status pill (icon + "Próximo" / "En curso" / "Finalizado").
+export function TournamentStatusPill({ status }: { status: TournamentStatus }) {
+  return <InfoPill icon={STATUS_ICONS[status]}>{TOURNAMENT_STATUS_TEXT[status]}</InfoPill>
+}
+
 // Icon + text row used throughout the card body.
 function InfoRow({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
   return (
@@ -35,9 +40,12 @@ function InfoRow({ icon: Icon, children }: { icon: LucideIcon; children: ReactNo
 export function TournamentCard({
   torneo,
   status,
+  showStatus = true,
 }: {
   torneo: TournamentDisplay
   status: TournamentStatus
+  // Hidden inside the status tabs, where the pill would repeat the tab name.
+  showStatus?: boolean
 }) {
   const isTeam = torneo.tournament_type === "team"
   // Inscription details show while a tournament is still relevant (upcoming or ongoing);
@@ -55,16 +63,15 @@ export function TournamentCard({
             {torneo.title}
           </Link>
         </h3>
-        <div className="flex flex-wrap gap-1.5">
-          <InfoPill icon={STATUS_ICONS[status]}>{TOURNAMENT_STATUS_TEXT[status]}</InfoPill>
-          {isTeam && <InfoPill icon={Users}>Por Equipos</InfoPill>}
-        </div>
-        {torneo.description && (
-          <p className="text-sm text-muted-foreground line-clamp-3">{torneo.description}</p>
+        {(showStatus || isTeam) && (
+          <div className="flex flex-wrap gap-1.5">
+            {showStatus && <TournamentStatusPill status={status} />}
+            {isTeam && <InfoPill icon={Users}>Por equipos</InfoPill>}
+          </div>
         )}
       </div>
 
-      <ul className="flex-1 space-y-1.5 text-sm text-muted-foreground">
+      <ul className="space-y-1.5 text-sm text-muted-foreground">
         <InfoRow icon={Calendar}>{formatDateRange(torneo.start_date, torneo.end_date)}</InfoRow>
         {torneo.time && <InfoRow icon={Clock}>{getTimeDisplay(torneo.time)}</InfoRow>}
         <InfoRow icon={MapPin}>
@@ -82,13 +89,17 @@ export function TournamentCard({
         )}
       </ul>
 
+      {torneo.description && (
+        <p className="text-sm text-muted-foreground line-clamp-3">{torneo.description}</p>
+      )}
+
       <div className="mt-auto flex items-center justify-between gap-2 pt-1">
         <span className="inline-flex items-center gap-1 text-sm font-semibold text-terracotta">
           Ver torneo
           <ChevronRight className="h-4 w-4" />
         </span>
         {showRegistration && torneo.registration_link && (
-          <Button asChild size="sm" className="relative z-10 bg-terracotta text-white hover:bg-terracotta/90">
+          <Button asChild size="sm" className="relative z-10">
             <a href={torneo.registration_link} target="_blank" rel="noopener noreferrer">
               Inscripción
             </a>

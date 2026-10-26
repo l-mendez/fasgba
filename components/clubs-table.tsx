@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown, Clock, Eye, Mail, MoreHorizontal, Pencil, Phone, Search, Trash2, User } from "lucide-react"
-import Link from "next/link"
+import { ChevronDown, Clock, ExternalLink, Mail, Pencil, Phone, Search, Trash2, User } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,15 +22,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Club } from "@/lib/clubUtils"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { AdminConfirmDialog } from "@/components/admin-confirm-dialog"
+import { AdminRowActions, type AdminRowAction } from "@/components/admin-row-actions"
+import { AdminSortIcon } from "@/components/admin-sort-icon"
+import type { Club } from "@/lib/clubUtils"
 import { apiCall } from "@/lib/utils/apiClient"
 
 // Extended Club interface for this component with admin stats
@@ -54,8 +49,6 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedDelegadoFilter, setSelectedDelegadoFilter] = useState<string>('all')
   const [clubToDelete, setClubToDelete] = useState<number | null>(null)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [sortBy, setSortBy] = useState<string | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
@@ -125,19 +118,8 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
     return sorted
   }
 
-  const getSortIcon = (field: string) => {
-    if (sortBy !== field) {
-      return null
-    }
-    
-    if (sortOrder === 'asc') {
-      return '↑'
-    } else if (sortOrder === 'desc') {
-      return '↓'
-    }
-    
-    return null
-  }
+  const getSortIcon = (field: string) =>
+    sortBy === field && sortOrder !== 'original' ? <AdminSortIcon direction={sortOrder} /> : null
 
   // Filter clubs by search term and delegado filter
   const filteredClubes = clubes.filter((club) => {
@@ -171,30 +153,28 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
 
     try {
       setIsDeleting(true)
-      setError(null)
       await deleteClub(clubToDelete)
       
       // Update the local state by filtering out the deleted club
       setClubes(clubes.filter((club) => club.id !== clubToDelete))
       setOriginalOrder(originalOrder.filter((club) => club.id !== clubToDelete))
-      
-      setShowDeleteDialog(false)
-      setClubToDelete(null)
+      toast.success("Club eliminado")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al eliminar el club")
+      toast.error(err instanceof Error ? err.message : "Error al eliminar el club")
     } finally {
       setIsDeleting(false)
+      setClubToDelete(null)
     }
   }
 
+  const getRowActions = (club: ClubWithAdminInfo): AdminRowAction[] => [
+    { label: "Ver en sitio", icon: ExternalLink, href: `/clubes/${club.id}`, external: true },
+    { label: "Editar", icon: Pencil, href: `/admin/clubes/${club.id}/editar` },
+    { label: "Eliminar", icon: Trash2, destructive: true, onSelect: () => setClubToDelete(club.id) },
+  ]
+
   return (
     <div className="space-y-4">
-      {error && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-destructive">
-          <p>{error}</p>
-        </div>
-      )}
-
       <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -234,19 +214,19 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
             <DropdownMenuContent align="end" className="w-[200px]">
               <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleSort('name')}>
+              <DropdownMenuItem className="gap-1" onClick={() => handleSort('name')}>
                 Nombre {getSortIcon('name')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('address')}>
+              <DropdownMenuItem className="gap-1" onClick={() => handleSort('address')}>
                 Dirección {getSortIcon('address')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('contact')}>
+              <DropdownMenuItem className="gap-1" onClick={() => handleSort('contact')}>
                 Contacto {getSortIcon('contact')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('schedule')}>
+              <DropdownMenuItem className="gap-1" onClick={() => handleSort('schedule')}>
                 Horarios {getSortIcon('schedule')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('admins')}>
+              <DropdownMenuItem className="gap-1" onClick={() => handleSort('admins')}>
                 Delegados {getSortIcon('admins')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -273,7 +253,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                 >
                   <div className="flex items-center gap-1">
                     Nombre
-                    {getSortIcon('name') && <span className="text-xs">{getSortIcon('name')}</span>}
+                    {getSortIcon('name')}
                   </div>
                 </TableHead>
                 <TableHead 
@@ -282,7 +262,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                 >
                   <div className="flex items-center gap-1">
                     Dirección
-                    {getSortIcon('address') && <span className="text-xs">{getSortIcon('address')}</span>}
+                    {getSortIcon('address')}
                   </div>
                 </TableHead>
                 <TableHead 
@@ -291,7 +271,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                 >
                   <div className="flex items-center gap-1">
                     Contacto
-                    {getSortIcon('contact') && <span className="text-xs">{getSortIcon('contact')}</span>}
+                    {getSortIcon('contact')}
                   </div>
                 </TableHead>
                 <TableHead 
@@ -300,7 +280,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                 >
                   <div className="flex items-center gap-1">
                     Horarios
-                    {getSortIcon('schedule') && <span className="text-xs">{getSortIcon('schedule')}</span>}
+                    {getSortIcon('schedule')}
                   </div>
                 </TableHead>
                 <TableHead 
@@ -309,10 +289,10 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                 >
                   <div className="flex items-center gap-1">
                     Delegados
-                    {getSortIcon('admins') && <span className="text-xs">{getSortIcon('admins')}</span>}
+                    {getSortIcon('admins')}
                   </div>
                 </TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                <TableHead className="w-[60px]"><span className="sr-only">Acciones</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -340,38 +320,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Acciones" title="Acciones">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/clubes/${club.id}`}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              Ver detalles
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/clubes/${club.id}/editar`}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Editar
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => {
-                              setClubToDelete(club.id)
-                              setShowDeleteDialog(true)
-                            }}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <AdminRowActions actions={getRowActions(club)} />
                     </TableCell>
                   </TableRow>
                 ))
@@ -420,38 +369,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                       </div>
                     </div>
 
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Acciones" title="Acciones">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/clubes/${club.id}`}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Ver detalles
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/clubes/${club.id}/editar`}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Editar
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => {
-                            setClubToDelete(club.id)
-                            setShowDeleteDialog(true)
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <AdminRowActions actions={getRowActions(club)} />
                   </div>
                 </div>
               ))}
@@ -460,33 +378,13 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
         </div>
       </>
 
-      {/* Dialog for deleting a club */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>¿Estás seguro?</DialogTitle>
-            <DialogDescription>
-              Esta acción no se puede deshacer. Se eliminará permanentemente el club.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowDeleteDialog(false)}
-              disabled={isDeleting}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleDeleteClub}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? 'Eliminando...' : 'Eliminar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdminConfirmDialog
+        open={clubToDelete !== null}
+        onOpenChange={(open) => !open && setClubToDelete(null)}
+        title="¿Eliminar club?"
+        onConfirm={handleDeleteClub}
+        pending={isDeleting}
+      />
     </div>
   )
 } 

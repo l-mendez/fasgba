@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
-import { ChevronLeft, Save } from "lucide-react"
+import { ChevronLeft, Loader2, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { toast } from "sonner"
 import { apiCall } from "@/lib/utils/apiClient"
 import { useAuth } from "@/hooks/useAuth"
+import { usePlayersListPath } from "@/app/jugadores/use-players-list-path"
 
 interface Club {
   id: number
@@ -33,6 +34,8 @@ interface PlayerFormData {
 
 export default function NuevoJugadorPage() {
   const router = useRouter()
+  const pathname = usePathname()
+  const listPath = usePlayersListPath()
   const { user, isAdmin, isClubAdmin, isLoading: authLoading } = useAuth()
   const [clubs, setClubs] = useState<Club[]>([])
   const [adminClubs, setAdminClubs] = useState<Club[]>([])
@@ -52,7 +55,7 @@ export default function NuevoJugadorPage() {
       if (authLoading) return
       
       if (!user) {
-        router.push('/login')
+        router.push(`/login?redirect=${encodeURIComponent(pathname)}`)
         return
       }
 
@@ -85,7 +88,7 @@ export default function NuevoJugadorPage() {
     }
 
     checkPermissionsAndFetchData()
-  }, [user, isAdmin, isClubAdmin, authLoading, router])
+  }, [user, isAdmin, isClubAdmin, authLoading, router, pathname])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -96,7 +99,7 @@ export default function NuevoJugadorPage() {
     }
 
     // If user is club admin, they can only create players for their clubs
-    if (!isAdmin && isClubAdmin && formData.club_id) {
+    if (!isAdmin && isClubAdmin && formData.club_id !== "none") {
       const clubId = parseInt(formData.club_id)
       const canCreateForClub = adminClubs.some(club => club.id === clubId)
       if (!canCreateForClub) {
@@ -122,12 +125,7 @@ export default function NuevoJugadorPage() {
 
       toast.success('Jugador creado exitosamente')
       
-      // Redirect based on user type
-      if (isAdmin) {
-        router.push('/admin/jugadores')
-      } else {
-        router.push('/club-admin')
-      }
+      router.push(listPath)
     } catch (error: any) {
       console.error('Error creating player:', error)
       const errorMessage = error.message || 'Error al crear jugador'
@@ -139,11 +137,8 @@ export default function NuevoJugadorPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-terracotta mx-auto mb-4"></div>
-          <p className="text-sm text-muted-foreground">Cargando...</p>
-        </div>
+      <div className="flex min-h-[400px] items-center justify-center" role="status" aria-label="Cargando">
+        <Loader2 className="h-8 w-8 animate-spin text-terracotta" />
       </div>
     )
   }
@@ -152,18 +147,18 @@ export default function NuevoJugadorPage() {
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       <div className="mb-6 flex items-center gap-2">
         <Button asChild variant="ghost" size="icon" className="-ml-2">
-          <Link href={isAdmin ? "/admin/jugadores" : "/club-admin"} aria-label="Volver" title="Volver">
+          <Link href={listPath} aria-label="Volver" title="Volver">
             <ChevronLeft />
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Nuevo Jugador</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Nuevo jugador</h1>
       </div>
 
       <Card>
         <CardContent className="p-4 md:p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="full_name">Nombre Completo *</Label>
+              <Label htmlFor="full_name">Nombre completo *</Label>
               <Input
                 id="full_name"
                 value={formData.full_name}
@@ -222,7 +217,7 @@ export default function NuevoJugadorPage() {
 
             <div className="flex justify-end gap-2 pt-2">
               <Button asChild variant="outline">
-                <Link href={isAdmin ? "/admin/jugadores" : "/club-admin"}>Cancelar</Link>
+                <Link href={listPath}>Cancelar</Link>
               </Button>
               <Button 
                 type="submit" 
@@ -231,13 +226,13 @@ export default function NuevoJugadorPage() {
               >
                 {isSubmitting ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creando...
                   </>
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />
-                    Crear Jugador
+                    Crear jugador
                   </>
                 )}
               </Button>

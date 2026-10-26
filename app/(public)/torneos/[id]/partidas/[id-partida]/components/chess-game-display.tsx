@@ -16,6 +16,11 @@ const ChessBoard = dynamic(() => import('@/app/components/chess-board'), {
   )
 })
 
+const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+// Board bar label: name plus rating, so no separate player card is needed.
+const playerLabel = (name: string, rating?: number) => (rating ? `${name} (${rating})` : name)
+
 interface ChessGameDisplayProps {
   game: GameDisplay
 }
@@ -47,38 +52,29 @@ export default function ChessGameDisplay({ game }: ChessGameDisplayProps) {
     }
   }
 
-  const players = [
-    { side: "Blancas", name: game.white, rating: game.whiteRating, team: game.whiteTeam, dot: "bg-white" },
-    { side: "Negras", name: game.black, rating: game.blackRating, team: game.blackTeam, dot: "bg-black" },
-  ]
+  const hasPosition = Boolean(game.fen && game.fen !== START_FEN)
+  if (!game.pgn && !hasPosition) {
+    return (
+      <p className="max-w-3xl rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
+        Partida sin movimientos cargados.
+      </p>
+    )
+  }
 
   return (
     <div className="grid gap-6 lg:grid-cols-12">
       <div className="flex justify-center rounded-lg border bg-card p-4 lg:col-span-7">
         <ChessBoard
-          fen={game.fen || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}
+          fen={game.fen || START_FEN}
           pgn={game.pgn}
-          whitePlayer={{ type: 'custom', value: game.white }}
-          blackPlayer={{ type: 'custom', value: game.black }}
+          whitePlayer={{ type: 'custom', value: playerLabel(game.white, game.whiteRating) }}
+          blackPlayer={{ type: 'custom', value: playerLabel(game.black, game.blackRating) }}
           result={game.result}
           width={400}
         />
       </div>
 
-      <div className="space-y-4 lg:col-span-5">
-        <ul className="divide-y rounded-lg border bg-card">
-          {players.map((player) => (
-            <li key={player.side} className="flex items-center gap-3 p-4">
-              <span className={`h-4 w-4 shrink-0 rounded-full border border-muted-foreground ${player.dot}`} title={player.side} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{player.name}</p>
-                {player.team && <p className="truncate text-sm text-muted-foreground">{player.team}</p>}
-              </div>
-              {player.rating ? <span className="text-sm font-semibold tabular-nums">{player.rating}</span> : null}
-            </li>
-          ))}
-        </ul>
-
+      <div className="lg:col-span-5">
         {game.pgn && (
           <div className="rounded-lg border bg-card p-4">
             <div className="mb-2 flex items-center justify-between">

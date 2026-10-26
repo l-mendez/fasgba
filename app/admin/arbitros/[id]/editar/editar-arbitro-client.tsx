@@ -3,10 +3,9 @@
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { AlertTriangle, ArrowLeft, Upload, X, ImageIcon, Loader2, CheckCircle, Mail, Phone } from "lucide-react"
+import { AlertTriangle, ArrowLeft, Upload, X, ImageIcon, Loader2, Mail, Phone } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { ErrorAlert } from "@/components/error-alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -58,7 +57,6 @@ interface EditarArbitroClientProps {
 export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClientProps) {
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [clubs] = useState<ClubOption[]>(initialClubs)
   const [formData, setFormData] = useState<FormData>({
     name: arbitro.name || "",
@@ -76,7 +74,6 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [pendingImageDeletion, setPendingImageDeletion] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const getCurrentImageUrl = () => {
@@ -94,7 +91,7 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
       const result = await uploadArbitroImageAction(arbitro.id, uploadFormData)
 
       if (!result.ok) {
-        throw new Error(result.error || 'Failed to upload image')
+        throw new Error(result.error || 'No se pudo subir la foto')
       }
 
       setCurrentImage(result.data.filePath)
@@ -102,10 +99,7 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
       setPendingImageDeletion(false)
 
       const actionMessage = result.data.replacedExisting ? 'reemplazada' : 'subida'
-      toast.success(`Foto ${actionMessage} correctamente`, {
-        description: "La foto del árbitro se ha actualizado exitosamente",
-        duration: 4000,
-      })
+      toast.success(`Foto ${actionMessage} correctamente`)
     } catch (error) {
       console.error('Error uploading image:', error)
       toast.error(error instanceof Error ? error.message : "Error al subir la foto")
@@ -170,7 +164,6 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
     setValidationErrors({})
 
     if (!validateForm()) return
@@ -184,7 +177,7 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
           const result = await deleteArbitroImageAction(arbitro.id)
 
           if (!result.ok) {
-            throw new Error(result.error || 'Failed to delete image')
+            throw new Error(result.error || 'No se pudo eliminar la foto')
           }
 
           setCurrentImage(null)
@@ -210,16 +203,10 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
         body: JSON.stringify(arbitroData)
       })
 
-      setShowSuccess(true)
-      toast.success("Árbitro actualizado correctamente", {
-        description: "Los cambios se han guardado exitosamente",
-        duration: 4000,
-      })
-
-      setTimeout(() => setShowSuccess(false), 3000)
+      toast.success("Árbitro actualizado correctamente")
       setTimeout(() => router.push("/admin/arbitros"), 1500)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al actualizar el árbitro")
+      toast.error(err instanceof Error ? err.message : "Error al actualizar el árbitro")
     } finally {
       setIsSaving(false)
     }
@@ -233,17 +220,6 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
     }
   }
 
-  if (error && !formData.name) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <ErrorAlert message={error} className="max-w-md" />
-        <Button variant="outline" onClick={() => router.push("/admin/arbitros")}>
-          Volver a la lista
-        </Button>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -253,24 +229,15 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Editar Árbitro</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Editar árbitro</h1>
         </div>
       </div>
-
-      {showSuccess && (
-        <div className="rounded-lg border bg-muted p-4">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="h-5 w-5 shrink-0 text-amber" />
-            <p className="text-sm font-medium">Árbitro actualizado exitosamente</p>
-          </div>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Photo Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Foto del Árbitro</CardTitle>
+            <CardTitle>Foto del árbitro</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -363,12 +330,12 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
         {/* Information Form */}
         <Card>
           <CardHeader>
-            <CardTitle>Información del Árbitro</CardTitle>
+            <CardTitle>Información del árbitro</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="name">Nombre Completo *</Label>
+                <Label htmlFor="name">Nombre completo *</Label>
                 <Input
                   id="name"
                   name="name"
@@ -389,7 +356,7 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
                   name="title"
                   value={formData.title}
                   onChange={handleChange}
-                  placeholder="Ej: Árbitro Internacional, Árbitro FIDE"
+                  placeholder="Ej: Árbitro internacional, Árbitro FIDE"
                   className={validationErrors.title ? "border-destructive" : ""}
                 />
                 {validationErrors.title && (
@@ -417,7 +384,7 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="birth_year">Año de Nacimiento</Label>
+                <Label htmlFor="birth_year">Año de nacimiento</Label>
                 <Input
                   id="birth_year"
                   name="birth_year"
@@ -436,7 +403,7 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="email">Correo Electrónico</Label>
+                  <Label htmlFor="email">Correo electrónico</Label>
                   <div className="relative">
                     <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -471,7 +438,7 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="bio">Reseña Biográfica</Label>
+                <Label htmlFor="bio">Reseña biográfica</Label>
                 <Textarea
                   id="bio"
                   name="bio"
@@ -485,12 +452,6 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
           </CardContent>
         </Card>
 
-        {error && (
-          <div className="text-sm text-destructive">
-            {error}
-          </div>
-        )}
-
         <div className="flex justify-end gap-3">
           <Button
             type="button"
@@ -500,7 +461,7 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
             Cancelar
           </Button>
           <Button type="submit" disabled={isSaving}>
-            {isSaving ? "Guardando..." : "Guardar Cambios"}
+            {isSaving ? "Guardando..." : "Guardar cambios"}
           </Button>
         </div>
       </form>

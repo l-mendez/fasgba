@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { apiCall } from "@/lib/utils/apiClient"
+import { toast } from "sonner"
 
 interface FormData {
   name: string
@@ -21,7 +22,6 @@ interface FormData {
 export default function NuevoClubPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState<FormData>({
     name: "",
     address: "",
@@ -44,7 +44,6 @@ export default function NuevoClubPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
     setValidationErrors({})
 
     if (!validateForm()) {
@@ -67,10 +66,10 @@ export default function NuevoClubPage() {
         body: JSON.stringify(clubData)
       })
 
-      // Redirect back to clubs list
+      toast.success("Club creado correctamente")
       router.push("/admin/clubes")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al crear el club")
+      toast.error(err instanceof Error ? err.message : "Error al crear el club")
     } finally {
       setIsLoading(false)
     }
@@ -94,14 +93,14 @@ export default function NuevoClubPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Nuevo Club</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Nuevo club</h1>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="name">Nombre del Club *</Label>
+            <Label htmlFor="name">Nombre del club *</Label>
             <Input
               id="name"
               name="name"
@@ -138,7 +137,7 @@ export default function NuevoClubPage() {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="mail">Correo Electrónico</Label>
+            <Label htmlFor="mail">Correo electrónico</Label>
             <Input
               id="mail"
               name="mail"
@@ -156,16 +155,10 @@ export default function NuevoClubPage() {
               name="schedule"
               value={formData.schedule}
               onChange={handleChange}
-              placeholder="Ej: Lunes a Viernes: 17:00 - 22:00"
+              placeholder="Ej: Lunes a viernes: 17:00 - 22:00"
             />
           </div>
         </div>
-
-        {error && (
-          <div className="text-sm text-destructive">
-            {error}
-          </div>
-        )}
 
         <div className="flex justify-end gap-3">
           <Button
@@ -176,7 +169,7 @@ export default function NuevoClubPage() {
             Cancelar
           </Button>
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Creando..." : "Crear Club"}
+            {isLoading ? "Creando..." : "Crear club"}
           </Button>
         </div>
       </form>

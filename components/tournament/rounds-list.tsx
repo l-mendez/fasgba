@@ -38,34 +38,37 @@ export function RoundsList({
           return gameRoundId === round.id
         })
 
+        const isSelected = selectedRound === round.id
+
         return (
           <div
             key={round.id}
-            className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
-              selectedRound === round.id ? 'border-amber bg-accent' : 'bg-card hover:border-amber'
+            className={`flex items-center gap-1 rounded-lg border pr-1 ${
+              isSelected ? 'border-amber bg-accent' : 'bg-card hover:border-amber'
             }`}
-            onClick={() => onSelectRound(round.id)}
           >
-            <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-lg p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => onSelectRound(round.id)}
+              aria-pressed={isSelected}
+            >
               <Calendar className="h-4 w-4 text-amber" />
-              <div>
-                <p className="font-medium text-sm">Ronda {round.round_number}</p>
-                <p className="text-xs text-muted-foreground">
+              <span>
+                <span className="block text-sm font-medium">Ronda {round.round_number}</span>
+                <span className="block text-xs text-muted-foreground">
                   {roundGames.length} {roundGames.length === 1 ? 'partida' : 'partidas'}
-                </p>
-              </div>
-            </div>
+                </span>
+              </span>
+            </button>
             <Button
               variant="ghost"
               size="icon"
               aria-label={`Eliminar ronda ${round.round_number}`}
               title="Eliminar ronda"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDeleteRound(round.id, round.round_number)
-              }}
+              onClick={() => onDeleteRound(round.id, round.round_number)}
               disabled={loading}
-              className="ml-auto h-8 w-8 text-destructive hover:text-destructive"
+              className="h-8 w-8 text-destructive hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />
             </Button>

@@ -11,41 +11,31 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { ErrorAlert } from "@/components/error-alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { updateNewsAction } from "@/lib/actions/news"
+import { deleteNewsAction, updateNewsAction } from "@/lib/actions/news"
 import { getArgentinaDateInputValue } from "@/lib/dateUtils"
 import { processNewsContent } from "@/lib/news-content-utils"
 import { NEWS_CATEGORIES, createEmptyTextBlock, type NewsBlockContent } from "@/components/news/types"
 import { NewsContentBlocksEditor } from "@/components/news/news-content-blocks-editor"
 import { useNewsContentBlocks } from "@/components/news/use-news-content-blocks"
-import { NewsFormHeader } from "@/components/news/news-form-header"
+import { NewsFormActions, NewsFormHeader } from "@/components/news/news-form-header"
 
-interface Club {
+export interface NewsClubOption {
   id: number
   name: string
-  description?: string
-  location?: string
-  website?: string
-  email?: string
-  phone?: string
-  created_at: string
-  updated_at: string
-}
-
-interface User {
-  id: string
-  email: string
-  role?: string
 }
 
 interface NewNewsFormProps {
-  user: User
-  userClubs: Club[]
+  userClubs: NewsClubOption[]
   isAdmin: boolean
   defaultEntityId: number | null
-  defaultEntityType: 'fasgba' | 'club'
+  /** List the user's clubs before FASGBA (when coming from club-admin). */
+  clubsFirst: boolean
+  returnPath: string
 }
 
-export function NewNewsForm({ userClubs, isAdmin, defaultEntityId }: NewNewsFormProps) {
+const FASGBA_VALUE = 'fasgba'
+
+export function NewNewsForm({ userClubs, isAdmin, defaultEntityId, clubsFirst, returnPath }: NewNewsFormProps) {
   const router = useRouter()
   const [formData, setFormData] = useState({
     title: "",
@@ -67,6 +57,37 @@ export function NewNewsForm({ userClubs, isAdmin, defaultEntityId }: NewNewsForm
     isUploading: false,
   })
   const isSubmittingRef = useRef(false)
+  // Images need the news id, so the row is created first. If a later step
+  // fails we try to delete it; if that fails too, a retry reuses this id
+  // instead of creating a duplicate.
+  const createdNewsIdRef = useRef<number | null>(null)
+
+  const createNews = async (baseData: Record<string, unknown>): Promise<number> => {
+    const supabase = createClient()
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+    if (sessionError || !session?.access_token) {
+      throw new Error('No estás autenticado. Inicia sesión nuevamente.')
+    }
+
+    const apiEndpoint = !isAdmin && formData.club_id ? `/api/clubs/${formData.club_id}/news` : '/api/news'
+    const response = await fetch(apiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ ...baseData, text: JSON.stringify([]) }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+    }
+
+    const createdNews = await response.json()
+    return createdNews.id
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -77,71 +98,49 @@ export function NewNewsForm({ userClubs, isAdmin, defaultEntityId }: NewNewsForm
       setIsSaving(true)
       setError(null)
 
-      const supabase = createClient()
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-
-      if (sessionError || !session?.access_token) {
-        throw new Error('No estás autenticado. Por favor, inicia sesión nuevamente.')
-      }
-
-      const initialNewsData = {
+      const baseData = {
         title: formData.title,
         date: formData.date,
         extract: formData.extract,
-        text: JSON.stringify([]),
         tags: formData.category ? [formData.category] : [],
         club_id: formData.club_id,
       }
 
-      let apiEndpoint = '/api/news'
-      if (!isAdmin && formData.club_id) {
-        apiEndpoint = `/api/clubs/${formData.club_id}/news`
+      if (createdNewsIdRef.current === null) {
+        createdNewsIdRef.current = await createNews(baseData)
+      }
+      const newsId = createdNewsIdRef.current
+
+      try {
+        const { processedContent, featuredImagePath } = await processNewsContent(
+          contentBlocks,
+          formData.image,
+          newsId,
+          setUploadProgress
+        )
+
+        const updateResult = await updateNewsAction(newsId, {
+          ...baseData,
+          text: JSON.stringify(processedContent),
+          image: featuredImagePath,
+        })
+
+        if (!updateResult.ok) {
+          throw new Error(updateResult.error)
+        }
+      } catch (err) {
+        const rollback = await deleteNewsAction(newsId).catch(() => null)
+        if (rollback?.ok) createdNewsIdRef.current = null
+        throw err
       }
 
-      const response = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(initialNewsData),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
-      }
-
-      const createdNews = await response.json()
-      const newsId = createdNews.id
-
-      const { processedContent, featuredImagePath } = await processNewsContent(
-        contentBlocks,
-        formData.image,
-        newsId,
-        setUploadProgress
-      )
-
-      const updateResult = await updateNewsAction(newsId, {
-        text: JSON.stringify(processedContent),
-        image: featuredImagePath,
-      })
-
-      if (!updateResult.ok) {
-        throw new Error(updateResult.error)
-      }
-
-      const redirectPath = isAdmin ? '/admin/noticias' : '/club-admin/noticias'
-
-      setTimeout(() => {
-        router.push(redirectPath)
-        router.refresh()
-      }, 500)
+      router.push(returnPath)
+      router.refresh()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al crear la noticia'
       setError(errorMessage)
-    } finally {
       setIsSaving(false)
+    } finally {
       isSubmittingRef.current = false
     }
   }
@@ -158,18 +157,11 @@ export function NewNewsForm({ userClubs, isAdmin, defaultEntityId }: NewNewsForm
     }
   }
 
-  const backPath = isAdmin ? '/admin/noticias' : '/club-admin/noticias'
+  const fasgbaOption = isAdmin ? <SelectItem value={FASGBA_VALUE}>FASGBA (Federación)</SelectItem> : null
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-8">
-      <NewsFormHeader
-        title="Nueva noticia"
-        saveLabel="Crear"
-        savingLabel="Creando..."
-        isSaving={isSaving}
-        onBack={() => router.push(backPath)}
-        onSubmit={handleSubmit}
-      />
+      <NewsFormHeader title="Nueva noticia" backHref={returnPath} />
 
       {uploadProgress.isUploading && (
         <Alert>
@@ -187,9 +179,7 @@ export function NewNewsForm({ userClubs, isAdmin, defaultEntityId }: NewNewsForm
         </Alert>
       )}
 
-      {error && (
-        <ErrorAlert title="Error" message={error} />
-      )}
+      {error && <ErrorAlert message={error} />}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid gap-4">
@@ -205,32 +195,25 @@ export function NewNewsForm({ userClubs, isAdmin, defaultEntityId }: NewNewsForm
           </div>
 
           <div className="grid gap-2">
+            <Label htmlFor="date">Fecha</Label>
+            <Input
+              id="date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div className="grid gap-2">
             <Label htmlFor="extract">Extracto</Label>
             <Textarea
               id="extract"
               value={formData.extract}
               onChange={(e) => setFormData(prev => ({ ...prev, extract: e.target.value }))}
               placeholder="Breve descripción de la noticia..."
+              className="min-h-[80px]"
             />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="image">Imagen destacada</Label>
-            <Input
-              id="image"
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-            />
-            {formData.imagePreview && (
-              <div className="mt-2">
-                <img
-                  src={formData.imagePreview}
-                  alt="Vista previa"
-                  className="max-h-[150px] rounded-md object-cover"
-                />
-              </div>
-            )}
           </div>
 
           <div className="grid gap-2">
@@ -251,26 +234,42 @@ export function NewNewsForm({ userClubs, isAdmin, defaultEntityId }: NewNewsForm
           </div>
 
           <div className="grid gap-2">
+            <Label htmlFor="image">Imagen destacada</Label>
+            <Input
+              id="image"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+            />
+            {formData.imagePreview && (
+              <img
+                src={formData.imagePreview}
+                alt="Vista previa"
+                className="mt-2 max-h-[150px] rounded-md object-cover"
+              />
+            )}
+          </div>
+
+          <div className="grid gap-2">
             <Label htmlFor="entity">Entidad</Label>
             <Select
-              value={formData.club_id?.toString() ?? 'fasgba'}
+              value={formData.club_id?.toString() ?? FASGBA_VALUE}
               onValueChange={(value) => setFormData(prev => ({
                 ...prev,
-                club_id: value === 'fasgba' ? null : parseInt(value),
+                club_id: value === FASGBA_VALUE ? null : parseInt(value),
               }))}
             >
               <SelectTrigger id="entity">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {isAdmin && (
-                  <SelectItem value="fasgba">FASGBA (Federación)</SelectItem>
-                )}
+                {!clubsFirst && fasgbaOption}
                 {userClubs.map((club) => (
                   <SelectItem key={club.id} value={club.id.toString()}>
                     {club.name}
                   </SelectItem>
                 ))}
+                {clubsFirst && fasgbaOption}
               </SelectContent>
             </Select>
           </div>
@@ -280,6 +279,13 @@ export function NewNewsForm({ userClubs, isAdmin, defaultEntityId }: NewNewsForm
             <NewsContentBlocksEditor blocks={contentBlocks} blockActions={blockActions} />
           </div>
         </div>
+
+        <NewsFormActions
+          cancelHref={returnPath}
+          saveLabel="Crear"
+          savingLabel="Creando..."
+          isSaving={isSaving}
+        />
       </form>
     </div>
   )

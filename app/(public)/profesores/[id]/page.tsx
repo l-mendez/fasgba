@@ -26,17 +26,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const profesorId = parseInt(id, 10)
 
   if (isNaN(profesorId)) {
-    return { title: 'Profesor no encontrado - FASGBA' }
+    return { title: 'Profesor no encontrado' }
   }
 
   const profesor = await getProfesorById(profesorId)
 
   if (!profesor) {
-    return { title: 'Profesor no encontrado - FASGBA' }
+    return { title: 'Profesor no encontrado' }
   }
 
   return {
-    title: `${profesor.titulo} - Profesores FASGBA`,
+    title: profesor.titulo,
     description: profesor.biografia || `Perfil del profesor ${profesor.titulo} en FASGBA.`,
   }
 }
@@ -56,6 +56,9 @@ export default async function ProfesorDetailPage({ params }: PageProps) {
   }
 
   const imageUrl = getImageUrlNullable(profesor.foto)
+  // "Consultar" means nothing without a way to ask, so it needs an email or phone.
+  const hasContact = Boolean(profesor.email || profesor.telefono)
+  const showTarifa = Boolean(profesor.tarifa_horaria) && (hasContact || !/^consultar$/i.test(profesor.tarifa_horaria!.trim()))
 
   return (
     <section className="container px-4 pt-8 pb-12 md:px-6 md:pt-12 md:pb-16">
@@ -94,7 +97,13 @@ export default async function ProfesorDetailPage({ params }: PageProps) {
             {profesor.club_name && (
               <li className="flex items-center gap-2">
                 <Building2 className="h-4 w-4 shrink-0" />
-                <span>{profesor.club_name}</span>
+                {profesor.club_id ? (
+                  <Link href={`/clubes/${profesor.club_id}`} className="text-terracotta hover:underline">
+                    {profesor.club_name}
+                  </Link>
+                ) : (
+                  <span>{profesor.club_name}</span>
+                )}
               </li>
             )}
             {profesor.zona && (
@@ -125,7 +134,7 @@ export default async function ProfesorDetailPage({ params }: PageProps) {
                 </a>
               </li>
             )}
-            {profesor.tarifa_horaria && (
+            {showTarifa && (
               <li className="flex items-center gap-2" title="Tarifa horaria">
                 <DollarSign className="h-4 w-4 shrink-0" />
                 <span>{profesor.tarifa_horaria}</span>

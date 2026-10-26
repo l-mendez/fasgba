@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ChevronDown, Edit, Eye, MoreHorizontal, Search, Trash2, Loader2 } from "lucide-react"
+import { ArrowUpDown, Eye, Pencil, Search, Trash2, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,19 +11,13 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { AdminConfirmDialog } from "@/components/admin-confirm-dialog"
+import { AdminRowActions, type AdminRowAction } from "@/components/admin-row-actions"
+import { AdminSortIcon } from "@/components/admin-sort-icon"
 import { ErrorAlert } from "@/components/error-alert"
+import { clubAdminEditorHref } from "@/lib/club-admin/links"
 import { deleteNewsAction } from "@/lib/actions/news"
 import { formatArgentinaDateOnly, getDateInputValue } from "@/lib/dateUtils"
 import { compareBy } from "@/lib/sortUtils"
@@ -75,9 +69,26 @@ const getNewsCategory = (news: ClubNews) => {
   return 'General'
 }
 
-// Get date for sorting (use the news date)
-const getNewsSortDate = (news: ClubNews): string => {
-  return getDateInputValue(news.date)
+type SortField = "title" | "author" | "date" | "category"
+
+const SORT_LABELS: Record<SortField, string> = {
+  title: "Título",
+  author: "Autor",
+  date: "Fecha",
+  category: "Categoría",
+}
+
+const getSortValue = (news: ClubNews, field: SortField): string => {
+  switch (field) {
+    case "title":
+      return news.title.toLowerCase()
+    case "date":
+      return getDateInputValue(news.date)
+    case "author":
+      return getAuthorName(news).toLowerCase()
+    case "category":
+      return getNewsCategory(news).toLowerCase()
+  }
 }
 
 export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentProps) {
@@ -88,163 +99,108 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
   })
   const [searchTerm, setSearchTerm] = useState("")
   const [noticiaToDelete, setNoticiaToDelete] = useState<number | null>(null)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [sortBy, setSortBy] = useState<string | null>(null)
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
-  const [originalOrder, setOriginalOrder] = useState<ClubNews[]>(initialNews)
-  
-  // Cargar noticias del club seleccionado usando la API
+  const [sortBy, setSortBy] = useState<SortField | null>(null)
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
+
   const loadNews = async () => {
     if (!selectedClub) return
 
     if (newsByClub[selectedClub.id]) {
       setNoticias(newsByClub[selectedClub.id])
-      setOriginalOrder(newsByClub[selectedClub.id])
       return
     }
-    
+
     try {
       setIsLoading(true)
       setError(null)
-      
       const newsData = await apiCall(`/api/clubs/${selectedClub.id}/news`)
-      
-      if (newsData && Array.isArray(newsData)) {
-        setNoticias(newsData)
-        setOriginalOrder(newsData)
-        setNewsByClub((current) => ({ ...current, [selectedClub.id]: newsData }))
-      } else {
-        setNoticias([])
-        setOriginalOrder([])
-        setNewsByClub((current) => ({ ...current, [selectedClub.id]: [] }))
-      }
+      const list: ClubNews[] = Array.isArray(newsData) ? newsData : []
+      setNoticias(list)
+      setNewsByClub((current) => ({ ...current, [selectedClub.id]: list }))
     } catch (err) {
-      console.error('Error loading news:', err)
-      setError(err instanceof Error ? err.message : 'Error al cargar las noticias')
+      console.error("Error loading news:", err)
+      setError(err instanceof Error ? err.message : "Error al cargar las noticias")
       setNoticias([])
-      setOriginalOrder([])
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Update news when selectedClub changes
   useEffect(() => {
     if (selectedClub) {
       loadNews()
     }
   }, [selectedClub?.id])
 
-  // Sorting functions
-  const handleSort = (field: string) => {
-    if (sortBy === field) {
-      // Cycle through: asc -> desc -> original
-      if (sortOrder === 'asc') {
-        setSortOrder('desc')
-      } else if (sortOrder === 'desc') {
-        setSortOrder('original')
-        setSortBy(null)
-      }
-    } else {
-      setSortBy(field)
-      setSortOrder('asc')
-    }
-  }
-
-  const getSortedNoticias = (noticiasToSort: ClubNews[]) => {
-    if (!sortBy || sortOrder === 'original') {
-      return originalOrder.filter(noticia => 
-        noticiasToSort.some(filtered => filtered.id === noticia.id)
-      )
-    }
-
-    return [...noticiasToSort].sort(
-      compareBy((news) => getNoticiasSortValue(news, sortBy), sortOrder)
-    )
-  }
-
-  const getNoticiasSortValue = (news: ClubNews, field: string): string => {
-    switch (field) {
-      case 'title':
-        return news.title.toLowerCase()
-      case 'date':
-        return getNewsSortDate(news)
-      case 'author':
-        return getAuthorName(news).toLowerCase()
-      case 'category':
-        return getNewsCategory(news).toLowerCase()
-      default:
-        return ''
-    }
-  }
-
-  const getSortIcon = (field: string) => {
+  // Cycle: asc -> desc -> original order
+  const handleSort = (field: SortField) => {
     if (sortBy !== field) {
-      return null
+      setSortBy(field)
+      setSortOrder("asc")
+    } else if (sortOrder === "asc") {
+      setSortOrder("desc")
+    } else {
+      setSortBy(null)
     }
-    
-    if (sortOrder === 'asc') {
-      return '↑'
-    } else if (sortOrder === 'desc') {
-      return '↓'
-    }
-    
-    return null
   }
 
-  // Filtrar noticias según término de búsqueda
-  const filteredNoticias = noticias.filter((noticia) => {
-    const searchLower = searchTerm.toLowerCase()
-    const author = getAuthorName(noticia)
-    const category = getNewsCategory(noticia)
-    return (
-      noticia.title.toLowerCase().includes(searchLower) ||
-      author.toLowerCase().includes(searchLower) ||
-      category.toLowerCase().includes(searchLower) ||
-      (noticia.extract && noticia.extract.toLowerCase().includes(searchLower)) ||
-      (noticia.tags && noticia.tags.some(tag => tag.toLowerCase().includes(searchLower)))
-    )
-  })
+  const sortIcon = (field: SortField) => <AdminSortIcon direction={sortBy === field ? sortOrder : null} />
 
-  // Apply sorting to filtered news
-  const sortedAndFilteredNoticias = getSortedNoticias(filteredNoticias)
+  const searchLower = searchTerm.toLowerCase()
+  const filteredNoticias = noticias.filter((noticia) => (
+    noticia.title.toLowerCase().includes(searchLower) ||
+    getAuthorName(noticia).toLowerCase().includes(searchLower) ||
+    getNewsCategory(noticia).toLowerCase().includes(searchLower) ||
+    (noticia.extract && noticia.extract.toLowerCase().includes(searchLower)) ||
+    (noticia.tags && noticia.tags.some((tag) => tag.toLowerCase().includes(searchLower)))
+  ))
+  const visibleNoticias = sortBy
+    ? [...filteredNoticias].sort(compareBy((news) => getSortValue(news, sortBy), sortOrder))
+    : filteredNoticias
 
-  // Función para eliminar una noticia usando la API
   const handleDeleteNoticia = async () => {
     if (!noticiaToDelete) return
-    
+    const clubId = selectedClub?.id
+
     try {
       setIsDeleting(true)
       setError(null)
-      
       const deleteResult = await deleteNewsAction(noticiaToDelete)
       if (!deleteResult.ok) {
         throw new Error(deleteResult.error)
       }
-      
-      // Actualizar el estado local
-      setNoticias(noticias.filter((noticia) => noticia.id !== noticiaToDelete))
-      setOriginalOrder(originalOrder.filter((noticia) => noticia.id !== noticiaToDelete))
-      setShowDeleteDialog(false)
-      setNoticiaToDelete(null)
+
+      const remaining = noticias.filter((noticia) => noticia.id !== noticiaToDelete)
+      setNoticias(remaining)
+      // Keep the per-club cache in sync so switching clubs doesn't resurrect it.
+      if (clubId) setNewsByClub((current) => ({ ...current, [clubId]: remaining }))
     } catch (err) {
-      console.error('Error al eliminar noticia:', err)
-      setError(err instanceof Error ? err.message : 'Ocurrió un error al eliminar la noticia')
+      console.error("Error al eliminar noticia:", err)
+      setError(err instanceof Error ? err.message : "Ocurrió un error al eliminar la noticia")
     } finally {
       setIsDeleting(false)
+      setNoticiaToDelete(null)
     }
   }
 
+  const editHref = (noticia: ClubNews) => clubAdminEditorHref(`/noticias/${noticia.id}/editar`)
+
+  const rowActions = (noticia: ClubNews): AdminRowAction[] => [
+    { label: "Ver en sitio", icon: Eye, href: `/noticias/${noticia.id}`, external: true },
+    { label: "Editar", icon: Pencil, href: editHref(noticia) },
+    { label: "Eliminar", icon: Trash2, destructive: true, onSelect: () => setNoticiaToDelete(noticia.id) },
+  ]
+
+  const emptyMessage = searchTerm ? "Sin resultados." : "No hay noticias."
+
   return (
     <>
-      {error && (
-        <ErrorAlert title="Error" message={error} />
-      )}
+      {error && <ErrorAlert message={error} />}
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+      <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -255,280 +211,123 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                Ordenar
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[200px]">
-              <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleSort('title')}>
-                Título {getSortIcon('title')}
+        {/* Desktop sorts from the column headers */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="shrink-0 md:hidden" aria-label="Ordenar" title="Ordenar">
+              <ArrowUpDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {(Object.keys(SORT_LABELS) as SortField[]).map((field) => (
+              <DropdownMenuItem key={field} onSelect={() => handleSort(field)} className="justify-between gap-4">
+                {SORT_LABELS[field]}
+                {sortIcon(field)}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('date')}>
-                Fecha {getSortIcon('date')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('author')}>
-                Autor {getSortIcon('author')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('category')}>
-                Categoría {getSortIcon('category')}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => {
-                setSortBy(null)
-                setSortOrder('original')
-              }}>
-                Orden original
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      <>
-        {/* Desktop Table View - Hidden on mobile */}
-        <div className="rounded-md border hidden md:block overflow-x-auto">
-          <Table>
-            <TableHeader>
+      <div className="rounded-md border hidden md:block overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {(Object.keys(SORT_LABELS) as SortField[]).map((field) => (
+                <TableHead
+                  key={field}
+                  className={`cursor-pointer select-none hover:bg-muted/50 ${field === "author" || field === "category" ? "hidden lg:table-cell" : ""}`}
+                  onClick={() => handleSort(field)}
+                  aria-sort={sortBy === field ? (sortOrder === "asc" ? "ascending" : "descending") : undefined}
+                >
+                  <div className="flex items-center gap-1">
+                    {SORT_LABELS[field]}
+                    {sortIcon(field)}
+                  </div>
+                </TableHead>
+              ))}
+              <TableHead className="w-[60px]"><span className="sr-only">Acciones</span></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
               <TableRow>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50 select-none"
-                  onClick={() => handleSort('title')}
-                >
-                  <div className="flex items-center gap-1">
-                    Título
-                    {getSortIcon('title') && <span className="text-xs">{getSortIcon('title')}</span>}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 select-none"
-                  onClick={() => handleSort('author')}
-                >
-                  <div className="flex items-center gap-1">
-                    Autor
-                    {getSortIcon('author') && <span className="text-xs">{getSortIcon('author')}</span>}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50 select-none"
-                  onClick={() => handleSort('date')}
-                >
-                  <div className="flex items-center gap-1">
-                    Fecha
-                    {getSortIcon('date') && <span className="text-xs">{getSortIcon('date')}</span>}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 select-none"
-                  onClick={() => handleSort('category')}
-                >
-                  <div className="flex items-center gap-1">
-                    Categoría
-                    {getSortIcon('category') && <span className="text-xs">{getSortIcon('category')}</span>}
-                  </div>
-                </TableHead>
-                <TableHead className="w-[60px]"><span className="sr-only">Acciones</span></TableHead>
+                <TableCell colSpan={5} className="text-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+            ) : visibleNoticias.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  {emptyMessage}
+                </TableCell>
+              </TableRow>
+            ) : (
+              visibleNoticias.map((noticia) => (
+                <TableRow key={noticia.id}>
+                  <TableCell className="font-medium">
+                    <Link href={editHref(noticia)} className="hover:underline">{noticia.title}</Link>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">{getAuthorName(noticia)}</TableCell>
+                  <TableCell className="whitespace-nowrap">{formatDate(noticia.date)}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{getNewsCategory(noticia)}</TableCell>
+                  <TableCell className="text-right">
+                    <AdminRowActions actions={rowActions(noticia)} />
                   </TableCell>
                 </TableRow>
-              ) : sortedAndFilteredNoticias.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    <p className="text-muted-foreground">
-                      {searchTerm ? 'Sin resultados.' : 'No hay noticias.'}
-                    </p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                sortedAndFilteredNoticias.map((noticia) => {
-                  const author = getAuthorName(noticia)
-                  const formattedDate = formatDate(noticia.date)
-                  const category = getNewsCategory(noticia)
-                  
-                  return (
-                    <TableRow key={noticia.id}>
-                      <TableCell className="font-medium">{noticia.title}</TableCell>
-                      <TableCell className="hidden lg:table-cell">{author}</TableCell>
-                      <TableCell className="whitespace-nowrap">{formattedDate}</TableCell>
-                      <TableCell className="hidden lg:table-cell">{category}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Acciones" title="Acciones">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link href={`/noticias/${noticia.id}`} target="_blank">
-                                <Eye className="mr-2 h-4 w-4" />
-                                Ver en sitio
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/noticias/${noticia.id}/editar`}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Editar
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setNoticiaToDelete(noticia.id)
-                                setShowDeleteDialog(true)
-                              }}
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Eliminar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-        {/* Mobile Card View - Hidden on desktop */}
-        <div className="md:hidden">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : sortedAndFilteredNoticias.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">
-                {searchTerm ? 'Sin resultados.' : 'No hay noticias.'}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {sortedAndFilteredNoticias.map((noticia) => {
-                const author = getAuthorName(noticia)
-                const formattedDate = formatDate(noticia.date)
-                const category = getNewsCategory(noticia)
-                
-                return (
-                  <div key={noticia.id} className="bg-card rounded-lg border p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-sm leading-5 text-card-foreground mb-2 line-clamp-2">
-                          {noticia.title}
-                        </h3>
-                        
-                        {noticia.extract && (
-                          <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                            {noticia.extract}
-                          </p>
-                        )}
-                        
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span className="font-medium text-terracotta">
-                              {formattedDate}
-                            </span>
-                            <span>•</span>
-                            <span className="truncate">{author}</span>
-                          </div>
-                          
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-muted-foreground">{category}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" aria-label="Acciones" title="Acciones">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/noticias/${noticia.id}`} target="_blank">
-                              <Eye className="mr-2 h-4 w-4" />
-                              Ver en sitio
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/noticias/${noticia.id}/editar`}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Editar
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setNoticiaToDelete(noticia.id)
-                              setShowDeleteDialog(true)
-                            }}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+      <div className="md:hidden">
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : visibleNoticias.length === 0 ? (
+          <p className="py-12 text-center text-muted-foreground">{emptyMessage}</p>
+        ) : (
+          <div className="space-y-3">
+            {visibleNoticias.map((noticia) => (
+              <div key={noticia.id} className="relative rounded-lg border bg-card p-4 hover:border-amber">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Link
+                      href={editHref(noticia)}
+                      className="line-clamp-2 text-sm font-medium leading-5 after:absolute after:inset-0"
+                    >
+                      {noticia.title}
+                    </Link>
+                    {noticia.extract && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">{noticia.extract}</p>
+                    )}
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-medium text-terracotta">{formatDate(noticia.date)}</span>
+                      <span>•</span>
+                      <span className="truncate">{getAuthorName(noticia)}</span>
+                      <span>•</span>
+                      <span>{getNewsCategory(noticia)}</span>
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </>
+                  <div className="relative z-10">
+                    <AdminRowActions actions={rowActions(noticia)} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-      {/* Diálogo de confirmación para eliminar noticia */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar eliminación</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro de que deseas eliminar esta noticia? Esta acción no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowDeleteDialog(false)}
-              disabled={isDeleting}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteNoticia}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Eliminando...
-                </>
-              ) : (
-                'Eliminar'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdminConfirmDialog
+        open={noticiaToDelete !== null}
+        onOpenChange={(open) => !open && setNoticiaToDelete(null)}
+        title="¿Eliminar noticia?"
+        onConfirm={handleDeleteNoticia}
+        pending={isDeleting}
+      />
     </>
   )
 }

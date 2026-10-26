@@ -26,36 +26,22 @@ function ResetPasswordContent() {
 
   // Handle auth state changes and session setup
   useEffect(() => {
-    console.log('Full URL:', window.location.href)
-    
     // Check for authorization code or tokens
     const code = searchParams?.get('code')
     let accessToken = searchParams?.get('access_token')
-    let refreshToken = searchParams?.get('refresh_token')
     
     // If not found in search params, try URL hash
     if (!accessToken && typeof window !== 'undefined') {
       const hashParams = new URLSearchParams(window.location.hash.substring(1))
       accessToken = hashParams.get('access_token')
-      refreshToken = hashParams.get('refresh_token')
     }
-    
-    console.log('URL Parameters:', { 
-      code: !!code, 
-      accessToken: !!accessToken, 
-      refreshToken: !!refreshToken
-    })
 
     // Set up auth state listener to detect when session is ready
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, !!session?.user)
-      
       if (event === 'SIGNED_IN' && session?.user) {
-        console.log('User signed in automatically, session ready')
         setIsSessionReady(true)
         setError(null)
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        console.log('Token refreshed, session ready')
         setIsSessionReady(true)
         setError(null)
       }
@@ -65,18 +51,14 @@ function ResetPasswordContent() {
     const checkCurrentSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
-        console.log('Existing session found')
         setIsSessionReady(true)
       } else if (code || accessToken) {
-        console.log('Waiting for session to be established...')
         // Give some time for automatic session establishment
         setTimeout(async () => {
           const { data: { session: newSession } } = await supabase.auth.getSession()
           if (newSession?.user) {
-            console.log('Session established after waiting')
             setIsSessionReady(true)
           } else {
-            console.log('No session after waiting')
             setError('El enlace de restablecimiento es inválido o ha expirado. Intenta solicitar uno nuevo.')
           }
         }, 2000)
@@ -114,7 +96,7 @@ function ResetPasswordContent() {
     setIsLoading(true)
     setError(null)
 
-        try {
+    try {
       // Check if session is ready
       if (!isSessionReady) {
         setError('La sesión no está lista. Intenta nuevamente en unos segundos.')
@@ -122,8 +104,7 @@ function ResetPasswordContent() {
       }
 
       // Verify current user
-      const { data: { user }, error: getUserError } = await supabase.auth.getUser()
-      console.log('Current user check:', { user: !!user, error: getUserError?.message })
+      const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
         setError('La sesión ha expirado. Solicita un nuevo enlace de restablecimiento.')
@@ -139,7 +120,6 @@ function ResetPasswordContent() {
         console.error('Password update error:', error)
         setError('Error al actualizar la contraseña. Intenta nuevamente.')
       } else {
-        console.log('Password updated successfully')
         setSuccess(true)
         // Redirect to login after 3 seconds
         setTimeout(() => {
@@ -205,7 +185,7 @@ function ResetPasswordContent() {
 
   // Show the password reset form only when session is ready and valid
   return (
-    <AuthShell title="Nueva Contraseña">
+    <AuthShell title="Nueva contraseña">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="password">Nueva contraseña</Label>
@@ -250,7 +230,7 @@ function ResetPasswordContent() {
 
 function ResetPasswordFallback() {
   return (
-    <AuthShell title="Nueva Contraseña">
+    <AuthShell title="Nueva contraseña">
       <div className="flex justify-center py-6" role="status" aria-label="Verificando enlace">
         <Loader2 className="h-6 w-6 animate-spin text-terracotta" />
       </div>

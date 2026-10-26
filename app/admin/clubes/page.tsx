@@ -52,7 +52,7 @@ async function fetchClubs(): Promise<Club[]> {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
     
     if (!supabaseServiceKey) {
-      throw new Error('Service role key not configured')
+      throw new Error('Falta configurar la clave de servicio del servidor')
     }
 
     const { createClient: createServiceClient } = await import('@supabase/supabase-js')
@@ -130,8 +130,8 @@ export default function AdminClubesPage() {
         action={
           <Button asChild>
             <Link href="/admin/clubes/nuevo">
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Club
+              <Plus className="h-4 w-4" />
+              Nuevo club
             </Link>
           </Button>
         }

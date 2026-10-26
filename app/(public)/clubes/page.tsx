@@ -21,7 +21,7 @@ const getCachedClubs = unstable_cache(
 
 // Generate metadata for better link previews
 export const metadata: Metadata = {
-  title: 'Clubes Afiliados - FASGBA',
+  title: 'Clubes',
   description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur del Gran Buenos Aires. Encuentra información de contacto, horarios y actividades.',
   keywords: ['FASGBA', 'clubes', 'ajedrez', 'afiliados', 'federación', 'Buenos Aires', 'directorio'],
   openGraph: {

@@ -6,14 +6,14 @@ import { getAllProfesores, type ProfesorWithClub } from "@/lib/profesorUtils"
 import { PageHero } from "@/components/page-hero"
 import { InfoPill } from "@/components/info-pill"
 import { getModalidades } from "@/lib/profesorModalidad"
-import { createClient } from "@/lib/supabase/client"
+import { getImageUrlNullable } from "@/lib/imageUtils"
 import { safe } from "@/lib/utils/safe"
 
 // Cached indefinitely, purged by revalidateProfesoresCache on mutation.
 export const revalidate = false
 
 export const metadata: Metadata = {
-  title: 'Profesores de Ajedrez - FASGBA',
+  title: 'Profesores',
   description: 'Directorio de profesores de ajedrez de la Federación de Ajedrez del Sur del Gran Buenos Aires. Encuentra profesores presenciales y virtuales.',
   keywords: ['FASGBA', 'profesores', 'ajedrez', 'clases', 'enseñanza', 'Buenos Aires'],
   openGraph: {
@@ -26,33 +26,19 @@ export const metadata: Metadata = {
   },
 }
 
-function getProfesorImageUrl(fotoPath: string | null) {
-  if (!fotoPath) return null
-  const supabase = createClient()
-  const { data } = supabase.storage.from('images').getPublicUrl(fotoPath)
-  return data.publicUrl
-}
-
 async function ProfesoresList() {
   const profesores = await safe(getAllProfesores, [] as ProfesorWithClub[], "Error fetching profesores:")
 
   if (profesores.length === 0) {
     return (
-      <div className="text-center py-12 min-h-[400px] flex flex-col justify-center">
-        <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-          No hay profesores disponibles
-        </h3>
-        <p className="text-muted-foreground">
-          Vuelve más tarde para ver el directorio de profesores.
-        </p>
-      </div>
+      <p className="py-12 text-center text-muted-foreground">No hay profesores disponibles.</p>
     )
   }
 
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {profesores.map((profesor) => {
-        const imageUrl = getProfesorImageUrl(profesor.foto)
+        const imageUrl = getImageUrlNullable(profesor.foto)
 
         return (
           // The title link stretches over the whole card; contact links sit above it.
@@ -61,7 +47,7 @@ async function ProfesoresList() {
             className="group relative flex flex-col overflow-hidden rounded-lg border bg-card transition-colors hover:border-amber"
           >
             {imageUrl ? (
-              <img src={imageUrl} alt={`Foto de ${profesor.titulo}`} className="aspect-[4/3] w-full object-cover" />
+              <img src={imageUrl} alt={`Foto de ${profesor.titulo}`} className="aspect-[4/3] w-full object-cover object-top" />
             ) : (
               <div className="flex aspect-[4/3] w-full items-center justify-center bg-muted">
                 <GraduationCap className="h-12 w-12 text-muted-foreground" />

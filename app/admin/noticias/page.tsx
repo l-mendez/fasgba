@@ -60,7 +60,7 @@ async function fetchNews(): Promise<News[]> {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
     
     if (!supabaseServiceKey) {
-      throw new Error('Service role key not configured')
+      throw new Error('Falta configurar la clave de servicio del servidor')
     }
 
     const { createClient: createServiceClient } = await import('@supabase/supabase-js')
@@ -157,7 +157,7 @@ export default function AdminNoticiasPage() {
         action={
           <Button asChild>
             <Link href="/noticias/nueva?source=admin">
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="h-4 w-4" />
               Nueva noticia
             </Link>
           </Button>

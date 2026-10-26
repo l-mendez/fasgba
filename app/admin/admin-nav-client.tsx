@@ -6,22 +6,31 @@ import { useState } from "react"
 import {
   Award,
   BarChart3,
+  BookOpen,
+  CastleIcon,
   FileText,
   FolderOpen,
   Globe,
   GraduationCap,
   Home,
   LayoutDashboard,
+  LogOut,
   Menu,
+  Settings,
   Shield,
   Trophy,
+  UserCog,
   Users,
   type LucideIcon,
 } from "lucide-react"
 
+import { useSignOut } from "@/components/auth-buttons"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { useAuth } from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
+
+const linkClass = "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent"
 
 const navItems: Array<{
   href: string
@@ -31,14 +40,14 @@ const navItems: Array<{
 }> = [
   {
     href: "/admin",
-    label: "Dashboard",
+    label: "Panel",
     icon: LayoutDashboard,
     isActive: (pathname) => pathname === "/admin",
   },
   {
     href: "/admin/usuarios",
     label: "Usuarios",
-    icon: Users,
+    icon: UserCog,
     isActive: (pathname) => pathname.startsWith("/admin/usuarios"),
   },
   {
@@ -92,7 +101,7 @@ const navItems: Array<{
   {
     href: "/admin/alumnos",
     label: "Alumnos",
-    icon: GraduationCap,
+    icon: BookOpen,
     isActive: (pathname) => pathname.startsWith("/admin/alumnos"),
   },
   {
@@ -115,30 +124,54 @@ interface AdminNavLinksProps {
 
 export function AdminNavLinks({ onLinkClick }: AdminNavLinksProps) {
   const pathname = usePathname()
+  const { isClubAdmin } = useAuth()
+  const signOut = useSignOut()
 
   return (
     <div className="space-y-4 py-4">
-      <div className="px-3 py-2">
-        <div className="space-y-1">
-          {navItems.map((item) => {
-            const Icon = item.icon
+      <div className="space-y-1 px-3 py-2">
+        {navItems.map((item) => {
+          const Icon = item.icon
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent",
-                  item.isActive(pathname) ? "bg-accent text-terracotta" : "text-muted-foreground"
-                )}
-                onClick={onLinkClick}
-              >
-                <Icon className="mr-2 h-4 w-4" />
-                {item.label}
-              </Link>
-            )
-          })}
-        </div>
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                linkClass,
+                item.isActive(pathname) ? "bg-accent text-terracotta" : "text-muted-foreground"
+              )}
+              onClick={onLinkClick}
+            >
+              <Icon className="mr-2 h-4 w-4" />
+              {item.label}
+            </Link>
+          )
+        })}
+      </div>
+
+      <div className="space-y-1 border-t border-amber/20 px-3 pt-4">
+        {isClubAdmin ? (
+          <Link href="/club-admin" className={cn(linkClass, "text-muted-foreground")} onClick={onLinkClick}>
+            <CastleIcon className="mr-2 h-4 w-4" />
+            Club admin
+          </Link>
+        ) : null}
+        <Link href="/ajustes" className={cn(linkClass, "text-muted-foreground")} onClick={onLinkClick}>
+          <Settings className="mr-2 h-4 w-4" />
+          Ajustes
+        </Link>
+        <button
+          type="button"
+          className={cn(linkClass, "w-full text-muted-foreground")}
+          onClick={() => {
+            onLinkClick?.()
+            void signOut()
+          }}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Cerrar sesión
+        </button>
       </div>
     </div>
   )

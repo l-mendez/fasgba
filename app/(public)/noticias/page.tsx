@@ -21,7 +21,7 @@ const MAX_NEWS = 5000
 
 // Generate metadata for better link previews
 export const metadata: Metadata = {
-  title: 'Noticias - FASGBA',
+  title: 'Noticias',
   description: 'Últimas novedades del ajedrez en la región sur de Buenos Aires. Noticias de la Federación de Ajedrez del Sur del Gran Buenos Aires y sus clubes afiliados.',
   keywords: ['FASGBA', 'noticias', 'ajedrez', 'novedades', 'federación', 'Buenos Aires', 'torneos'],
   openGraph: {

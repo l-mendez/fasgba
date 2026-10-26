@@ -1,78 +1,61 @@
 "use client"
 
 import { useState } from "react"
-import { CheckCircle2, Settings } from "lucide-react"
+import { Settings } from "lucide-react"
+import { toast } from "sonner"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AdminPageHeader } from "@/components/admin-page-header"
 import { Button } from "@/components/ui/button"
-import { ErrorAlert } from "@/components/error-alert"
 import { DocumentoUploadCard } from "./documento-upload-card"
 import { DocumentosSettingsDialog } from "./documentos-settings-dialog"
 import { DocumentosTable } from "./documentos-table"
 import { useDocumentosList } from "./use-documentos-list"
 import type { CategoryImportance, Documento } from "./types"
 
+// Feedback goes through sonner toasts; empty messages (used to "clear") are ignored.
+const notifyError = (message: string) => {
+  if (message) toast.error(message)
+}
+const notifySuccess = (message: string) => {
+  if (message) toast.success(message)
+}
+
 interface AdminDocumentosClientProps {
   initialDocuments: Documento[]
   initialTotalDocuments: number
   initialCategoryImportance: CategoryImportance
-  showHeader?: boolean
 }
 
 export function AdminDocumentosClient({
   initialDocuments,
   initialTotalDocuments,
   initialCategoryImportance,
-  showHeader = true,
 }: AdminDocumentosClientProps) {
-  const [errorMessage, setErrorMessage] = useState("")
-  const [successMessage, setSuccessMessage] = useState("")
   const [showSettings, setShowSettings] = useState(false)
 
   const list = useDocumentosList({
     initialDocuments,
     initialTotalDocuments,
-    setErrorMessage,
-    setSuccessMessage,
+    setErrorMessage: notifyError,
+    setSuccessMessage: notifySuccess,
   })
 
   return (
     <div className="flex-1 space-y-6">
-      {showHeader ? (
-        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <h2 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Documentos</h2>
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
-              <Settings className="mr-2 h-4 w-4" />
-              Configuración
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
-            <Settings className="mr-2 h-4 w-4" />
+      <AdminPageHeader
+        title="Documentos"
+        action={
+          <Button variant="outline" onClick={() => setShowSettings(true)}>
+            <Settings className="h-4 w-4" />
             Configuración
           </Button>
-        </div>
-      )}
-
-      {errorMessage && <ErrorAlert message={errorMessage} />}
-
-      {successMessage && (
-        <Alert
-          variant="default"
-          className="bg-muted text-foreground"
-        >
-          <CheckCircle2 className="h-4 w-4 text-amber" />
-          <AlertDescription>{successMessage}</AlertDescription>
-        </Alert>
-      )}
+        }
+      />
 
       <DocumentoUploadCard
         onUploaded={(documentId) => list.loadDocuments({ ensureDocumentId: documentId })}
-        setErrorMessage={setErrorMessage}
-        setSuccessMessage={setSuccessMessage}
+        setErrorMessage={notifyError}
+        setSuccessMessage={notifySuccess}
       />
 
       <DocumentosTable
@@ -95,8 +78,8 @@ export function AdminDocumentosClient({
         loadMoreRef={list.loadMoreRef}
         setDocuments={list.setDocuments}
         setTotalDocuments={list.setTotalDocuments}
-        setErrorMessage={setErrorMessage}
-        setSuccessMessage={setSuccessMessage}
+        setErrorMessage={notifyError}
+        setSuccessMessage={notifySuccess}
       />
 
       <DocumentosSettingsDialog
@@ -108,8 +91,8 @@ export function AdminDocumentosClient({
             return list.loadDocuments()
           }
         }}
-        setErrorMessage={setErrorMessage}
-        setSuccessMessage={setSuccessMessage}
+        setErrorMessage={notifyError}
+        setSuccessMessage={notifySuccess}
       />
     </div>
   )

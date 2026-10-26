@@ -1,23 +1,18 @@
 import Link from "next/link"
-import { ChevronLeft, Mail, MapPin, Phone, Clock, Calendar, User, Heart, UserCheck, ImageIcon, Tag } from "lucide-react"
+import { notFound } from "next/navigation"
+import { ChevronLeft, ChevronRight, Mail, MapPin, Phone, Clock, Calendar, User, Heart, ImageIcon, Tag, Users } from "lucide-react"
 import { Metadata } from "next"
 
 import { Button } from "@/components/ui/button"
 import { InfoPill } from "@/components/info-pill"
 import { formatArgentinaDateOnly } from "@/lib/dateUtils"
-import {
-  getClubById,
-  getClubAdmins,
-  getClubNews,
-  isUserFollowingClubServer,
-  getClubFollowersCount,
-  type ClubWithStats,
-  type ClubAdmin,
-  type ClubNews
-} from "@/lib/clubUtils"
+import { getClubNews, isUserFollowingClubServer, getClubFollowersCount } from "@/lib/clubUtils"
 import { getCurrentUserServer } from "@/lib/auth-server"
 import { ClubFollowButton } from "@/components/club-follow-button"
 import { createClient } from "@/lib/supabase/client"
+import { createClient as createServerClient } from "@/lib/supabase/server"
+import { PhoneLinks } from "./phone-links"
+import { getClubCached, parseClubId } from "./club-data"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
@@ -30,25 +25,9 @@ interface ClubDetailPageProps {
 
 // Generate metadata for better link previews
 export async function generateMetadata({ params }: ClubDetailPageProps): Promise<Metadata> {
-  const resolvedParams = await params
-  const clubId = parseInt(resolvedParams.id)
-  
-  if (isNaN(clubId)) {
-    return {
-      title: 'Club no encontrado - FASGBA',
-      description: 'El club que estás buscando no existe o ha sido eliminado.',
-    }
-  }
-
-  // Fetch the club data for metadata
-  const clubData = await getClubById(clubId, true) as ClubWithStats | null
-  
-  if (!clubData) {
-    return {
-      title: 'Club no encontrado - FASGBA',
-      description: 'El club que estás buscando no existe o ha sido eliminado.',
-    }
-  }
+  const clubId = parseClubId((await params).id)
+  const clubData = clubId ? await getClubCached(clubId) : null
+  if (!clubId || !clubData) return { title: 'Club no encontrado | FASGBA' }
 
   // Create description from club info
   const description = `${clubData.name} - Club afiliado a FASGBA. ${clubData.address ? `Ubicado en ${clubData.address}. ` : ''}Información de contacto, horarios y actividades disponibles.`
@@ -62,11 +41,11 @@ export async function generateMetadata({ params }: ClubDetailPageProps): Promise
     : `https://fasgba.com/images/fasgba-logo.png`
 
   return {
-    title: `${clubData.name} - FASGBA`,
+    title: `${clubData.name} | FASGBA`,
     description,
     keywords: ['FASGBA', 'club', 'ajedrez', clubData.name, clubData.address ? clubData.address.split(',')[0] : '', 'federación'].filter(Boolean),
     openGraph: {
-      title: clubData.name,
+      title: `${clubData.name} | FASGBA`,
       description,
       url,
       siteName: 'FASGBA',
@@ -83,7 +62,7 @@ export async function generateMetadata({ params }: ClubDetailPageProps): Promise
     },
     twitter: {
       card: 'summary_large_image',
-      title: clubData.name,
+      title: `${clubData.name} | FASGBA`,
       description,
       images: [imageUrl],
       creator: '@FASGBA',
@@ -107,103 +86,29 @@ export async function generateMetadata({ params }: ClubDetailPageProps): Promise
   }
 }
 
-interface ClubPageData {
-  club: ClubWithStats | null
-  admins: ClubAdmin[]
-  news: ClubNews[]
-  followersCount: number
-  isFollowing: boolean
-  user: any | null
-  error: string | null
+async function loadClubData(clubId: number) {
+  const club = await getClubCached(clubId)
+  if (!club) return null
+
+  const user = await getCurrentUserServer()
+  const supabase = await createServerClient()
+  const [news, followersCount, isFollowing, teamsResult] = await Promise.all([
+    getClubNews(clubId, 5).catch(() => []),
+    getClubFollowersCount(clubId).catch(() => 0),
+    user ? isUserFollowingClubServer(clubId, user.id).catch(() => false) : false,
+    supabase.from('teams').select('id', { count: 'exact', head: true }).eq('club_id', clubId),
+  ])
+
+  return { club, user, news, followersCount, isFollowing, teamsCount: teamsResult.count ?? 0 }
 }
 
-async function loadClubData(clubId: number): Promise<ClubPageData> {
-  try {
-    // Get current user for follow status
-    const user = await getCurrentUserServer()
-    
-    // Load club basic info with stats
-    const clubData = await getClubById(clubId, true) as ClubWithStats | null
-    if (!clubData) {
-      return {
-        club: null,
-        admins: [],
-        news: [],
-        followersCount: 0,
-        isFollowing: false,
-        user,
-        error: "Club no encontrado"
-      }
-    }
-
-    // Load additional data in parallel
-    const [adminsData, newsData, followersCountData, isFollowingData] = await Promise.all([
-      getClubAdmins(clubId),
-      getClubNews(clubId, 5), // Limit to 5 most recent news
-      getClubFollowersCount(clubId),
-      user ? isUserFollowingClubServer(clubId, user.id) : false
-    ])
-
-    return {
-      club: clubData,
-      admins: adminsData,
-      news: newsData,
-      followersCount: followersCountData,
-      isFollowing: isFollowingData,
-      user,
-      error: null
-    }
-  } catch (error) {
-    console.error('Error loading club data:', error)
-    return {
-      club: null,
-      admins: [],
-      news: [],
-      followersCount: 0,
-      isFollowing: false,
-      user: null,
-      error: "Error al cargar los datos del club"
-    }
-  }
-}
+const linkClass = "hover:text-foreground hover:underline"
 
 export default async function ClubDetailPage({ params }: ClubDetailPageProps) {
-  const resolvedParams = await params
-  const clubId = parseInt(resolvedParams.id)
-
-  if (isNaN(clubId)) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center text-center max-w-md mx-auto px-4">
-        <h1 className="text-xl sm:text-2xl font-bold mb-4">
-          ID de club inválido
-        </h1>
-        <p className="text-muted-foreground mb-6 text-sm sm:text-base">
-          El enlace que has seguido no es válido.
-        </p>
-        <Button asChild variant="outline" className="w-full sm:w-auto">
-          <Link href="/clubes">Volver a clubes</Link>
-        </Button>
-      </div>
-    )
-  }
-
-  const { club, admins, news, followersCount, isFollowing, user, error } = await loadClubData(clubId)
-
-  if (error || !club) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center text-center max-w-md mx-auto px-4">
-        <h1 className="text-xl sm:text-2xl font-bold mb-4">
-          {error || "Club no encontrado"}
-        </h1>
-        <p className="text-muted-foreground mb-6 text-sm sm:text-base">
-          {error || "El club que estás buscando no existe o ha sido eliminado."}
-        </p>
-        <Button asChild variant="outline" className="w-full sm:w-auto">
-          <Link href="/clubes">Volver a clubes</Link>
-        </Button>
-      </div>
-    )
-  }
+  const clubId = parseClubId((await params).id)
+  const data = clubId ? await loadClubData(clubId) : null
+  if (!data) notFound()
+  const { club, user, news, followersCount, isFollowing, teamsCount } = data
 
   const imageUrl = club.image
     ? createClient().storage.from('images').getPublicUrl(club.image).data.publicUrl
@@ -233,8 +138,14 @@ export default async function ClubDetailPage({ params }: ClubDetailPageProps) {
             <div className="min-w-0 flex-1 space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <h1 className="break-words text-3xl font-bold tracking-tight text-terracotta md:text-4xl">{club.name}</h1>
-                {user && (
-                  <ClubFollowButton clubId={club.id} initialIsFollowing={isFollowing} isUserAuthenticated={!!user} />
+                {user ? (
+                  <ClubFollowButton clubId={club.id} initialIsFollowing={isFollowing} isUserAuthenticated />
+                ) : (
+                  <Button asChild variant="outline" size="icon">
+                    <Link href={`/login?redirect=/clubes/${club.id}`} aria-label="Seguir club" title="Seguir club">
+                      <Heart />
+                    </Link>
+                  </Button>
                 )}
               </div>
 
@@ -252,34 +163,53 @@ export default async function ClubDetailPage({ params }: ClubDetailPageProps) {
                   </li>
                 )}
                 {club.telephone && (
-                  <li className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 shrink-0 text-amber" />
-                    <a href={`tel:${club.telephone}`} className="hover:text-foreground hover:underline">{club.telephone}</a>
+                  <li className="flex items-start gap-2">
+                    <Phone className="mt-0.5 h-4 w-4 shrink-0 text-amber" />
+                    <span className="break-words">
+                      <PhoneLinks value={club.telephone} className={linkClass} />
+                    </span>
                   </li>
                 )}
                 {club.mail && (
                   <li className="flex items-center gap-2">
                     <Mail className="h-4 w-4 shrink-0 text-amber" />
-                    <a href={`mailto:${club.mail}`} className="break-all hover:text-foreground hover:underline">{club.mail}</a>
+                    <a href={`mailto:${club.mail}`} className={`break-all ${linkClass}`}>{club.mail}</a>
                   </li>
                 )}
-                <li className="flex items-center gap-2">
-                  <Heart className="h-4 w-4 shrink-0 text-amber" />
-                  <span>{followersCount} seguidor{followersCount !== 1 ? 'es' : ''}</span>
-                </li>
+                {teamsCount > 0 && (
+                  <li className="flex items-center gap-2">
+                    <Users className="h-4 w-4 shrink-0 text-amber" />
+                    <Link href={`/clubes/${club.id}/equipos`} className={linkClass}>
+                      {teamsCount} equipo{teamsCount !== 1 ? 's' : ''}
+                    </Link>
+                  </li>
+                )}
+                {followersCount > 0 && (
+                  <li className="flex items-center gap-2">
+                    <Heart className="h-4 w-4 shrink-0 text-amber" />
+                    <span>{followersCount} seguidor{followersCount !== 1 ? 'es' : ''}</span>
+                  </li>
+                )}
               </ul>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
-        <div className="container grid gap-8 px-4 md:px-6 lg:grid-cols-3">
-          <div className="min-w-0 lg:col-span-2">
-            <h2 className="mb-4 text-2xl font-bold tracking-tight text-terracotta">Noticias</h2>
-            {news.length === 0 ? (
-              <p className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">Sin noticias.</p>
-            ) : (
+      {news.length > 0 && (
+        <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
+          <div className="container px-4 md:px-6">
+            <div className="max-w-4xl">
+              <div className="mb-4 flex items-end justify-between gap-4">
+                <h2 className="text-2xl font-bold tracking-tight text-terracotta">Noticias</h2>
+                <Link
+                  href={`/noticias?club=${club.id}`}
+                  className="flex shrink-0 items-center gap-1 text-sm font-bold text-terracotta underline-offset-4 hover:underline"
+                >
+                  Ver todas
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              </div>
               <ul className="space-y-3">
                 {news.map((article) => (
                   <li
@@ -319,28 +249,10 @@ export default async function ClubDetailPage({ params }: ClubDetailPageProps) {
                   </li>
                 ))}
               </ul>
-            )}
+            </div>
           </div>
-
-          <div>
-            <h2 className="mb-4 text-2xl font-bold tracking-tight text-terracotta">Administradores</h2>
-            {admins.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sin administradores.</p>
-            ) : (
-              <ul className="space-y-1.5 rounded-lg border bg-card p-4 text-sm text-muted-foreground">
-                {admins.map((admin) => (
-                  <li key={admin.id} className="flex items-center gap-2">
-                    <UserCheck className="h-4 w-4 shrink-0 text-amber" />
-                    <a href={`mailto:${admin.email}`} className="break-all hover:text-foreground hover:underline">
-                      {admin.email}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
     </>
   )
 }

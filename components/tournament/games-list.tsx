@@ -38,7 +38,7 @@ export function GamesList({
       {games.map((game) => (
         <Card key={game.id} className="p-4">
           <div className="flex items-center gap-3">
-            <p className="font-medium">Mesa {game.board || 'N/A'}</p>
+            <p className="font-medium">Mesa {game.board || '–'}</p>
             <InfoPill icon={game.result === '*' ? PlayCircle : CheckCircle2}>
               {game.result === '*' ? 'En juego' : game.result}
             </InfoPill>

@@ -112,7 +112,7 @@ export function TeamRosterManagement({
           onClick={() => onOpenAddPlayer(teamId)}
         >
           <UserPlus className="h-4 w-4 mr-2" />
-          Agregar Jugador
+          Agregar jugador
         </Button>
       ) : (
         <div className="border rounded-lg p-3 mt-2 space-y-3 bg-background">

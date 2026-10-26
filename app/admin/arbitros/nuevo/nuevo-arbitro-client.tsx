@@ -43,7 +43,6 @@ interface NuevoArbitroClientProps {
 export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [clubs] = useState<ClubOption[]>(initialClubs)
   const [formData, setFormData] = useState<FormData>({
     name: "",
@@ -110,7 +109,6 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
     setValidationErrors({})
 
     if (!validateForm()) {
@@ -136,6 +134,7 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
         body: JSON.stringify(arbitroData)
       })
 
+      let photoFailed = false
       // Upload photo if one was selected
       if (selectedFile && result?.id) {
         try {
@@ -144,17 +143,19 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
 
           const uploadResult = await uploadArbitroImageAction(Number(result.id), uploadFormData)
           if (!uploadResult.ok) {
-            throw new Error(uploadResult.error || 'Failed to upload image')
+            throw new Error(uploadResult.error || 'No se pudo subir la foto')
           }
         } catch (uploadErr) {
           console.error('Error uploading photo:', uploadErr)
-          toast.error("Árbitro creado, pero hubo un error al subir la foto.")
+          photoFailed = true
+          toast.error("Árbitro creado, pero hubo un error al subir la foto")
         }
       }
 
+      if (!photoFailed) toast.success("Árbitro creado correctamente")
       router.push("/admin/arbitros")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al crear el árbitro")
+      toast.error(err instanceof Error ? err.message : "Error al crear el árbitro")
     } finally {
       setIsLoading(false)
     }
@@ -177,7 +178,7 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Nuevo Árbitro</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Nuevo árbitro</h1>
         </div>
       </div>
 
@@ -185,7 +186,7 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
         {/* Photo Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Foto del Árbitro</CardTitle>
+            <CardTitle>Foto del árbitro</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -201,8 +202,8 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
                     variant="destructive"
                     size="sm"
                     className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                      aria-label="Quitar imagen"
-                      title="Quitar imagen"
+                    aria-label="Quitar imagen"
+                    title="Quitar imagen"
                     onClick={handleImageRemove}
                   >
                     <X className="h-3 w-3" />
@@ -248,7 +249,7 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
 
         <div className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="name">Nombre Completo *</Label>
+            <Label htmlFor="name">Nombre completo *</Label>
             <Input
               id="name"
               name="name"
@@ -269,7 +270,7 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
               name="title"
               value={formData.title}
               onChange={handleChange}
-              placeholder="Ej: Árbitro Internacional, Árbitro FIDE, Árbitro Nacional"
+              placeholder="Ej: Árbitro internacional, Árbitro FIDE, Árbitro nacional"
               className={validationErrors.title ? "border-destructive" : ""}
             />
             {validationErrors.title && (
@@ -297,7 +298,7 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="birth_year">Año de Nacimiento</Label>
+            <Label htmlFor="birth_year">Año de nacimiento</Label>
             <Input
               id="birth_year"
               name="birth_year"
@@ -316,7 +317,7 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="email">Correo Electrónico</Label>
+              <Label htmlFor="email">Correo electrónico</Label>
               <div className="relative">
                 <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -351,7 +352,7 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="bio">Reseña Biográfica</Label>
+            <Label htmlFor="bio">Reseña biográfica</Label>
             <Textarea
               id="bio"
               name="bio"
@@ -363,12 +364,6 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
           </div>
         </div>
 
-        {error && (
-          <div className="text-sm text-destructive">
-            {error}
-          </div>
-        )}
-
         <div className="flex justify-end gap-3">
           <Button
             type="button"
@@ -378,7 +373,7 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
             Cancelar
           </Button>
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Creando..." : "Crear Árbitro"}
+            {isLoading ? "Creando..." : "Crear árbitro"}
           </Button>
         </div>
       </form>

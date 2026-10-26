@@ -236,20 +236,21 @@ export function PaisesMap({ countries, now, onToggle }: PaisesMapProps) {
           {canToggle ? (
             <>
               <p className="mt-1 text-sm text-muted-foreground">
-                {selected.enabled ? 'Deshabilitar' : 'Habilitar'} usuarios de {selected.name}
+                ¿{selected.enabled ? 'Deshabilitar' : 'Habilitar'} el acceso desde {selected.name}?
               </p>
               <div className="mt-3 flex justify-end gap-2">
                 <Button size="sm" variant="outline" onClick={() => setSelection(null)}>
-                  No
+                  Cancelar
                 </Button>
                 <Button
                   size="sm"
+                  variant={selected.enabled ? 'destructive' : 'default'}
                   onClick={() => {
                     onToggle(selected, !selected.enabled)
                     setSelection(null)
                   }}
                 >
-                  Sí
+                  {selected.enabled ? 'Deshabilitar' : 'Habilitar'}
                 </Button>
               </div>
             </>
@@ -257,7 +258,7 @@ export function PaisesMap({ countries, now, onToggle }: PaisesMapProps) {
             <p className="mt-1 text-sm text-muted-foreground">
               {isProtected
                 ? 'Argentina no puede deshabilitarse.'
-                : 'Se modificó hace poco. Probá de nuevo en unos minutos.'}
+                : 'Se modificó hace poco. Prueba de nuevo en unos minutos.'}
             </p>
           )}
         </div>
@@ -266,7 +267,7 @@ export function PaisesMap({ countries, now, onToggle }: PaisesMapProps) {
       <p className="px-2 pb-1 text-xs text-muted-foreground">
         {hovered ??
           (shapes.length
-            ? 'Tocá un país para habilitarlo o deshabilitarlo.'
+            ? 'Toca un país para habilitarlo o deshabilitarlo.'
             : 'Cargando mapa...')}
       </p>
     </div>

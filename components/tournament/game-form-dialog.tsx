@@ -1,6 +1,6 @@
 'use client'
 
-import { Dispatch, SetStateAction } from 'react'
+import { Dispatch, SetStateAction, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { AlertCircle } from 'lucide-react'
 import { GameDisplay } from '@/lib/gameUtils-client'
 import { GameFormData, Match, Player } from './types'
+import { PlayerSearchField } from './player-search-field'
 
 interface GameFormDialogProps {
   mode: 'add' | 'edit'
@@ -40,6 +41,15 @@ export function GameFormDialog({
   loading,
   onSubmit,
 }: GameFormDialogProps) {
+  // Names of players picked in the search fields, by id (edit mode falls back to the game's names).
+  const [pickedNames, setPickedNames] = useState<Record<number, string>>({})
+  const getPlayerName = (playerId: number) => {
+    if (pickedNames[playerId]) return pickedNames[playerId]
+    if (editingGame?.whitePlayerId === playerId) return editingGame.white
+    if (editingGame?.blackPlayerId === playerId) return editingGame.black
+    return undefined
+  }
+
   const getWhitePlayerOptions = (): Player[] => {
     if (tournamentType !== 'team' || !gameFormData.match_id || !gameFormData.board_number) {
       return players
@@ -86,45 +96,50 @@ export function GameFormDialog({
     })()
   )) || null
 
+  const playerSelect = (color: 'white' | 'black') => {
+    const field = color === 'white' ? 'white_player_id' : 'black_player_id'
+    const options = color === 'white' ? getWhitePlayerOptions() : getBlackPlayerOptions()
+    const inputId = `${color}_player`
+
+    return (
+      <div>
+        <Label htmlFor={inputId}>{color === 'white' ? 'Blancas *' : 'Negras *'}</Label>
+        {tournamentType === 'team' ? (
+          // Team games only allow the (few) players registered to each team.
+          <Select value={gameFormData[field].toString()} onValueChange={(value) =>
+            setGameFormData(prev => ({ ...prev, [field]: parseInt(value) }))
+          }>
+            <SelectTrigger id={inputId}>
+              <SelectValue placeholder="Seleccionar jugador" />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((player) => (
+                <SelectItem key={player.id} value={player.id.toString()}>
+                  {player.full_name} {player.rating && `(${player.rating})`}
+                  {player.club && ` - ${player.club.name}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <PlayerSearchField
+            id={inputId}
+            value={gameFormData[field]}
+            selectedLabel={getPlayerName(gameFormData[field])}
+            onSelect={(player) => {
+              if (player) setPickedNames(prev => ({ ...prev, [player.id]: player.full_name }))
+              setGameFormData(prev => ({ ...prev, [field]: player?.id ?? 0 }))
+            }}
+          />
+        )}
+      </div>
+    )
+  }
+
   const playerSelects = (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="white_player">Jugador Blancas *</Label>
-        <Select value={gameFormData.white_player_id.toString()} onValueChange={(value) =>
-          setGameFormData(prev => ({ ...prev, white_player_id: parseInt(value) }))
-        }>
-          <SelectTrigger>
-            <SelectValue placeholder="Seleccionar jugador" />
-          </SelectTrigger>
-          <SelectContent>
-            {getWhitePlayerOptions().map((player) => (
-              <SelectItem key={player.id} value={player.id.toString()}>
-                {player.full_name} {player.rating && `(${player.rating})`}
-                {player.club && ` - ${player.club.name}`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label htmlFor="black_player">Jugador Negras *</Label>
-        <Select value={gameFormData.black_player_id.toString()} onValueChange={(value) =>
-          setGameFormData(prev => ({ ...prev, black_player_id: parseInt(value) }))
-        }>
-          <SelectTrigger>
-            <SelectValue placeholder="Seleccionar jugador" />
-          </SelectTrigger>
-          <SelectContent>
-            {getBlackPlayerOptions().map((player) => (
-              <SelectItem key={player.id} value={player.id.toString()}>
-                {player.full_name} {player.rating && `(${player.rating})`}
-                {player.club && ` - ${player.club.name}`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {playerSelect('white')}
+      {playerSelect('black')}
     </div>
   )
 
@@ -134,7 +149,7 @@ export function GameFormDialog({
       <Select value={gameFormData.result} onValueChange={(value: '1-0' | '0-1' | '1/2-1/2' | '*') =>
         setGameFormData(prev => ({ ...prev, result: value }))
       }>
-        <SelectTrigger>
+        <SelectTrigger id="result">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -151,6 +166,7 @@ export function GameFormDialog({
     <div>
       <Label htmlFor="game_date">Fecha</Label>
       <Input
+        id="game_date"
         type="date"
         value={gameFormData.game_date || ''}
         onChange={(e) => setGameFormData(prev => ({ ...prev, game_date: e.target.value }))}
@@ -162,6 +178,7 @@ export function GameFormDialog({
     <div>
       <Label htmlFor="game_time">Hora</Label>
       <Input
+        id="game_time"
         type="time"
         value={gameFormData.game_time || ''}
         onChange={(e) => setGameFormData(prev => ({ ...prev, game_time: e.target.value }))}
@@ -175,7 +192,7 @@ export function GameFormDialog({
         className={`${mode === 'add' ? 'max-w-lg' : 'max-w-2xl'} max-h-[90vh] overflow-y-auto`}
       >
         <DialogHeader>
-          <DialogTitle>{mode === 'add' ? 'Agregar Nueva Partida' : 'Editar Partida'}</DialogTitle>
+          <DialogTitle>{mode === 'add' ? 'Nueva partida' : 'Editar partida'}</DialogTitle>
         </DialogHeader>
 
         {mode === 'edit' && !editingGame ? null : (
@@ -192,7 +209,7 @@ export function GameFormDialog({
                     black_player_id: 0
                   }))
                 }}>
-                  <SelectTrigger>
+                  <SelectTrigger id="match">
                     <SelectValue placeholder="Seleccionar enfrentamiento" />
                   </SelectTrigger>
                   <SelectContent>
@@ -233,8 +250,9 @@ export function GameFormDialog({
             {mode === 'add' ? (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="board_number">Número de Mesa</Label>
+                  <Label htmlFor="board_number">Mesa</Label>
                   <Input
+                    id="board_number"
                     type="number"
                     min="1"
                     value={gameFormData.board_number || ''}
@@ -273,6 +291,7 @@ export function GameFormDialog({
             <div>
               <Label htmlFor="pgn">PGN</Label>
               <Textarea
+                id="pgn"
                 placeholder="Notación de la partida..."
                 value={gameFormData.pgn || ''}
                 onChange={(e) => setGameFormData(prev => ({ ...prev, pgn: e.target.value }))}
@@ -290,7 +309,7 @@ export function GameFormDialog({
               >
                 {loading
                   ? mode === 'add' ? 'Agregando...' : 'Guardando...'
-                  : mode === 'add' ? 'Agregar Partida' : 'Guardar Cambios'}
+                  : mode === 'add' ? 'Agregar partida' : 'Guardar cambios'}
               </Button>
             </div>
           </div>

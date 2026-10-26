@@ -1,6 +1,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { Metadata } from "next"
+import { notFound } from "next/navigation"
 import { Building2, Calendar, ChevronLeft, Tag, User } from "lucide-react"
 
 import { InfoPill } from "@/components/info-pill"
@@ -22,13 +23,11 @@ export const revalidate = false
 // Generate metadata for better link previews
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
-  const newsItem = await getNewsById(parseInt(id), ['club', 'author'])
+  const newsId = Number(id)
+  const newsItem = Number.isInteger(newsId) ? await getNewsById(newsId, ['club', 'author']) : null
 
   if (!newsItem) {
-    return {
-      title: 'Noticia no encontrada - FASGBA',
-      description: 'La noticia que estás buscando no existe o ha sido eliminada.',
-    }
+    return { title: 'Noticia no encontrada' }
   }
 
   // Create a description from extract or extracted plain text
@@ -43,7 +42,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const author = newsItem.author_name || (newsItem.club?.name ? `${newsItem.club.name}` : 'FASGBA')
 
   return {
-    title: `${newsItem.title} - FASGBA`,
+    title: newsItem.title,
     description,
     authors: [{ name: author }],
   }
@@ -63,17 +62,11 @@ function BackLink() {
 
 export default async function NoticiaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const newsItem = await getNewsById(parseInt(id), ['club', 'author'])
+  const newsId = Number(id)
+  if (!Number.isInteger(newsId)) notFound()
 
-  if (!newsItem) {
-    return (
-      <section className="container px-4 pt-8 pb-12 md:px-6 md:pt-12 md:pb-16">
-        <BackLink />
-        <h1 className="mt-4 text-3xl font-bold tracking-tight text-terracotta">Noticia no encontrada</h1>
-        <p className="mt-2 text-muted-foreground">La noticia no existe o fue eliminada.</p>
-      </section>
-    )
-  }
+  const newsItem = await getNewsById(newsId, ['club', 'author'])
+  if (!newsItem) notFound()
 
   // Fetch related news (limit 3 since the util filters out current after limiting)
   const relatedNews = (await getRelatedNews(newsItem.id, 3)).slice(0, 2)
@@ -135,12 +128,12 @@ export default async function NoticiaPage({ params }: { params: Promise<{ id: st
             sizes="(max-width: 768px) 100vw, 768px"
             priority
             unoptimized
-            className="mt-6 h-auto w-full rounded-lg border"
+            className="mt-6 h-auto max-h-[480px] w-full rounded-lg border bg-muted object-contain"
           />
         )}
 
         <div className="mt-6">
-          <NewsContent text={newsItem.text} />
+          <NewsContent text={newsItem.text} coverUrl={imageUrl} />
         </div>
       </article>
 

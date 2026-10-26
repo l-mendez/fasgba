@@ -49,8 +49,8 @@ export default function ProfesoresAdminPage() {
         action={
           <Button asChild>
             <Link href="/admin/profesores/nuevo">
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Profesor
+              <Plus className="h-4 w-4" />
+              Nuevo profesor
             </Link>
           </Button>
         }

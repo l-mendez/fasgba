@@ -10,6 +10,7 @@ import { ClubFollowButton } from "@/components/club-follow-button"
 import { useAuth } from "@/hooks/useAuth"
 import { createClient } from "@/lib/supabase/client"
 import { getImageUrlNullable } from "@/lib/imageUtils"
+import { normalizeForSearch } from "@/lib/countries"
 import type { Club } from "@/lib/clubUtils"
 
 export function ClubsGrid({ clubs }: { clubs: Club[] }) {
@@ -57,10 +58,11 @@ export function ClubsGrid({ clubs }: { clubs: Club[] }) {
   }, [])
 
   const filteredClubs = useMemo(() => {
-    const term = searchTerm.toLowerCase()
+    // Accent-insensitive: "lanus" matches "Lanús".
+    const term = normalizeForSearch(searchTerm)
     if (!term) return clubs
     return clubs.filter((club) =>
-      [club.name, club.address].some((field) => field?.toLowerCase().includes(term))
+      [club.name, club.address].some((field) => field && normalizeForSearch(field).includes(term))
     )
   }, [clubs, searchTerm])
 
@@ -71,11 +73,8 @@ export function ClubsGrid({ clubs }: { clubs: Club[] }) {
   if (filteredClubs.length === 0) {
     return (
       <div className="text-center py-12 min-h-[400px] flex flex-col justify-center">
-        <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-          {searchTerm ? "No se encontraron clubes" : "No hay clubes disponibles"}
-        </h3>
         <p className="text-muted-foreground">
-          {searchTerm ? "Intenta con otros términos de búsqueda." : "Vuelve más tarde para ver los clubes afiliados."}
+          {searchTerm ? "No se encontraron clubes." : "No hay clubes disponibles."}
         </p>
         {searchTerm && (
           <Button asChild variant="outline" className="mt-4 mx-auto">
@@ -87,7 +86,7 @@ export function ClubsGrid({ clubs }: { clubs: Club[] }) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       {filteredClubs.map((club) => (
         <ClubCard
           key={club.id}
@@ -115,40 +114,48 @@ function ClubCard({
   const imageUrl = getImageUrlNullable(club.image)
   const href = `/clubes/${club.id}`
 
+  // The title link stretches over the whole card; contact links and the
+  // follow button sit above it (relative z-10).
   return (
-    <div className="flex gap-4 rounded-lg border bg-card p-3 transition-colors hover:border-amber">
-      <Link
-        href={href}
-        className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white"
-        aria-label={club.name}
-      >
+    <div className="group relative flex min-w-0 gap-4 rounded-lg border bg-card p-3 transition-colors hover:border-amber">
+      <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white">
         {imageUrl ? (
           <img src={imageUrl} alt={`Imagen de ${club.name}`} className="h-full w-full object-contain p-1" />
         ) : (
           <ImageIcon className="h-8 w-8 text-muted-foreground" />
         )}
-      </Link>
+      </div>
 
       <div className="min-w-0 flex-1 space-y-1 text-sm">
-        <Link href={href} className="block truncate text-base font-semibold text-terracotta hover:underline">
+        <Link
+          href={href}
+          title={club.name}
+          className="block truncate text-base font-semibold text-terracotta after:absolute after:inset-0 group-hover:underline"
+        >
           {club.name}
         </Link>
         {club.address && (
           <p className="flex items-center gap-1.5 text-muted-foreground">
             <MapPin className="h-4 w-4 shrink-0" />
-            <span className="truncate">{club.address}</span>
+            <span className="truncate" title={club.address}>{club.address}</span>
           </p>
         )}
         {club.telephone && (
-          <a href={`tel:${club.telephone}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+          <a
+            href={`tel:${club.telephone}`}
+            className="relative z-10 flex w-fit max-w-full items-center gap-1.5 text-muted-foreground hover:underline"
+          >
             <Phone className="h-4 w-4 shrink-0" />
-            <span className="truncate">{club.telephone}</span>
+            <span className="truncate" title={club.telephone}>{club.telephone}</span>
           </a>
         )}
         {club.mail && (
-          <a href={`mailto:${club.mail}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+          <a
+            href={`mailto:${club.mail}`}
+            className="relative z-10 flex w-fit max-w-full items-center gap-1.5 text-muted-foreground hover:underline"
+          >
             <Mail className="h-4 w-4 shrink-0" />
-            <span className="truncate">{club.mail}</span>
+            <span className="truncate" title={club.mail}>{club.mail}</span>
           </a>
         )}
       </div>
@@ -157,6 +164,7 @@ function ClubCard({
         clubId={club.id}
         initialIsFollowing={isFollowing}
         isUserAuthenticated={isUserAuthenticated}
+        className="relative z-10 shrink-0"
         onFollowChange={onFollowChange}
       />
     </div>

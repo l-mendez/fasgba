@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { AlertTriangle, Loader2, Save, Upload, X, ImageIcon, CheckCircle } from "lucide-react"
+import { Loader2, Save, Upload, X, ImageIcon } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { AdminConfirmDialog } from "@/components/admin-confirm-dialog"
 
 import { apiCall } from "@/lib/utils/apiClient"
 import { uploadClubImageAction, deleteClubImageAction } from "@/lib/actions/clubs"
@@ -59,8 +60,8 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [currentImage, setCurrentImage] = useState<string | null>(club.image)
-  const [pendingImageDeletion, setPendingImageDeletion] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
+  const [confirmRemoveImage, setConfirmRemoveImage] = useState(false)
+  const [isRemovingImage, setIsRemovingImage] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const supabase = createClient()
@@ -98,48 +99,36 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
         throw new Error(result.error || 'Failed to upload image')
       }
 
-      // Update current image and clear preview
       setCurrentImage(result.data.filePath)
       setImagePreview(null)
-      setPendingImageDeletion(false)
-
-      // Show appropriate success message based on whether an image was replaced
-      const successMessage = result.data.replacedExisting
-        ? '✅ Imagen actualizada correctamente'
-        : '✅ Imagen subida correctamente'
-
-      const successDescription = result.data.replacedExisting
-        ? 'La imagen anterior ha sido reemplazada exitosamente'
-        : 'La imagen del club se ha agregado exitosamente'
-
-      toast.success(successMessage, {
-        description: successDescription,
-        duration: 3000,
-      })
+      toast.success(result.data.replacedExisting ? 'Imagen actualizada' : 'Imagen subida')
       router.refresh()
     } catch (error) {
       console.error('Error uploading image:', error)
+      setImagePreview(null)
       toast.error(error instanceof Error ? error.message : 'Error al subir la imagen')
     } finally {
       setIsUploadingImage(false)
     }
   }
 
+  // Removal applies immediately, like uploads.
   const handleImageRemove = async () => {
-    // Mark image for deletion (don't delete immediately)
-    setPendingImageDeletion(true)
-    toast.success('✅ Imagen marcada para eliminación', {
-      description: 'La imagen se eliminará cuando guardes los cambios',
-      duration: 3000,
-    })
-  }
-
-  const handleUndoImageDeletion = () => {
-    setPendingImageDeletion(false)
-    toast.success('Eliminación cancelada', {
-      description: 'La imagen se mantendrá al guardar los cambios',
-      duration: 2000,
-    })
+    try {
+      setIsRemovingImage(true)
+      const result = await deleteClubImageAction(club.id)
+      if (!result.ok) throw new Error(result.error || 'No se pudo quitar la imagen')
+      setCurrentImage(null)
+      setImagePreview(null)
+      toast.success('Imagen quitada')
+      router.refresh()
+    } catch (error) {
+      console.error('Error deleting image:', error)
+      toast.error(error instanceof Error ? error.message : 'No se pudo quitar la imagen')
+    } finally {
+      setIsRemovingImage(false)
+      setConfirmRemoveImage(false)
+    }
   }
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,42 +172,14 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
         schedule: data.schedule?.trim() || null,
       }
       
-      // Handle pending image deletion
-      if (pendingImageDeletion && currentImage) {
-        try {
-          const result = await deleteClubImageAction(club.id)
-
-          if (!result.ok) {
-            throw new Error(result.error || 'Failed to delete image')
-          }
-
-          // Update local state
-          setCurrentImage(null)
-          setPendingImageDeletion(false)
-        } catch (error) {
-          console.error('Error deleting image:', error)
-          throw new Error('No se pudo eliminar la imagen. Intenta de nuevo.')
-        }
-      }
-      
       // Update club information
       await apiCall(`/api/clubs/${club.id}/settings`, {
         method: 'PUT',
         body: JSON.stringify(cleanedData),
       })
       
-      // Show success feedback
-      setShowSuccess(true)
-      toast.success("✅ Configuración actualizada correctamente", {
-        description: "Los cambios se han guardado exitosamente",
-        duration: 4000,
-      })
-      
-      // Hide success indicator after 3 seconds
-      setTimeout(() => {
-        setShowSuccess(false)
-      }, 3000)
-      
+      toast.success("Cambios guardados")
+      form.reset(data)
       router.refresh()
     } catch (error) {
       console.error('Error updating club settings:', error)
@@ -230,105 +191,91 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
 
   return (
     <div className="space-y-6">
-      {/* Success Banner */}
-      {showSuccess && (
-        <div className="flex items-center gap-2 rounded-lg border bg-muted p-3 text-sm text-foreground">
-          <CheckCircle className="h-4 w-4 text-amber" />
-          Configuración guardada.
-        </div>
-      )}
-
-      {/* Club Image Section */}
       <Card>
         <CardHeader>
           <CardTitle className="text-terracotta">Imagen</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Current Image Display */}
-            {(currentImage || imagePreview) && !pendingImageDeletion && (
+            {currentImage || imagePreview ? (
               <div className="relative inline-block">
                 <img
                   src={imagePreview || getCurrentImageUrl() || ''}
                   alt="Imagen del club"
                   className="h-32 w-32 object-contain bg-white rounded-lg border"
                 />
-                {!isUploadingImage && (
+                {isUploadingImage ? (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/70">
+                    <Loader2 className="h-6 w-6 animate-spin text-terracotta" />
+                  </div>
+                ) : (
                   <Button
                     type="button"
                     variant="destructive"
-                    size="sm"
-                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                    onClick={handleImageRemove}
-                    disabled={isLoading}
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                    onClick={() => setConfirmRemoveImage(true)}
+                    disabled={isLoading || isRemovingImage}
+                    aria-label="Quitar imagen"
+                    title="Quitar imagen"
                   >
                     <X className="h-3 w-3" />
                   </Button>
                 )}
-                {isUploadingImage && (
-                  <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                    <Loader2 className="h-6 w-6 text-white animate-spin" />
-                  </div>
-                )}
               </div>
-            )}
-
-            {/* Upload Area */}
-            {(!currentImage || pendingImageDeletion) && !imagePreview && (
-              <div 
-                className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-amber transition-colors"
+            ) : (
+              <button
+                type="button"
+                className="w-full rounded-lg border-2 border-dashed p-6 text-center hover:border-amber focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingImage || isLoading}
               >
-                <ImageIcon className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-                <p className="text-xs text-muted-foreground">
+                <ImageIcon className="mx-auto mb-2 h-10 w-10 text-muted-foreground" />
+                <span className="flex items-center justify-center gap-2 text-sm font-medium">
+                  <Upload className="h-4 w-4" />
+                  Subir imagen
+                </span>
+                <span className="mt-1 block text-xs text-muted-foreground">
                   JPG, PNG, GIF o WebP (máx. 5MB)
-                </p>
-                {pendingImageDeletion && (
-                  <div className="mt-3 pt-3 border-t border-dashed">
-                    <p className="flex items-center justify-center gap-1 text-xs font-medium text-foreground mb-2">
-                      <AlertTriangle className="h-3.5 w-3.5 text-amber" />
-                      La imagen actual será eliminada al guardar
-                    </p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-6"
-                      onClick={handleUndoImageDeletion}
-                      disabled={isLoading}
-                    >
-                      Deshacer eliminación
-                    </Button>
-                  </div>
-                )}
-              </div>
+                </span>
+              </button>
             )}
 
-            {/* Upload Button */}
-            <div className="flex gap-2">
+            {currentImage || imagePreview ? (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isUploadingImage || isLoading}
+                disabled={isUploadingImage || isLoading || isRemovingImage}
               >
                 <Upload className="mr-2 h-4 w-4" />
-                {(currentImage && !pendingImageDeletion) || imagePreview ? 'Cambiar imagen' : 'Subir imagen'}
+                Cambiar imagen
               </Button>
-            </div>
+            ) : null}
 
-            {/* Hidden file input */}
             <input
               ref={fileInputRef}
               type="file"
               accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-              onChange={handleFileSelect}
+              onChange={(event) => {
+                handleFileSelect(event)
+                event.target.value = ''
+              }}
               className="hidden"
             />
           </div>
         </CardContent>
       </Card>
+
+      <AdminConfirmDialog
+        open={confirmRemoveImage}
+        onOpenChange={setConfirmRemoveImage}
+        title="¿Quitar imagen?"
+        confirmLabel="Quitar"
+        onConfirm={handleImageRemove}
+        pending={isRemovingImage}
+      />
 
       {/* Club Information Form */}
       <Card>
@@ -430,32 +377,22 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
                 )}
               />
               
-              <div className="flex justify-end gap-2">
+              <div className="sticky bottom-0 flex justify-end gap-2 border-t bg-card py-3 md:static md:border-0 md:py-0">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => router.back()}
-                  disabled={isLoading}
+                  onClick={() => form.reset()}
+                  disabled={isLoading || !form.formState.isDirty}
                 >
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={isLoading}>
                   {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Guardando...
-                    </>
-                  ) : showSuccess ? (
-                    <>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      ¡Guardado!
-                    </>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Guardar cambios
-                    </>
+                    <Save className="mr-2 h-4 w-4" />
                   )}
+                  {isLoading ? "Guardando..." : "Guardar cambios"}
                 </Button>
               </div>
             </form>

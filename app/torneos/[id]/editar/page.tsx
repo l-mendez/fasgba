@@ -1,14 +1,12 @@
 import { Suspense } from "react"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
-import { ArrowLeft, MapPin } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 import { getTournamentGames, getTournamentRounds } from "@/lib/gameUtils"
 
 import { Button } from "@/components/ui/button"
-import { ErrorAlert } from "@/components/error-alert"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
@@ -18,24 +16,15 @@ export const dynamic = 'force-dynamic'
 // Metadata generation
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params
-  
+
   try {
     const { tournament } = await getTournamentData(id)
-    
-    if (tournament) {
-      return {
-        title: `Editar ${tournament.title} | FASGBA`,
-        description: `Editar torneo: ${tournament.title}`,
-      }
-    }
+    if (tournament) return { title: `Editar ${tournament.title}` }
   } catch (error) {
     console.error('Error generating metadata:', error)
   }
-  
-  return {
-    title: 'Editar Torneo | FASGBA',
-    description: 'Editar información del torneo',
-  }
+
+  return { title: 'Editar torneo' }
 }
 
 interface Tournament {
@@ -261,11 +250,14 @@ interface PageProps {
   params: Promise<{
     id: string
   }>
+  searchParams: Promise<{ source?: string }>
 }
 
 // Main server component
-export default async function EditarTorneoPage({ params }: PageProps) {
+export default async function EditarTorneoPage({ params, searchParams }: PageProps) {
   const { id } = await params
+  const { source } = await searchParams
+  if (!/^\d+$/.test(id)) notFound()
   
   // Check authentication first - if not authenticated, redirect to login
   const isAuthenticated = await checkAuthentication()
@@ -275,11 +267,13 @@ export default async function EditarTorneoPage({ params }: PageProps) {
   }
   
   // Get tournament data and authorization
-  const { tournament, isAuthorized, error, isSiteAdmin, isClubAdmin, rounds, userClubIds } = await getTournamentData(id)
+  const { tournament, isAuthorized, isSiteAdmin, isClubAdmin, rounds, userClubIds } = await getTournamentData(id)
+
+  if (!tournament) notFound()
 
   // Prefetch existing games if we have a tournament and user is authorized
   let initialGames: any[] = []
-  if (tournament && isAuthorized) {
+  if (isAuthorized) {
     try {
       const gamesByRound = await getTournamentGames(
         parseInt(id, 10),
@@ -303,7 +297,7 @@ export default async function EditarTorneoPage({ params }: PageProps) {
 
   // Dynamic import management components
   let RoundsGamesManagement, TeamManagement
-  if (tournament && isAuthorized) {
+  if (isAuthorized) {
     const [roundsGamesManagementModule, teamManagementModule] = await Promise.all([
       import("@/components/tournament/rounds-games-management"),
       import("@/components/tournament/team-management")
@@ -312,46 +306,28 @@ export default async function EditarTorneoPage({ params }: PageProps) {
     TeamManagement = teamManagementModule.default
   }
 
+  // Coming from club-admin wins over the site-admin role (users can be both).
+  const returnPath = source === 'club-admin' || !isSiteAdmin ? '/club-admin/torneos' : '/admin/torneos'
+
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-8">
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" asChild>
-          <Link href={isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"} aria-label="Volver" title="Volver">
+          <Link href={returnPath} aria-label="Volver" title="Volver">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">
-            {tournament ? 'Editar torneo' : 'Error'}
-          </h1>
-          <p className="truncate text-sm text-muted-foreground">
-            {tournament ? tournament.title : 'No se pudo cargar el torneo'}
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Editar torneo</h1>
+          <p className="truncate text-sm text-muted-foreground">{tournament.title}</p>
         </div>
       </div>
 
-      {error && <ErrorAlert message={error} />}
-
-      {tournament && !isAuthorized && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-terracotta">{tournament.title}</CardTitle>
-            <CardDescription>No tienes permisos para editar este torneo.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1.5 text-sm text-muted-foreground">
-              {tournament.description && (
-                <p className="whitespace-pre-line">{tournament.description}</p>
-              )}
-              {tournament.place && (
-                <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-amber" />{tournament.place}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      {!isAuthorized && (
+        <p className="text-sm text-muted-foreground">No tienes permisos para editar este torneo.</p>
       )}
 
-      {tournament && isAuthorized && (
+      {isAuthorized && (
         <Suspense fallback={<LoadingSpinner />}>
           <Tabs defaultValue="info" className="w-full">
             <TabsList className={`grid w-full ${tournament.tournament_type === 'team' ? 'grid-cols-3' : 'grid-cols-2'}`}>
@@ -366,7 +342,7 @@ export default async function EditarTorneoPage({ params }: PageProps) {
               <EditarTorneoForm 
                 tournament={tournament}
                 tournamentId={id}
-                isSiteAdmin={isSiteAdmin}
+                returnPath={returnPath}
               />
             </TabsContent>
 

@@ -1,13 +1,15 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Calendar, ImageIcon, MapPin } from "lucide-react"
+import { Calendar, ChevronRight, ImageIcon, MapPin, Tag } from "lucide-react"
 import { ReactNode } from "react"
 import { unstable_cache } from "next/cache"
 import { createClient } from '@supabase/supabase-js'
 
 import { Badge } from "@/components/ui/badge"
 import { getAllNews } from "@/lib/newsUtils"
-import { getAllTournamentsForDisplay } from "@/lib/tournamentUtils"
+import { formatDateRange, getAllTournamentsForDisplay, getTournamentStatus } from "@/lib/tournamentUtils"
+import type { TournamentStatus } from "@/lib/utils/constants"
+import { TournamentStatusPill } from "@/app/(public)/torneos/components/tournament-card"
 import { getAllClubs } from "@/lib/clubUtils"
 import { getImageUrl, getImageUrlNullable } from "@/lib/imageUtils"
 import { formatArgentinaDateOnly, getDateInputValue } from "@/lib/dateUtils"
@@ -44,21 +46,16 @@ interface NewsItem {
   } | null
 }
 
+// Date range and status are computed inside the cache (from Date objects) so
+// only plain strings cross the cache boundary.
 interface Tournament {
   id: number
   title: string
   description: string | null
   time: string | null
   place: string | null
-  location: string | null
-  rounds: number | null
-  pace: string | null
-  inscription_details: string | null
-  cost: string | null
-  prizes: string | null
-  image: string | null
-  created_by_club_id?: number | null
-  formatted_start_date?: string
+  date_range: string
+  status: TournamentStatus
 }
 
 interface Club {
@@ -162,18 +159,11 @@ const getCachedTournaments = unstable_cache(
       description: t.description,
       time: t.time,
       place: t.place,
-      location: t.location,
-      rounds: t.rounds,
-      pace: t.pace,
-      inscription_details: t.inscription_details,
-      cost: t.cost,
-      prizes: t.prizes,
-      image: t.image,
-      created_by_club_id: t.created_by_club_id,
-      formatted_start_date: t.formatted_start_date,
+      date_range: formatDateRange(t.start_date, t.end_date),
+      status: getTournamentStatus(t),
     }))
   },
-  ['home-tournaments'],
+  ['home-tournaments-v2'],
   { revalidate: false, tags: ['torneos'] }
 )
 
@@ -225,13 +215,20 @@ function mapNewsToNoticia(newsItem: NewsItem, isFeatured = false): Noticia {
   }
 }
 
-// Helper function to format tournament date
-function formatTournamentDate(tournament: Tournament): string {
-  if (tournament.formatted_start_date) {
-    return tournament.formatted_start_date
-  }
-  
-  return 'Fecha por confirmar'
+const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
+
+// Category pills over the news image (white on a dark backdrop for contrast)
+function NoticiaTags({ tags, className }: { tags: string[]; className: string }): ReactNode {
+  return (
+    <div className={className}>
+      {tags.map((categoria) => (
+        <Badge key={categoria} variant="outline" className="gap-1 border-amber bg-black/50 text-white">
+          <Tag className="h-3 w-3" />
+          {capitalize(categoria)}
+        </Badge>
+      ))}
+    </div>
+  )
 }
 
 // Component for featured news
@@ -248,18 +245,12 @@ function NoticiaDestacada({ noticia }: NoticiaProps): ReactNode {
           className="object-cover"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/30" />
       </div>
       <div className="relative flex h-full flex-col justify-end p-6 text-white">
-        <div className="mb-4 flex flex-wrap gap-2">
-          {noticia.categorias.slice(0, 3).map((categoria) => (
-            <Badge key={categoria} variant="outline" className="border-amber bg-black/50 text-white hover:bg-amber/20">
-              {categoria}
-            </Badge>
-          ))}
-        </div>
+        <NoticiaTags tags={noticia.categorias.slice(0, 3)} className="mb-4 flex flex-wrap gap-2" />
         <h2 className="mb-2 text-2xl font-bold leading-tight sm:text-3xl md:text-4xl">{noticia.titulo}</h2>
-        <div className="flex items-center gap-2 text-sm text-amber">
+        <div className="flex items-center gap-2 text-sm text-white/80">
           <Calendar className="h-4 w-4" />
           <span>{noticia.fecha}</span>
         </div>
@@ -271,7 +262,7 @@ function NoticiaDestacada({ noticia }: NoticiaProps): ReactNode {
 // Component for regular news cards
 function NoticiaCard({ noticia }: NoticiaProps): ReactNode {
   return (
-    <div className="group relative h-full overflow-hidden rounded-lg">
+    <div className="relative h-full overflow-hidden rounded-lg">
       <div className="absolute inset-0">
         <Image
           src={noticia.imagen || "/placeholder.svg"}
@@ -279,24 +270,14 @@ function NoticiaCard({ noticia }: NoticiaProps): ReactNode {
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
           unoptimized
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          className="object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/30" />
       </div>
       <div className="relative flex h-full flex-col justify-end p-4 text-white">
-        <div className="mb-2 flex flex-wrap gap-1">
-          {noticia.categorias.slice(0, 2).map((categoria) => (
-            <Badge
-              key={categoria}
-              variant="outline"
-              className="border-amber bg-black/50 text-white hover:bg-amber/20 text-xs"
-            >
-              {categoria}
-            </Badge>
-          ))}
-        </div>
+        <NoticiaTags tags={noticia.categorias.slice(0, 2)} className="mb-2 flex flex-wrap gap-1" />
         <h3 className="mb-2 text-lg font-bold leading-tight">{noticia.titulo}</h3>
-        <div className="flex items-center gap-1 text-xs text-amber">
+        <div className="flex items-center gap-1 text-xs text-white/80">
           <Calendar className="h-3 w-3" />
           <span>{noticia.fecha}</span>
         </div>
@@ -305,19 +286,23 @@ function NoticiaCard({ noticia }: NoticiaProps): ReactNode {
   )
 }
 
-// Component for tournament cards (same look as the /torneos cards)
+// Component for tournament cards (same look as the /torneos cards). The status
+// pill matters here: with nothing upcoming the section falls back to past ones.
 function TournamentCard({ tournament }: { tournament: Tournament }): ReactNode {
   return (
     <Link
       href={`/torneos/${tournament.id}`}
       className="group flex h-full flex-col gap-3 rounded-lg border bg-card p-4 transition-colors hover:border-amber"
     >
-      <h3 className="text-lg font-semibold leading-tight text-terracotta line-clamp-2 group-hover:underline">{tournament.title}</h3>
+      <div className="space-y-2">
+        <h3 className="text-lg font-semibold leading-tight text-terracotta line-clamp-2 group-hover:underline">{tournament.title}</h3>
+        <TournamentStatusPill status={tournament.status} />
+      </div>
       <ul className="space-y-1.5 text-sm text-muted-foreground">
         <li className="flex items-center gap-2">
           <Calendar className="h-4 w-4 shrink-0" />
           <span className="line-clamp-1">
-            {formatTournamentDate(tournament)}
+            {tournament.date_range}
             {tournament.time && ` · ${tournament.time}`}
           </span>
         </li>
@@ -331,6 +316,10 @@ function TournamentCard({ tournament }: { tournament: Tournament }): ReactNode {
       {tournament.description && (
         <p className="text-sm text-muted-foreground line-clamp-3">{tournament.description}</p>
       )}
+      <span className="mt-auto inline-flex items-center gap-1 pt-1 text-sm font-semibold text-terracotta">
+        Ver torneo
+        <ChevronRight className="h-4 w-4" />
+      </span>
     </Link>
   )
 }
@@ -342,7 +331,7 @@ function ClubCard({ club }: { club: Club }): ReactNode {
   return (
     <Link
       href={`/clubes/${club.id}`}
-      className="group block overflow-hidden rounded-lg border border-amber/20 bg-background transition-colors hover:border-amber"
+      className="block overflow-hidden rounded-lg border border-amber/20 bg-background transition-colors hover:border-amber"
       title={club.name}
     >
       <div className="relative aspect-square w-full bg-white">
@@ -353,7 +342,7 @@ function ClubCard({ club }: { club: Club }): ReactNode {
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
             unoptimized
-            className="object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+            className="object-contain p-2"
           />
         ) : (
           <div className="flex h-full items-center justify-center bg-muted">
@@ -361,7 +350,7 @@ function ClubCard({ club }: { club: Club }): ReactNode {
           </div>
         )}
       </div>
-      <p className="truncate p-2 text-center text-xs font-medium text-muted-foreground group-hover:text-amber-dark">
+      <p className="truncate p-2 text-center text-xs font-medium text-muted-foreground">
         {club.name}
       </p>
     </Link>

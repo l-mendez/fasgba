@@ -3,7 +3,13 @@ import Link from "next/link"
 import { RatingChange } from "@/components/rating-change"
 import type { Player } from "@/lib/rankingUtils"
 
-// Top active players by standard rating; each row opens the ranking filtered to that player
+// Top active players by standard rating; each row opens that player's panel on /ranking
+function playerHref(player: Player) {
+  return player.id
+    ? `/ranking?jugador=${encodeURIComponent(player.id)}`
+    : `/ranking?search=${encodeURIComponent(player.name)}`
+}
+
 export function TopRanking({ players }: { players: Player[] }) {
   if (players.length === 0) {
     return <p className="py-12 text-center text-muted-foreground">El ranking no está disponible en este momento.</p>
@@ -14,10 +20,10 @@ export function TopRanking({ players }: { players: Player[] }) {
       {players.map((player, index) => (
         <li key={player.id || player.position} className="border-b border-amber/15 last:border-b-0 md:[&:nth-child(5)]:border-b-0">
           <Link
-            href={`/ranking?search=${encodeURIComponent(player.name)}`}
+            href={playerHref(player)}
             className="flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-amber/10"
           >
-            <span className="w-6 shrink-0 text-right text-lg font-bold text-amber">{index + 1}</span>
+            <span className="w-6 shrink-0 text-right text-lg font-bold text-terracotta">{index + 1}</span>
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">
                 {player.title && <span className="mr-1 text-terracotta">{player.title}</span>}

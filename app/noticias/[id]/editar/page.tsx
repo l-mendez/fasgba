@@ -1,4 +1,4 @@
-import React from "react"
+import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 
@@ -6,6 +6,8 @@ import { EditNewsForm } from "./edit-news-form"
 
 // Force dynamic rendering since we use cookies
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = { title: 'Editar noticia' }
 
 interface News {
   id: number
@@ -87,41 +89,35 @@ async function getNewsData(newsId: string): Promise<News | null> {
   }
 }
 
-// Server function to check if user can edit the news
-async function canUserEditNews(userId: string, news: News): Promise<{ canEdit: boolean; redirectPath: string }> {
+// Server function to check if user can edit the news. Roles are checked
+// before authorship so admins return to their panel, not the public list.
+async function canUserEditNews(userId: string, news: News, source?: string): Promise<{ canEdit: boolean; redirectPath: string }> {
   try {
     const supabase = await createClient()
-    
-    // Check if user is the author
-    if (news.created_by_auth_id === userId) {
-      return { canEdit: true, redirectPath: '/noticias' }
-    }
-    
-    // Check if user is a site-wide admin
-    const { data: siteAdmin } = await supabase
-      .from('admins')
-      .select('auth_id')
-      .eq('auth_id', userId)
-      .single()
 
+    const [{ data: siteAdmin }, { data: clubAdmin }] = await Promise.all([
+      supabase.from('admins').select('auth_id').eq('auth_id', userId).maybeSingle(),
+      news.club_id
+        ? supabase
+            .from('club_admins')
+            .select('auth_id')
+            .eq('auth_id', userId)
+            .eq('club_id', news.club_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ])
+
+    // Users can be both: the panel they came from wins.
+    if (clubAdmin && (source === 'club-admin' || !siteAdmin)) {
+      return { canEdit: true, redirectPath: '/club-admin/noticias' }
+    }
     if (siteAdmin) {
       return { canEdit: true, redirectPath: '/admin/noticias' }
     }
-    
-    // Check if user is a club admin and the news belongs to their club
-    if (news.club_id) {
-      const { data: clubAdmin } = await supabase
-        .from('club_admins')
-        .select('auth_id')
-        .eq('auth_id', userId)
-        .eq('club_id', news.club_id)
-        .single()
-
-      if (clubAdmin) {
-        return { canEdit: true, redirectPath: '/club-admin/noticias' }
-      }
+    if (news.created_by_auth_id === userId) {
+      return { canEdit: true, redirectPath: '/noticias' }
     }
-    
+
     return { canEdit: false, redirectPath: '/noticias' }
   } catch (error) {
     console.error('Error checking edit permissions:', error)
@@ -131,12 +127,14 @@ async function canUserEditNews(userId: string, news: News): Promise<{ canEdit: b
 
 // Server component
 export default async function EditNewsPage({
-  params
+  params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ source?: string }>
 }) {
-  // Await the params
   const { id: newsId } = await params
+  const { source } = await searchParams
 
   // Get current user
   const user = await getCurrentUser()
@@ -151,7 +149,7 @@ export default async function EditNewsPage({
   }
 
   // Check if user can edit this news
-  const { canEdit, redirectPath } = await canUserEditNews(user.id, news)
+  const { canEdit, redirectPath } = await canUserEditNews(user.id, news, source)
   if (!canEdit) {
     notFound()
   }

@@ -34,7 +34,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <AuthShell title="Recuperar Contraseña" links={backToLogin}>
+    <AuthShell title="Recuperar contraseña" links={backToLogin}>
       <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
         <div className="space-y-2">
           <Label htmlFor="email">Correo electrónico</Label>

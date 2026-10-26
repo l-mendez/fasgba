@@ -8,12 +8,16 @@ export const dynamic = "force-dynamic"
 
 export default function AdminDocumentosPage() {
   return (
-    <div className="space-y-6">
-      <AdminPageHeader title="Documentos" />
-      <Suspense fallback={<AdminContentSkeleton rows={5} />}>
-        <AdminDocumentosContent />
-      </Suspense>
-    </div>
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <AdminPageHeader title="Documentos" />
+          <AdminContentSkeleton rows={5} />
+        </div>
+      }
+    >
+      <AdminDocumentosContent />
+    </Suspense>
   )
 }
 
@@ -22,7 +26,6 @@ async function AdminDocumentosContent() {
 
   return (
     <AdminDocumentosClient
-      showHeader={false}
       initialDocuments={documents}
       initialTotalDocuments={totalDocuments}
       initialCategoryImportance={categoryImportance}

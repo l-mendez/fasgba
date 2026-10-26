@@ -2,11 +2,11 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, BadgeCheck, Ban, CalendarPlus, CheckCircle2, ChevronLeft, CircleDashed, Fingerprint, LogIn, Mail } from "lucide-react"
+import { BadgeCheck, CalendarPlus, ChevronLeft, CircleDashed, Fingerprint, Loader2, LogIn, Mail } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { InfoPill } from "@/components/info-pill"
 import { apiCall } from "@/lib/utils/apiClient"
@@ -47,8 +47,6 @@ interface UserEditFormProps {
 export function UserEditForm({ user, clubs, clubsAdmin }: UserEditFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
 
   const [permissions, setPermissions] = useState({
     isAdmin: user.isAdmin,
@@ -58,8 +56,6 @@ export function UserEditForm({ user, clubs, clubsAdmin }: UserEditFormProps) {
   const handlePermissionsSubmit = async () => {
     try {
       setIsSubmitting(true)
-      setError(null)
-      setSuccess(null)
 
       await apiCall(`/api/admin/users/${user.id}/permissions`, {
         method: 'PUT',
@@ -69,28 +65,11 @@ export function UserEditForm({ user, clubs, clubsAdmin }: UserEditFormProps) {
         }),
       })
 
-      setSuccess("Permisos actualizados correctamente")
-
+      toast.success("Permisos actualizados")
+      router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al actualizar los permisos")
+      toast.error(err instanceof Error ? err.message : "Error al actualizar los permisos")
       console.error('Error updating permissions:', err)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleBanUser = async () => {
-    if (!confirm('¿Estás seguro de que quieres suspender a este usuario?')) return
-
-    try {
-      setIsSubmitting(true)
-      setError(null)
-
-      // TODO: Implement user ban functionality
-      setError("Funcionalidad de suspensión no implementada aún")
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al suspender el usuario")
     } finally {
       setIsSubmitting(false)
     }
@@ -141,20 +120,6 @@ export function UserEditForm({ user, clubs, clubsAdmin }: UserEditFormProps) {
           {fullName || user.email}
         </h1>
       </div>
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {success && (
-        <Alert className="bg-muted">
-          <CheckCircle2 className="h-4 w-4 text-amber" />
-          <AlertDescription>{success}</AlertDescription>
-        </Alert>
-      )}
 
       <Card>
         <CardContent className="space-y-1.5 p-4 text-sm text-muted-foreground">
@@ -226,27 +191,10 @@ export function UserEditForm({ user, clubs, clubsAdmin }: UserEditFormProps) {
               disabled={isSubmitting}
               className="w-full md:w-auto"
             >
-              {isSubmitting ? "Guardando..." : "Guardar permisos"}
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Guardar permisos
             </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-destructive/40">
-        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            El usuario no podrá acceder hasta que se reactive su cuenta.
-          </p>
-          <Button
-            onClick={handleBanUser}
-            disabled={isSubmitting}
-            variant="destructive"
-            size="sm"
-            className="w-full sm:w-auto"
-          >
-            <Ban className="mr-2 h-4 w-4" />
-            Suspender usuario
-          </Button>
         </CardContent>
       </Card>
     </div>

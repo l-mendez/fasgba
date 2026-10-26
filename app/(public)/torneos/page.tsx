@@ -19,7 +19,7 @@ export const revalidate = false
 
 // Generate metadata for better link previews
 export const metadata: Metadata = {
-  title: 'Torneos FASGBA - Calendario de Competencias',
+  title: 'Torneos',
   description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires. Consulta próximos torneos, torneos en curso y resultados.',
   keywords: ['FASGBA', 'torneos', 'ajedrez', 'competencias', 'calendario', 'federación', 'Buenos Aires', 'inscripción'],
   openGraph: {

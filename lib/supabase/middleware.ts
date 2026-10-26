@@ -35,21 +35,35 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Only redirect to login for protected routes, not for public routes like news
-  const isProtectedRoute = request.nextUrl.pathname.startsWith('/admin') || 
-                          request.nextUrl.pathname.startsWith('/club-admin') ||
-                          request.nextUrl.pathname.startsWith('/dashboard')
+  const { pathname } = request.nextUrl
 
-  if (
-    !user &&
-    isProtectedRoute &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth')
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  // Redirects keep the refreshed session cookies set above.
+  const redirectTo = (url: URL) => {
+    const response = NextResponse.redirect(url)
+    supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
+    return response
+  }
+
+  // Only redirect to login for protected routes, not for public routes like news
+  const isProtectedRoute = ['/admin', '/club-admin', '/dashboard', '/jugadores'].some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  )
+
+  if (!user && isProtectedRoute) {
+    // Send the user back here after signing in.
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    return NextResponse.redirect(url)
+    url.search = ''
+    url.searchParams.set('redirect', pathname + request.nextUrl.search)
+    return redirectTo(url)
+  }
+
+  // Signed-in users have nothing to do on the login/signup forms.
+  if (user && (pathname === '/login' || pathname === '/registro')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/'
+    url.search = ''
+    return redirectTo(url)
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're

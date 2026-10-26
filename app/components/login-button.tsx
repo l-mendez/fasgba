@@ -14,11 +14,9 @@ export interface LoginButtonProps {
 
 function LoginButtonContent(props: LoginButtonProps) {
   return (
-    <AuthButton
-      {...props}
-      mode="signin"
-      children={props.children || "Iniciar Sesión"}
-    />
+    <AuthButton {...props} mode="signin">
+      {props.children || "Iniciar sesión"}
+    </AuthButton>
   )
 }
 

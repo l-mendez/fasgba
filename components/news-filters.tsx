@@ -52,13 +52,13 @@ export function NewsFilters({
 
   // Plain elements (not nested components) so they don't remount on every render.
   const tagChips = tagOptions.map(({ value, label }) => (
-    <button key={value} type="button" onClick={() => onTagChange(value)}>
+    <button key={value} type="button" aria-pressed={selectedTag === value} onClick={() => onTagChange(value)}>
       <Badge
         variant={selectedTag === value ? 'default' : 'outline'}
         className={`cursor-pointer ${
           selectedTag === value
             ? 'bg-terracotta text-white hover:bg-terracotta-dark'
-            : 'border-amber/20 text-muted-foreground hover:border-amber hover:text-amber-dark hover:bg-amber/10'
+            : 'border-amber/20 text-muted-foreground hover:border-amber'
         }`}
       >
         {label}
@@ -115,14 +115,13 @@ export function NewsFilters({
           </SheetTrigger>
           <SheetContent side="right" className="w-[300px] sm:w-[400px]">
             <SheetHeader>
-              <SheetTitle>Filtros de noticias</SheetTitle>
-              <SheetDescription>
-                Filtra las noticias por categoría o club
-              </SheetDescription>
+              <SheetTitle>Filtros</SheetTitle>
+              <SheetDescription className="sr-only">Categoría y club</SheetDescription>
             </SheetHeader>
             <div className="mt-6 space-y-6">
               {hasActiveFilters && (
-                <Button variant="outline" size="sm" className="w-full" onClick={onClear}>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground" onClick={onClear}>
+                  <X className="h-4 w-4 mr-1" />
                   Limpiar filtros
                 </Button>
               )}

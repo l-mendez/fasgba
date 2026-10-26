@@ -1,12 +1,13 @@
 "use client"
 
 import { useRef, useState } from "react"
+import { toast } from "sonner"
 import {
   Award,
   FileText,
   GraduationCap,
   Home,
-  ListOrdered,
+  BarChart3,
   RefreshCw,
   Trophy,
   type LucideIcon,
@@ -31,7 +32,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useToast } from "@/hooks/use-toast"
 import { CACHE_SCOPES, type CacheScope } from "@/lib/cache/scopes"
 import { apiCall } from "@/lib/utils/apiClient"
 
@@ -41,7 +41,7 @@ const SCOPE_META: Record<CacheScope, { label: string; icon: LucideIcon }> = {
   news: { label: "Noticias", icon: FileText },
   clubs: { label: "Clubes", icon: Home },
   torneos: { label: "Torneos", icon: Trophy },
-  ranking: { label: "Ranking", icon: ListOrdered },
+  ranking: { label: "Ranking", icon: BarChart3 },
   profesores: { label: "Profesores", icon: GraduationCap },
   arbitros: { label: "Árbitros", icon: Award },
 }
@@ -50,7 +50,6 @@ export function PurgeCacheMenu() {
   const [isPurging, setIsPurging] = useState(false)
   const [isConfirmingAll, setIsConfirmingAll] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
-  const { toast } = useToast()
 
   const purge = async (scope: CacheScope | "all", label: string) => {
     // The trigger stays enabled so Radix can return focus to it on close;
@@ -63,17 +62,12 @@ export function PurgeCacheMenu() {
         method: "POST",
         body: JSON.stringify({ scope }),
       })
-      toast({
-        title: "Caché actualizada",
+      toast.success("Caché actualizada", {
         description: `Los últimos cambios en ${label} se verán en unos segundos.`,
       })
     } catch (error) {
       console.error("Purge cache error:", error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "No se pudo actualizar la caché.",
-        variant: "destructive",
-      })
+      toast.error(error instanceof Error ? error.message : "No se pudo actualizar la caché")
     } finally {
       setIsPurging(false)
     }
@@ -95,7 +89,7 @@ export function PurgeCacheMenu() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-64">
           <DropdownMenuLabel className="font-normal text-xs text-muted-foreground">
-            Usalo si cambiaste datos fuera del sitio y no se ven las novedades.
+            Úsalo si cambiaste datos fuera del sitio y no se ven las novedades.
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           {/* Confirmation only here: purging everything regenerates the whole site.
@@ -135,14 +129,14 @@ export function PurgeCacheMenu() {
             <AlertDialogTitle>¿Actualizar todas las secciones?</AlertDialogTitle>
             <AlertDialogDescription>
               Se van a volver a generar todas las páginas del sitio, incluso las que no
-              cambiaron. Si sabés qué sección cambió, actualizá solo esa: es más rápido y
+              cambiaron. Si sabes qué sección cambió, actualiza solo esa: es más rápido y
               no recarga el sitio entero.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={() => purge("all", "todas las secciones")}>
-              Sí, actualizar todo
+              Actualizar todo
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -14,21 +14,13 @@ import {
   Pencil,
   RefreshCw,
   Save,
+  Search,
   Trash2,
   X,
 } from "lucide-react"
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+import { AdminConfirmDialog } from "@/components/admin-confirm-dialog"
+import { AdminRowActions } from "@/components/admin-row-actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -52,6 +44,7 @@ import {
 import { apiCall } from "@/lib/utils/apiClient"
 import { openDocumento } from "@/lib/documentos-client"
 import {
+  DOCUMENT_CATEGORIES,
   formatArgentinaDate,
   formatFileSize,
   getDocumentoExtension,
@@ -111,7 +104,20 @@ export function DocumentosTable({
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingName, setEditingName] = useState("")
   const [isRenaming, setIsRenaming] = useState(false)
-  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Documento | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+
+  const query = searchTerm.trim().toLowerCase()
+  const visibleDocuments = query
+    ? documents.filter(
+        (d) =>
+          d.name.toLowerCase().includes(query) ||
+          (DOCUMENT_CATEGORIES[d.category] ?? d.category).toLowerCase().includes(query)
+      )
+    : documents
+  // Reordering only makes sense on the full, unfiltered list.
+  const canReorder = sortOption === "custom" && !query
 
   const openDocument = (documento: Documento) =>
     openDocumento(documento, "view").catch((err) => setErrorMessage(err.message))
@@ -155,7 +161,7 @@ export function DocumentosTable({
         prev.map((d) => (d.id === id ? { ...d, name: editingName.trim() } : d))
       )
 
-      setSuccessMessage("Nombre actualizado exitosamente")
+      setSuccessMessage("Nombre actualizado")
       cancelEditing()
     } catch (error) {
       console.error("Rename error:", error)
@@ -167,10 +173,10 @@ export function DocumentosTable({
     }
   }
 
-  const handleDelete = async (documento: Documento) => {
-    setDeletingId(documento.id)
-    setErrorMessage("")
-    setSuccessMessage("")
+  const handleDelete = async () => {
+    const documento = deleteTarget
+    if (!documento) return
+    setIsDeleting(true)
 
     try {
       const result = await apiCall(`/api/admin/documentos/${documento.id}`, {
@@ -180,14 +186,15 @@ export function DocumentosTable({
       setDocuments((prev) => prev.filter((d) => d.id !== documento.id))
       setTotalDocuments((total) => Math.max(total - 1, 0))
 
-      setSuccessMessage(result.message || "Documento eliminado exitosamente")
+      setSuccessMessage(result.message || "Documento eliminado")
     } catch (error) {
       console.error("Delete error:", error)
       setErrorMessage(
-        error instanceof Error ? error.message : "Error desconocido al eliminar el documento"
+        error instanceof Error ? error.message : "Error al eliminar el documento"
       )
     } finally {
-      setDeletingId(null)
+      setIsDeleting(false)
+      setDeleteTarget(null)
     }
   }
 
@@ -195,8 +202,18 @@ export function DocumentosTable({
     <Card>
       <CardHeader>
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <CardTitle>Documentos existentes</CardTitle>
-          <div className="flex items-center gap-2">
+          <CardTitle>Documentos</CardTitle>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nombre o categoría..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 sm:w-[260px]"
+                aria-label="Buscar documentos"
+              />
+            </div>
             <Label htmlFor="sort-select" className="sr-only">Ordenar por</Label>
             <Select
               value={sortOption}
@@ -216,7 +233,7 @@ export function DocumentosTable({
             </Select>
           </div>
         </div>
-        {sortOption === "custom" && hasOrderChanges && (
+        {canReorder && hasOrderChanges && (
           <div className="flex items-center gap-2 mt-4">
             <Button
               onClick={saveCustomOrder}
@@ -236,14 +253,14 @@ export function DocumentosTable({
               )}
             </Button>
             <span className="text-sm text-muted-foreground">
-              Tienes cambios sin guardar
+              Cambios sin guardar
             </span>
           </div>
         )}
-        {sortOption === "custom" && (
+        {canReorder && (
           <p className="text-sm text-muted-foreground mt-2">
-            <span className="hidden sm:inline">Arrastrá las filas para reordenar</span>
-            <span className="sm:hidden">Usá las flechas para reordenar</span>
+            <span className="hidden sm:inline">Arrastra las filas para reordenar</span>
+            <span className="sm:hidden">Usa las flechas para reordenar</span>
           </p>
         )}
       </CardHeader>
@@ -251,18 +268,24 @@ export function DocumentosTable({
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-            <span className="ml-2 text-muted-foreground">Cargando documentos...</span>
+            <span className="sr-only">Cargando documentos</span>
           </div>
+        ) : visibleDocuments.length === 0 ? (
+          <p className="py-8 text-center text-muted-foreground">
+            {query ? "No se encontraron documentos" : "No hay documentos"}
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
-              <TableCaption>
-                Mostrando {documents.length} de {totalDocuments} documento
-                {totalDocuments !== 1 ? "s" : ""}
-              </TableCaption>
+              {!query && (
+                <TableCaption>
+                  Mostrando {documents.length} de {totalDocuments}{" "}
+                  {totalDocuments === 1 ? "documento" : "documentos"}
+                </TableCaption>
+              )}
               <TableHeader>
                 <TableRow>
-                  {sortOption === "custom" && <TableHead className="w-10"></TableHead>}
+                  {canReorder && <TableHead className="w-10"></TableHead>}
                   <TableHead>Nombre</TableHead>
                   <TableHead className="hidden sm:table-cell">Categoría</TableHead>
                   <TableHead className="hidden md:table-cell">Fecha</TableHead>
@@ -271,20 +294,20 @@ export function DocumentosTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {documents.map((documento) => (
+                {visibleDocuments.map((documento) => (
                   <TableRow
                     key={documento.id}
-                    draggable={sortOption === "custom"}
+                    draggable={canReorder}
                     onDragStart={(e) => handleRowDragStart(e, documento.id)}
                     onDragEnd={handleRowDragEnd}
                     onDragOver={(e) => handleRowDragOver(e, documento.id)}
                     className={`${
-                      sortOption === "custom" ? "cursor-move" : ""
+                      canReorder ? "cursor-move" : ""
                     } ${
                       draggedId === documento.id ? "opacity-50" : ""
                     }`}
                   >
-                    {sortOption === "custom" && (
+                    {canReorder && (
                       <TableCell>
                         <div className="flex items-center gap-1">
                           {/* Desktop: drag handle */}
@@ -377,93 +400,37 @@ export function DocumentosTable({
                       {formatFileSize(documento.file_size)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => startEditing(documento)}
-                          title="Renombrar documento"
-                          disabled={editingId !== null}
-                        >
-                          <Pencil className="h-4 w-4" />
-                          <span className="sr-only">Renombrar documento</span>
-                        </Button>
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => openDocument(documento)}
-                          title="Ver documento"
-                        >
-                          <Eye className="h-4 w-4" />
-                          <span className="sr-only">Ver documento</span>
-                        </Button>
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => downloadDocument(documento)}
-                          title="Descargar documento"
-                        >
-                          <Download className="h-4 w-4" />
-                          <span className="sr-only">Descargar documento</span>
-                        </Button>
-
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                              title="Eliminar documento"
-                              disabled={deletingId === documento.id}
-                            >
-                              {deletingId === documento.id ? (
-                                <RefreshCw className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                              <span className="sr-only">Eliminar documento</span>
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                ¿Eliminar documento?
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta acción eliminará permanentemente el documento
-                                &quot;{documento.name}&quot;. Esta acción no se puede
-                                deshacer.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDelete(documento)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Eliminar
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+                      <AdminRowActions
+                        actions={[
+                          {
+                            label: "Ver",
+                            icon: Eye,
+                            onSelect: () => openDocument(documento),
+                          },
+                          {
+                            label: "Descargar",
+                            icon: Download,
+                            onSelect: () => downloadDocument(documento),
+                          },
+                          {
+                            label: "Renombrar",
+                            icon: Pencil,
+                            onSelect: () => startEditing(documento),
+                            disabled: editingId !== null,
+                          },
+                          {
+                            label: "Eliminar",
+                            icon: Trash2,
+                            destructive: true,
+                            onSelect: () => setDeleteTarget(documento),
+                          },
+                        ]}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-
-            {documents.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <FileText className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
-                <p>No hay documentos</p>
-              </div>
-            )}
 
             {hasMoreDocuments && (
               <div ref={loadMoreRef} className="flex justify-center py-6">
@@ -478,7 +445,7 @@ export function DocumentosTable({
                       Cargando...
                     </>
                   ) : (
-                    "Cargar más documentos"
+                    "Cargar más"
                   )}
                 </Button>
               </div>
@@ -486,6 +453,15 @@ export function DocumentosTable({
           </div>
         )}
       </CardContent>
+
+      <AdminConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="¿Eliminar documento?"
+        description={`Se eliminará "${deleteTarget?.name ?? ""}". Esta acción no se puede deshacer.`}
+        onConfirm={handleDelete}
+        pending={isDeleting}
+      />
     </Card>
   )
 }

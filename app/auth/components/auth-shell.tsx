@@ -1,3 +1,5 @@
+import Link from "next/link"
+import { ChevronLeft } from "lucide-react"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteLogo } from "@/components/site-logo"
 import { Card, CardContent } from "@/components/ui/card"
@@ -13,7 +15,16 @@ interface AuthShellProps {
 export function AuthShell({ title, children, links }: AuthShellProps) {
   return (
     <div className="flex min-h-screen flex-col">
-      <main className="flex flex-1 items-start justify-center px-4 py-12 md:items-center md:py-16">
+      <div className="container pt-4">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground underline-offset-4 hover:underline"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Inicio
+        </Link>
+      </div>
+      <main className="flex flex-1 items-start justify-center px-4 py-8 md:items-center md:py-12">
         <div className="w-full max-w-sm space-y-6">
           <div className="flex flex-col items-center gap-4 text-center">
             <SiteLogo />

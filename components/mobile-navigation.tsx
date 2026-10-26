@@ -39,7 +39,7 @@ export function MobileNavigation() {
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Abrir menú" title="Menú" className="text-terracotta md:hidden [&_svg]:size-6">
+        <Button variant="ghost" size="icon" aria-label="Abrir menú" title="Menú" className="text-terracotta lg:hidden [&_svg]:size-6">
           <Menu />
         </Button>
       </SheetTrigger>
@@ -63,7 +63,7 @@ export function MobileNavigation() {
             </div>
           ) : !isAuthenticated ? (
             <>
-              {item("/login", "Iniciar Sesión", LogIn)}
+              {item("/login", "Iniciar sesión", LogIn)}
               {item("/registro", "Registrarse", UserPlus)}
             </>
           ) : (
@@ -80,7 +80,7 @@ export function MobileNavigation() {
                 className={cn(itemClass, "text-foreground")}
               >
                 <LogOut className="h-5 w-5 text-amber" />
-                Cerrar Sesión
+                Cerrar sesión
               </button>
             </>
           )}

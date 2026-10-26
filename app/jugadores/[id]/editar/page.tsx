@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { usePathname, useRouter, useParams } from "next/navigation"
 import Link from "next/link"
-import { ChevronLeft, Save, Trash2 } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -29,6 +29,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { toast } from "sonner"
 import { apiCall } from "@/lib/utils/apiClient"
 import { useAuth } from "@/hooks/useAuth"
+import { usePlayersListPath } from "@/app/jugadores/use-players-list-path"
 
 interface Club {
   id: number
@@ -55,6 +56,8 @@ interface PlayerFormData {
 
 export default function EditarJugadorPage() {
   const router = useRouter()
+  const pathname = usePathname()
+  const listPath = usePlayersListPath()
   const params = useParams()
   const playerId = params.id as string
   const { user, isAdmin, isClubAdmin, isLoading: authLoading } = useAuth()
@@ -80,7 +83,7 @@ export default function EditarJugadorPage() {
       if (authLoading) return
       
       if (!user) {
-        router.push('/login')
+        router.push(`/login?redirect=${encodeURIComponent(pathname)}`)
         return
       }
 
@@ -126,14 +129,14 @@ export default function EditarJugadorPage() {
 
           if (!canEditPlayer) {
             toast.error('No tienes permisos para editar este jugador')
-            router.push('/club-admin')
+            router.push(listPath)
             return
           }
         }
       } catch (error) {
         console.error('Error fetching data:', error)
         toast.error('Error al cargar datos del jugador')
-        router.push(isAdmin ? '/admin/jugadores' : '/club-admin')
+        router.push(listPath)
       } finally {
         setIsLoading(false)
       }
@@ -142,7 +145,7 @@ export default function EditarJugadorPage() {
     if (playerId) {
       checkPermissionsAndFetchData()
     }
-  }, [user, isAdmin, isClubAdmin, authLoading, router, playerId])
+  }, [user, isAdmin, isClubAdmin, authLoading, router, playerId, pathname, listPath])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -179,12 +182,7 @@ export default function EditarJugadorPage() {
 
       toast.success('Jugador actualizado exitosamente')
       
-      // Redirect based on user type
-      if (isAdmin) {
-        router.push('/admin/jugadores')
-      } else {
-        router.push('/club-admin')
-      }
+      router.push(listPath)
     } catch (error: any) {
       console.error('Error updating player:', error)
       const errorMessage = error.message || 'Error al actualizar jugador'
@@ -204,12 +202,7 @@ export default function EditarJugadorPage() {
 
       toast.success('Jugador eliminado exitosamente')
       
-      // Redirect based on user type
-      if (isAdmin) {
-        router.push('/admin/jugadores')
-      } else {
-        router.push('/club-admin')
-      }
+      router.push(listPath)
     } catch (error: any) {
       console.error('Error deleting player:', error)
       const errorMessage = error.message || 'Error al eliminar jugador'
@@ -221,11 +214,8 @@ export default function EditarJugadorPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-terracotta mx-auto mb-4"></div>
-          <p className="text-sm text-muted-foreground">Cargando...</p>
-        </div>
+      <div className="flex min-h-[400px] items-center justify-center" role="status" aria-label="Cargando">
+        <Loader2 className="h-8 w-8 animate-spin text-terracotta" />
       </div>
     )
   }
@@ -244,18 +234,18 @@ export default function EditarJugadorPage() {
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       <div className="mb-6 flex items-center gap-2">
         <Button asChild variant="ghost" size="icon" className="-ml-2">
-          <Link href={isAdmin ? "/admin/jugadores" : "/club-admin"} aria-label="Volver" title="Volver">
+          <Link href={listPath} aria-label="Volver" title="Volver">
             <ChevronLeft />
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Editar Jugador</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Editar jugador</h1>
       </div>
 
       <Card>
         <CardContent className="p-4 md:p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="full_name">Nombre Completo *</Label>
+              <Label htmlFor="full_name">Nombre completo *</Label>
               <Input
                 id="full_name"
                 value={formData.full_name}
@@ -317,7 +307,7 @@ export default function EditarJugadorPage() {
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" type="button">
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Eliminar Jugador
+                    Eliminar jugador
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -337,7 +327,7 @@ export default function EditarJugadorPage() {
                     >
                       {isDeleting ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Eliminando...
                         </>
                       ) : (
@@ -350,7 +340,7 @@ export default function EditarJugadorPage() {
 
               <div className="flex gap-2">
                 <Button asChild variant="outline">
-                  <Link href={isAdmin ? "/admin/jugadores" : "/club-admin"}>Cancelar</Link>
+                  <Link href={listPath}>Cancelar</Link>
                 </Button>
                 <Button 
                   type="submit" 
@@ -359,13 +349,13 @@ export default function EditarJugadorPage() {
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Actualizando...
                     </>
                   ) : (
                     <>
                       <Save className="mr-2 h-4 w-4" />
-                      Actualizar Jugador
+                      Guardar
                     </>
                   )}
                 </Button>

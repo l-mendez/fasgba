@@ -66,7 +66,7 @@ export function PaisesLogs({ logs, countries, onLogsChange }: PaisesLogsProps) {
       <div className="max-h-[55vh] space-y-3 overflow-y-auto pr-1">
         {logs.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            Todavía no hay cambios registrados.
+            Todavía no hay cambios registrados
           </p>
         ) : (
           <ul className="divide-y">

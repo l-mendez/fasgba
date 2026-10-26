@@ -25,7 +25,7 @@ const TABS: readonly TabConfig[] = [
   },
   {
     status: TOURNAMENT_STATUS.ONGOING,
-    label: "En Curso",
+    label: "En curso",
     emptyMessage: "No hay torneos en curso en este momento.",
   },
   {
@@ -86,7 +86,7 @@ export function TournamentsTabs({ tournaments }: { tournaments: TournamentDispla
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {tournaments.map((torneo) => (
-                <TournamentCard key={torneo.id} torneo={torneo} status={status} />
+                <TournamentCard key={torneo.id} torneo={torneo} status={status} showStatus={false} />
               ))}
             </div>
           )}

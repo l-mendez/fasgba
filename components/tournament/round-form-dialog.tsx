@@ -135,7 +135,7 @@ export function RoundFormDialog({
         await Promise.all(matchPromises)
       }
 
-      toast.success('Ronda agregada exitosamente')
+      toast.success('Ronda agregada')
       onOpenChange(false)
       onSuccess()
     } catch (error) {
@@ -150,11 +150,11 @@ export function RoundFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={tournamentType === 'team' ? "max-w-2xl" : "max-w-md"}>
         <DialogHeader>
-          <DialogTitle>Agregar Ronda</DialogTitle>
+          <DialogTitle>Nueva ronda</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="round_number">Número de Ronda</Label>
+            <Label htmlFor="round_number">Número de ronda</Label>
             <Input
               id="round_number"
               type="number"
@@ -260,7 +260,7 @@ export function RoundFormDialog({
               Cancelar
             </Button>
             <Button onClick={handleAddRound} disabled={loading}>
-              {loading ? 'Agregando...' : 'Agregar Ronda'}
+              {loading ? 'Agregando...' : 'Agregar ronda'}
             </Button>
           </div>
         </div>

@@ -6,7 +6,7 @@ const LEGAL_PROSE =
   "prose max-w-3xl [--tw-prose-body:var(--color-foreground)] [--tw-prose-headings:var(--color-terracotta)] [--tw-prose-bold:var(--color-foreground)] [--tw-prose-links:var(--color-terracotta)] [--tw-prose-bullets:var(--color-muted-foreground)] [--tw-prose-counters:var(--color-muted-foreground)] prose-h2:mb-3 prose-h2:mt-10 prose-h2:text-2xl prose-h2:font-bold prose-h2:tracking-tight prose-h3:text-lg first:prose-h2:mt-0"
 
 export const metadata: Metadata = {
-  title: 'Política de Privacidad',
+  title: 'Política de privacidad',
   description: 'Política de privacidad de la Federación de Ajedrez del Sur del Gran Buenos Aires',
 }
 
@@ -14,7 +14,7 @@ export default function PoliticaPrivacidadPage() {
   return (
     <>
       <PageHero
-        title="Política de Privacidad"
+        title="Política de privacidad"
         subtitle="Última actualización: 29 de septiembre de 2025"
       />
 
@@ -32,10 +32,10 @@ export default function PoliticaPrivacidadPage() {
               y normativas aplicables.
             </p>
 
-            <h2>2. Información que Recopilamos</h2>
+            <h2>2. Información que recopilamos</h2>
             <p>Recopilamos los siguientes tipos de información:</p>
             
-            <h3>2.1 Información que Usted nos Proporciona:</h3>
+            <h3>2.1 Información que usted nos proporciona</h3>
             <ul>
               <li><strong>Datos de registro:</strong> Nombre, apellido, correo electrónico, contraseña</li>
               <li><strong>Datos de perfil:</strong> Información adicional que elija compartir</li>
@@ -43,14 +43,14 @@ export default function PoliticaPrivacidadPage() {
               <li><strong>Afiliación:</strong> Club al que pertenece, si aplica</li>
             </ul>
 
-            <h3>2.2 Información Recopilada Automáticamente:</h3>
+            <h3>2.2 Información recopilada automáticamente</h3>
             <ul>
               <li><strong>Datos de navegación:</strong> Dirección IP, tipo de navegador, páginas visitadas</li>
               <li><strong>Cookies:</strong> Información almacenada en su dispositivo para mejorar la experiencia</li>
               <li><strong>Datos de sesión:</strong> Información sobre su uso del Sitio</li>
             </ul>
 
-            <h2>3. Cómo Usamos su Información</h2>
+            <h2>3. Cómo usamos su información</h2>
             <p>Utilizamos su información personal para:</p>
             <ul>
               <li>Crear y gestionar su cuenta de usuario</li>
@@ -64,27 +64,27 @@ export default function PoliticaPrivacidadPage() {
               <li>Prevenir fraudes y garantizar la seguridad del Sitio</li>
             </ul>
 
-            <h2>4. Compartir Información</h2>
+            <h2>4. Compartir información</h2>
             <p>No vendemos ni alquilamos su información personal. Podemos compartir su información con:</p>
             
-            <h3>4.1 Proveedores de Servicios:</h3>
+            <h3>4.1 Proveedores de servicios</h3>
             <ul>
               <li><strong>Supabase:</strong> Para autenticación y almacenamiento de datos</li>
               <li><strong>Servicios de email:</strong> Para envío de notificaciones</li>
               <li><strong>Servicios de hosting:</strong> Para alojar el Sitio</li>
             </ul>
 
-            <h3>4.2 Información Pública:</h3>
+            <h3>4.2 Información pública</h3>
             <p>
               El ranking de jugadores y resultados de torneos son información pública visible para todos los usuarios del Sitio.
             </p>
 
-            <h3>4.3 Requisitos Legales:</h3>
+            <h3>4.3 Requisitos legales</h3>
             <p>
               Podemos divulgar su información cuando sea requerido por ley o para proteger nuestros derechos legales.
             </p>
 
-            <h2>5. Seguridad de los Datos</h2>
+            <h2>5. Seguridad de los datos</h2>
             <p>
               Implementamos medidas de seguridad técnicas y organizativas apropiadas para proteger su información personal contra 
               acceso no autorizado, alteración, divulgación o destrucción, incluyendo:
@@ -100,7 +100,7 @@ export default function PoliticaPrivacidadPage() {
               Usted es responsable de mantener la confidencialidad de su contraseña.
             </p>
 
-            <h2>6. Cookies y Tecnologías Similares</h2>
+            <h2>6. Cookies y tecnologías similares</h2>
             <p>
               Utilizamos cookies y tecnologías similares para mejorar su experiencia en el Sitio. Las cookies son pequeños 
               archivos que se almacenan en su dispositivo y nos permiten:
@@ -115,7 +115,7 @@ export default function PoliticaPrivacidadPage() {
               Puede configurar su navegador para rechazar cookies, aunque esto puede afectar la funcionalidad del Sitio.
             </p>
 
-            <h2>7. Sus Derechos</h2>
+            <h2>7. Sus derechos</h2>
             <p>De acuerdo con la legislación aplicable, usted tiene derecho a:</p>
             <ul>
               <li><strong>Acceso:</strong> Solicitar una copia de su información personal</li>
@@ -129,7 +129,7 @@ export default function PoliticaPrivacidadPage() {
               Para ejercer estos derechos, contáctenos en: <a href="mailto:secretaria@fasgba.com">secretaria@fasgba.com</a>
             </p>
 
-            <h2>8. Notificaciones por Email</h2>
+            <h2>8. Notificaciones por email</h2>
             <p>
               Al registrarse, acepta recibir notificaciones sobre:
             </p>
@@ -144,7 +144,7 @@ export default function PoliticaPrivacidadPage() {
               haciendo clic en el enlace de cancelación de suscripción en nuestros emails.
             </p>
 
-            <h2>9. Retención de Datos</h2>
+            <h2>9. Retención de datos</h2>
             <p>
               Conservamos su información personal durante el tiempo necesario para cumplir con los propósitos descritos 
               en esta política, a menos que la ley requiera o permita un período de retención más largo.
@@ -154,7 +154,7 @@ export default function PoliticaPrivacidadPage() {
               de la federación.
             </p>
 
-            <h2>10. Menores de Edad</h2>
+            <h2>10. Menores de edad</h2>
             <p>
               Nuestro Sitio no está dirigido a menores de 13 años. No recopilamos intencionalmente información de menores. 
               Si es padre o tutor y cree que su hijo nos ha proporcionado información personal, contáctenos para que podamos 
@@ -164,13 +164,13 @@ export default function PoliticaPrivacidadPage() {
               Los menores entre 13 y 18 años deben contar con la autorización de sus padres o tutores para registrarse.
             </p>
 
-            <h2>11. Enlaces a Terceros</h2>
+            <h2>11. Enlaces a terceros</h2>
             <p>
               Nuestro Sitio puede contener enlaces a sitios web de terceros. No somos responsables de las prácticas de 
               privacidad de estos sitios. Le recomendamos leer las políticas de privacidad de cada sitio que visite.
             </p>
 
-            <h2>12. Cambios a esta Política</h2>
+            <h2>12. Cambios a esta política</h2>
             <p>
               Podemos actualizar esta Política de Privacidad ocasionalmente. Le notificaremos sobre cambios significativos 
               mediante un aviso destacado en el Sitio o por correo electrónico. La fecha de "Última actualización" al inicio 
@@ -189,7 +189,7 @@ export default function PoliticaPrivacidadPage() {
               <p>Sitio web: <a href="https://fasgba.com">https://fasgba.com</a></p>
             </div>
 
-            <h2>14. Autoridad de Aplicación</h2>
+            <h2>14. Autoridad de aplicación</h2>
             <p>
               La Agencia de Acceso a la Información Pública, en su carácter de Órgano de Control de la Ley N° 25.326, 
               tiene la atribución de atender las denuncias y reclamos que se interpongan con relación al incumplimiento 

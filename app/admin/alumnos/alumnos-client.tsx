@@ -1,21 +1,14 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import {
-  GraduationCap,
-  Trash2,
-  UserPlus,
-  AlertCircle,
-  CheckCircle2,
-  Search,
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react"
+import { Trash2, UserPlus, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { toast } from "sonner"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { AdminConfirmDialog } from "@/components/admin-confirm-dialog"
+import { AdminPageHeader } from "@/components/admin-page-header"
+import { AdminRowActions } from "@/components/admin-row-actions"
 import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import {
   Table,
@@ -25,17 +18,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import { formatArgentinaDate } from "@/lib/documentosUtils"
 import { apiCall } from "@/lib/utils/apiClient"
 
@@ -75,18 +57,18 @@ interface AdminAlumnosClientProps {
   initialAlumnos: Alumno[]
   initialUsers: UserResult[]
   initialUsersTotal: number
-  showHeader?: boolean
 }
 
 export function AdminAlumnosClient({
   initialAlumnos,
   initialUsers,
   initialUsersTotal,
-  showHeader = true,
 }: AdminAlumnosClientProps) {
   const [alumnos, setAlumnos] = useState<Alumno[]>(initialAlumnos)
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [alumnosSearch, setAlumnosSearch] = useState("")
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [alumnoToRemove, setAlumnoToRemove] = useState<Alumno | null>(null)
+  const [removing, setRemoving] = useState(false)
 
   // Users list state
   const [users, setUsers] = useState<UserResult[]>(initialUsers)
@@ -103,8 +85,6 @@ export function AdminAlumnosClient({
       setAlumnos(json.alumnos || [])
     } catch (error) {
       console.error("Error fetching alumnos:", error)
-    } finally {
-      setLoading(false)
     }
   }, [])
 
@@ -150,226 +130,220 @@ export function AdminAlumnosClient({
 
   const handleAddAlumno = async (authId: string) => {
     setAdding(authId)
-    setMessage(null)
     try {
       await apiCall("/api/admin/alumnos", {
         method: "POST",
         body: JSON.stringify({ auth_id: authId }),
       })
 
-      setMessage({ type: "success", text: "Alumno agregado correctamente" })
+      toast.success("Alumno agregado")
       fetchAlumnos() // useEffect on alumnos will re-fetch users
     } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Error al agregar alumno" })
+      toast.error(error instanceof Error ? error.message : "Error al agregar alumno")
     } finally {
       setAdding(null)
     }
   }
 
-  const handleDeleteAlumno = async (authId: string) => {
-    setMessage(null)
+  const handleRemoveAlumno = async () => {
+    if (!alumnoToRemove) return
+    setRemoving(true)
     try {
-      await apiCall(`/api/admin/alumnos/${authId}`, {
+      await apiCall(`/api/admin/alumnos/${alumnoToRemove.auth_id}`, {
         method: "DELETE",
       })
 
-      setMessage({ type: "success", text: "Alumno eliminado correctamente" })
+      toast.success("Alumno quitado")
+      setAlumnoToRemove(null)
       fetchAlumnos()
     } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Error al eliminar alumno" })
+      toast.error(error instanceof Error ? error.message : "Error al quitar alumno")
+    } finally {
+      setRemoving(false)
     }
   }
 
   const totalPages = Math.ceil(usersTotal / PER_PAGE)
+  const searchLength = usersSearch.trim().length
+  const alumnosQuery = alumnosSearch.trim().toLowerCase()
+  const filteredAlumnos = alumnosQuery
+    ? alumnos.filter((alumno) =>
+        `${alumno.nombre} ${alumno.apellido} ${alumno.email}`.toLowerCase().includes(alumnosQuery)
+      )
+    : alumnos
 
   return (
     <div className="space-y-6">
-      {showHeader ? (
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Alumnos</h1>
-          <p className="text-muted-foreground">
-            Los alumnos pueden acceder a documentos protegidos de la sección Escuela.
-          </p>
-        </div>
-      ) : null}
-
-      {message && (
-        <Alert variant={message.type === "error" ? "destructive" : "default"}>
-          {message.type === "error" ? (
-            <AlertCircle className="h-4 w-4" />
-          ) : (
-            <CheckCircle2 className="h-4 w-4 text-amber" />
-          )}
-          <AlertDescription>{message.text}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Add alumno - paginated user list */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-amber" />
+      <AdminPageHeader
+        title="Alumnos"
+        action={
+          <Button onClick={() => setIsAddOpen(true)}>
+            <UserPlus className="h-4 w-4" />
             Agregar alumno
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          </Button>
+        }
+      />
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por nombre o email..."
+          value={alumnosSearch}
+          onChange={(e) => setAlumnosSearch(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nombre</TableHead>
+              <TableHead className="hidden sm:table-cell">Email</TableHead>
+              <TableHead className="hidden md:table-cell">Fecha de alta</TableHead>
+              <TableHead className="w-[56px]"><span className="sr-only">Acciones</span></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredAlumnos.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                  {alumnos.length === 0 ? "No hay alumnos" : "No se encontraron alumnos"}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredAlumnos.map((alumno) => (
+                <TableRow key={alumno.auth_id}>
+                  <TableCell className="font-medium">
+                    {alumno.nombre} {alumno.apellido}
+                    <span className="block text-xs font-normal text-muted-foreground sm:hidden">{alumno.email}</span>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">{alumno.email}</TableCell>
+                  <TableCell className="hidden md:table-cell">{formatArgentinaDate(alumno.created_at)}</TableCell>
+                  <TableCell>
+                    <div className="flex justify-end">
+                      <AdminRowActions
+                        actions={[
+                          { label: "Quitar alumno", icon: Trash2, destructive: true, onSelect: () => setAlumnoToRemove(alumno) },
+                        ]}
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <AdminConfirmDialog
+        open={alumnoToRemove !== null}
+        onOpenChange={(open) => !open && setAlumnoToRemove(null)}
+        title="¿Quitar alumno?"
+        description={
+          alumnoToRemove
+            ? `${alumnoToRemove.nombre} ${alumnoToRemove.apellido} ya no podrá acceder a los documentos de la Escuela.`
+            : undefined
+        }
+        confirmLabel="Quitar"
+        onConfirm={handleRemoveAlumno}
+        pending={removing}
+      />
+
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Agregar alumno</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Filtrar por nombre, email o club..."
+                placeholder="Buscar por nombre, email o club..."
                 value={usersSearch}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-9"
+                className="pl-10"
+                aria-describedby="alumnos-search-hint"
               />
             </div>
-          </div>
+            {searchLength > 0 && searchLength < 3 ? (
+              <p id="alumnos-search-hint" className="text-xs text-muted-foreground">
+                Escribe al menos 3 caracteres
+              </p>
+            ) : null}
 
-          {usersLoading ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-terracotta" />
-            </div>
-          ) : users.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              {usersSearch.trim().length >= 3
-                ? "No se encontraron usuarios con esa búsqueda."
-                : "No hay usuarios disponibles para agregar."}
-            </p>
-          ) : (
-            <div className="border rounded-md divide-y">
-              {users.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-2.5 hover:bg-muted/50">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">
-                      {user.nombre} {user.apellido}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {user.email}
-                      {user.club_name && <span className="ml-2 text-terracotta">({user.club_name})</span>}
-                    </p>
+            {usersLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-terracotta" aria-label="Cargando" />
+              </div>
+            ) : users.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                {searchLength >= 3 ? "No se encontraron usuarios" : "No hay usuarios para agregar"}
+              </p>
+            ) : (
+              <div className="max-h-[50vh] divide-y overflow-y-auto rounded-md border">
+                {users.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between p-2.5 hover:bg-muted/50">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {user.nombre} {user.apellido}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {user.email}
+                        {user.club_name && <span className="ml-2 text-terracotta">({user.club_name})</span>}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddAlumno(user.id)}
+                      disabled={adding === user.id}
+                      className="ml-2 shrink-0"
+                      aria-label="Agregar como alumno"
+                      title="Agregar como alumno"
+                    >
+                      {adding === user.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <UserPlus className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
+                ))}
+              </div>
+            )}
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Página {usersPage} de {totalPages} ({usersTotal} usuarios)
+                </p>
+                <div className="flex gap-1">
                   <Button
+                    variant="outline"
                     size="sm"
-                    onClick={() => handleAddAlumno(user.id)}
-                    disabled={adding === user.id}
-                    className="bg-terracotta hover:bg-terracotta/90 ml-2 shrink-0"
-                  aria-label="Agregar como alumno"
-                  title="Agregar como alumno"
+                    onClick={() => setUsersPage((p) => Math.max(1, p - 1))}
+                    aria-label="Página anterior"
+                    title="Página anterior"
+                    disabled={usersPage <= 1 || usersLoading}
                   >
-                    {adding === user.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <UserPlus className="h-4 w-4" />
-                    )}
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setUsersPage((p) => Math.min(totalPages, p + 1))}
+                    aria-label="Página siguiente"
+                    title="Página siguiente"
+                    disabled={usersPage >= totalPages || usersLoading}
+                  >
+                    <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-3">
-              <p className="text-xs text-muted-foreground">
-                Página {usersPage} de {totalPages} ({usersTotal} usuarios)
-              </p>
-              <div className="flex gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setUsersPage((p) => Math.max(1, p - 1))}
-                  aria-label="Página anterior"
-                  title="Página anterior"
-                  disabled={usersPage <= 1 || usersLoading}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setUsersPage((p) => Math.min(totalPages, p + 1))}
-                  aria-label="Página siguiente"
-                  title="Página siguiente"
-                  disabled={usersPage >= totalPages || usersLoading}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Alumnos list */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <GraduationCap className="h-5 w-5 text-amber" />
-            Alumnos actuales ({alumnos.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-terracotta" />
-            </div>
-          ) : alumnos.length === 0 ? (
-            <p className="text-center py-8 text-muted-foreground">
-              No hay alumnos registrados.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead className="hidden sm:table-cell">Email</TableHead>
-                  <TableHead className="hidden md:table-cell">Fecha de alta</TableHead>
-                  <TableHead className="text-right"><span className="sr-only">Acciones</span></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {alumnos.map((alumno) => (
-                  <TableRow key={alumno.auth_id}>
-                    <TableCell className="font-medium">
-                      {alumno.nombre} {alumno.apellido}
-                      <span className="block text-xs font-normal text-muted-foreground sm:hidden">{alumno.email}</span>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">{alumno.email}</TableCell>
-                    <TableCell className="hidden md:table-cell">{formatArgentinaDate(alumno.created_at)}</TableCell>
-                    <TableCell className="text-right">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" aria-label="Eliminar alumno" title="Eliminar alumno">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Eliminar alumno</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              ¿Estás seguro de que querés eliminar a {alumno.nombre} {alumno.apellido} como alumno?
-                              Ya no podrá acceder a los documentos de la Escuela.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteAlumno(alumno.auth_id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Eliminar
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

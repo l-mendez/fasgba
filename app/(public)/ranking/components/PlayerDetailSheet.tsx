@@ -84,26 +84,27 @@ export function PlayerDetailSheet({
   const [details, setDetails] = useState<TournamentDetail[]>([]);
 
   useEffect(() => {
-    if (!open || !player) {
-      setDetails([]);
-      return;
-    }
+    // Clear the previous player's history right away so it never shows under
+    // the newly selected player while the new request is in flight.
+    setDetails([]);
+    const playerId = player?.id;
+    if (!open || !playerId) return;
 
-    const playerId = player.id;
-    if (!playerId) {
-      setDetails([]);
-      return;
-    }
-
+    const controller = new AbortController();
     fetch(
-      `/api/ranking/analytics?ranking=${encodeURIComponent(rankingFilename)}&playerId=${encodeURIComponent(playerId)}`
+      `/api/ranking/analytics?ranking=${encodeURIComponent(rankingFilename)}&playerId=${encodeURIComponent(playerId)}`,
+      { signal: controller.signal }
     )
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
       .then((data) => {
         // apiSuccess returns the payload unwrapped: { details }
         setDetails(Array.isArray(data?.details) ? data.details : []);
       })
-      .catch(() => setDetails([]));
+      .catch(() => {
+        if (!controller.signal.aborted) setDetails([]);
+      });
+
+    return () => controller.abort();
   }, [open, player, rankingFilename]);
 
   if (!player) return null;
@@ -158,12 +159,12 @@ export function PlayerDetailSheet({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Torneo</TableHead>
-                    <TableHead className="text-center w-10">Tipo</TableHead>
-                    <TableHead className="text-right">Elo</TableHead>
-                    <TableHead className="text-center">W/n</TableHead>
-                    <TableHead className="text-right">Rp</TableHead>
-                    <TableHead className="text-right">K</TableHead>
-                    <TableHead className="text-right">+/-</TableHead>
+                    <TableHead className="text-center w-10" title="Ritmo de juego">Ritmo</TableHead>
+                    <TableHead className="text-right" title="Elo antes del torneo">Elo</TableHead>
+                    <TableHead className="text-center" title="Puntos / partidas">Pts</TableHead>
+                    <TableHead className="text-right" title="Performance">Perf.</TableHead>
+                    <TableHead className="text-right" title="Factor K">K</TableHead>
+                    <TableHead className="text-right" title="Variación de Elo">+/-</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

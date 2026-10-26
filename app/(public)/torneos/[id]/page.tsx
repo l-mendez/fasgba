@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server"
 import {
   getAllTournamentsWithDates,
   transformTournamentToDisplay,
-  type TournamentDisplay
 } from "@/lib/tournamentUtils"
 import { getTournamentGames, getTournamentRounds } from "@/lib/gameUtils"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -102,6 +101,7 @@ export default async function TournamentPage({ params }: PageProps) {
     const registeredTeams = (registeredTeamsResult.data || []).map((t: any) => ({
       team_id: t.team_id,
       name: t.teams?.name || '',
+      club_id: t.teams?.club_id ?? null,
       club_name: t.teams?.clubs?.name || '',
       players: playersByTeam[t.team_id] || [],
     }))

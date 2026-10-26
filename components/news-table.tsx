@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { ChevronDown, Eye, MoreHorizontal, Pencil, Search, Trash2, User } from "lucide-react"
+import { ChevronDown, ExternalLink, Pencil, Search, Trash2, User } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,15 +15,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AdminConfirmDialog } from "@/components/admin-confirm-dialog"
+import { AdminRowActions, type AdminRowAction } from "@/components/admin-row-actions"
+import { AdminSortIcon } from "@/components/admin-sort-icon"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { deleteNewsAction } from "@/lib/actions/news"
 import { formatArgentinaDateOnly, getArgentinaDateInputValue, getDateInputValue } from "@/lib/dateUtils"
 import { FEDERATION_NAME } from "@/lib/newsDisplay"
@@ -59,7 +54,7 @@ export function NewsTable({ initialNews }: NewsTableProps) {
   const [selectedClubFilter, setSelectedClubFilter] = useState<number | null | 'all'>('all')
   const [selectedDateFilter, setSelectedDateFilter] = useState<string>('')
   const [newsToDelete, setNewsToDelete] = useState<number | null>(null)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [sortBy, setSortBy] = useState<string | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
   const [originalOrder, setOriginalOrder] = useState<News[]>(initialNews)
@@ -116,36 +111,34 @@ export function NewsTable({ initialNews }: NewsTableProps) {
     }
   }
 
-  const getSortIcon = (field: string) => {
-    if (sortBy !== field) {
-      return null
-    }
-    
-    if (sortOrder === 'asc') {
-      return '↑'
-    } else if (sortOrder === 'desc') {
-      return '↓'
-    }
-    
-    return null
-  }
+  const getSortIcon = (field: string) =>
+    sortBy === field && sortOrder !== 'original' ? <AdminSortIcon direction={sortOrder} /> : null
 
   const handleDeleteNews = async () => {
     if (!newsToDelete) return
     
     try {
+      setIsDeleting(true)
       await deleteNews(newsToDelete)
       
       // Update local state
       setNews(prevNews => prevNews.filter(item => item.id !== newsToDelete))
       setOriginalOrder(prevOriginal => prevOriginal.filter(item => item.id !== newsToDelete))
-      setShowDeleteDialog(false)
-      setNewsToDelete(null)
+      toast.success('Noticia eliminada')
     } catch (err) {
       console.error('Error deleting news:', err)
-      // Handle error appropriately
+      toast.error(err instanceof Error ? err.message : 'Error al eliminar la noticia')
+    } finally {
+      setIsDeleting(false)
+      setNewsToDelete(null)
     }
   }
+
+  const getRowActions = (item: News): AdminRowAction[] => [
+    { label: "Ver en sitio", icon: ExternalLink, href: `/noticias/${item.id}`, external: true },
+    { label: "Editar", icon: Pencil, href: `/noticias/${item.id}/editar` },
+    { label: "Eliminar", icon: Trash2, destructive: true, onSelect: () => setNewsToDelete(item.id) },
+  ]
 
   const filteredNews = news.filter(newsItem => {
     const search = searchTerm.toLowerCase().trim()
@@ -268,16 +261,16 @@ export function NewsTable({ initialNews }: NewsTableProps) {
             <DropdownMenuContent align="end" className="w-[200px]">
               <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleSort('title')}>
+              <DropdownMenuItem className="gap-1" onClick={() => handleSort('title')}>
                 Título {getSortIcon('title')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('club')}>
+              <DropdownMenuItem className="gap-1" onClick={() => handleSort('club')}>
                 Club {getSortIcon('club')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('date')}>
+              <DropdownMenuItem className="gap-1" onClick={() => handleSort('date')}>
                 Fecha {getSortIcon('date')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('author')}>
+              <DropdownMenuItem className="gap-1" onClick={() => handleSort('author')}>
                 Creado por {getSortIcon('author')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -303,7 +296,7 @@ export function NewsTable({ initialNews }: NewsTableProps) {
               >
                 <div className="flex items-center gap-1">
                   Título
-                  {getSortIcon('title') && <span className="text-xs">{getSortIcon('title')}</span>}
+                  {getSortIcon('title')}
                 </div>
               </TableHead>
               <TableHead 
@@ -312,7 +305,7 @@ export function NewsTable({ initialNews }: NewsTableProps) {
               >
                 <div className="flex items-center gap-1">
                   Club
-                  {getSortIcon('club') && <span className="text-xs">{getSortIcon('club')}</span>}
+                  {getSortIcon('club')}
                 </div>
               </TableHead>
               <TableHead 
@@ -321,7 +314,7 @@ export function NewsTable({ initialNews }: NewsTableProps) {
               >
                 <div className="flex items-center gap-1">
                   Fecha
-                  {getSortIcon('date') && <span className="text-xs">{getSortIcon('date')}</span>}
+                  {getSortIcon('date')}
                 </div>
               </TableHead>
               <TableHead 
@@ -330,10 +323,10 @@ export function NewsTable({ initialNews }: NewsTableProps) {
               >
                 <div className="flex items-center gap-1">
                   Creado por
-                  {getSortIcon('author') && <span className="text-xs">{getSortIcon('author')}</span>}
+                  {getSortIcon('author')}
                 </div>
               </TableHead>
-              <TableHead className="w-[60px]"></TableHead>
+              <TableHead className="w-[60px]"><span className="sr-only">Acciones</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -352,7 +345,6 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                   <TableCell className="hidden lg:table-cell">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src="" />
                         <AvatarFallback>
                           {item.author_name ? (
                             item.author_name.charAt(0).toUpperCase()
@@ -371,39 +363,8 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Acciones" title="Acciones">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/noticias/${item.id}`} className="flex items-center">
-                            <Eye className="mr-2 h-4 w-4" />
-                            Ver
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/noticias/${item.id}/editar`} className="flex items-center">
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Editar
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => {
-                            setNewsToDelete(item.id)
-                            setShowDeleteDialog(true)
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <TableCell className="text-right">
+                    <AdminRowActions actions={getRowActions(item)} />
                   </TableCell>
                 </TableRow>
               ))
@@ -438,7 +399,6 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                     
                     <div className="flex items-center gap-2">
                       <Avatar className="h-6 w-6">
-                        <AvatarImage src="" />
                         <AvatarFallback className="text-xs">
                           {item.author_name ? (
                             item.author_name.charAt(0).toUpperCase()
@@ -452,62 +412,20 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                   </div>
                 </div>
                 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Acciones" title="Acciones">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link href={`/noticias/${item.id}`} className="flex items-center">
-                        <Eye className="mr-2 h-4 w-4" />
-                        Ver
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href={`/noticias/${item.id}/editar`} className="flex items-center">
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Editar
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={() => {
-                        setNewsToDelete(item.id)
-                        setShowDeleteDialog(true)
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Eliminar
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <AdminRowActions actions={getRowActions(item)} />
               </div>
             </div>
           ))
         )}
       </div>
 
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>¿Estás seguro?</DialogTitle>
-            <DialogDescription>
-              Esta acción no se puede deshacer. Se eliminará permanentemente la noticia.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteNews}>
-              Eliminar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdminConfirmDialog
+        open={newsToDelete !== null}
+        onOpenChange={(open) => !open && setNewsToDelete(null)}
+        title="¿Eliminar noticia?"
+        onConfirm={handleDeleteNews}
+        pending={isDeleting}
+      />
     </div>
   )
 }

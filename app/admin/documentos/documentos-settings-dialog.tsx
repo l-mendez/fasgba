@@ -53,7 +53,7 @@ export function DocumentosSettingsDialog({
         body: JSON.stringify({ categoryImportance }),
       })
 
-      setSuccessMessage("Configuración guardada exitosamente")
+      setSuccessMessage("Configuración guardada")
       onOpenChange(false)
 
       // Reload documents if sorting by importance

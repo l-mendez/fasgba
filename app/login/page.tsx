@@ -14,7 +14,7 @@ export default function Login() {
 
   return (
     <AuthShell
-      title="Iniciar Sesión"
+      title="Iniciar sesión"
       links={
         <>
           <p>

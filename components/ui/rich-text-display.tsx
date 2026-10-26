@@ -13,8 +13,8 @@ export function RichTextDisplay({ content, className = "" }: RichTextDisplayProp
                   prose-h2:text-lg prose-h2:sm:text-xl prose-h2:md:text-2xl
                   prose-h3:text-base prose-h3:sm:text-lg prose-h3:md:text-xl
                   prose-p:text-sm prose-p:sm:text-base prose-p:leading-relaxed prose-p:text-foreground
-                  prose-a:text-terracotta prose-a:underline
-                  prose-strong:text-terracotta dark:prose-strong:text-terracotta prose-strong:font-semibold
+                  prose-a:text-terracotta! prose-a:underline
+                  prose-strong:text-foreground prose-strong:font-semibold
                   prose-blockquote:border-l-4 prose-blockquote:border-amber dark:prose-blockquote:border-amber
                   prose-blockquote:bg-amber/5 dark:prose-blockquote:bg-amber/10 prose-blockquote:pl-4 prose-blockquote:py-2
                   prose-blockquote:text-muted-foreground

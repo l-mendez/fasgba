@@ -44,7 +44,7 @@ export function NewsPagination({
   return (
     <div className="mt-10 flex items-center justify-center gap-2">
       <Button
-        variant="brandOutline"
+        variant="outline"
         size="icon"
         disabled={currentPage === 1}
         onClick={() => onPageChange(currentPage - 1)}
@@ -57,13 +57,9 @@ export function NewsPagination({
       {getPageNumbers().map((pageNum) => (
         <Button
           key={pageNum}
-          variant="outline"
+          variant={currentPage === pageNum ? "default" : "outline"}
           size="icon"
-          className={
-            currentPage === pageNum
-              ? "border-amber bg-amber/10 text-amber-dark hover:bg-amber/20"
-              : "border-amber/20 text-muted-foreground hover:border-amber hover:text-amber-dark hover:bg-amber/10"
-          }
+          aria-current={currentPage === pageNum ? "page" : undefined}
           onClick={() => onPageChange(pageNum)}
         >
           {pageNum}
@@ -71,7 +67,7 @@ export function NewsPagination({
       ))}
 
       <Button
-        variant="brandOutline"
+        variant="outline"
         size="icon"
         disabled={currentPage === totalPages}
         onClick={() => onPageChange(currentPage + 1)}

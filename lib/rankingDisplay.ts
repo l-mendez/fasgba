@@ -2,6 +2,7 @@
 // client `PlayerList` island to shape, filter and paginate the player list.
 
 import type { Player, RatingType, PaginatedPlayersResponse } from '@/lib/rankingUtils'
+import { normalizeForSearch } from '@/lib/countries'
 
 /**
  * Normalizes a player from the old format (no `ratings`) to the new format.
@@ -72,10 +73,11 @@ export function selectPlayersPage(
           .filter(p => (activeFilter === 'active' ? p.active : !p.active))
           .map((p, index) => ({ ...p, position: index + 1 }))
 
-  const term = search.toLowerCase()
+  // Accent-insensitive, so "nunez" matches "Núñez"
+  const term = normalizeForSearch(search.trim())
   const filtered = term
     ? byActivity.filter(
-        p => p.name.toLowerCase().includes(term) || p.club.toLowerCase().includes(term)
+        p => normalizeForSearch(p.name).includes(term) || normalizeForSearch(p.club || '').includes(term)
       )
     : byActivity
 

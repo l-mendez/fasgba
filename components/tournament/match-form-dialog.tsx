@@ -40,7 +40,7 @@ export function MatchFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Editar Enfrentamiento</DialogTitle>
+          <DialogTitle>Editar enfrentamiento</DialogTitle>
         </DialogHeader>
         {editingMatch && (
           <div className="space-y-4">
@@ -62,8 +62,8 @@ export function MatchFormDialog({
                     setMatchFormData(prev => ({ ...prev, team_a_id: parseInt(value) }))
                   }
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar Equipo A" />
+                  <SelectTrigger id="edit_club_a">
+                    <SelectValue placeholder="Seleccionar equipo" />
                   </SelectTrigger>
                   <SelectContent>
                     {teams.map((team) => (
@@ -83,8 +83,8 @@ export function MatchFormDialog({
                     setMatchFormData(prev => ({ ...prev, team_b_id: parseInt(value) }))
                   }
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar Equipo B" />
+                  <SelectTrigger id="edit_club_b">
+                    <SelectValue placeholder="Seleccionar equipo" />
                   </SelectTrigger>
                   <SelectContent>
                     {teams.map((team) => (
@@ -102,7 +102,7 @@ export function MatchFormDialog({
                 Cancelar
               </Button>
               <Button onClick={onSubmit} disabled={loading}>
-                {loading ? 'Guardando...' : 'Guardar Cambios'}
+                {loading ? 'Guardando...' : 'Guardar cambios'}
               </Button>
             </div>
           </div>

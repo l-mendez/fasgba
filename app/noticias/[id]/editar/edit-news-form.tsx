@@ -22,7 +22,8 @@ import {
   type StoredImageBlockContent,
 } from "@/components/news/types"
 import { NewsContentBlocksEditorSimple } from "@/components/news/news-content-blocks-editor-simple"
-import { NewsFormHeader } from "@/components/news/news-form-header"
+import { NewsFormActions, NewsFormHeader } from "@/components/news/news-form-header"
+import { AdminConfirmDialog } from "@/components/admin-confirm-dialog"
 import { useEditableNewsBlocks } from "@/components/news/use-news-content-blocks"
 
 interface News {
@@ -70,6 +71,8 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
     normalizeStoredNewsBlocks(initialNews.text)
   )
   const blockActions = useEditableNewsBlocks(contentBlocks, setContentBlocks)
+  // Large batches are confirmed first (they are slow and may fail).
+  const [pendingBulkFiles, setPendingBulkFiles] = useState<File[] | null>(null)
 
   const getPublicUrl = (filePath: string) => {
     if (!filePath) return null
@@ -80,15 +83,16 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
     return publicUrl
   }
 
+  const requestBulkUpload = (files: File[]) => {
+    if (files.length > 20) {
+      setPendingBulkFiles(files)
+      return
+    }
+    void addMultipleImageBlocks(files)
+  }
+
   const addMultipleImageBlocks = async (files: File[]) => {
     if (files.length === 0) return
-
-    if (files.length > 20) {
-      const proceed = confirm(
-        `Estás intentando subir ${files.length} imágenes. Esto puede tomar varios minutos y podría fallar con conexiones lentas. ¿Deseas continuar?`
-      )
-      if (!proceed) return
-    }
 
     let validFiles = files
     const oversizedFiles = files.filter(file => file.size > 5 * 1024 * 1024)
@@ -144,14 +148,11 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
         throw new Error(result.error)
       }
 
-      setTimeout(() => {
-        router.push(redirectPath)
-        router.refresh()
-      }, 500)
+      router.push(redirectPath)
+      router.refresh()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al guardar la noticia'
       setError(errorMessage)
-    } finally {
       setIsSaving(false)
     }
   }
@@ -190,18 +191,9 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-8">
-      <NewsFormHeader
-        title="Editar noticia"
-        saveLabel="Guardar"
-        savingLabel="Guardando..."
-        isSaving={isSaving}
-        onBack={() => router.push(redirectPath)}
-        onSubmit={handleSubmit}
-      />
+      <NewsFormHeader title="Editar noticia" backHref={redirectPath} />
 
-      {error && (
-        <ErrorAlert title="Error" message={error} />
-      )}
+      {error && <ErrorAlert message={error} />}
 
       {uploadProgress.isUploading && (
         <Alert>
@@ -228,7 +220,7 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
               value={news.title}
               onChange={(e) => setNews({ ...news, title: e.target.value })}
               required
-             
+              placeholder="Título de la noticia"
             />
           </div>
 
@@ -240,7 +232,6 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
               value={news.date}
               onChange={(e) => setNews({ ...news, date: e.target.value })}
               required
-             
             />
           </div>
 
@@ -279,6 +270,13 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
             placeholder="Haz clic para subir la imagen destacada"
           />
 
+          {news.club && (
+            <div className="grid gap-2">
+              <Label>Entidad</Label>
+              <p className="rounded-md bg-muted p-3 text-sm font-medium">{news.club.name}</p>
+            </div>
+          )}
+
           <div className="grid gap-2">
             <Label>Contenido</Label>
             <NewsContentBlocksEditorSimple
@@ -300,21 +298,36 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
               onChange={(e) => {
                 const files = Array.from(e.target.files || [])
                 if (files.length > 0) {
-                  addMultipleImageBlocks(files)
+                  requestBulkUpload(files)
                   e.target.value = ''
                 }
               }}
             />
           </div>
 
-          {news.club && (
-            <div className="grid gap-2">
-              <Label>Club</Label>
-              <p className="rounded-md bg-muted p-3 text-sm font-medium">{news.club.name}</p>
-            </div>
-          )}
         </div>
+
+        <NewsFormActions
+          cancelHref={redirectPath}
+          saveLabel="Guardar"
+          savingLabel="Guardando..."
+          isSaving={isSaving}
+        />
       </form>
+
+      <AdminConfirmDialog
+        open={pendingBulkFiles !== null}
+        onOpenChange={(open) => !open && setPendingBulkFiles(null)}
+        title={`¿Subir ${pendingBulkFiles?.length ?? 0} imágenes?`}
+        description="Puede tardar varios minutos y fallar con conexiones lentas."
+        confirmLabel="Subir"
+        destructive={false}
+        onConfirm={() => {
+          const files = pendingBulkFiles ?? []
+          setPendingBulkFiles(null)
+          void addMultipleImageBlocks(files)
+        }}
+      />
     </div>
   )
 }

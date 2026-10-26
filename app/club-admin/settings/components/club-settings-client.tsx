@@ -12,7 +12,7 @@ export function ClubSettingsClient() {
   }
 
   if (error) {
-    return <ErrorAlert title="Error" message={`Error al cargar los datos del club: ${error}`} />
+    return <ErrorAlert message={`Error al cargar el club: ${error}`} />
   }
 
   if (hasNoClubs) {
@@ -27,5 +27,6 @@ export function ClubSettingsClient() {
     )
   }
 
-  return <ClubSettingsForm club={selectedClub} />
+  // key: remount per club so the form never keeps another club's values.
+  return <ClubSettingsForm key={selectedClub.id} club={selectedClub} />
 } 

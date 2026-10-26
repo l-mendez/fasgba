@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, X, Calendar, Loader2 } from "lucide-react"
+import { X, Calendar } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,14 +10,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { TournamentFormData } from "@/lib/tournament-form-utils"
 import { formatTournamentDisplayDate } from "@/lib/tournament-form-utils"
 
+/** Shared footer for the tournament forms: right-aligned, sticky on mobile. */
+export const TOURNAMENT_FORM_ACTIONS_CLASS =
+  "sticky bottom-0 flex justify-end gap-2 border-t bg-card py-3 md:static md:border-0 md:py-0"
+
 interface TournamentFormFieldsProps {
   formData: TournamentFormData
   validationErrors: Record<string, string>
-  newDate: string
-  setNewDate: (date: string) => void
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
   onSelectChange: (name: string, value: string) => void
-  onAddDate: () => void
+  /** Called as soon as a date is picked. */
+  onAddDate: (date: string) => void
   onRemoveDate: (date: string) => void
   isLoading?: boolean
   tournamentTypeExtras?: React.ReactNode
@@ -26,8 +29,6 @@ interface TournamentFormFieldsProps {
 export function TournamentFormFields({
   formData,
   validationErrors,
-  newDate,
-  setNewDate,
   onChange,
   onSelectChange,
   onAddDate,
@@ -38,7 +39,7 @@ export function TournamentFormFields({
   return (
     <>
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-terracotta">Información Básica</h3>
+        <h3 className="text-lg font-semibold text-terracotta">Información básica</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -57,7 +58,7 @@ export function TournamentFormFields({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="rounds">Número de Rondas</Label>
+            <Label htmlFor="rounds">Número de rondas</Label>
             <Input
               id="rounds"
               name="rounds"
@@ -88,7 +89,7 @@ export function TournamentFormFields({
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-terracotta">Ubicación y Horario</h3>
+        <h3 className="text-lg font-semibold text-terracotta">Ubicación y horario</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -127,18 +128,12 @@ export function TournamentFormFields({
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-terracotta">Detalles del Torneo</h3>
+        <h3 className="text-lg font-semibold text-terracotta">Detalles del torneo</h3>
 
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <Label htmlFor="tournament_type">Tipo de Torneo *</Label>
+            <Label htmlFor="tournament_type">Tipo de torneo *</Label>
             {tournamentTypeExtras}
-            {isLoading && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Guardando...
-              </span>
-            )}
           </div>
           <Select
             value={formData.tournament_type}
@@ -150,7 +145,7 @@ export function TournamentFormFields({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="individual">Individual</SelectItem>
-              <SelectItem value="team">Por Equipos</SelectItem>
+              <SelectItem value="team">Por equipos</SelectItem>
             </SelectContent>
           </Select>
           {validationErrors.tournament_type && (
@@ -161,7 +156,7 @@ export function TournamentFormFields({
         {formData.tournament_type === 'team' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
             <div className="space-y-2">
-              <Label htmlFor="players_per_team">Jugadores por Equipo</Label>
+              <Label htmlFor="players_per_team">Jugadores por equipo</Label>
               <Input
                 id="players_per_team"
                 name="players_per_team"
@@ -179,7 +174,7 @@ export function TournamentFormFields({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="max_teams">Máximo de Equipos</Label>
+              <Label htmlFor="max_teams">Máximo de equipos</Label>
               <Input
                 id="max_teams"
                 name="max_teams"
@@ -200,7 +195,7 @@ export function TournamentFormFields({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="pace">Ritmo de Juego</Label>
+            <Label htmlFor="pace">Ritmo de juego</Label>
             <Input
               id="pace"
               name="pace"
@@ -211,7 +206,7 @@ export function TournamentFormFields({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cost">Costo de Inscripción</Label>
+            <Label htmlFor="cost">Costo de inscripción</Label>
             <Input
               id="cost"
               name="cost"
@@ -223,7 +218,7 @@ export function TournamentFormFields({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="inscription_details">Detalles de Inscripción</Label>
+          <Label htmlFor="inscription_details">Detalles de inscripción</Label>
           <Textarea
             id="inscription_details"
             name="inscription_details"
@@ -248,10 +243,10 @@ export function TournamentFormFields({
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-terracotta">Inscripción y Fechas</h3>
+        <h3 className="text-lg font-semibold text-terracotta">Inscripción y fechas</h3>
 
         <div className="space-y-2">
-          <Label htmlFor="registration_link">Link de Inscripción</Label>
+          <Label htmlFor="registration_link">Link de inscripción</Label>
           <Input
             id="registration_link"
             name="registration_link"
@@ -267,7 +262,7 @@ export function TournamentFormFields({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="registration_deadline">Fecha Límite de Inscripción</Label>
+          <Label htmlFor="registration_deadline">Fecha límite de inscripción</Label>
           <Input
             id="registration_deadline"
             name="registration_deadline"
@@ -282,27 +277,15 @@ export function TournamentFormFields({
         </div>
 
         <div className="space-y-2">
-          <Label>Fechas del Torneo *</Label>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Input
-                type="date"
-                value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
-                className={validationErrors.dates ? "border-destructive" : ""}
-              />
-            </div>
-            <Button
-              type="button"
-              onClick={onAddDate}
-              disabled={!newDate}
-              aria-label="Agregar fecha"
-              title="Agregar fecha"
-              className="bg-terracotta hover:bg-terracotta/90"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
+          <Label htmlFor="tournament_date">Fechas del torneo *</Label>
+          {/* Each picked date is added right away; the input stays empty for the next one. */}
+          <Input
+            id="tournament_date"
+            type="date"
+            value=""
+            onChange={(e) => onAddDate(e.target.value)}
+            className={validationErrors.dates ? "border-destructive" : ""}
+          />
 
           {validationErrors.dates && (
             <p className="text-sm text-destructive">{validationErrors.dates}</p>

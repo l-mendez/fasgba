@@ -2,6 +2,7 @@ import Link from "next/link"
 import { ExternalLink, FileText, Trophy, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { clubAdminEditorHref } from "@/lib/club-admin/links"
 import type { ClubAdminClub } from "@/lib/club-admin/types"
 
 interface QuickActionsProps {
@@ -9,10 +10,6 @@ interface QuickActionsProps {
 }
 
 export function QuickActions({ selectedClub }: QuickActionsProps) {
-  const newNewsUrl = selectedClub 
-    ? `/noticias/nueva?source=club-admin&clubId=${selectedClub.id}`
-    : '/noticias/nueva?source=club-admin'
-
   return (
     <div className="grid gap-2">
       <Button asChild variant="outline" className="w-full justify-start">
@@ -22,13 +19,13 @@ export function QuickActions({ selectedClub }: QuickActionsProps) {
         </Link>
       </Button>
       <Button asChild variant="outline" className="w-full justify-start">
-        <Link href="/torneos/nuevo">
+        <Link href={clubAdminEditorHref("/torneos/nuevo", selectedClub?.id)}>
           <Trophy className="mr-2 h-4 w-4" />
           Nuevo torneo
         </Link>
       </Button>
       <Button asChild variant="outline" className="w-full justify-start">
-        <Link href={newNewsUrl}>
+        <Link href={clubAdminEditorHref("/noticias/nueva", selectedClub?.id)}>
           <FileText className="mr-2 h-4 w-4" />
           Nueva noticia
         </Link>

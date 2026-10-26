@@ -1,17 +1,30 @@
+import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { PageHero } from "@/components/page-hero"
 import { SettingsForm } from "@/components/settings-form"
 import { createClient as createServerSupabase } from "@/lib/supabase/server"
 import UnsubscribeHandler from "@/components/unsubscribe-handler"
 
+export const metadata: Metadata = { title: "Ajustes" }
+
 // Mark this page as dynamic since it requires server-side authentication
 export const dynamic = 'force-dynamic'
 
-export default async function AjustesPage() {
+export default async function AjustesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const supabase = await createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    redirect('/login')
+    // Keep the destination (and ?notificaciones=off from email links) across login.
+    const params = new URLSearchParams()
+    for (const [key, value] of Object.entries(await searchParams)) {
+      for (const v of Array.isArray(value) ? value : value ? [value] : []) params.append(key, v)
+    }
+    const qs = params.toString()
+    redirect(`/login?redirect=${encodeURIComponent(qs ? `/ajustes?${qs}` : '/ajustes')}`)
   }
   const initial = (user.user_metadata as any)?.notifications || null
   return (
@@ -29,5 +42,3 @@ export default async function AjustesPage() {
     </>
   )
 }
-
-// Unsubscribe client logic moved to components/unsubscribe-handler.tsx

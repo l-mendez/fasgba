@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent } from '@/components/ui/card'
-import { InfoPill } from '@/components/info-pill'
 import { Plus, Users, Trash2, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import { TeamRosterManagement } from './team-roster-management'
 import type { useTeamRoster } from '@/hooks/useTeamRoster'
@@ -67,13 +66,8 @@ export function RegisteredTeamsSection({ roster }: RegisteredTeamsSectionProps) 
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <h3 className="text-2xl font-bold tracking-tight text-terracotta">Equipos</h3>
-          <InfoPill icon={Users}>
-            {registeredTeams.length} {registeredTeams.length === 1 ? 'equipo' : 'equipos'}
-          </InfoPill>
-        </div>
+      {/* The tab label already says "Equipos" */}
+      <div className="flex justify-end">
 
         <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
           setIsAddDialogOpen(open)
@@ -86,23 +80,23 @@ export function RegisteredTeamsSection({ roster }: RegisteredTeamsSectionProps) 
           }
         }}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Registrar Equipo
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Registrar equipo
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Registrar Equipo</DialogTitle>
+              <DialogTitle>Registrar equipo</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="club_select">1. Seleccionar Club</Label>
+                <Label htmlFor="club_select">Club</Label>
                 <Select
                   value={selectedClubId?.toString() || ''}
                   onValueChange={(value) => setSelectedClubId(value ? parseInt(value) : null)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="club_select">
                     <SelectValue placeholder="Selecciona un club" />
                   </SelectTrigger>
                   <SelectContent>
@@ -117,7 +111,7 @@ export function RegisteredTeamsSection({ roster }: RegisteredTeamsSectionProps) 
 
               {selectedClubId && (
                 <div>
-                  <Label htmlFor="team_select">2. Seleccionar Equipo</Label>
+                  <Label htmlFor="team_select">Equipo</Label>
                   {loadingClubTeams ? (
                     <div className="flex items-center gap-2 py-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -156,7 +150,7 @@ export function RegisteredTeamsSection({ roster }: RegisteredTeamsSectionProps) 
                         value={selectedTeamId?.toString() || ''}
                         onValueChange={(value) => setSelectedTeamId(value ? parseInt(value) : null)}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger id="team_select">
                           <SelectValue placeholder="Selecciona un equipo" />
                         </SelectTrigger>
                         <SelectContent>
@@ -169,16 +163,17 @@ export function RegisteredTeamsSection({ roster }: RegisteredTeamsSectionProps) 
                       </Select>
                       {availableTeamsForClub.length === 0 && clubTeams.length > 0 && (
                         <p className="text-sm text-muted-foreground mt-1">
-                          Todos los equipos de este club ya están registrados
+                          Todos los equipos de este club ya están registrados.
                         </p>
                       )}
                       <Button
                         variant="link"
                         size="sm"
-                        className="mt-1 p-0 h-auto"
+                        className="mt-1 h-auto p-0"
                         onClick={() => setIsCreateTeamMode(true)}
                       >
-                        + Crear nuevo equipo
+                        <Plus className="mr-1 h-3.5 w-3.5" />
+                        Crear equipo
                       </Button>
                     </>
                   )}
@@ -193,7 +188,7 @@ export function RegisteredTeamsSection({ roster }: RegisteredTeamsSectionProps) 
                   onClick={handleAddTeam}
                   disabled={loading || !selectedTeamId}
                 >
-                  {loading ? 'Registrando...' : 'Registrar Equipo'}
+                  {loading ? 'Registrando...' : 'Registrar'}
                 </Button>
               </div>
             </div>

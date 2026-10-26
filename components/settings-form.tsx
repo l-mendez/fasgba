@@ -6,7 +6,7 @@ import { useTheme } from "next-themes"
 import { Bell, Moon, LogOut, Loader2, Lock, Eye, EyeOff, UserCog } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -18,11 +18,22 @@ import { validatePassword } from "@/lib/utils/passwordValidation"
 
 const TITLE = "flex items-center gap-2 text-lg text-terracotta"
 
-export function SettingsForm({ initial }: { initial?: { type?: string; torneos?: string; noticias?: string; ranking?: boolean } }) {
-  const [notificaciones, setNotificaciones] = useState<string>(initial?.type || "todas")
-  const [torneos, setTorneos] = useState<string>(initial?.torneos || "todos")
-  const [noticias, setNoticias] = useState<string>(initial?.noticias || "todos")
-  const [ranking, setRanking] = useState<boolean>(typeof initial?.ranking === 'boolean' ? !!initial?.ranking : true)
+type NotificationPrefs = { type?: string; torneos?: string; noticias?: string; ranking?: boolean }
+
+// Saved preferences with defaults for unset fields.
+const toPrefs = (p?: NotificationPrefs) => ({
+  type: p?.type || "todas",
+  torneos: p?.torneos || "todos",
+  noticias: p?.noticias || "todos",
+  ranking: typeof p?.ranking === 'boolean' ? p.ranking : true,
+})
+
+export function SettingsForm({ initial }: { initial?: NotificationPrefs }) {
+  const [saved, setSaved] = useState(() => toPrefs(initial))
+  const [notificaciones, setNotificaciones] = useState<string>(saved.type)
+  const [torneos, setTorneos] = useState<string>(saved.torneos)
+  const [noticias, setNoticias] = useState<string>(saved.noticias)
+  const [ranking, setRanking] = useState<boolean>(saved.ranking)
   const { setTheme, resolvedTheme } = useTheme()
   const { toast } = useToast()
   const router = useRouter()
@@ -51,6 +62,7 @@ useEffect(() => {
   if (initial?.torneos && initial.torneos !== torneos) setTorneos(initial.torneos)
   if (initial?.noticias && initial.noticias !== noticias) setNoticias(initial.noticias)
   if (typeof initial?.ranking === 'boolean' && initial.ranking !== ranking) setRanking(!!initial.ranking)
+  setSaved(toPrefs(initial))
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [initial?.type, initial?.torneos, initial?.noticias, initial?.ranking])
 
@@ -104,12 +116,9 @@ useEffect(() => {
       })
       if (!res.ok) throw new Error('Failed to save notifications')
 
-      toast({
-        title: "Cambios Guardados",
-        description: "Tus preferencias de notificaciones se han actualizado correctamente.",
-      })
+      setSaved({ type: notificaciones, torneos, noticias, ranking })
+      toast({ title: "Cambios guardados" })
     } catch {
-      console.log('Failed to save notification prefs')
       toast({
         title: "Error",
         description: "No se pudieron guardar los cambios. Intenta nuevamente.",
@@ -121,12 +130,10 @@ useEffect(() => {
   }
 
   const handleCancelNotifications = () => {
-    // TODO: Reset to original values from database/server
-    console.log("Cancelando cambios en notificaciones")
-    setNotificaciones("todas")
-    setTorneos("todos")
-    setNoticias("todos")
-    setRanking(true)
+    setNotificaciones(saved.type)
+    setTorneos(saved.torneos)
+    setNoticias(saved.noticias)
+    setRanking(saved.ranking)
   }
 
   const resetPasswordForm = () => {
@@ -204,7 +211,7 @@ useEffect(() => {
           <div className="space-y-2">
             <Label htmlFor="notificaciones">Tipo de notificaciones</Label>
             <Select value={notificaciones} onValueChange={setNotificaciones}>
-              <SelectTrigger>
+              <SelectTrigger id="notificaciones">
                 <SelectValue placeholder="Selecciona el tipo de notificaciones" />
               </SelectTrigger>
               <SelectContent>
@@ -221,7 +228,7 @@ useEffect(() => {
               <div className="space-y-2">
                 <Label htmlFor="torneos">Torneos</Label>
                 <Select value={torneos} onValueChange={setTorneos}>
-                  <SelectTrigger>
+                  <SelectTrigger id="torneos">
                     <SelectValue placeholder="Notificaciones de torneos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -237,7 +244,7 @@ useEffect(() => {
               <div className="space-y-2">
                 <Label htmlFor="noticias-notif">Noticias</Label>
                 <Select value={noticias} onValueChange={setNoticias}>
-                  <SelectTrigger>
+                  <SelectTrigger id="noticias-notif">
                     <SelectValue placeholder="Notificaciones de noticias" />
                   </SelectTrigger>
                   <SelectContent>
@@ -328,12 +335,9 @@ useEffect(() => {
                 Cambiar contraseña
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
               <DialogHeader>
                 <DialogTitle>Cambiar contraseña</DialogTitle>
-                <DialogDescription>
-                  Ingresá tu contraseña actual y elegí una nueva
-                </DialogDescription>
               </DialogHeader>
               <div className="space-y-3 pt-2">
                 <div className="space-y-2">
@@ -389,7 +393,7 @@ useEffect(() => {
                       type={showConfirmNewPassword ? "text" : "password"}
                       value={confirmNewPassword}
                       onChange={(e) => setConfirmNewPassword(e.target.value)}
-                      placeholder="Confirmá tu nueva contraseña"
+                      placeholder="Confirma tu nueva contraseña"
                     />
                     <Button
                       type="button"

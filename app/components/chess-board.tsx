@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { Clock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Clock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { parse } from '@mliebelt/pgn-parser'
 
 // Dynamically import chess.js to avoid SSR issues
@@ -146,37 +147,19 @@ function getPlayerName(player?: { type: string; value: string }): string {
   }
 }
 
-// Evaluation Bar Component
-const EvaluationBar = ({ evaluation, className = "" }: { evaluation?: number, className?: string }) => {
-  if (evaluation === undefined) {
-    return (
-      <div className={`w-3 bg-gray-300 dark:bg-gray-600 rounded-sm ${className}`}>
-        <div className="w-full h-full flex items-center justify-center">
-          <div className="w-1 h-4 bg-gray-500 dark:bg-gray-400 rounded-full"></div>
-        </div>
-      </div>
-    );
-  }
-  
+// Evaluation bar: hidden until the PGN provides an evaluation.
+const EvaluationBar = ({ evaluation, height }: { evaluation?: number, height: number }) => {
+  if (evaluation === undefined) return null;
+
   // Ensure evaluation is a number (handle both number and string inputs)
   const numericEval = typeof evaluation === 'string' ? parseFloat(evaluation) : evaluation;
-  
-  // Check if conversion was successful
-  if (isNaN(numericEval)) {
-    return (
-      <div className={`w-3 bg-gray-300 dark:bg-gray-600 rounded-sm ${className}`}>
-        <div className="w-full h-full flex items-center justify-center">
-          <div className="w-1 h-4 bg-gray-500 dark:bg-gray-400 rounded-full"></div>
-        </div>
-      </div>
-    );
-  }
-  
+  if (isNaN(numericEval)) return null;
+
   // Check for mate positions (encoded as 1000 + moves or -1000 - moves)
   const isMatePosition = Math.abs(numericEval) >= 1000;
   let displayText: string;
   let percentage: number;
-  
+
   if (isMatePosition) {
     // For mate positions, extract moves to mate
     const movesToMate = Math.abs(numericEval) - 1000;
@@ -188,31 +171,23 @@ const EvaluationBar = ({ evaluation, className = "" }: { evaluation?: number, cl
     percentage = ((cappedEval + 5) / 10) * 100;
     displayText = numericEval > 0 ? `+${numericEval.toFixed(1)}` : numericEval.toFixed(1);
   }
-  
+
   return (
-    <div className={`w-3 rounded-sm relative overflow-hidden ${className}`} style={{ backgroundColor: '#1f2937' }}>
+    <div
+      className="relative ml-2 w-3 shrink-0 overflow-hidden rounded-sm border bg-black"
+      style={{ height }}
+      title={`Evaluación: ${displayText}`}
+    >
       {/* White advantage area (from bottom) */}
-      <div 
-        className="transition-all duration-500 ease-in-out w-full absolute bottom-0"
-        style={{ 
-          height: `${percentage}%`,
-          backgroundColor: '#ffffff'
-        }}
+      <div
+        className="absolute bottom-0 w-full bg-white transition-all duration-500 ease-in-out"
+        style={{ height: `${percentage}%` }}
       />
       {/* Center line */}
-      <div 
-        className="absolute left-0 right-0 h-px transform -translate-y-1/2" 
-        style={{ 
-          top: '50%',
-          backgroundColor: '#6b7280'
-        }}
-      />
+      <div className="absolute left-0 right-0 top-1/2 h-px bg-muted-foreground" />
       {/* Evaluation text */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div 
-          className="text-white text-xs px-1 rounded transform -rotate-90 whitespace-nowrap"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
-        >
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div className="-rotate-90 whitespace-nowrap rounded bg-black/70 px-1 text-xs text-white">
           {displayText}
         </div>
       </div>
@@ -258,15 +233,15 @@ const PlayerInfo = ({
   
   return (
     <div className={`flex items-center justify-between p-2 rounded ${
-      isCurrentPlayer ? 'bg-amber/20 dark:bg-amber/30' : 'bg-muted/50 dark:bg-muted/60'
+      isCurrentPlayer ? 'bg-amber/20 dark:bg-amber/30' : 'bg-muted'
     }`}>
       <div className="flex items-center gap-2">
-        <div className={`w-4 h-4 rounded-full border-2 ${
-          color === 'white' ? 'bg-white border-gray-400 dark:border-gray-500' : 'bg-black border-gray-300 dark:border-gray-400'
+        <div className={`w-4 h-4 rounded-full border-2 border-muted-foreground ${
+          color === 'white' ? 'bg-white' : 'bg-black'
         }`} />
         <span className="font-medium text-sm text-foreground">{playerName}</span>
         {playerScore !== null && (
-          <span className="text-sm font-semibold text-terracotta dark:text-amber-400 ml-2">
+          <span className="text-sm font-semibold text-terracotta ml-2">
             {playerScore}
           </span>
         )}
@@ -498,14 +473,12 @@ export default function ChessBoard({
   
   // Function to make a move
   const handleMove = async (move: number) => {
-    if (!Chess) {
-      const module = await import('chess.js');
-      Chess = module.Chess;
-    }
-    
+    // chess.js is already loaded by initChess; import() is the cached fallback.
+    const ChessClass = Chess ?? (await import('chess.js')).Chess;
+
     try {
       // Create a new game from the initial position
-      const newGame = new Chess(fen);
+      const newGame = new ChessClass(fen);
       
       // Apply moves up to the specified index
       for (let i = 0; i < move && i < moves.length; i++) {
@@ -537,18 +510,18 @@ export default function ChessBoard({
     }
   };
   
-  // Go to next move
-  const goToNextMove = () => {
-    if (moveIndex < moves.length) {
-      handleMove(moveIndex + 1);
-    }
-  };
-  
-  // Go to previous move
-  const goToPrevMove = () => {
-    if (moveIndex > 0) {
-      handleMove(moveIndex - 1);
-    }
+  // Arrow keys / Home / End navigate while the viewer has focus.
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    const target: Record<string, number> = {
+      ArrowLeft: moveIndex - 1,
+      ArrowRight: moveIndex + 1,
+      Home: 0,
+      End: moves.length,
+    };
+    if (!(e.key in target) || moves.length === 0) return;
+    e.preventDefault();
+    const next = Math.max(0, Math.min(moves.length, target[e.key]));
+    if (next !== moveIndex) handleMove(next);
   };
   
   // Calculate responsive width
@@ -595,11 +568,25 @@ export default function ChessBoard({
     );
   }
   
+  const hasMoves = Boolean(pgn) && moves.length > 0;
+  const navButton = (target: number, disabled: boolean, label: string, Icon: typeof ChevronLeft) => (
+    <Button variant="outline" size="icon" onClick={() => handleMove(target)} disabled={disabled} aria-label={label} title={label}>
+      <Icon />
+    </Button>
+  );
+
   return (
-    <div className="flex flex-col items-center w-full max-w-md mx-auto">
-      {/* Black Player Info (Top) */}
-      <div className="w-full mb-2">
-        <PlayerInfo 
+    <div
+      className="flex max-w-full flex-col items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      tabIndex={hasMoves ? 0 : undefined}
+      onKeyDown={hasMoves ? handleKeyDown : undefined}
+      role="group"
+      aria-label="Visor de partida"
+      aria-keyshortcuts={hasMoves ? 'ArrowLeft ArrowRight Home End' : undefined}
+    >
+      {/* Player bars match the board width */}
+      <div className="mb-2 max-w-full" style={{ width: boardWidth }}>
+        <PlayerInfo
           player={blackPlayer}
           color="black"
           clockTime={currentBlackClock}
@@ -607,39 +594,27 @@ export default function ChessBoard({
           result={result}
         />
       </div>
-      
-      {/* Chess Board with Evaluation Bar - Centered Layout */}
-      <div className="relative flex justify-center items-center">
-        {/* Chess Board */}
+
+      <div className="flex items-center">
         <div className="max-w-full overflow-hidden" style={{ width: boardWidth }}>
-          {isReady && (
-            <ReactChessboard
-              options={{
-                position: currentPosition,
-                allowDrawingArrows: true,
-                boardStyle: {
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                  width: `${boardWidth}px`,
-                  height: `${boardWidth}px`,
-                },
-              }}
-            />
-          )}
-        </div>
-        
-        {/* Evaluation Bar - Positioned to the right of the board */}
-        <div className="ml-2 relative">
-          <EvaluationBar 
-            evaluation={currentEvaluation} 
-            className="h-[250px] sm:h-[300px] md:h-[360px]"
+          <ReactChessboard
+            options={{
+              position: currentPosition,
+              allowDrawingArrows: true,
+              boardStyle: {
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                width: `${boardWidth}px`,
+                height: `${boardWidth}px`,
+              },
+            }}
           />
         </div>
+        <EvaluationBar evaluation={currentEvaluation} height={boardWidth} />
       </div>
-      
-      {/* White Player Info (Bottom) */}
-      <div className="w-full mt-2">
-        <PlayerInfo 
+
+      <div className="mt-2 max-w-full" style={{ width: boardWidth }}>
+        <PlayerInfo
           player={whitePlayer}
           color="white"
           clockTime={currentWhiteClock}
@@ -647,20 +622,12 @@ export default function ChessBoard({
           result={result}
         />
       </div>
-      
-      {/* Navigation Controls */}
-      {pgn && moves.length > 0 && (
+
+      {hasMoves && (
         <div className="mt-3 flex items-center gap-2">
-          <button 
-            onClick={goToPrevMove}
-            className="p-2 bg-amber/20 hover:bg-amber/30 dark:bg-amber/30 dark:hover:bg-amber/40 rounded text-amber-dark dark:text-amber-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            disabled={moveIndex === 0}
-            title="Movimiento anterior"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          
-          <span className="px-3 py-2 bg-muted dark:bg-muted/80 rounded text-sm font-medium min-w-[80px] text-center text-foreground">
+          {navButton(0, moveIndex === 0, 'Inicio de la partida', ChevronsLeft)}
+          {navButton(moveIndex - 1, moveIndex === 0, 'Movimiento anterior', ChevronLeft)}
+          <span className="min-w-[80px] rounded-md bg-muted px-3 py-2 text-center text-sm font-medium" aria-live="polite">
             {moveIndex > 0 && moves[moveIndex - 1] ? (
               <>
                 {moves[moveIndex - 1].moveNumber}
@@ -671,15 +638,8 @@ export default function ChessBoard({
               'Inicio'
             )}
           </span>
-          
-          <button 
-            onClick={goToNextMove}
-            className="p-2 bg-amber/20 hover:bg-amber/30 dark:bg-amber/30 dark:hover:bg-amber/40 rounded text-amber-dark dark:text-amber-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            disabled={moveIndex === moves.length}
-            title="Siguiente movimiento"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
+          {navButton(moveIndex + 1, moveIndex === moves.length, 'Siguiente movimiento', ChevronRight)}
+          {navButton(moves.length, moveIndex === moves.length, 'Final de la partida', ChevronsRight)}
         </div>
       )}
     </div>

@@ -12,11 +12,12 @@ const siteLinks = [
   { href: "/clubes", label: "Clubes" },
   { href: "/ranking", label: "Ranking" },
   { href: "/noticias", label: "Noticias" },
+  { href: "/profesores", label: "Profesores" },
+  { href: "/arbitraje", label: "Arbitraje" },
 ]
 
 const resources = [
   { href: `${FILES}/cd2025-2027.xlsx`, label: "Comisión Directiva" },
-  { href: `${FILES}/calendario2025.xlsx`, label: "Calendario" },
   { href: `${FILES}/estatuto.pdf`, label: "Estatuto" },
 ]
 
@@ -36,7 +37,7 @@ export function SiteFooter() {
           <SiteLogo />
           <div className="-ml-2 flex gap-1">
             {socials.map(({ href, label, Icon }) => (
-              <Button key={label} asChild variant="ghost" size="icon" className="text-amber">
+              <Button key={label} asChild variant="ghost" size="icon" className="text-terracotta">
                 <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}>
                   <Icon className="h-5 w-5" />
                 </a>

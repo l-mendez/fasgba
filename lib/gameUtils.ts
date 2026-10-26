@@ -409,12 +409,12 @@ export async function getTournamentRounds(tournamentId: number): Promise<number>
         .eq('id', tournamentId)
         .single()
       
-      return tournament?.rounds || 6
+      return tournament?.rounds || 0
     }
 
     return rounds[0].round_number
   } catch (error) {
     console.error('Error fetching tournament rounds:', error)
-    return 6 // Default fallback
+    return 0 // Unknown: never invent a round count
   }
 } 

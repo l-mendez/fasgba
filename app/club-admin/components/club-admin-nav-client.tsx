@@ -4,9 +4,8 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 import {
-  BarChart3,
   FileText,
-  Home,
+  LayoutDashboard,
   Menu,
   Settings,
   Shield,
@@ -28,8 +27,8 @@ const navItems: Array<{
 }> = [
   {
     href: "/club-admin",
-    label: "Dashboard",
-    icon: BarChart3,
+    label: "Panel",
+    icon: LayoutDashboard,
     isActive: (pathname) => pathname === "/club-admin",
   },
   {
@@ -114,9 +113,8 @@ export function ClubAdminMobileHeader() {
         <SheetContent side="left" className="w-64 border-amber/20">
           <SheetTitle className="sr-only">Navegación del club</SheetTitle>
           <div className="flex h-14 items-center border-b border-amber/20 px-4 -mx-6 -mt-6 mb-4">
-            <Link href="/club-admin" className="flex items-center space-x-2" onClick={() => setIsMobileOpen(false)}>
-              <Home className="h-6 w-6 text-terracotta" />
-              <span className="font-bold text-terracotta">Club Admin</span>
+            <Link href="/" className="flex items-center space-x-2" onClick={() => setIsMobileOpen(false)}>
+              <span className="font-bold text-terracotta">FASGBA</span>
             </Link>
           </div>
           <div className="-mx-6 mb-4">

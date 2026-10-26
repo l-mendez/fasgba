@@ -17,10 +17,10 @@ export default function PlayersManagementPage() {
       <AdminPageHeader
         title="Jugadores"
         action={
-          <Button asChild className="bg-terracotta hover:bg-terracotta/90">
+          <Button asChild>
             <Link href="/jugadores/nuevo">
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Jugador
+              <Plus className="h-4 w-4" />
+              Nuevo jugador
             </Link>
           </Button>
         }
@@ -39,11 +39,8 @@ async function PlayersManagementContent() {
     <div className="space-y-6">
       <AdminPlayerStats stats={stats} />
       <PlayersManagementClient
-        showHeader={false}
-        showStats={false}
         initialPlayers={players}
         initialClubs={clubs}
-        initialStats={stats}
         initialTotalResults={totalResults}
       />
     </div>

@@ -17,6 +17,34 @@ import ChessGameDisplay from "./components/chess-game-display"
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
 
+type ServerClient = Awaited<ReturnType<typeof createClient>>
+
+// PostgREST embeds many-to-one relations as objects, but the inferred type is an array.
+const one = <T,>(value: T | T[] | null | undefined) => (Array.isArray(value) ? value[0] : value)
+
+// Game ids are per table, so make sure the game belongs to the tournament in the URL.
+async function gameBelongsToTournament(
+  supabase: ServerClient,
+  gameId: number,
+  tournamentId: number,
+  tournamentType: string
+): Promise<boolean> {
+  if (tournamentType === 'team') {
+    const { data } = await supabase
+      .from('match_games')
+      .select('match:matches(round:rounds(tournament_id))')
+      .eq('id', gameId)
+      .maybeSingle()
+    return one(one(data?.match)?.round)?.tournament_id === tournamentId
+  }
+  const { data } = await supabase
+    .from('individual_games')
+    .select('round:rounds(tournament_id)')
+    .eq('id', gameId)
+    .maybeSingle()
+  return one(data?.round)?.tournament_id === tournamentId
+}
+
 // Generate metadata
 export async function generateMetadata({ params }: { 
   params: Promise<{ id: string; 'id-partida': string }> 
@@ -31,28 +59,25 @@ export async function generateMetadata({ params }: {
     const tournament = tournamentsWithDates.find(t => t.id === tournamentId)
     
     if (!tournament) {
-      return {
-        title: 'Partida no encontrada - FASGBA',
-      }
+      return { title: 'Partida no encontrada | FASGBA' }
     }
 
-    const tournamentDisplay = transformTournamentToDisplay(tournament)
-    const game = await getGameById(gameId, tournamentDisplay.tournament_type || 'individual')
-    
-    if (!game) {
-      return {
-        title: 'Partida no encontrada - FASGBA',
-      }
+    const type = transformTournamentToDisplay(tournament).tournament_type || 'individual'
+    const [game, belongs] = await Promise.all([
+      getGameById(gameId, type),
+      gameBelongsToTournament(supabase, gameId, tournamentId, type),
+    ])
+
+    if (!game || !belongs) {
+      return { title: 'Partida no encontrada | FASGBA' }
     }
 
     return {
-      title: `${game.white} vs ${game.black} - ${tournament.title} - FASGBA`,
+      title: `${game.white} vs ${game.black} · ${tournament.title} | FASGBA`,
       description: `Partida de la ronda ${game.round} entre ${game.white} y ${game.black} en el torneo ${tournament.title}`,
     }
-  } catch (error) {
-    return {
-      title: 'Partida - FASGBA',
-    }
+  } catch {
+    return { title: 'Partida | FASGBA' }
   }
 }
 
@@ -81,11 +106,16 @@ export default async function GamePage({ params }: {
     }
 
     tournament = transformTournamentToDisplay(tournamentWithDates)
-    game = await getGameById(gameId, tournament.tournament_type || 'individual')
-    
-    if (!game) {
+    const type = tournament.tournament_type || 'individual'
+    const [gameData, belongs] = await Promise.all([
+      getGameById(gameId, type),
+      gameBelongsToTournament(supabase, gameId, tournamentId, type),
+    ])
+
+    if (!gameData || !belongs) {
       notFound()
     }
+    game = gameData
   } catch (err) {
     console.error('Error loading tournament or game:', err)
     error = 'Error al cargar la partida'

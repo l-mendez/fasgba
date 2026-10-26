@@ -162,7 +162,7 @@ export function UserCreateForm({ clubs }: UserCreateFormProps) {
               <SelectContent>
                 <SelectItem value="user">Usuario</SelectItem>
                 <SelectItem value="admin">Administrador</SelectItem>
-                <SelectItem value="club_admin">Administrador de Club</SelectItem>
+                <SelectItem value="club_admin">Administrador de club</SelectItem>
               </SelectContent>
             </Select>
           </div>

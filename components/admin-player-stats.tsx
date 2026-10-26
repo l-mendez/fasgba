@@ -14,7 +14,7 @@ interface AdminPlayerStatsProps {
 
 export function AdminPlayerStats({ stats }: AdminPlayerStatsProps) {
   return (
-    <div className="grid gap-3 grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-3">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Jugadores</CardTitle>
@@ -35,7 +35,7 @@ export function AdminPlayerStats({ stats }: AdminPlayerStatsProps) {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Con Club</CardTitle>
+          <CardTitle className="text-sm font-medium">Con club</CardTitle>
           <Home className="h-4 w-4 text-amber" />
         </CardHeader>
         <CardContent>

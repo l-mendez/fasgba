@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Iniciar Sesión',
+  title: 'Iniciar sesión',
   description: 'Accede a tu cuenta de FASGBA - Federación de Ajedrez del Sur del Gran Buenos Aires',
 }
 

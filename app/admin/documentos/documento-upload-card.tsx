@@ -89,7 +89,7 @@ export function DocumentoUploadCard({
 
   const handleUpload = async () => {
     if (!file || !documentName.trim()) {
-      setErrorMessage("Por favor, selecciona un archivo y proporciona un nombre")
+      setErrorMessage("Selecciona un archivo e ingresa un nombre")
       return
     }
 
@@ -186,7 +186,7 @@ export function DocumentoUploadCard({
           <Upload className="mx-auto mb-3 h-10 w-10 text-amber" />
           <div className="space-y-2">
             <p className="text-lg font-medium">
-              {file ? file.name : "Arrastra tu archivo aquí o haz clic para seleccionar"}
+              {file ? file.name : "Arrastra tu archivo aquí"}
             </p>
             <p className="text-sm text-muted-foreground">
               Archivos PDF y Excel (máximo 10MB)

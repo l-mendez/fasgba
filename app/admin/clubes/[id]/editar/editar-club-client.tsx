@@ -3,10 +3,9 @@
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { AlertTriangle, ArrowLeft, Upload, X, ImageIcon, Loader2, CheckCircle } from "lucide-react"
+import { AlertTriangle, ArrowLeft, Upload, X, ImageIcon, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { ErrorAlert } from "@/components/error-alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -40,7 +39,6 @@ interface EditarClubClientProps {
 export function EditarClubClient({ club }: EditarClubClientProps) {
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState<FormData>({
     name: club.name || "",
     address: club.address || "",
@@ -55,7 +53,6 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [pendingImageDeletion, setPendingImageDeletion] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Get current image URL
@@ -78,7 +75,7 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
       const result = await uploadClubImageAction(club.id, formData)
 
       if (!result.ok) {
-        throw new Error(result.error || 'Failed to upload image')
+        throw new Error(result.error || 'No se pudo subir la imagen')
       }
 
       // Update state
@@ -88,10 +85,7 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
 
       // Show success toast
       const actionMessage = result.data.replacedExisting ? 'reemplazada' : 'subida'
-      toast.success(`✅ Imagen ${actionMessage} correctamente`, {
-        description: "La imagen del club se ha actualizado exitosamente",
-        duration: 4000,
-      })
+      toast.success(`Imagen ${actionMessage} correctamente`)
 
     } catch (error) {
       console.error('Error uploading image:', error)
@@ -157,7 +151,6 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
     setValidationErrors({})
 
     if (!validateForm()) {
@@ -173,7 +166,7 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
           const result = await deleteClubImageAction(club.id)
 
           if (!result.ok) {
-            throw new Error(result.error || 'Failed to delete image')
+            throw new Error(result.error || 'No se pudo eliminar la imagen')
           }
 
           // Update local state
@@ -198,24 +191,14 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
         body: JSON.stringify(clubData)
       })
 
-      // Show success feedback
-      setShowSuccess(true)
-      toast.success("✅ Club actualizado correctamente", {
-        description: "Los cambios se han guardado exitosamente",
-        duration: 4000,
-      })
-      
-      // Hide success indicator after 3 seconds
-      setTimeout(() => {
-        setShowSuccess(false)
-      }, 3000)
+      toast.success("Club actualizado correctamente")
 
       // Redirect back to clubs list after a short delay
       setTimeout(() => {
         router.push("/admin/clubes")
       }, 1500)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al actualizar el club")
+      toast.error(err instanceof Error ? err.message : "Error al actualizar el club")
     } finally {
       setIsSaving(false)
     }
@@ -230,17 +213,6 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
     }
   }
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <ErrorAlert message={error} className="max-w-md" />
-        <Button variant="outline" onClick={() => router.push("/admin/clubes")}>
-          Volver a la lista
-        </Button>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -250,25 +222,15 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Editar Club</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Editar club</h1>
         </div>
       </div>
-
-      {/* Success Banner */}
-      {showSuccess && (
-        <div className="rounded-lg border bg-muted p-4">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="h-5 w-5 shrink-0 text-amber" />
-            <p className="text-sm font-medium">¡Club actualizado exitosamente!</p>
-          </div>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Club Image Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Imagen del Club</CardTitle>
+            <CardTitle>Imagen del club</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -365,12 +327,12 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
         {/* Club Information Form */}
         <Card>
           <CardHeader>
-            <CardTitle>Información del Club</CardTitle>
+            <CardTitle>Información del club</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="name">Nombre del Club *</Label>
+                <Label htmlFor="name">Nombre del club *</Label>
                 <Input
                   id="name"
                   name="name"
@@ -407,7 +369,7 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="mail">Correo Electrónico</Label>
+                <Label htmlFor="mail">Correo electrónico</Label>
                 <Input
                   id="mail"
                   name="mail"
@@ -425,18 +387,12 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
                   name="schedule"
                   value={formData.schedule}
                   onChange={handleChange}
-                  placeholder="Ej: Lunes a Viernes: 17:00 - 22:00"
+                  placeholder="Ej: Lunes a viernes: 17:00 - 22:00"
                 />
               </div>
             </div>
           </CardContent>
         </Card>
-
-        {error && (
-          <div className="text-sm text-destructive">
-            {error}
-          </div>
-        )}
 
         <div className="flex justify-end gap-3">
           <Button
@@ -447,7 +403,7 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
             Cancelar
           </Button>
           <Button type="submit" disabled={isSaving}>
-            {isSaving ? "Guardando..." : "Guardar Cambios"}
+            {isSaving ? "Guardando..." : "Guardar cambios"}
           </Button>
         </div>
       </form>

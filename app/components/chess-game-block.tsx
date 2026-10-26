@@ -1,10 +1,9 @@
 "use client"
 
-import Link from "next/link"
 import dynamic from "next/dynamic"
 import { useState } from "react"
 import { Button } from '@/components/ui/button'
-import { Copy, Check } from 'lucide-react'
+import { Copy, Check, ExternalLink } from 'lucide-react'
 
 // Simple placeholder loader
 const ChessBoardLoader = () => (
@@ -76,16 +75,18 @@ export default function ChessGameBlock({
   
   // Create the Lichess analysis URL
   const getLichessUrl = () => {
-    // If we have PGN, use that for the full game analysis
+    // Full game: Lichess reads the PGN from the path. Comments (clocks, evals)
+    // are dropped to keep the URL short.
     if (pgn) {
-      return `https://lichess.org/analysis?pgn=${encodeURIComponent(pgn)}`;
+      const compact = pgn.replace(/\{[^}]*\}/g, '').replace(/[ \t]+/g, ' ');
+      return `https://lichess.org/analysis/pgn/${encodeURIComponent(compact)}`;
     }
-    // Otherwise just use the current position FEN
-    return `https://lichess.org/analysis/${encodeURIComponent(currentFen)}`;
+    // Otherwise just the current position (Lichess expects `_` for spaces)
+    return `https://lichess.org/analysis/${currentFen.replace(/ /g, '_')}`;
   };
   
   return (
-    <div className="my-4 sm:my-6 p-3 sm:p-4 md:p-6 bg-muted/30 dark:bg-muted/40 rounded-lg border border-amber/10 dark:border-amber/20">
+    <div className="my-4 sm:my-6 p-3 sm:p-4 md:p-6 bg-card rounded-lg border">
       <div className="flex justify-center">
         <ChessBoard 
           fen={fen} 
@@ -98,28 +99,20 @@ export default function ChessGameBlock({
         />
       </div>
       
-      {pgn && (
-        <div className="mt-3 sm:mt-4 flex justify-center">
-          <Button
-            onClick={handleCopyPGN}
-            variant="outline"
-            size="sm"
-            className="border-amber text-amber-dark dark:text-amber-200 hover:bg-amber/10 dark:hover:bg-amber/20 hover:text-amber-dark dark:hover:text-amber-100 transition-colors"
-          >
-            {isCopied ? (
-              <>
-                <Check className="w-4 h-4 mr-2" />
-                ¡Copiado!
-              </>
-            ) : (
-              <>
-                <Copy className="w-4 h-4 mr-2" />
-                Copiar PGN
-              </>
-            )}
+      <div className="mt-3 sm:mt-4 flex justify-center gap-2">
+        {pgn && (
+          <Button onClick={handleCopyPGN} variant="outline" size="sm">
+            {isCopied ? <Check /> : <Copy />}
+            {isCopied ? '¡Copiado!' : 'Copiar PGN'}
           </Button>
-        </div>
-      )}
+        )}
+        <Button asChild variant="outline" size="sm">
+          <a href={getLichessUrl()} target="_blank" rel="noopener noreferrer" aria-label="Abrir en Lichess" title="Abrir en Lichess">
+            <ExternalLink />
+            Lichess
+          </a>
+        </Button>
+      </div>
     </div>
   )
 } 

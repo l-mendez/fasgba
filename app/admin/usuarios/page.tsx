@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import type { User } from "@supabase/supabase-js"
 
 import { createClient } from "@/lib/supabase/server"
 import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
@@ -23,8 +24,11 @@ interface UserWithPermissions {
   fecha_nacimiento?: string | null
   isAdmin: boolean
   isClubAdmin: boolean
+  isAlumno: boolean
   adminClubs: string[]
 }
+
+const USERS_PER_PAGE = 1000
 
 // Server-side function to fetch all users from Supabase Auth
 async function fetchAllUsers(): Promise<UserWithPermissions[]> {
@@ -54,22 +58,34 @@ async function fetchAllUsers(): Promise<UserWithPermissions[]> {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
     
     if (!supabaseServiceKey) {
-      throw new Error('Service role key not configured')
+      throw new Error('Falta configurar la clave de servicio de Supabase')
     }
 
     const { createClient: createServiceClient } = await import('@supabase/supabase-js')
     const supabaseAdmin = createServiceClient(supabaseServiceUrl, supabaseServiceKey)
 
-    // Fetch all users from Supabase Auth using admin API
-    const { data: { users }, error: usersError } = await supabaseAdmin.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000 // Adjust as needed
-    })
+    // Fetch every page of users from Supabase Auth (max 1000 per page)
+    const users: User[] = []
+    for (let page = 1; ; page++) {
+      const { data, error: usersError } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage: USERS_PER_PAGE,
+      })
 
-    if (usersError) {
-      console.error('Error fetching users:', usersError)
-      throw new Error('Error al obtener los usuarios del sistema de autenticación')
+      if (usersError) {
+        console.error('Error fetching users:', usersError)
+        throw new Error('Error al obtener los usuarios del sistema de autenticación')
+      }
+
+      users.push(...data.users)
+      if (data.users.length < USERS_PER_PAGE) break
     }
+
+    // Alumnos (service role: same access as /api/admin/alumnos)
+    const { data: alumnos } = await supabaseAdmin
+      .from('alumnos')
+      .select('auth_id')
+    const alumnoIds = new Set(alumnos?.map(alumno => alumno.auth_id) || [])
 
     // Get all admins
     const { data: admins, error: adminsError } = await supabase
@@ -99,11 +115,11 @@ async function fetchAllUsers(): Promise<UserWithPermissions[]> {
     })
 
     // Transform the users data to match UserWithPermissions interface
-    const transformedUsers: UserWithPermissions[] = users.map((authUser: any) => ({
+    const transformedUsers: UserWithPermissions[] = users.map((authUser) => ({
       id: authUser.id,
       email: authUser.email || 'email@no-disponible.com',
-      emailVerified: authUser.email_confirmed_at !== null,
-      lastSignIn: authUser.last_sign_in_at,
+      emailVerified: Boolean(authUser.email_confirmed_at),
+      lastSignIn: authUser.last_sign_in_at ?? null,
       createdAt: authUser.created_at,
       nombre: authUser.user_metadata?.nombre || authUser.user_metadata?.name || undefined,
       apellido: authUser.user_metadata?.apellido || authUser.user_metadata?.surname || undefined,
@@ -112,6 +128,7 @@ async function fetchAllUsers(): Promise<UserWithPermissions[]> {
       fecha_nacimiento: authUser.user_metadata?.fecha_nacimiento || authUser.user_metadata?.birth_date || null,
       isAdmin: adminIds.has(authUser.id),
       isClubAdmin: clubAdminMap.has(authUser.id),
+      isAlumno: alumnoIds.has(authUser.id),
       adminClubs: clubAdminMap.get(authUser.id) || []
     }))
 
@@ -124,7 +141,7 @@ async function fetchAllUsers(): Promise<UserWithPermissions[]> {
 
 export default function UsersPage() {
   return (
-    <div className="flex-1 space-y-4">
+    <div className="flex-1 space-y-6">
       <AdminPageHeader title="Usuarios" />
       <Suspense fallback={<AdminContentSkeleton rows={6} filters={false} />}>
         <UsersContent />

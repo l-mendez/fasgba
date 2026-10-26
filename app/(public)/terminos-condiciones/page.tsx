@@ -6,7 +6,7 @@ const LEGAL_PROSE =
   "prose max-w-3xl [--tw-prose-body:var(--color-foreground)] [--tw-prose-headings:var(--color-terracotta)] [--tw-prose-bold:var(--color-foreground)] [--tw-prose-links:var(--color-terracotta)] [--tw-prose-bullets:var(--color-muted-foreground)] [--tw-prose-counters:var(--color-muted-foreground)] prose-h2:mb-3 prose-h2:mt-10 prose-h2:text-2xl prose-h2:font-bold prose-h2:tracking-tight prose-h3:text-lg first:prose-h2:mt-0"
 
 export const metadata: Metadata = {
-  title: 'Términos y Condiciones',
+  title: 'Términos y condiciones',
   description: 'Términos y condiciones de uso de la Federación de Ajedrez del Sur del Gran Buenos Aires',
 }
 
@@ -14,14 +14,14 @@ export default function TerminosCondicionesPage() {
   return (
     <>
       <PageHero
-        title="Términos y Condiciones"
+        title="Términos y condiciones"
         subtitle="Última actualización: 29 de septiembre de 2025"
       />
 
       <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
         <div className="container px-4 md:px-6">
           <article className={LEGAL_PROSE}>
-            <h2>1. Aceptación de los Términos</h2>
+            <h2>1. Aceptación de los términos</h2>
             <p>
               Bienvenido al sitio web de la Federación de Ajedrez del Sur del Gran Buenos Aires ("FASGBA", "nosotros" o "nuestro"). 
               Al acceder y usar fasgba.com (el "Sitio"), usted acepta estar sujeto a estos Términos y Condiciones ("Términos").
@@ -40,14 +40,14 @@ export default function TerminosCondicionesPage() {
               <li><strong>"Club Afiliado":</strong> Club de ajedrez reconocido oficialmente por FASGBA</li>
             </ul>
 
-            <h2>3. Uso del Sitio</h2>
+            <h2>3. Uso del sitio</h2>
             <h3>3.1 Elegibilidad</h3>
             <p>
               Para crear una cuenta, debe tener al menos 13 años de edad. Los menores entre 13 y 18 años deben contar con 
               la autorización de sus padres o tutores.
             </p>
 
-            <h3>3.2 Registro de Cuenta</h3>
+            <h3>3.2 Registro de cuenta</h3>
             <p>Para acceder a ciertas funcionalidades, debe crear una cuenta proporcionando:</p>
             <ul>
               <li>Información precisa y completa</li>
@@ -59,7 +59,7 @@ export default function TerminosCondicionesPage() {
               que ocurran bajo su cuenta.
             </p>
 
-            <h3>3.3 Uso Permitido</h3>
+            <h3>3.3 Uso permitido</h3>
             <p>Usted se compromete a usar el Sitio únicamente para:</p>
             <ul>
               <li>Consultar información sobre torneos, clubes y ranking</li>
@@ -68,7 +68,7 @@ export default function TerminosCondicionesPage() {
               <li>Interactuar con contenido de forma legal y respetuosa</li>
             </ul>
 
-            <h2>4. Conductas Prohibidas</h2>
+            <h2>4. Conductas prohibidas</h2>
             <p>Está estrictamente prohibido:</p>
             <ul>
               <li>Proporcionar información falsa o engañosa</li>
@@ -83,8 +83,8 @@ export default function TerminosCondicionesPage() {
               <li>Vender o transferir su cuenta a terceros</li>
             </ul>
 
-            <h2>5. Torneos y Ranking</h2>
-            <h3>5.1 Información de Torneos</h3>
+            <h2>5. Torneos y ranking</h2>
+            <h3>5.1 Información de torneos</h3>
             <p>
               La información sobre torneos se proporciona con fines informativos. FASGBA se reserva el derecho de modificar, 
               cancelar o reprogramar torneos sin previo aviso.
@@ -96,7 +96,7 @@ export default function TerminosCondicionesPage() {
               Es responsabilidad del jugador verificar los requisitos y fechas límite.
             </p>
 
-            <h3>5.3 Ranking Oficial</h3>
+            <h3>5.3 Ranking oficial</h3>
             <p>
               El ranking publicado en el Sitio es el ranking oficial de FASGBA. Los cálculos y actualizaciones 
               se realizan según los reglamentos de la federación. Las disputas sobre el ranking deben dirigirse 
@@ -109,45 +109,45 @@ export default function TerminosCondicionesPage() {
               correcciones necesarias una vez verificados.
             </p>
 
-            <h2>6. Contenido y Propiedad Intelectual</h2>
-            <h3>6.1 Propiedad del Sitio</h3>
+            <h2>6. Contenido y propiedad intelectual</h2>
+            <h3>6.1 Propiedad del sitio</h3>
             <p>
               El Sitio, su diseño, código, logotipos y contenido original son propiedad de FASGBA y están protegidos 
               por leyes de propiedad intelectual. No se autoriza su reproducción sin permiso expreso.
             </p>
 
-            <h3>6.2 Contenido de Usuarios</h3>
+            <h3>6.2 Contenido de usuarios</h3>
             <p>
               Al publicar contenido en el Sitio (si aplica), usted otorga a FASGBA una licencia mundial, no exclusiva, 
               libre de regalías para usar, reproducir y mostrar dicho contenido.
             </p>
 
-            <h3>6.3 Contenido de Clubes</h3>
+            <h3>6.3 Contenido de clubes</h3>
             <p>
               Los clubes afiliados son responsables del contenido que publican. FASGBA no asume responsabilidad 
               por la exactitud o legalidad del contenido generado por clubes.
             </p>
 
-            <h2>7. Roles y Permisos</h2>
+            <h2>7. Roles y permisos</h2>
             <h3>7.1 Administradores</h3>
             <p>
               Los administradores de FASGBA tienen acceso completo para gestionar torneos, ranking, noticias 
               y usuarios del Sitio.
             </p>
 
-            <h3>7.2 Administradores de Club</h3>
+            <h3>7.2 Administradores de club</h3>
             <p>
               Los administradores de club pueden gestionar información y contenido específico de su club. 
               Este rol es otorgado por FASGBA y puede ser revocado en cualquier momento.
             </p>
 
-            <h3>7.3 Usuarios Registrados</h3>
+            <h3>7.3 Usuarios registrados</h3>
             <p>
               Los usuarios registrados pueden acceder a funcionalidades adicionales como notificaciones 
               personalizadas y seguimiento de clubes.
             </p>
 
-            <h2>8. Notificaciones y Comunicaciones</h2>
+            <h2>8. Notificaciones y comunicaciones</h2>
             <p>
               Al registrarse, acepta recibir comunicaciones de FASGBA por correo electrónico, incluyendo:
             </p>
@@ -169,8 +169,8 @@ export default function TerminosCondicionesPage() {
               </a>, que forma parte integral de estos Términos.
             </p>
 
-            <h2>10. Suspensión y Terminación de Cuentas</h2>
-            <h3>10.1 Por el Usuario</h3>
+            <h2>10. Suspensión y terminación de cuentas</h2>
+            <h3>10.1 Por el usuario</h3>
             <p>
               Puede eliminar su cuenta en cualquier momento contactando a secretaria@fasgba.com. 
               Algunos datos pueden conservarse según lo requerido por ley.
@@ -188,7 +188,7 @@ export default function TerminosCondicionesPage() {
               <li>Abusa o acosa a otros usuarios</li>
             </ul>
 
-            <h2>11. Limitación de Responsabilidad</h2>
+            <h2>11. Limitación de responsabilidad</h2>
             <p>
               En la medida máxima permitida por la ley:
             </p>
@@ -215,7 +215,7 @@ export default function TerminosCondicionesPage() {
               <li>Contenido que usted publique o transmita</li>
             </ul>
 
-            <h2>13. Disputas y Apelaciones</h2>
+            <h2>13. Disputas y apelaciones</h2>
             <p>
               Las disputas relacionadas con torneos, ranking o sanciones deben ser presentadas formalmente por escrito a:
             </p>
@@ -226,7 +226,7 @@ export default function TerminosCondicionesPage() {
               Las decisiones de la comisión directiva de FASGBA son finales y vinculantes.
             </p>
 
-            <h2>14. Modificaciones del Servicio</h2>
+            <h2>14. Modificaciones del servicio</h2>
             <p>
               FASGBA se reserva el derecho de:
             </p>
@@ -239,20 +239,20 @@ export default function TerminosCondicionesPage() {
               Los cambios significativos serán notificados a través del Sitio o por correo electrónico.
             </p>
 
-            <h2>15. Enlaces a Terceros</h2>
+            <h2>15. Enlaces a terceros</h2>
             <p>
               El Sitio puede contener enlaces a sitios web de terceros. FASGBA no controla ni es responsable 
               del contenido, políticas o prácticas de sitios de terceros. El acceso a estos sitios es bajo 
               su propio riesgo.
             </p>
 
-            <h2>16. Fuerza Mayor</h2>
+            <h2>16. Fuerza mayor</h2>
             <p>
               FASGBA no será responsable por incumplimientos debido a circunstancias fuera de su control razonable, 
               incluyendo desastres naturales, fallas técnicas, pandemias, o decisiones gubernamentales.
             </p>
 
-            <h2>17. Ley Aplicable y Jurisdicción</h2>
+            <h2>17. Ley aplicable y jurisdicción</h2>
             <p>
               Estos Términos se rigen por las leyes de la República Argentina. Cualquier disputa legal se someterá 
               a la jurisdicción de los tribunales competentes de la Provincia de Buenos Aires, Argentina.
@@ -264,7 +264,7 @@ export default function TerminosCondicionesPage() {
               permanecerán en pleno vigor y efecto.
             </p>
 
-            <h2>19. Acuerdo Completo</h2>
+            <h2>19. Acuerdo completo</h2>
             <p>
               Estos Términos, junto con la Política de Privacidad, constituyen el acuerdo completo entre usted y 
               FASGBA respecto al uso del Sitio, y reemplazan todos los acuerdos previos.

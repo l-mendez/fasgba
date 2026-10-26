@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { ChevronDown, Pencil, Phone, Search, Trash2 } from "lucide-react"
-import Link from "next/link"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,14 +22,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { AdminConfirmDialog } from "@/components/admin-confirm-dialog"
+import { AdminRowActions, type AdminRowAction } from "@/components/admin-row-actions"
+import { AdminSortIcon } from "@/components/admin-sort-icon"
 import { apiCall } from "@/lib/utils/apiClient"
 
 interface ArbitroRow {
@@ -57,8 +52,6 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
   const [arbitros, setArbitros] = useState<ArbitroRow[]>(initialArbitros)
   const [searchTerm, setSearchTerm] = useState("")
   const [arbitroToDelete, setArbitroToDelete] = useState<number | null>(null)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [sortBy, setSortBy] = useState<string | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
@@ -78,12 +71,8 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
     }
   }
 
-  const getSortIcon = (field: string) => {
-    if (sortBy !== field) return null
-    if (sortOrder === 'asc') return '↑'
-    if (sortOrder === 'desc') return '↓'
-    return null
-  }
+  const sortDirection = (field: string) =>
+    sortBy === field && sortOrder !== 'original' ? sortOrder : null
 
   const filteredArbitros = useMemo(() => {
     const search = searchTerm.toLowerCase().trim()
@@ -121,33 +110,31 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
 
     try {
       setIsDeleting(true)
-      setError(null)
       await deleteArbitro(arbitroToDelete)
-      setArbitros(arbitros.filter((a) => a.id !== arbitroToDelete))
-      setShowDeleteDialog(false)
-      setArbitroToDelete(null)
+      setArbitros((prev) => prev.filter((a) => a.id !== arbitroToDelete))
+      toast.success("Árbitro eliminado")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al eliminar el árbitro")
+      toast.error(err instanceof Error ? err.message : "Error al eliminar el árbitro")
     } finally {
       setIsDeleting(false)
+      setArbitroToDelete(null)
     }
   }
 
+  const rowActions = (arbitro: ArbitroRow): AdminRowAction[] => [
+    { label: "Editar", icon: Pencil, href: `/admin/arbitros/${arbitro.id}/editar` },
+    { label: "Eliminar", icon: Trash2, onSelect: () => setArbitroToDelete(arbitro.id), destructive: true },
+  ]
+
   return (
     <div className="space-y-4">
-      {error && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-destructive">
-          <p>{error}</p>
-        </div>
-      )}
-
       <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Buscar por nombre, título o club..."
-            className="pl-8 w-full"
+            className="pl-10 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -162,17 +149,21 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
           <DropdownMenuContent align="end" className="w-[200px]">
             <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => handleSort('name')}>
-              Nombre {getSortIcon('name')}
+            <DropdownMenuItem onClick={() => handleSort('name')} className="justify-between">
+              Nombre
+              <AdminSortIcon direction={sortDirection('name')} />
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSort('title')}>
-              Título {getSortIcon('title')}
+            <DropdownMenuItem onClick={() => handleSort('title')} className="justify-between">
+              Título
+              <AdminSortIcon direction={sortDirection('title')} />
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSort('club')}>
-              Club {getSortIcon('club')}
+            <DropdownMenuItem onClick={() => handleSort('club')} className="justify-between">
+              Club
+              <AdminSortIcon direction={sortDirection('club')} />
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSort('phone')}>
-              Teléfono {getSortIcon('phone')}
+            <DropdownMenuItem onClick={() => handleSort('phone')} className="justify-between">
+              Teléfono
+              <AdminSortIcon direction={sortDirection('phone')} />
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => { setSortBy(null); setSortOrder('original') }}>
@@ -190,28 +181,30 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
               <TableHead className="cursor-pointer hover:bg-muted/50 select-none" onClick={() => handleSort('name')}>
                 <div className="flex items-center gap-1">
                   Nombre
-                  {getSortIcon('name') && <span className="text-xs">{getSortIcon('name')}</span>}
+                  <AdminSortIcon direction={sortDirection('name')} />
                 </div>
               </TableHead>
               <TableHead className="cursor-pointer hover:bg-muted/50 select-none" onClick={() => handleSort('title')}>
                 <div className="flex items-center gap-1">
                   Título
-                  {getSortIcon('title') && <span className="text-xs">{getSortIcon('title')}</span>}
+                  <AdminSortIcon direction={sortDirection('title')} />
                 </div>
               </TableHead>
               <TableHead className="cursor-pointer hover:bg-muted/50 select-none" onClick={() => handleSort('club')}>
                 <div className="flex items-center gap-1">
                   Club
-                  {getSortIcon('club') && <span className="text-xs">{getSortIcon('club')}</span>}
+                  <AdminSortIcon direction={sortDirection('club')} />
                 </div>
               </TableHead>
               <TableHead className="cursor-pointer hover:bg-muted/50 select-none" onClick={() => handleSort('phone')}>
                 <div className="flex items-center gap-1">
                   Teléfono
-                  {getSortIcon('phone') && <span className="text-xs">{getSortIcon('phone')}</span>}
+                  <AdminSortIcon direction={sortDirection('phone')} />
                 </div>
               </TableHead>
-              <TableHead className="w-[90px]"></TableHead>
+              <TableHead className="w-[60px]">
+                <span className="sr-only">Acciones</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -229,26 +222,7 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
                   <TableCell>{arbitro.club_name || "Sin club"}</TableCell>
                   <TableCell>{arbitro.phone || "—"}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex shrink-0 justify-end gap-1">
-                      <Button asChild variant="ghost" size="icon" className="h-8 w-8" aria-label="Editar" title="Editar">
-                        <Link href={`/admin/arbitros/${arbitro.id}/editar`}>
-                          <Pencil className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        aria-label="Eliminar"
-                        title="Eliminar"
-                        onClick={() => {
-                          setArbitroToDelete(arbitro.id)
-                          setShowDeleteDialog(true)
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <AdminRowActions actions={rowActions(arbitro)} />
                   </TableCell>
                 </TableRow>
               ))
@@ -285,26 +259,7 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
                       )}
                     </div>
                   </div>
-                  <div className="flex shrink-0 justify-end gap-1">
-                    <Button asChild variant="ghost" size="icon" className="h-8 w-8" aria-label="Editar" title="Editar">
-                      <Link href={`/admin/arbitros/${arbitro.id}/editar`}>
-                        <Pencil className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      aria-label="Eliminar"
-                      title="Eliminar"
-                      onClick={() => {
-                        setArbitroToDelete(arbitro.id)
-                        setShowDeleteDialog(true)
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <AdminRowActions actions={rowActions(arbitro)} />
                 </div>
               </div>
             ))}
@@ -312,33 +267,13 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
         )}
       </div>
 
-      {/* Delete Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>¿Estás seguro?</DialogTitle>
-            <DialogDescription>
-              Esta acción no se puede deshacer. Se eliminará permanentemente el árbitro.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-              disabled={isDeleting}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleDeleteArbitro}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? 'Eliminando...' : 'Eliminar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdminConfirmDialog
+        open={arbitroToDelete !== null}
+        onOpenChange={(open) => !open && setArbitroToDelete(null)}
+        title="¿Eliminar árbitro?"
+        onConfirm={handleDeleteArbitro}
+        pending={isDeleting}
+      />
     </div>
   )
 }

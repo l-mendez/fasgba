@@ -76,8 +76,8 @@ export default function AdminArbitrosPage() {
         action={
           <Button asChild>
             <Link href="/admin/arbitros/nuevo">
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Árbitro
+              <Plus className="h-4 w-4" />
+              Nuevo árbitro
             </Link>
           </Button>
         }

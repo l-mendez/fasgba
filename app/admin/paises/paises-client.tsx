@@ -7,19 +7,9 @@ import { toast } from 'sonner'
 
 import { CountryRow } from '@/app/admin/paises/country-row'
 import { PaisesLogs } from '@/app/admin/paises/paises-logs'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { AdminConfirmDialog } from '@/components/admin-confirm-dialog'
 import { InfoPill } from '@/components/info-pill'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -42,6 +32,9 @@ interface PaisesClientProps {
   initialOverview: CountriesOverview
   initialLogs: CountryAccessLogItem[]
 }
+
+const plural = (count: number, singular: string, pluralForm: string) =>
+  `${count} ${count === 1 ? singular : pluralForm}`
 
 type PendingChange = { country: CountryAccessOverviewItem; enabled: boolean }
 type PendingBulk = { continent: Continent; enabled: boolean }
@@ -78,7 +71,7 @@ export function AdminPaisesClient({ initialOverview, initialLogs }: PaisesClient
       setOverview(nextOverview)
       setLogs(nextLogs.logs)
     } catch {
-      toast.info('No se pudo actualizar la vista. Recargá la página.')
+      toast.info('No se pudo actualizar la vista. Recarga la página.')
     }
   }
 
@@ -116,10 +109,12 @@ export function AdminPaisesClient({ initialOverview, initialLogs }: PaisesClient
       })
       await refresh()
 
-      const skipped = result.skipped.length
+      const updated: number = result.updated.length
+      const skipped: number = result.skipped.length
+      const verb = enabled ? 'habilitado' : 'deshabilitado'
       toast.success(
-        `${result.updated.length} país(es) ${enabled ? 'habilitados' : 'deshabilitados'} en ${CONTINENTS[target].label}` +
-          (skipped > 0 ? ` · ${skipped} omitido(s)` : '')
+        `${plural(updated, `país ${verb}`, `países ${verb}s`)} en ${CONTINENTS[target].label}` +
+          (skipped > 0 ? ` · ${plural(skipped, 'omitido', 'omitidos')}` : '')
       )
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Error al actualizar el continente')
@@ -226,12 +221,7 @@ export function AdminPaisesClient({ initialOverview, initialLogs }: PaisesClient
         )}
 
         {visibleCountries.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-center text-muted-foreground">
-              <Globe className="mx-auto mb-3 h-10 w-10 opacity-50" />
-              <p>No se encontraron países.</p>
-            </CardContent>
-          </Card>
+          <p className="py-8 text-center text-muted-foreground">No se encontraron países</p>
         ) : (
           <div className="space-y-2">
             {visibleCountries.map((country) => (
@@ -246,54 +236,32 @@ export function AdminPaisesClient({ initialOverview, initialLogs }: PaisesClient
           </div>
         )}
 
-        <AlertDialog open={!!pendingChange} onOpenChange={(open) => !open && setPendingChange(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Deshabilitar {pendingChange?.country.name}?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Tuvo {pendingChange?.country.allowed7d} visita(s) en los últimos 7 días. Quienes
-                accedan desde ese país verán una página de acceso restringido.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  if (pendingChange) applyToggle(pendingChange.country, pendingChange.enabled)
-                  setPendingChange(null)
-                }}
-              >
-                Deshabilitar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <AdminConfirmDialog
+          open={!!pendingChange}
+          onOpenChange={(open) => !open && setPendingChange(null)}
+          title={`¿Deshabilitar ${pendingChange?.country.name ?? ''}?`}
+          description={`Tuvo ${plural(pendingChange?.country.allowed7d ?? 0, 'visita', 'visitas')} en los últimos 7 días. Quienes accedan desde ese país verán una página de acceso restringido.`}
+          confirmLabel="Deshabilitar"
+          onConfirm={() => {
+            if (pendingChange) applyToggle(pendingChange.country, pendingChange.enabled)
+            setPendingChange(null)
+          }}
+        />
 
-        <AlertDialog open={!!pendingBulk} onOpenChange={(open) => !open && setPendingBulk(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {pendingBulk?.enabled ? 'Habilitar' : 'Deshabilitar'}{' '}
-                {pendingBulk ? CONTINENTS[pendingBulk.continent].label : ''}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                Se aplicará a todos los países del continente. Argentina y los países en espera de
-                enfriamiento se omiten automáticamente.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  if (pendingBulk) applyBulk(pendingBulk)
-                  setPendingBulk(null)
-                }}
-              >
-                Confirmar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <AdminConfirmDialog
+          open={!!pendingBulk}
+          onOpenChange={(open) => !open && setPendingBulk(null)}
+          title={`¿${pendingBulk?.enabled ? 'Habilitar' : 'Deshabilitar'} ${
+            pendingBulk ? CONTINENTS[pendingBulk.continent].label : ''
+          }?`}
+          description="Se aplicará a todos los países del continente. Argentina y los países en espera de enfriamiento se omiten automáticamente."
+          confirmLabel={pendingBulk?.enabled ? 'Habilitar' : 'Deshabilitar'}
+          destructive={!pendingBulk?.enabled}
+          onConfirm={() => {
+            if (pendingBulk) applyBulk(pendingBulk)
+            setPendingBulk(null)
+          }}
+        />
       </div>
     </TooltipProvider>
   )

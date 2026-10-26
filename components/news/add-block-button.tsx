@@ -1,79 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { Plus, ChevronDown, ImageIcon, Type } from "lucide-react"
-import { DiamondIcon as ChessIcon } from "lucide-react"
+import { Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-
-interface AddBlockButtonProps {
-  onAddTextBlock: () => void
-  onAddChessGameBlock: () => void
-  onAddImageBlock: () => void
-}
-
-export function AddBlockButton({
-  onAddTextBlock,
-  onAddChessGameBlock,
-  onAddImageBlock,
-}: AddBlockButtonProps) {
-  const [isOpen, setIsOpen] = useState(false)
-
-  return (
-    <div className="flex justify-center my-4">
-      <div className="relative">
-        <Button
-          variant="outline"
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center"
-          type="button"
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          Añadir bloque
-          <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-        </Button>
-
-        {isOpen && (
-          <div className="absolute z-10 mt-1 w-48 bg-popover text-popover-foreground rounded-md shadow-md border overflow-hidden">
-            <button
-              className="w-full text-left px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground flex items-center"
-              onClick={() => {
-                onAddTextBlock()
-                setIsOpen(false)
-              }}
-              type="button"
-            >
-              <Type className="mr-2 h-4 w-4" />
-              <span>Texto</span>
-            </button>
-            <button
-              className="w-full text-left px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground flex items-center"
-              onClick={() => {
-                onAddImageBlock()
-                setIsOpen(false)
-              }}
-              type="button"
-            >
-              <ImageIcon className="mr-2 h-4 w-4" />
-              <span>Imagen</span>
-            </button>
-            <button
-              className="w-full text-left px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground flex items-center"
-              onClick={() => {
-                onAddChessGameBlock()
-                setIsOpen(false)
-              }}
-              type="button"
-            >
-              <ChessIcon className="mr-2 h-4 w-4" />
-              <span>Partida de ajedrez</span>
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
 
 interface SimpleAddBlockButtonsProps {
   onAddTextBlock: () => void

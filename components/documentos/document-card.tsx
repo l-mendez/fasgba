@@ -63,7 +63,8 @@ export function DocumentCard({ documento }: { documento: DocumentoSummary }) {
       </div>
 
       <div className="mt-auto flex gap-2">
-        {actionButton("view", Eye, "Ver")}
+        {/* Browsers can't preview spreadsheets: "Ver" would just download them. */}
+        {!isExcel && actionButton("view", Eye, "Ver")}
         {actionButton("download", Download, "Descargar")}
       </div>
     </div>

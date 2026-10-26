@@ -5,9 +5,9 @@ import { useRouter, usePathname } from "next/navigation"
 import { CastleIcon, LogOut, Settings, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
+import { isActivePath } from "@/components/main-nav"
 
 // Signs out and returns to the home page. Shared with the mobile menu.
 export function useSignOut() {
@@ -48,7 +48,7 @@ export function AuthButtons() {
     return (
       <div className="flex items-center gap-2">
         <Button asChild variant="outline" size="sm" className="border-terracotta/40 text-terracotta hover:text-terracotta">
-          <Link href="/login">Iniciar Sesión</Link>
+          <Link href="/login">Iniciar sesión</Link>
         </Button>
         <Button asChild size="sm" className="bg-terracotta text-white hover:bg-terracotta/90">
           <Link href="/registro">Registrarse</Link>
@@ -57,16 +57,15 @@ export function AuthButtons() {
     )
   }
 
+  const activeClass = (href: string) =>
+    isActivePath(pathname, href) ? "text-terracotta" : "text-muted-foreground"
+
+  // Icon-only below xl so the header fits at lg with every link shown.
   const roleLink = (href: string, label: string, Icon: typeof Shield) => (
-    <Button
-      asChild
-      variant="ghost"
-      size="sm"
-      className={cn(pathname.startsWith(href) ? "text-terracotta" : "text-muted-foreground")}
-    >
-      <Link href={href}>
+    <Button asChild variant="ghost" size="sm" className={activeClass(href)}>
+      <Link href={href} title={label}>
         <Icon />
-        {label}
+        <span className="sr-only xl:not-sr-only">{label}</span>
       </Link>
     </Button>
   )
@@ -75,7 +74,7 @@ export function AuthButtons() {
     <div className="flex items-center gap-1">
       {isAdmin && roleLink("/admin", "Admin", Shield)}
       {isClubAdmin && roleLink("/club-admin", "Club Admin", CastleIcon)}
-      <Button asChild variant="ghost" size="icon" className="text-muted-foreground">
+      <Button asChild variant="ghost" size="icon" className={activeClass("/ajustes")}>
         <Link href="/ajustes" aria-label="Ajustes" title="Ajustes">
           <Settings />
         </Link>

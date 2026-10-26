@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Plus, Pencil, Trash2, Search, Users, Home, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Pencil, Trash2, Search, Loader2 } from "lucide-react"
+import { AdminConfirmDialog } from "@/components/admin-confirm-dialog"
+import { AdminRowActions } from "@/components/admin-row-actions"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -19,20 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
 import { apiCall } from "@/lib/utils/apiClient"
-import Link from "next/link"
 
 const PAGE_SIZE = 50
 
@@ -52,28 +41,16 @@ interface Club {
   name: string
 }
 
-interface Stats {
-  total: number
-  withFideId: number
-  withClub: number
-}
-
 interface PlayersManagementClientProps {
   initialPlayers: Player[]
   initialClubs: Club[]
-  initialStats: Stats
   initialTotalResults: number
-  showHeader?: boolean
-  showStats?: boolean
 }
 
 export function PlayersManagementClient({
   initialPlayers,
   initialClubs,
-  initialStats,
   initialTotalResults,
-  showHeader = true,
-  showStats = true,
 }: PlayersManagementClientProps) {
   const [players, setPlayers] = useState<Player[]>(initialPlayers)
   const [searchTerm, setSearchTerm] = useState("")
@@ -85,8 +62,6 @@ export function PlayersManagementClient({
   const [hasMore, setHasMore] = useState(initialPlayers.length < initialTotalResults)
   const [page, setPage] = useState(1)
   const [totalResults, setTotalResults] = useState(initialTotalResults)
-  const [stats, setStats] = useState<Stats | null>(initialStats)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [playerToDelete, setPlayerToDelete] = useState<Player | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -154,13 +129,10 @@ export function PlayersManagementClient({
     try {
       setIsDeleting(true)
       await apiCall(`/api/players/${playerToDelete.id}`, { method: 'DELETE' })
-      toast.success('Jugador eliminado exitosamente')
-      setIsDeleteDialogOpen(false)
+      toast.success('Jugador eliminado')
       setPlayerToDelete(null)
       // Refresh current data
       fetchPlayers(1, debouncedSearch, selectedClubId, false)
-      // Refresh stats
-      apiCall('/api/players?stats=true').then(setStats).catch(() => {})
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Error al eliminar jugador')
     } finally {
@@ -168,68 +140,17 @@ export function PlayersManagementClient({
     }
   }
 
-  const openDeleteDialog = (player: Player) => {
-    setPlayerToDelete(player)
-    setIsDeleteDialogOpen(true)
-  }
-
   return (
     <div className="space-y-6">
-      {showHeader ? (
-        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Jugadores</h1>
-          </div>
-          <Button asChild className="bg-terracotta hover:bg-terracotta/90">
-            <Link href="/jugadores/nuevo">
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Jugador
-            </Link>
-          </Button>
-        </div>
-      ) : null}
-
-      {showStats ? (
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Jugadores</CardTitle>
-              <Users className="h-4 w-4 text-amber" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.total ?? "—"}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Con FIDE ID</CardTitle>
-              <Users className="h-4 w-4 text-amber" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.withFideId ?? "—"}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Con Club</CardTitle>
-              <Home className="h-4 w-4 text-amber" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.withClub ?? "—"}</div>
-            </CardContent>
-          </Card>
-        </div>
-      ) : null}
-
       {/* Search and Filters */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="flex items-center space-x-2 flex-1">
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por nombre, FIDE ID o club..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
+            className="pl-10"
           />
         </div>
         <Select value={selectedClubId} onValueChange={(v) => setSelectedClubId(v === "all" ? "" : v)}>
@@ -247,17 +168,16 @@ export function PlayersManagementClient({
         </Select>
         {(debouncedSearch || selectedClubId) && (
           <span className="text-sm text-muted-foreground whitespace-nowrap">
-            {totalResults} resultado{totalResults !== 1 ? 's' : ''}
+            {totalResults} {totalResults === 1 ? 'resultado' : 'resultados'}
           </span>
         )}
       </div>
 
       {/* Players Table */}
-      <Card>
+      <div className="rounded-md border">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-terracotta" />
-            <span className="ml-2 text-muted-foreground">Cargando jugadores...</span>
+            <Loader2 className="h-6 w-6 animate-spin text-terracotta" aria-label="Cargando" />
           </div>
         ) : (
           <>
@@ -268,7 +188,7 @@ export function PlayersManagementClient({
                   <TableHead className="hidden sm:table-cell">FIDE ID</TableHead>
                   <TableHead className="hidden sm:table-cell">Rating</TableHead>
                   <TableHead className="hidden md:table-cell">Club</TableHead>
-                  <TableHead className="w-[88px]"><span className="sr-only">Acciones</span></TableHead>
+                  <TableHead className="w-[56px]"><span className="sr-only">Acciones</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -293,22 +213,13 @@ export function PlayersManagementClient({
                       <TableCell className="hidden sm:table-cell">{player.rating || "—"}</TableCell>
                       <TableCell className="hidden md:table-cell">{player.club?.name || "—"}</TableCell>
                       <TableCell>
-                        <div className="flex items-center justify-end gap-1">
-                          <Button asChild variant="ghost" size="icon" className="h-8 w-8" title="Editar jugador">
-                            <Link href={`/jugadores/${player.id}/editar`} aria-label="Editar jugador">
-                              <Pencil className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openDeleteDialog(player)}
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            aria-label="Eliminar jugador"
-                            title="Eliminar jugador"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <div className="flex justify-end">
+                          <AdminRowActions
+                            actions={[
+                              { label: "Editar", icon: Pencil, href: `/jugadores/${player.id}/editar` },
+                              { label: "Eliminar", icon: Trash2, destructive: true, onSelect: () => setPlayerToDelete(player) },
+                            ]}
+                          />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -322,49 +233,31 @@ export function PlayersManagementClient({
 
             {isLoadingMore && (
               <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-5 w-5 animate-spin text-terracotta" />
-                <span className="ml-2 text-sm text-muted-foreground">Cargando más...</span>
+                <Loader2 className="h-5 w-5 animate-spin text-terracotta" aria-label="Cargando" />
               </div>
             )}
 
             {!hasMore && players.length > 0 && (
               <p className="text-center text-sm text-muted-foreground py-4">
-                {players.length} jugador{players.length !== 1 ? 'es' : ''} mostrado{players.length !== 1 ? 's' : ''}
+                {players.length} {players.length === 1 ? 'jugador' : 'jugadores'}
               </p>
             )}
           </>
         )}
-      </Card>
+      </div>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará permanentemente el jugador{" "}
-              <strong>{playerToDelete?.full_name}</strong> del sistema.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Eliminando...
-                </>
-              ) : (
-                'Eliminar'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AdminConfirmDialog
+        open={playerToDelete !== null}
+        onOpenChange={(open) => !open && setPlayerToDelete(null)}
+        title="¿Eliminar jugador?"
+        description={
+          <>
+            Se eliminará <strong>{playerToDelete?.full_name}</strong>. Esta acción no se puede deshacer.
+          </>
+        }
+        onConfirm={handleDelete}
+        pending={isDeleting}
+      />
     </div>
   )
 }

@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { TournamentFormFields } from "@/components/tournament/tournament-form-fields"
+import { TournamentFormFields, TOURNAMENT_FORM_ACTIONS_CLASS } from "@/components/tournament/tournament-form-fields"
 import { apiCall } from "@/lib/utils/apiClient"
 import {
   createEmptyTournamentFormData,
@@ -26,37 +26,37 @@ import {
   type TournamentFormData,
 } from "@/lib/tournament-form-utils"
 
-interface Club {
+export interface OrganizerClub {
   id: number
   name: string
-  description?: string
-  location?: string
-  website?: string
-  email?: string
-  phone?: string
-  created_at: string
-  updated_at: string
+  address: string | null
 }
 
 interface NuevoTorneoFormProps {
   isSiteAdmin: boolean
-  clubs: Club[]
-  selectedClub: Club | null
+  clubs: OrganizerClub[]
+  /** Preselected organizer; null means FASGBA (site admins only). */
+  defaultClubId: number | null
+  returnPath: string
+  /** Query appended to the editor link so it returns to the same panel. */
+  editQuery: string
 }
 
-export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorneoFormProps) {
+const FASGBA_VALUE = "none"
+
+export function NuevoTorneoForm({ isSiteAdmin, clubs, defaultClubId, returnPath, editQuery }: NuevoTorneoFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [newDate, setNewDate] = useState("")
-  const [selectedClubId, setSelectedClubId] = useState<number | undefined>(
-    selectedClub?.id
-  )
+  const [clubValue, setClubValue] = useState(defaultClubId ? String(defaultClubId) : FASGBA_VALUE)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [createdTournamentId, setCreatedTournamentId] = useState<number | null>(null)
 
   const [formData, setFormData] = useState<TournamentFormData>(createEmptyTournamentFormData())
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+
+  const selectedClubId = clubValue === FASGBA_VALUE ? undefined : Number(clubValue)
+  const singleClub = !isSiteAdmin && clubs.length === 1 ? clubs[0] : null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -89,8 +89,7 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
         setCreatedTournamentId(result.id)
         setShowSuccessDialog(true)
       } else {
-        const redirectPath = isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"
-        router.push(redirectPath)
+        router.push(returnPath)
       }
     } catch (err) {
       console.error('Error creating tournament:', err)
@@ -127,14 +126,13 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
     }
   }
 
-  const addDate = () => {
-    if (!newDate || formData.dates.includes(newDate)) return
+  const addDate = (date: string) => {
+    if (!date || formData.dates.includes(date)) return
 
     setFormData(prev => ({
       ...prev,
-      dates: [...prev.dates, newDate].sort()
+      dates: [...prev.dates, date].sort()
     }))
-    setNewDate("")
 
     if (validationErrors.dates) {
       setValidationErrors(prev => ({ ...prev, dates: "" }))
@@ -148,8 +146,6 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
     }))
   }
 
-  const cancelPath = isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"
-
   return (
     <>
       <Card>
@@ -157,75 +153,67 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && <ErrorAlert message={error} />}
 
-            {isSiteAdmin && clubs.length > 0 && (
-              <div className="space-y-2">
-                  <Label htmlFor="club">Club organizador</Label>
-                  <Select
-                    value={selectedClubId?.toString()}
-                    onValueChange={(value) => {
-                      setSelectedClubId(value === "none" ? undefined : parseInt(value))
-                      if (validationErrors.club) {
-                        setValidationErrors(prev => ({ ...prev, club: "" }))
-                      }
-                    }}
-                  >
-                    <SelectTrigger className={validationErrors.club ? "border-destructive" : ""}>
-                      <SelectValue placeholder="Seleccionar club (opcional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">FASGBA</SelectItem>
-                      {clubs.map((club) => (
-                        <SelectItem key={club.id} value={club.id.toString()}>
-                          {club.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {validationErrors.club && (
-                    <p className="text-sm text-destructive">{validationErrors.club}</p>
-                  )}
-              </div>
-            )}
-
-            {!isSiteAdmin && selectedClub && (
+            {singleClub ? (
               <div className="space-y-2">
                 <Label>Club organizador</Label>
                 <div className="p-3 bg-muted rounded-md">
-                  <p className="text-sm font-medium">{selectedClub.name}</p>
-                  {selectedClub.location && (
-                    <p className="text-sm text-muted-foreground">{selectedClub.location}</p>
+                  <p className="text-sm font-medium">{singleClub.name}</p>
+                  {singleClub.address && (
+                    <p className="text-sm text-muted-foreground">{singleClub.address}</p>
                   )}
                 </div>
               </div>
-            )}
+            ) : clubs.length > 0 ? (
+              <div className="space-y-2">
+                <Label htmlFor="club">Club organizador</Label>
+                <Select
+                  value={clubValue}
+                  onValueChange={(value) => {
+                    setClubValue(value)
+                    if (validationErrors.club) {
+                      setValidationErrors(prev => ({ ...prev, club: "" }))
+                    }
+                  }}
+                >
+                  <SelectTrigger id="club" className={validationErrors.club ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Seleccionar club" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isSiteAdmin && <SelectItem value={FASGBA_VALUE}>FASGBA</SelectItem>}
+                    {clubs.map((club) => (
+                      <SelectItem key={club.id} value={club.id.toString()}>
+                        {club.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {validationErrors.club && (
+                  <p className="text-sm text-destructive">{validationErrors.club}</p>
+                )}
+              </div>
+            ) : null}
 
             <TournamentFormFields
               formData={formData}
               validationErrors={validationErrors}
-              newDate={newDate}
-              setNewDate={setNewDate}
               onChange={handleChange}
               onSelectChange={handleSelectChange}
               onAddDate={addDate}
               onRemoveDate={removeDate}
             />
 
-            <div className="flex gap-2 pt-2">
-              <Button
-                type="submit"
-                disabled={isLoading}
-              >
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isLoading ? "Creando..." : "Crear torneo"}
-              </Button>
-
+            <div className={TOURNAMENT_FORM_ACTIONS_CLASS}>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push(cancelPath)}
+                onClick={() => router.push(returnPath)}
                 disabled={isLoading}
               >
                 Cancelar
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isLoading ? "Creando..." : "Crear torneo"}
               </Button>
             </div>
           </form>
@@ -240,14 +228,14 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
               Torneo creado
             </DialogTitle>
             <DialogDescription>
-              Configurá ahora equipos, rondas, partidas y jugadores, o hacelo más tarde.
+              Configura rondas y partidas ahora o más tarde.
             </DialogDescription>
           </DialogHeader>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
-              onClick={() => router.push(cancelPath)}
+              onClick={() => router.push(returnPath)}
               className="w-full sm:w-auto"
             >
               Volver
@@ -255,7 +243,7 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
             <Button
               onClick={() => {
                 if (createdTournamentId) {
-                  router.push(`/torneos/${createdTournamentId}/editar`)
+                  router.push(`/torneos/${createdTournamentId}/editar${editQuery}`)
                 }
               }}
               className="w-full sm:w-auto"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
@@ -45,6 +45,7 @@ import {
 import type { Player, RatingType, RankingData } from "@/lib/rankingUtils";
 
 const PAGE_SIZE = 50;
+const SEARCH_DEBOUNCE_MS = 300;
 
 // Rating gains use the brand amber (readable in both themes); losses use destructive.
 
@@ -150,6 +151,8 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
   const search = searchParams.get("search") || "";
   const activeFilter = normalizeActiveFilter(searchParams.get("active"));
   const sortBy = normalizeSortBy(searchParams.get("sortBy"));
+  // Deep link from the home ranking: /ranking?jugador=<id> opens that player's panel.
+  const jugadorParam = searchParams.get("jugador");
 
   const latestFilename = availableRankings[0]?.filename || "";
   // The server already rendered the latest ranking; only a past selection needs
@@ -163,10 +166,35 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
   const [searchTerm, setSearchTerm] = useState(search);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const listTopRef = useRef<HTMLDivElement>(null);
+  // Last search value this component wrote to the URL, so the URL→input sync
+  // below only reacts to outside navigation and never clobbers typing.
+  const pushedSearchRef = useRef(search);
 
   useEffect(() => {
-    setSearchTerm(search);
+    if (search !== pushedSearchRef.current) {
+      pushedSearchRef.current = search;
+      setSearchTerm(search);
+    }
   }, [search]);
+
+  // Live search: write the (debounced) term to the URL as the user types.
+  useEffect(() => {
+    const trimmed = searchTerm.trim();
+    if (trimmed === search) return;
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (trimmed) {
+        params.set("search", trimmed);
+      } else {
+        params.delete("search");
+      }
+      params.set("page", "1");
+      pushedSearchRef.current = trimmed;
+      router.replace(`?${params.toString()}`, { scroll: false });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchTerm, search, searchParams, router]);
 
   // Selecting a *past* ranking loads that specific file on the client; the
   // latest ranking (the common case) is already provided via initialPlayers.
@@ -216,23 +244,20 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
     };
   }, [players, sortBy, search, activeFilter, page]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const params = new URLSearchParams(searchParams.toString());
-    const trimmed = searchTerm.trim();
-    if (trimmed) {
-      params.set("search", trimmed);
-    } else {
-      params.delete("search");
-    }
-    params.set("page", "1");
-    router.replace(`?${params.toString()}`, { scroll: false });
-  };
+  const linkedPlayer = useMemo(
+    () => (jugadorParam && players?.find((p) => p.id === jugadorParam)) || null,
+    [jugadorParam, players]
+  );
 
   const handlePageChange = (nextPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", nextPage.toString());
     router.replace(`?${params.toString()}`, { scroll: false });
+    // Bring the top of the list back into view (e.g. after using the bottom pagination).
+    const listTop = listTopRef.current;
+    if (listTop && listTop.getBoundingClientRect().top < 80) {
+      listTop.scrollIntoView({ block: "start" });
+    }
   };
 
   const handleRankingChange = (rankingFilename: string) => {
@@ -262,23 +287,39 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
     setDetailOpen(true);
   };
 
+  // A deep-linked player keeps the panel open until it is closed, which also
+  // drops ?jugador= from the URL.
+  const handleDetailOpenChange = (open: boolean) => {
+    setDetailOpen(open);
+    if (!open && linkedPlayer) {
+      setSelectedPlayer(linkedPlayer);
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("jugador");
+      const query = params.toString();
+      router.replace(query ? `?${query}` : "/ranking", { scroll: false });
+    }
+  };
+
   return (
     <div className="container px-4 md:px-6">
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-        <form onSubmit={handleSearchSubmit} className="flex flex-1 items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Buscar jugador o club..."
+            aria-label="Buscar jugador o club"
+            className="pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <Button type="submit" variant="outline" size="icon" className="shrink-0" aria-label="Buscar" title="Buscar">
-            <Search />
-          </Button>
-        </form>
+        </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <RatingTypeSelector currentType={sortBy} />
+        {/* Mobile: tabs on one row, then the two selects side by side */}
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center">
+          <div className="col-span-2">
+            <RatingTypeSelector currentType={sortBy} />
+          </div>
 
           <Select
             value={activeFilter}
@@ -286,7 +327,7 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
               handleActiveChange(v as "active" | "inactive" | "all")
             }
           >
-            <SelectTrigger className="w-32" aria-label="Actividad">
+            <SelectTrigger className="w-full sm:w-32" aria-label="Actividad">
               <SelectValue placeholder="Actividad" />
             </SelectTrigger>
             <SelectContent>
@@ -301,7 +342,7 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
               value={currentRanking || availableRankings[0]?.filename || ""}
               onValueChange={handleRankingChange}
             >
-              <SelectTrigger className="w-40" aria-label="Ranking">
+              <SelectTrigger className="w-full sm:w-40" aria-label="Ranking">
                 <SelectValue placeholder="Ranking" />
               </SelectTrigger>
               <SelectContent>
@@ -325,8 +366,10 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
         <div className="h-96 w-full animate-pulse rounded-md bg-muted" />
       ) : (
         <>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">{totalPlayers} jugadores</p>
+          <div ref={listTopRef} className="mb-3 flex scroll-mt-20 flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              {totalPlayers} {totalPlayers === 1 ? "jugador" : "jugadores"}
+            </p>
             <PaginationControls
               currentPage={page}
               totalPages={totalPages}
@@ -353,10 +396,10 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
       )}
 
       <PlayerDetailSheet
-        player={selectedPlayer}
+        player={linkedPlayer ?? selectedPlayer}
         rankingFilename={currentRanking || ""}
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
+        open={detailOpen || linkedPlayer !== null}
+        onOpenChange={handleDetailOpenChange}
       />
     </div>
   );

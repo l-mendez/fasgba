@@ -66,26 +66,29 @@ export function formatDate(date: Date): string {
   });
 }
 
+// Fixed abbreviations (not Intl) so server and client render the same text.
+const MONTH_SHORT_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
 /**
- * Formats a date range for tournaments
+ * Formats a tournament date range compactly:
+ * "16 may 2026", "10–24 oct 2026", "28 sep – 3 oct 2026", "28 dic 2025 – 3 ene 2026".
+ * Dates are calendar dates parsed as local dates (see transformTournamentToDisplay).
  */
 export function formatDateRange(startDate: Date, endDate: Date | null): string {
+  const day = (d: Date) => d.getDate();
+  const month = (d: Date) => MONTH_SHORT_ES[d.getMonth()];
+  const full = (d: Date) => `${day(d)} ${month(d)} ${d.getFullYear()}`;
+
   if (!endDate || startDate.toDateString() === endDate.toDateString()) {
-    return formatDate(startDate);
+    return full(startDate);
   }
-
-  const startStr = formatArgentinaCalendarDate(startDate, {
-    day: 'numeric',
-    month: 'short'
-  });
-
-  const endStr = formatArgentinaCalendarDate(endDate, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
-
-  return `${startStr} - ${endStr}`;
+  if (startDate.getFullYear() !== endDate.getFullYear()) {
+    return `${full(startDate)} – ${full(endDate)}`;
+  }
+  if (startDate.getMonth() !== endDate.getMonth()) {
+    return `${day(startDate)} ${month(startDate)} – ${full(endDate)}`;
+  }
+  return `${day(startDate)}–${full(endDate)}`;
 }
 
 /**

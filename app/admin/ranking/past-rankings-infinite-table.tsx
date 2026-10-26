@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Archive, Calendar, CheckCircle2, FileSpreadsheet, RefreshCw } from "lucide-react"
+import { Archive, Calendar, CheckCircle2, RefreshCw } from "lucide-react"
 
 import { RankingRowActions } from "./ranking-row-actions"
 import type { PaginatedPastRankings, PastRanking } from "./types"
@@ -69,7 +69,7 @@ export function PastRankingsInfiniteTable({ initialData }: PastRankingsInfiniteT
       setNextPage(result.nextPage)
     } catch (error) {
       console.error("Load rankings error:", error)
-      setLoadError(error instanceof Error ? error.message : "No se pudieron cargar más rankings.")
+      setLoadError(error instanceof Error ? error.message : "No se pudieron cargar más rankings")
     } finally {
       inFlightPageRef.current = null
       setIsLoadingMore(false)
@@ -97,14 +97,17 @@ export function PastRankingsInfiniteTable({ initialData }: PastRankingsInfiniteT
     }
   }, [hasMore, loadError, loadMore, nextPage])
 
+  if (rankings.length === 0) {
+    return <p className="py-8 text-center text-muted-foreground">No hay rankings cargados</p>
+  }
+
   return (
     <div className="space-y-4">
       <div className="overflow-x-auto">
         <Table>
           <TableCaption>
-            {initialData.total === 0
-              ? "No hay rankings cargados"
-              : `Mostrando ${rankings.length} de ${initialData.total} rankings`}
+            Mostrando {rankings.length} de {initialData.total}{" "}
+            {initialData.total === 1 ? "ranking" : "rankings"}
           </TableCaption>
           <TableHeader>
             <TableRow>
@@ -151,13 +154,6 @@ export function PastRankingsInfiniteTable({ initialData }: PastRankingsInfiniteT
         </Table>
       </div>
 
-      {initialData.total === 0 ? (
-        <div className="py-8 text-center text-muted-foreground">
-          <FileSpreadsheet className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
-          <p>No se encontraron rankings anteriores</p>
-        </div>
-      ) : null}
-
       {hasMore || loadError ? (
         <div ref={sentinelRef} className="flex flex-col items-center gap-3 py-2">
           {loadError ? (
@@ -173,7 +169,7 @@ export function PastRankingsInfiniteTable({ initialData }: PastRankingsInfiniteT
               {isLoadingMore ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Cargando más rankings...
+                  Cargando...
                 </>
               ) : loadError ? (
                 "Reintentar"

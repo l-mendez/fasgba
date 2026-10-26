@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { CalendarClock, CheckCircle2, ChevronDown, Eye, MoreHorizontal, Pencil, PlayCircle, Search, Trash2, Users, Loader2, AlertCircle, type LucideIcon } from "lucide-react"
+import { CalendarClock, CheckCircle2, ChevronDown, ExternalLink, Pencil, PlayCircle, Search, Trash2, Users, type LucideIcon } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,17 +15,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { AdminConfirmDialog } from "@/components/admin-confirm-dialog"
+import { AdminRowActions, type AdminRowAction } from "@/components/admin-row-actions"
+import { AdminSortIcon } from "@/components/admin-sort-icon"
 import { InfoPill } from "@/components/info-pill"
 import { createClient } from "@/lib/supabase/client"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 
 // Tournament type based on the API response format
 interface Tournament {
@@ -41,7 +35,7 @@ interface Tournament {
   cost?: string | null
   prizes?: string | null
   image?: string | null
-  start_date: Date
+  start_date: Date | null
   end_date: Date | null
   formatted_start_date: string
   formatted_end_date?: string | null
@@ -108,8 +102,6 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
   const [selectedClubFilter, setSelectedClubFilter] = useState<number | null | 'all'>('all')
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all')
   const [torneoToDelete, setTorneoToDelete] = useState<string | null>(null)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [sortBy, setSortBy] = useState<string | null>(null)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'original'>('original')
@@ -148,8 +140,9 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
           bValue = b.title.toLowerCase()
           break
         case 'date':
-          aValue = new Date(a.start_date).getTime()
-          bValue = new Date(b.start_date).getTime()
+          // Undated tournaments sort last
+          aValue = a.start_date ? new Date(a.start_date).getTime() : Infinity
+          bValue = b.start_date ? new Date(b.start_date).getTime() : Infinity
           break
         case 'location':
           aValue = (a.location || '').toLowerCase()
@@ -175,19 +168,8 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
     return sorted
   }
 
-  const getSortIcon = (field: string) => {
-    if (sortBy !== field) {
-      return null
-    }
-    
-    if (sortOrder === 'asc') {
-      return '↑'
-    } else if (sortOrder === 'desc') {
-      return '↓'
-    }
-    
-    return null
-  }
+  const getSortIcon = (field: string) =>
+    sortBy === field && sortOrder !== 'original' ? <AdminSortIcon direction={sortOrder} /> : null
 
   // Filtrar torneos según término de búsqueda
   const filteredTorneos = torneos.filter((torneo) => {
@@ -240,23 +222,31 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
 
     try {
       setIsDeleting(true)
-      setError(null)
-      
       await apiCall(`/api/tournaments/${torneoToDelete}`, {
         method: 'DELETE'
       })
       
       setTorneos(torneos.filter((torneo) => torneo.id !== torneoToDelete))
       setOriginalOrder(originalOrder.filter((torneo) => torneo.id !== torneoToDelete))
-      setShowDeleteDialog(false)
-      setTorneoToDelete(null)
+      toast.success('Torneo eliminado')
     } catch (err) {
       console.error('Error deleting tournament:', err)
-      setError(err instanceof Error ? err.message : 'Error al eliminar el torneo')
+      toast.error(err instanceof Error ? err.message : 'Error al eliminar el torneo')
     } finally {
       setIsDeleting(false)
+      setTorneoToDelete(null)
     }
   }
+
+  const getRowActions = (torneo: Tournament): AdminRowAction[] => [
+    { label: "Ver en sitio", icon: ExternalLink, href: `/torneos/${torneo.id}`, external: true },
+    { label: "Editar", icon: Pencil, href: `/torneos/${torneo.id}/editar` },
+    { label: "Eliminar", icon: Trash2, destructive: true, onSelect: () => setTorneoToDelete(torneo.id) },
+  ]
+
+  const hasActiveFilters =
+    searchTerm.trim() !== '' || selectedClubFilter !== 'all' || selectedStatusFilter !== 'all'
+  const emptyText = hasActiveFilters ? 'No se encontraron torneos' : 'No hay torneos'
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -269,7 +259,8 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
   }
 
   // Get date range display
-  const getDateRange = (startDate: Date | string, endDate: Date | string | null) => {
+  const getDateRange = (startDate: Date | string | null, endDate: Date | string | null) => {
+    if (!startDate) return 'Sin fechas'
     const formattedStart = typeof startDate === 'string' ? startDate : formatDate(startDate.toString())
     const formattedEnd = endDate ? (typeof endDate === 'string' ? endDate : formatDate(endDate.toString())) : null
     
@@ -295,13 +286,6 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
 
   return (
     <div className="space-y-4">
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
       <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -369,16 +353,16 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
             <DropdownMenuContent align="end" className="w-[200px]">
               <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleSort('name')}>
+              <DropdownMenuItem className="gap-1" onClick={() => handleSort('name')}>
                 Nombre {getSortIcon('name')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('date')}>
+              <DropdownMenuItem className="gap-1" onClick={() => handleSort('date')}>
                 Fecha {getSortIcon('date')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('location')}>
+              <DropdownMenuItem className="gap-1" onClick={() => handleSort('location')}>
                 Lugar {getSortIcon('location')}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort('participants')}>
+              <DropdownMenuItem className="gap-1" onClick={() => handleSort('participants')}>
                 Participantes {getSortIcon('participants')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -405,7 +389,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                 >
                   <div className="flex items-center gap-1">
                     Nombre
-                    {getSortIcon('name') && <span className="text-xs">{getSortIcon('name')}</span>}
+                    {getSortIcon('name')}
                   </div>
                 </TableHead>
                 <TableHead 
@@ -414,7 +398,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                 >
                   <div className="flex items-center gap-1">
                     Fecha
-                    {getSortIcon('date') && <span className="text-xs">{getSortIcon('date')}</span>}
+                    {getSortIcon('date')}
                   </div>
                 </TableHead>
                 <TableHead 
@@ -423,7 +407,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                 >
                   <div className="flex items-center gap-1">
                     Lugar
-                    {getSortIcon('location') && <span className="text-xs">{getSortIcon('location')}</span>}
+                    {getSortIcon('location')}
                   </div>
                 </TableHead>
                 <TableHead>Estado</TableHead>
@@ -433,10 +417,10 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                 >
                   <div className="flex items-center gap-1">
                     Participantes
-                    {getSortIcon('participants') && <span className="text-xs">{getSortIcon('participants')}</span>}
+                    {getSortIcon('participants')}
                   </div>
                 </TableHead>
-                <TableHead className="w-[60px]"></TableHead>
+                <TableHead className="w-[60px]"><span className="sr-only">Acciones</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -444,7 +428,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8">
                     <p className="text-muted-foreground">
-                      {searchTerm ? 'No se encontraron torneos' : 'No hay torneos'}
+                      {emptyText}
                     </p>
                   </TableCell>
                 </TableRow>
@@ -463,38 +447,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">{torneo.participants || 0}</TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Acciones" title="Acciones">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/torneos/${torneo.id}`} target="_blank">
-                              <Eye className="mr-2 h-4 w-4" />
-                              Ver en sitio
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/torneos/${torneo.id}/editar`}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Editar
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setTorneoToDelete(torneo.id)
-                              setShowDeleteDialog(true)
-                            }}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <AdminRowActions actions={getRowActions(torneo)} />
                     </TableCell>
                   </TableRow>
                 ))
@@ -508,7 +461,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
           {sortedAndFilteredTorneos.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">
-                {searchTerm ? 'No se encontraron torneos' : 'No hay torneos'}
+                {emptyText}
               </p>
             </div>
           ) : (
@@ -542,38 +495,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                       </div>
                     </div>
                     
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Acciones" title="Acciones">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/torneos/${torneo.id}`} target="_blank">
-                            <Eye className="mr-2 h-4 w-4" />
-                            Ver en sitio
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/torneos/${torneo.id}/editar`}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Editar
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setTorneoToDelete(torneo.id)
-                            setShowDeleteDialog(true)
-                          }}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <AdminRowActions actions={getRowActions(torneo)} />
                   </div>
                 </div>
               ))}
@@ -582,40 +504,13 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
         </div>
       </>
 
-      {/* Diálogo de confirmación para eliminar torneo */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar eliminación</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro de que deseas eliminar este torneo? Esta acción no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowDeleteDialog(false)}
-              disabled={isDeleting}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteTorneo}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Eliminando...
-                </>
-              ) : (
-                'Eliminar'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdminConfirmDialog
+        open={torneoToDelete !== null}
+        onOpenChange={(open) => !open && setTorneoToDelete(null)}
+        title="¿Eliminar torneo?"
+        onConfirm={handleDeleteTorneo}
+        pending={isDeleting}
+      />
     </div>
   )
 } 

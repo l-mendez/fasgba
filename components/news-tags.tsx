@@ -24,7 +24,7 @@ export function NewsCardTags({ tags }: { tags: string[] | null }) {
           href={buildNoticiasUrl({ tag })}
           className="relative z-10 rounded-full transition-colors hover:[&>span]:border-amber hover:[&>span]:text-foreground"
         >
-          <InfoPill icon={Tag}>{tag}</InfoPill>
+          <InfoPill icon={Tag}>{tag.charAt(0).toUpperCase() + tag.slice(1)}</InfoPill>
         </Link>
       ))}
       {hiddenCount > 0 && (

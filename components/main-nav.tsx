@@ -27,7 +27,7 @@ export function MainNav({ className }: { className?: string }) {
   const { canViewDocumentos } = useAuth()
 
   return (
-    <nav className={cn("items-center gap-6 text-sm font-medium", className)}>
+    <nav className={cn("items-center gap-4 text-sm font-medium xl:gap-6", className)}>
       {navLinks.filter((link) => !link.restricted || canViewDocumentos).map(({ href, label }) => (
         <Link
           key={href}

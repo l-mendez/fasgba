@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { Heart } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { followClub, unfollowClub } from "@/lib/clubUtils"
+import { followClub, unfollowClub } from "@/lib/club/follow-client"
 import { useAuth } from "@/hooks/useAuth"
 
 interface ClubFollowButtonProps {
@@ -61,10 +62,13 @@ export function ClubFollowButton({
       setIsFollowing(previousState)
       onFollowChange?.(clubId, previousState)
       console.error('Error toggling follow status:', error)
+      toast.error(previousState ? 'No se pudo dejar de seguir el club' : 'No se pudo seguir el club')
     } finally {
       setIsLoading(false)
     }
   }
+
+  const label = isFollowing ? 'Dejar de seguir' : 'Seguir club'
 
   return (
     <Button 
@@ -73,15 +77,12 @@ export function ClubFollowButton({
       className={className}
       onClick={handleToggleFollow}
       disabled={isLoading || !user}
+      title={label}
+      aria-label={size === "icon" ? label : undefined}
     >
       <Heart className={`${size === "lg" ? "h-5 w-5" : "h-4 w-4"} ${size !== "icon" ? "mr-2" : ""} ${isFollowing ? 'fill-current' : ''}`} />
       {size !== "icon" && (
-        <span>{isFollowing ? 'Siguiendo' : 'Seguir Club'}</span>
-      )}
-      {size === "icon" && (
-        <span className="sr-only">
-          {isFollowing ? 'Dejar de seguir' : 'Seguir'} club
-        </span>
+        <span>{isFollowing ? 'Siguiendo' : 'Seguir club'}</span>
       )}
     </Button>
   )
