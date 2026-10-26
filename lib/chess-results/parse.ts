@@ -42,6 +42,20 @@ export function parseTitle(html: string): string {
   return match ? cellText(match[1]) : ''
 }
 
+/**
+ * Drops the subtitle chess-results appends to a tournament's name ("… en la UNLa
+ * Comienza el 31.10.2026"). Its search list glues both without a space
+ * ("…UNLaComienza", cut at 50 chars), which marks where the subtitle starts.
+ */
+export function chessResultsTitle(full: string, listName?: string | null): string {
+  if (listName && !full.startsWith(listName)) {
+    for (let i = full.indexOf(' '); i > 0 && i <= listName.length; i = full.indexOf(' ', i + 1)) {
+      if ((full.slice(0, i) + full.slice(i + 1)).startsWith(listName)) return full.slice(0, i).trim()
+    }
+  }
+  return full.replace(/\s+(Comienza|Comenzó|Empieza|Inicia|Campe[oó]n|1ro\.)(\s|$).*$/i, '').trim()
+}
+
 export function parseDetails(html: string, tnr: number): CrDetails {
   const values = labelValues(html)
   const system = findLabel(values, (l) => l === 'Tipo de torneo')

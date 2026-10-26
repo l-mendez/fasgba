@@ -2,10 +2,10 @@ import { cn } from "@/lib/utils"
 import type { PlanStatus } from "@/lib/chess-results/plan"
 
 const STYLES: Record<PlanStatus, { label: string; className: string }> = {
-  new: { label: "Nuevo", className: "border-emerald-600/30 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400" },
-  fill: { label: "Se completa", className: "border-amber/40 bg-amber/10 text-amber-dark" },
-  exists: { label: "Ya cargado", className: "border-border bg-muted text-muted-foreground" },
-  skip: { label: "No se importa", className: "border-destructive/30 bg-destructive/10 text-destructive" },
+  new: { label: "Nuevo", className: "border-amber/50 bg-amber/15 text-terracotta" },
+  fill: { label: "Se completa", className: "border-terracotta/30 bg-terracotta/10 text-terracotta" },
+  exists: { label: "Ya cargado", className: "border-transparent bg-muted text-muted-foreground" },
+  skip: { label: "No se importa", className: "border-terracotta bg-terracotta text-white" },
 }
 
 /** Small pill telling what the import does with an item. */

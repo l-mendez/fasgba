@@ -5,12 +5,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ChessResultsCandidateInsert, ChessResultsCandidateRow } from '@/lib/db-types'
 import { fail } from './db'
-import { searchChessResults } from './fetch'
+import { fetchChessResultsTitle, searchChessResults } from './fetch'
 import { cleanChessResultsName, suggestTournaments, type SiteTournament } from './suggest'
 
 /** Only tournaments starting on or after this date are discovered. */
 export const DISCOVERY_FROM = '2025-01-01'
 const SEARCHES = [{ organizer: 'FASGBA' }, { name: 'FASGBA' }]
+/** Titles fetched per run (one page each); the rest keep the list name until the next run. */
+const MAX_TITLE_FETCHES = 25
 
 type Metadata = Pick<ChessResultsCandidateRow,
   'tnr' | 'name' | 'start_date' | 'end_date' | 'organizer' | 'place' | 'time_control' | 'rounds' | 'players'>
@@ -53,7 +55,21 @@ export async function discoverCandidates(db: SupabaseClient, sites: SiteTourname
   // Next state of every row we know about (found now or already queued).
   const rows = new Map<number, ChessResultsCandidateInsert>()
   for (const c of existing.values()) rows.set(c.tnr, { ...c })
-  for (const meta of found) rows.set(meta.tnr, { ...rows.get(meta.tnr), ...meta })
+  for (const meta of found) {
+    const old = existing.get(meta.tnr)
+    // The list name is cut at 50 chars and glued to the subtitle: keep a title already fetched.
+    const name = old && old.name !== meta.name ? old.name : meta.name
+    rows.set(meta.tnr, { ...rows.get(meta.tnr), ...meta, name })
+  }
+  const listNames = new Map(found.map((m) => [m.tnr, m.name]))
+  // New rows, and old ones still showing a cut list name (it's cut at 50 chars).
+  const untitled = found
+    .filter((m) => !existing.has(m.tnr) || (rows.get(m.tnr)!.name === m.name && m.name.length >= 50))
+    .slice(0, MAX_TITLE_FETCHES)
+  for (const { tnr } of untitled) {
+    const title = await fetchChessResultsTitle(tnr, listNames.get(tnr) ?? null).catch(() => null)
+    if (title) rows.get(tnr)!.name = title
+  }
   for (const row of rows.values()) {
     const tournamentId = linked.get(row.tnr)
     if (tournamentId) Object.assign(row, { status: 'imported', tournament_id: tournamentId, suggested_tournament_id: null })

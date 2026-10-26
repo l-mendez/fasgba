@@ -3,7 +3,7 @@
 // torneo" ASP.NET postback, so every page load replays it when present.
 
 import { nameKey } from './match'
-import { parseDetails, parseIndividualRound, parsePgnFile, parsePlayers, parseSearchResults, parseTeamList, parseTeamRosters, parseTeamRound } from './parse'
+import { chessResultsTitle, parseDetails, parseTitle, parseIndividualRound, parsePgnFile, parsePlayers, parseSearchResults, parseTeamList, parseTeamRosters, parseTeamRound } from './parse'
 import type { CrPgnGame, CrRound, CrSearchResult, CrTournament } from './types'
 import { chessResultsUrl } from './url'
 
@@ -66,6 +66,21 @@ async function page(tnr: number, params: Record<string, string | number> = {}) {
   return html
 }
 
+/** The tournament's name as the search list shows it (title and subtitle glued), if found. */
+async function listName(tnr: number): Promise<string | null> {
+  try {
+    return (await searchChessResults({ tnr }))[0]?.name ?? null
+  } catch {
+    return null
+  }
+}
+
+/** Clean tournament title (without the subtitle) from its page heading. */
+export async function fetchChessResultsTitle(tnr: number, list: string | null): Promise<string | null> {
+  const title = parseTitle(await fetchChessResultsPage(`${BASE}/tnr${tnr}.aspx?lan=2`))
+  return title ? chessResultsTitle(title, list) : null
+}
+
 /** Games of the tournament's "Descargar en formato PGN" download (PartieSuche.aspx). */
 export async function fetchChessResultsPgns(tnr: number, searchId: number): Promise<CrPgnGame[]> {
   const first = await request(`${BASE}/PartieSuche.aspx?lan=2&id=${searchId}&tnr=${tnr}&art=3`, '')
@@ -89,6 +104,7 @@ function attachPgns(rounds: CrRound[], pgns: CrPgnGame[]) {
 export async function fetchChessResultsTournament(tnr: number): Promise<CrTournament> {
   const details = parseDetails(await page(tnr, { turdet: 'YES' }), tnr)
   if (!details.name) throw new Error(`No se encontró el torneo ${tnr} en chess-results`)
+  details.name = chessResultsTitle(details.name, await listName(tnr))
   const rounds: CrRound[] = []
   const tournament: CrTournament = { details, players: [], teams: [], rounds }
   if (details.isTeam) {
@@ -107,6 +123,7 @@ export async function fetchChessResultsTournament(tnr: number): Promise<CrTourna
 }
 
 export interface ChessResultsSearch {
+  tnr?: number
   organizer?: string
   name?: string
   country?: string // e.g. 'ARG'
@@ -116,6 +133,7 @@ export interface ChessResultsSearch {
 /** Tournament database search (TurnierSuche.aspx), newest start date first, up to 2000 rows. */
 export async function searchChessResults(search: ChessResultsSearch): Promise<CrSearchResult[]> {
   const html = await fetchChessResultsPage(`${BASE}/TurnierSuche.aspx?lan=2`, {
+    'ctl00$P1$txt_tnr': search.tnr ? String(search.tnr) : '',
     'ctl00$P1$txt_veranstalter': search.organizer ?? '',
     'ctl00$P1$txt_bez': search.name ?? '',
     'ctl00$P1$combo_land': search.country ?? '-',

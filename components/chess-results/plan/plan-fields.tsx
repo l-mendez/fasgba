@@ -7,7 +7,7 @@ import { PlanStatusBadge } from "./plan-status"
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="grid gap-1 py-2 sm:grid-cols-[10rem_1fr] sm:gap-3">
-      <dt className="text-xs font-medium text-muted-foreground sm:text-sm">{label}</dt>
+      <dt className="text-sm font-medium">{label}</dt>
       <dd className="min-w-0 break-words text-sm">{children}</dd>
     </div>
   )
@@ -29,13 +29,13 @@ export function PlanFields({ fields, details }: { fields: PlanField[]; details: 
     ["Última actualización", details.lastUpdate],
   ]
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <section>
-        <h4 className="text-sm font-semibold">Se completa en el torneo</h4>
+        <h3 className="text-lg font-semibold text-terracotta">Se completa en el torneo</h3>
         {changes.length === 0 ? (
-          <p className="py-2 text-sm text-muted-foreground">Nada: los datos del torneo ya están cargados.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Nada: los datos del torneo ya están cargados.</p>
         ) : (
-          <dl className="divide-y">
+          <dl className="mt-2 divide-y">
             {changes.map((f) => (
               <Row key={f.label} label={f.label}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -50,9 +50,9 @@ export function PlanFields({ fields, details }: { fields: PlanField[]; details: 
 
       {differences.length > 0 && (
         <section>
-          <h4 className="text-sm font-semibold">Distinto en chess-results</h4>
-          <p className="text-xs text-muted-foreground">Se mantiene lo del sitio; editalo en el torneo si chess-results tiene razón.</p>
-          <dl className="divide-y">
+          <h3 className="text-lg font-semibold text-terracotta">Distinto en chess-results</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Se mantiene lo del sitio; editalo en el torneo si chess-results tiene razón.</p>
+          <dl className="mt-2 divide-y">
             {differences.map((f) => (
               <Row key={f.label} label={f.label}>
                 <p>{f.current}</p>
@@ -63,8 +63,8 @@ export function PlanFields({ fields, details }: { fields: PlanField[]; details: 
         </section>
       )}
 
-      <details className="group rounded-md border px-3">
-        <summary className="flex cursor-pointer list-none items-center justify-between py-2 text-sm font-medium">
+      <details className="group rounded-lg border px-4">
+        <summary className="flex cursor-pointer list-none items-center justify-between py-3 text-sm font-medium">
           Más datos de chess-results
           <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
         </summary>

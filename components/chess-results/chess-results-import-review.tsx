@@ -122,7 +122,6 @@ export function ChessResultsImportReview({ preview, chooseClub, club, onOpenChan
   return (
     <ReviewDialogContent
       title="Revisar e importar"
-      description="Editá los datos del torneo y revisá jugadores, rondas y partidas antes de importar."
       busy={saving}
       footer={
         <>

@@ -86,7 +86,6 @@ function ImportDialogContent(props: ChessResultsImportDialogProps) {
   return (
     <ReviewDialogContent
       title="Importar desde chess-results"
-      description="Pegá el link del torneo. Vas a poder revisar y editar todo antes de importar."
       busy={loading}
       footer={
         <>

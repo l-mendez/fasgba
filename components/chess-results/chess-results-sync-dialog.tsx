@@ -44,7 +44,6 @@ function SyncDialogContent({ tnr, tournamentId, onOpenChange, onConfirm }: Chess
   return (
     <ReviewDialogContent
       title="Sincronizar con chess-results"
-      description="Solo se agrega lo que falta; no se modifica lo ya cargado."
       busy={saving}
       footer={
         <>

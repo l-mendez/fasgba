@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowLeft, Link2, Loader2, Repeat } from "lucide-react"
+import { Link2, Loader2, Repeat } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -65,7 +65,6 @@ function LinkCandidateContent({ candidate, tournaments, onOpenChange, onLinked }
   return (
     <ReviewDialogContent
       title="Vincular a un torneo existente"
-      description={<span className="break-words">{candidate.name}</span>}
       footer={
         <>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
@@ -96,22 +95,9 @@ function ReviewStep({ tnr, tournamentId, title, saving, onBack, onCancel, onConf
   return (
     <ReviewDialogContent
       title="Revisar y vincular"
-      description={
-        <span className="flex flex-wrap items-center gap-x-2">
-          <span>Se vincula a <strong className="text-foreground">{title}</strong>. Solo se agrega lo que falta.</span>
-          <button type="button" onClick={onBack} disabled={saving} className="inline-flex items-center gap-1 font-medium text-terracotta underline-offset-4 hover:underline">
-            <Repeat className="h-3.5 w-3.5" />
-            Elegir otro torneo
-          </button>
-        </span>
-      }
       busy={saving}
       footer={
         <>
-          <Button variant="outline" onClick={onBack} disabled={saving} className="sm:mr-auto">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Volver
-          </Button>
           <Button variant="outline" onClick={onCancel} disabled={saving}>Cancelar</Button>
           <Button onClick={onConfirm} disabled={!canConfirmPreview(state) || saving}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
@@ -120,7 +106,16 @@ function ReviewStep({ tnr, tournamentId, title, saving, onBack, onCancel, onConf
         </>
       }
     >
-      <ChessResultsPreviewBody state={state} />
+      <div className="space-y-5">
+        <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="min-w-0">Se vincula a <strong className="break-words">{title}</strong>. Solo se agrega lo que falta.</p>
+          <Button variant="outline" size="sm" onClick={onBack} disabled={saving} className="shrink-0">
+            <Repeat className="mr-2 h-4 w-4" />
+            Elegir otro torneo
+          </Button>
+        </div>
+        <ChessResultsPreviewBody state={state} />
+      </div>
     </ReviewDialogContent>
   )
 }
