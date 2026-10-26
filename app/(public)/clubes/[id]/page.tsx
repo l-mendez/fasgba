@@ -1,26 +1,22 @@
 import Link from "next/link"
-import { ChevronLeft, Mail, MapPin, Phone, Clock, Calendar, User, Heart, Loader2, Users, UserCheck, FileText, Star, Building2, ImageIcon } from "lucide-react"
-import { notFound } from "next/navigation"
+import { ChevronLeft, Mail, MapPin, Phone, Clock, Calendar, User, Heart, UserCheck, ImageIcon, Tag } from "lucide-react"
 import { Metadata } from "next"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { InfoPill } from "@/components/info-pill"
+import { formatArgentinaDateOnly } from "@/lib/dateUtils"
 import {
   getClubById,
   getClubAdmins,
   getClubNews,
   isUserFollowingClubServer,
   getClubFollowersCount,
-  type Club,
   type ClubWithStats,
   type ClubAdmin,
   type ClubNews
 } from "@/lib/clubUtils"
 import { getCurrentUserServer } from "@/lib/auth-server"
 import { ClubFollowButton } from "@/components/club-follow-button"
-import { validateClubId } from "@/lib/schemas/clubSchemas"
 import { createClient } from "@/lib/supabase/client"
 
 // Force dynamic rendering for SSR
@@ -209,231 +205,142 @@ export default async function ClubDetailPage({ params }: ClubDetailPageProps) {
     )
   }
 
-  return (
-    <section className="w-full py-6 sm:py-12 md:py-24 lg:py-32 bg-muted">
-      <div className="container px-4 md:px-6">
-        <Button asChild variant="outline" size="sm" className="mb-4 sm:mb-6">
-          <Link href="/clubes">
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            Volver a clubes
-          </Link>
-        </Button>
+  const imageUrl = club.image
+    ? createClient().storage.from('images').getPublicUrl(club.image).data.publicUrl
+    : null
 
-        {/* Club Header */}
-        <div className="mb-8 lg:mb-12">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-            {/* Club Image */}
-            <div className="flex flex-col lg:flex-row gap-6 flex-1">
-              {club.image ? (
-                <div className="w-full lg:w-64 aspect-video lg:aspect-square overflow-hidden rounded-lg border">
-                  <img
-                    src={(() => {
-                      const supabase = createClient()
-                      const { data } = supabase.storage.from('images').getPublicUrl(club.image)
-                      return data.publicUrl
-                    })()}
-                    alt={`Imagen de ${club.name}`}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
+  return (
+    <>
+      <section className="w-full pt-8 md:pt-12">
+        <div className="container space-y-4 px-4 md:px-6">
+          <Link
+            href="/clubes"
+            className="inline-flex items-center gap-1 text-sm font-semibold text-terracotta underline-offset-4 hover:underline"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Clubes
+          </Link>
+
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+            <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-white md:h-36 md:w-36">
+              {imageUrl ? (
+                <img src={imageUrl} alt={`Imagen de ${club.name}`} className="h-full w-full object-contain p-2" />
               ) : (
-                <div className="w-full lg:w-64 aspect-video lg:aspect-square bg-muted rounded-lg border flex items-center justify-center">
-                  <ImageIcon className="h-16 w-16 text-muted-foreground" />
-                </div>
+                <ImageIcon className="h-10 w-10 text-muted-foreground" />
               )}
-              
-              <div className="flex-1">
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground mb-4 break-words">
-                  {club.name}
-                </h1>
-                
-                {/* Quick Stats Bar */}
-                <div className="flex flex-wrap gap-4 sm:gap-6 mb-6">
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-sm font-medium text-muted-foreground">{club.adminCount} administradores</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Heart className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-sm font-medium text-muted-foreground">{followersCount} seguidores</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-sm font-medium text-muted-foreground">{club.newsCount} noticias</span>
-                  </div>
-                </div>
-              </div>
             </div>
 
-            {/* Follow Button */}
-            {user && (
-              <div className="lg:flex-shrink-0">
-                <ClubFollowButton 
-                  clubId={club.id} 
-                  initialIsFollowing={isFollowing} 
-                  isUserAuthenticated={!!user}
-                  className="w-full lg:w-auto"
-                  size="lg"
-                />
+            <div className="min-w-0 flex-1 space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <h1 className="break-words text-3xl font-bold tracking-tight text-terracotta md:text-4xl">{club.name}</h1>
+                {user && (
+                  <ClubFollowButton clubId={club.id} initialIsFollowing={isFollowing} isUserAuthenticated={!!user} />
+                )}
               </div>
+
+              <ul className="space-y-1.5 text-sm text-muted-foreground">
+                {club.address && (
+                  <li className="flex items-start gap-2">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-amber" />
+                    <span className="break-words">{club.address}</span>
+                  </li>
+                )}
+                {club.schedule && (
+                  <li className="flex items-start gap-2">
+                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber" />
+                    <span className="whitespace-pre-line break-words">{club.schedule}</span>
+                  </li>
+                )}
+                {club.telephone && (
+                  <li className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 shrink-0 text-amber" />
+                    <a href={`tel:${club.telephone}`} className="hover:text-foreground hover:underline">{club.telephone}</a>
+                  </li>
+                )}
+                {club.mail && (
+                  <li className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 shrink-0 text-amber" />
+                    <a href={`mailto:${club.mail}`} className="break-all hover:text-foreground hover:underline">{club.mail}</a>
+                  </li>
+                )}
+                <li className="flex items-center gap-2">
+                  <Heart className="h-4 w-4 shrink-0 text-amber" />
+                  <span>{followersCount} seguidor{followersCount !== 1 ? 'es' : ''}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
+        <div className="container grid gap-8 px-4 md:px-6 lg:grid-cols-3">
+          <div className="min-w-0 lg:col-span-2">
+            <h2 className="mb-4 text-2xl font-bold tracking-tight text-terracotta">Noticias</h2>
+            {news.length === 0 ? (
+              <p className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">Sin noticias.</p>
+            ) : (
+              <ul className="space-y-3">
+                {news.map((article) => (
+                  <li
+                    key={article.id}
+                    className="group relative space-y-2 rounded-lg border bg-card p-4 transition-colors hover:border-amber"
+                  >
+                    <h3 className="text-lg font-semibold leading-tight">
+                      <Link
+                        href={`/noticias/${article.id}`}
+                        className="break-words text-terracotta after:absolute after:inset-0 group-hover:underline"
+                      >
+                        {article.title}
+                      </Link>
+                    </h3>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="h-4 w-4" />
+                        {formatArgentinaDateOnly(article.date)}
+                      </span>
+                      {article.author_name && (
+                        <span className="flex items-center gap-1.5">
+                          <User className="h-4 w-4" />
+                          {article.author_name}
+                        </span>
+                      )}
+                    </div>
+                    {article.extract && (
+                      <p className="line-clamp-3 text-sm text-muted-foreground">{article.extract}</p>
+                    )}
+                    {article.tags && article.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {article.tags.map((tag) => (
+                          <InfoPill key={tag} icon={Tag}>{tag}</InfoPill>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div>
+            <h2 className="mb-4 text-2xl font-bold tracking-tight text-terracotta">Administradores</h2>
+            {admins.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sin administradores.</p>
+            ) : (
+              <ul className="space-y-1.5 rounded-lg border bg-card p-4 text-sm text-muted-foreground">
+                {admins.map((admin) => (
+                  <li key={admin.id} className="flex items-center gap-2">
+                    <UserCheck className="h-4 w-4 shrink-0 text-amber" />
+                    <a href={`mailto:${admin.email}`} className="break-all hover:text-foreground hover:underline">
+                      {admin.email}
+                    </a>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         </div>
-
-        <div className="grid gap-8 lg:grid-cols-3 lg:gap-12">
-          {/* Main Content - 2/3 width */}
-          <div className="lg:col-span-2 space-y-8">
-            
-            {/* Contact Information */}
-            {(club.address || club.telephone || club.mail || club.schedule) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5" />
-                    Información de Contacto
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {club.address && (
-                      <div className="flex gap-3">
-                        <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium">Dirección</p>
-                          <p className="text-sm text-muted-foreground break-words">{club.address}</p>
-                        </div>
-                      </div>
-                    )}
-                    {club.telephone && (
-                      <div className="flex gap-3">
-                        <Phone className="h-5 w-5 text-muted-foreground shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium">Teléfono</p>
-                          <p className="text-sm text-muted-foreground">{club.telephone}</p>
-                        </div>
-                      </div>
-                    )}
-                    {club.mail && (
-                      <div className="flex gap-3">
-                        <Mail className="h-5 w-5 text-muted-foreground shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium">Email</p>
-                          <p className="text-sm text-muted-foreground break-all">{club.mail}</p>
-                        </div>
-                      </div>
-                    )}
-                    {club.schedule && (
-                      <div className="flex gap-3">
-                        <Clock className="h-5 w-5 text-muted-foreground shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium">Horarios</p>
-                          <p className="text-sm text-muted-foreground break-words">{club.schedule}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* News Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Últimas Noticias
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {news.length === 0 ? (
-                  <div className="text-center py-8">
-                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground text-sm sm:text-base">No hay noticias disponibles para este club.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {news.map((article, index) => (
-                      <div key={article.id}>
-                        <Link href={`/noticias/${article.id}`} className="block group">
-                          <article className="space-y-3 cursor-pointer hover:bg-muted/30 p-3 rounded-lg transition-colors">
-                            <div>
-                              <h3 className="text-lg font-bold break-words group-hover:text-primary transition-colors">{article.title}</h3>
-                              <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="h-4 w-4" />
-                                  <span>{new Date(article.date).toLocaleDateString()}</span>
-                                </div>
-                                {article.author_name && (
-                                  <div className="flex items-center gap-1">
-                                    <User className="h-4 w-4" />
-                                    <span>Por {article.author_name}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            {article.extract && (
-                              <p className="text-muted-foreground leading-relaxed">{article.extract}</p>
-                            )}
-                            {article.tags && article.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-2">
-                                {article.tags.map((tag, tagIndex) => (
-                                  <Badge key={tagIndex} variant="secondary" className="text-xs">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-                          </article>
-                        </Link>
-                        {index < news.length - 1 && <Separator className="mt-6" />}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar - 1/3 width */}
-          <div className="space-y-6">
-            
-            {/* Administrators */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UserCheck className="h-5 w-5" />
-                  Administradores
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {admins.length === 0 ? (
-                  <div className="text-center py-6">
-                    <UserCheck className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground text-sm">No hay administradores registrados.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {admins.map((admin) => (
-                      <div key={admin.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <User className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge className="text-xs">ADMIN</Badge>
-                          </div>
-                          <p className="text-sm font-medium break-all">{admin.email}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    </section>
+      </section>
+    </>
   )
 }
-

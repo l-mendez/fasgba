@@ -43,10 +43,9 @@ async function getProfesores() {
 
 export default function ProfesoresAdminPage() {
   return (
-    <div className="flex flex-col gap-8">
+    <div className="space-y-6">
       <AdminPageHeader
         title="Profesores"
-        subtitle="Gestiona los profesores de ajedrez de FASGBA."
         action={
           <Button asChild>
             <Link href="/admin/profesores/nuevo">

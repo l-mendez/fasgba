@@ -13,7 +13,7 @@ import {
   ChevronRight,
 } from "lucide-react"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
@@ -186,9 +186,9 @@ export function AdminAlumnosClient({
     <div className="space-y-6">
       {showHeader ? (
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Alumnos</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Alumnos</h1>
           <p className="text-muted-foreground">
-            Gestionar alumnos de la escuela. Los alumnos pueden acceder a documentos protegidos de la sección Escuela.
+            Los alumnos pueden acceder a documentos protegidos de la sección Escuela.
           </p>
         </div>
       ) : null}
@@ -198,7 +198,7 @@ export function AdminAlumnosClient({
           {message.type === "error" ? (
             <AlertCircle className="h-4 w-4" />
           ) : (
-            <CheckCircle2 className="h-4 w-4" />
+            <CheckCircle2 className="h-4 w-4 text-amber" />
           )}
           <AlertDescription>{message.text}</AlertDescription>
         </Alert>
@@ -208,10 +208,9 @@ export function AdminAlumnosClient({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
+            <UserPlus className="h-5 w-5 text-amber" />
             Agregar alumno
           </CardTitle>
-          <CardDescription>Usuarios más recientes. Buscá por nombre, email o club para filtrar.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2 mb-4">
@@ -254,6 +253,8 @@ export function AdminAlumnosClient({
                     onClick={() => handleAddAlumno(user.id)}
                     disabled={adding === user.id}
                     className="bg-terracotta hover:bg-terracotta/90 ml-2 shrink-0"
+                  aria-label="Agregar como alumno"
+                  title="Agregar como alumno"
                   >
                     {adding === user.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -277,6 +278,8 @@ export function AdminAlumnosClient({
                   variant="outline"
                   size="sm"
                   onClick={() => setUsersPage((p) => Math.max(1, p - 1))}
+                  aria-label="Página anterior"
+                  title="Página anterior"
                   disabled={usersPage <= 1 || usersLoading}
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -285,6 +288,8 @@ export function AdminAlumnosClient({
                   variant="outline"
                   size="sm"
                   onClick={() => setUsersPage((p) => Math.min(totalPages, p + 1))}
+                  aria-label="Página siguiente"
+                  title="Página siguiente"
                   disabled={usersPage >= totalPages || usersLoading}
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -299,7 +304,7 @@ export function AdminAlumnosClient({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <GraduationCap className="h-5 w-5" />
+            <GraduationCap className="h-5 w-5 text-amber" />
             Alumnos actuales ({alumnos.length})
           </CardTitle>
         </CardHeader>
@@ -317,9 +322,9 @@ export function AdminAlumnosClient({
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Fecha de alta</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  <TableHead className="hidden sm:table-cell">Email</TableHead>
+                  <TableHead className="hidden md:table-cell">Fecha de alta</TableHead>
+                  <TableHead className="text-right"><span className="sr-only">Acciones</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -327,13 +332,14 @@ export function AdminAlumnosClient({
                   <TableRow key={alumno.auth_id}>
                     <TableCell className="font-medium">
                       {alumno.nombre} {alumno.apellido}
+                      <span className="block text-xs font-normal text-muted-foreground sm:hidden">{alumno.email}</span>
                     </TableCell>
-                    <TableCell>{alumno.email}</TableCell>
-                    <TableCell>{formatArgentinaDate(alumno.created_at)}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{alumno.email}</TableCell>
+                    <TableCell className="hidden md:table-cell">{formatArgentinaDate(alumno.created_at)}</TableCell>
                     <TableCell className="text-right">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" aria-label="Eliminar alumno" title="Eliminar alumno">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
@@ -349,7 +355,7 @@ export function AdminAlumnosClient({
                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => handleDeleteAlumno(alumno.auth_id)}
-                              className="bg-red-600 hover:bg-red-700"
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
                               Eliminar
                             </AlertDialogAction>

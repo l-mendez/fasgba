@@ -90,9 +90,11 @@ export function TeamRosterManagement({
               </div>
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
+                aria-label={`Quitar a ${player.full_name}`}
+                title="Quitar jugador"
                 onClick={() => onRemovePlayer(player.id, player.full_name)}
-                className="text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0 h-8 w-8 p-0"
+                className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
               >
                 <X className="h-3.5 w-3.5" />
               </Button>
@@ -115,11 +117,13 @@ export function TeamRosterManagement({
       ) : (
         <div className="border rounded-lg p-3 mt-2 space-y-3 bg-background">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Agregar jugador al equipo</Label>
+            <Label className="text-sm font-medium">Agregar jugador</Label>
             <Button
               variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
+              size="icon"
+              className="h-6 w-6"
+              aria-label="Cerrar"
+              title="Cerrar"
               onClick={() => {
                 setAddPlayerTeamId(null)
                 setIsNewPlayerMode(false)
@@ -157,7 +161,7 @@ export function TeamRosterManagement({
                     <button
                       key={player.id}
                       type="button"
-                      className="w-full text-left px-3 py-2 hover:bg-muted/50 border-b last:border-b-0 transition-colors"
+                      className="w-full text-left px-3 py-2 hover:bg-accent border-b last:border-b-0 transition-colors"
                       onClick={() => onAddExistingPlayer(player, teamId)}
                       disabled={addingPlayer}
                     >

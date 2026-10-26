@@ -2,11 +2,11 @@
 
 import { useState, useEffect, use } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Plus, Pencil, Trash2, Users, Loader2 } from 'lucide-react'
+import { Check, ChevronLeft, Plus, Pencil, Trash2, Users, Loader2, X } from 'lucide-react'
+import { PageHero } from '@/components/page-hero'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { apiCall } from '@/lib/utils/apiClient'
@@ -131,122 +131,135 @@ export default function ClubEquiposPage({ params }: { params: Promise<{ id: stri
   }
 
   return (
-    <div className="container mx-auto max-w-3xl py-8 px-4">
-      <div className="mb-6">
-        <Link href={`/clubes/${clubId}`} className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          Volver al club
-        </Link>
-      </div>
+    <>
+      <PageHero title="Equipos" subtitle={club?.name} />
+      <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
+        <div className="container px-4 md:px-6 [&>*]:max-w-3xl">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <Link
+              href={`/clubes/${clubId}`}
+              className="inline-flex items-center gap-1 text-sm font-semibold text-terracotta underline-offset-4 hover:underline"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Volver al club
+            </Link>
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-terracotta">Equipos</h1>
-          {club && <p className="text-muted-foreground">{club.name}</p>}
-        </div>
-
-        <Dialog open={isAddOpen} onOpenChange={(open) => {
-          setIsAddOpen(open)
-          if (!open) setTeamName('')
-        }}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Nuevo Equipo
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Crear Equipo</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="team_name">Nombre del equipo</Label>
-                <Input
-                  id="team_name"
-                  placeholder="Ej: Equipo A"
-                  value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddOpen(false)}>
-                  Cancelar
+            <Dialog open={isAddOpen} onOpenChange={(open) => {
+              setIsAddOpen(open)
+              if (!open) setTeamName('')
+            }}>
+              <DialogTrigger asChild>
+                <Button className="bg-terracotta text-white hover:bg-terracotta/90">
+                  <Plus className="h-4 w-4" />
+                  Nuevo equipo
                 </Button>
-                <Button onClick={handleCreate} disabled={saving || !teamName.trim()}>
-                  {saving ? 'Creando...' : 'Crear'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center p-12">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span className="ml-2">Cargando equipos...</span>
-        </div>
-      ) : teams.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>Este club no tiene equipos creados.</p>
-            <p className="text-sm mt-1">Crea un equipo para poder inscribirlo en torneos por equipos.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {teams.map((team) => (
-            <Card key={team.id}>
-              <CardContent className="flex items-center justify-between p-4">
-                {editingTeam?.id === team.id ? (
-                  <div className="flex items-center gap-2 flex-1">
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Crear Equipo</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="team_name">Nombre del equipo</Label>
                     <Input
+                      id="team_name"
+                      placeholder="Ej: Equipo A"
                       value={teamName}
                       onChange={(e) => setTeamName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleUpdate()
-                        if (e.key === 'Escape') cancelEdit()
-                      }}
-                      autoFocus
+                      onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                     />
-                    <Button size="sm" onClick={handleUpdate} disabled={saving || !teamName.trim()}>
-                      {saving ? 'Guardando...' : 'Guardar'}
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={cancelEdit}>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setIsAddOpen(false)}>
                       Cancelar
                     </Button>
+                    <Button
+                      onClick={handleCreate}
+                      disabled={saving || !teamName.trim()}
+                      className="bg-terracotta text-white hover:bg-terracotta/90"
+                    >
+                      {saving ? 'Creando...' : 'Crear'}
+                    </Button>
                   </div>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 rounded-full">
-                        <Users className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <span className="font-medium">{team.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => startEdit(team)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center p-12 text-muted-foreground">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : teams.length === 0 ? (
+            <p className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
+              Este club no tiene equipos.
+            </p>
+          ) : (
+            <ul className="divide-y rounded-lg border bg-card">
+              {teams.map((team) => (
+                <li key={team.id} className="flex items-center justify-between gap-2 px-4 py-2.5">
+                  {editingTeam?.id === team.id ? (
+                    <div className="flex flex-1 items-center gap-2">
+                      <Input
+                        value={teamName}
+                        onChange={(e) => setTeamName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleUpdate()
+                          if (e.key === 'Escape') cancelEdit()
+                        }}
+                        aria-label="Nombre del equipo"
+                        autoFocus
+                      />
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(team)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        size="icon"
+                        className="bg-terracotta text-white hover:bg-terracotta/90"
+                        onClick={handleUpdate}
+                        disabled={saving || !teamName.trim()}
+                        aria-label="Guardar"
+                        title="Guardar"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        {saving ? <Loader2 className="animate-spin" /> : <Check />}
+                      </Button>
+                      <Button size="icon" variant="outline" onClick={cancelEdit} aria-label="Cancelar" title="Cancelar">
+                        <X />
                       </Button>
                     </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  ) : (
+                    <>
+                      <span className="flex min-w-0 items-center gap-2 font-medium">
+                        <Users className="h-4 w-4 shrink-0 text-amber" />
+                        <span className="truncate">{team.name}</span>
+                      </span>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => startEdit(team)}
+                          aria-label="Editar equipo"
+                          title="Editar equipo"
+                        >
+                          <Pencil />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => handleDelete(team)}
+                          aria-label="Eliminar equipo"
+                          title="Eliminar equipo"
+                        >
+                          <Trash2 />
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-      )}
-    </div>
+      </section>
+    </>
   )
 }

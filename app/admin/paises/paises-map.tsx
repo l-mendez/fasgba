@@ -227,6 +227,7 @@ export function PaisesMap({ countries, now, onToggle }: PaisesMapProps) {
               onClick={() => setSelection(null)}
               className="text-muted-foreground hover:text-foreground"
               aria-label="Cerrar"
+              title="Cerrar"
             >
               <X className="h-4 w-4" />
             </button>

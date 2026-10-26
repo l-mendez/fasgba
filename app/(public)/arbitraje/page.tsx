@@ -1,4 +1,3 @@
-import Link from "next/link"
 import { Award, Calendar, Mail, Phone, User } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -70,18 +69,9 @@ export default async function ArbitrajePage() {
 
   return (
     <>
-      <PageHero
-        title="Arbitraje"
-        subtitle="Árbitros oficiales de la Federación de Ajedrez del Sur del Gran Buenos Aires"
-      />
-      <section className="w-full py-12 md:py-24 lg:py-32">
+      <PageHero title="Arbitraje" />
+      <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
         <div className="container px-4 md:px-6">
-          <div className="mb-10">
-            <h2 className="text-2xl font-bold tracking-tight mb-2">Árbitros Oficiales</h2>
-            <p className="text-muted-foreground">
-              Listado de árbitros habilitados por FASGBA para dirigir torneos oficiales
-            </p>
-          </div>
           {arbitros.length === 0 ? (
             <p className="text-muted-foreground text-center py-12">
               No hay árbitros registrados actualmente.
@@ -135,7 +125,7 @@ export default async function ArbitrajePage() {
                         </div>
                       )}
                       {arbitro.bio && (
-                        <p className="text-sm text-muted-foreground line-clamp-3">
+                        <p className="text-sm text-muted-foreground whitespace-pre-line">
                           {arbitro.bio}
                         </p>
                       )}
@@ -145,21 +135,6 @@ export default async function ArbitrajePage() {
               ))}
             </div>
           )}
-        </div>
-      </section>
-      <section className="w-full py-12 md:py-24 lg:py-32">
-        <div className="container px-4 md:px-6">
-          <h2 className="text-2xl font-bold tracking-tight mb-6">Recursos para Árbitros</h2>
-          <Card>
-            <CardHeader>
-              <CardTitle>Documentos Oficiales</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Link href="/reglamentos/fide" className="text-primary hover:underline">
-                Leyes del Ajedrez FIDE
-              </Link>
-            </CardContent>
-          </Card>
         </div>
       </section>
     </>

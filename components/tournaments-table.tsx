@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ChevronDown, Edit, Eye, MoreHorizontal, Plus, Search, Trash2, Users, Loader2, AlertCircle } from "lucide-react"
+import { CalendarClock, CheckCircle2, ChevronDown, Eye, MoreHorizontal, Pencil, PlayCircle, Search, Trash2, Users, Loader2, AlertCircle, type LucideIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
+import { InfoPill } from "@/components/info-pill"
 import { createClient } from "@/lib/supabase/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
@@ -55,6 +55,12 @@ interface Tournament {
     id: number
     name: string
   } | null
+}
+
+const STATUS_ICONS: Record<string, LucideIcon> = {
+  upcoming: CalendarClock,
+  ongoing: PlayCircle,
+  past: CheckCircle2,
 }
 
 // API helper function
@@ -273,34 +279,6 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
     return `${formattedStart} al ${formattedEnd}`
   }
 
-  // Get status badge variant
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case "upcoming":
-        return "default"
-      case "ongoing":
-        return "default"
-      case "past":
-        return "outline"
-      default:
-        return "outline"
-    }
-  }
-
-  // Get status badge class
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case "upcoming":
-        return "bg-blue-500 hover:bg-blue-500/80"
-      case "ongoing":
-        return "bg-green-500 hover:bg-green-500/80"
-      case "past":
-        return "text-muted-foreground"
-      default:
-        return ""
-    }
-  }
-
   // Get status display text
   const getStatusText = (status: string) => {
     switch (status) {
@@ -316,7 +294,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -324,7 +302,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
         </Alert>
       )}
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -440,7 +418,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('location')}
                 >
                   <div className="flex items-center gap-1">
@@ -450,7 +428,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                 </TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead 
-                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('participants')}
                 >
                   <div className="flex items-center gap-1">
@@ -458,7 +436,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                     {getSortIcon('participants') && <span className="text-xs">{getSortIcon('participants')}</span>}
                   </div>
                 </TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                <TableHead className="w-[60px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -466,7 +444,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8">
                     <p className="text-muted-foreground">
-                      {searchTerm ? 'No se encontraron torneos que coincidan con la búsqueda.' : 'No hay torneos disponibles.'}
+                      {searchTerm ? 'No se encontraron torneos' : 'No hay torneos'}
                     </p>
                   </TableCell>
                 </TableRow>
@@ -477,27 +455,21 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                     <TableCell>
                       {getDateRange(torneo.start_date, torneo.end_date)}
                     </TableCell>
-                    <TableCell>{torneo.location}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{torneo.location}</TableCell>
                     <TableCell>
-                      <Badge
-                        variant={getStatusBadgeVariant(torneo.status)}
-                        className={getStatusBadgeClass(torneo.status)}
-                      >
+                      <InfoPill icon={STATUS_ICONS[torneo.status] ?? CalendarClock}>
                         {getStatusText(torneo.status)}
-                      </Badge>
+                      </InfoPill>
                     </TableCell>
-                    <TableCell>{torneo.participants || 0}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{torneo.participants || 0}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Acciones" title="Acciones">
                             <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Abrir menú</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
                           <DropdownMenuItem asChild>
                             <Link href={`/torneos/${torneo.id}`} target="_blank">
                               <Eye className="mr-2 h-4 w-4" />
@@ -506,14 +478,8 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href={`/torneos/${torneo.id}/editar`}>
-                              <Edit className="mr-2 h-4 w-4" />
+                              <Pencil className="mr-2 h-4 w-4" />
                               Editar
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/torneos/${torneo.id}/inscripciones`}>
-                              <Users className="mr-2 h-4 w-4" />
-                              Ver inscripciones
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
@@ -522,7 +488,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                               setTorneoToDelete(torneo.id)
                               setShowDeleteDialog(true)
                             }}
-                            className="text-red-500 focus:text-red-500"
+                            className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Eliminar
@@ -538,17 +504,17 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
         </div>
 
         {/* Mobile Card View - Hidden on desktop */}
-        <div className="md:hidden pb-8">
+        <div className="md:hidden">
           {sortedAndFilteredTorneos.length === 0 ? (
-            <div className="text-center py-12">
+            <div className="text-center py-8">
               <p className="text-muted-foreground">
-                {searchTerm ? 'No se encontraron torneos que coincidan con la búsqueda.' : 'No hay torneos disponibles.'}
+                {searchTerm ? 'No se encontraron torneos' : 'No hay torneos'}
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {sortedAndFilteredTorneos.map((torneo) => (
-                <div key={torneo.id} className="bg-card rounded-lg border p-4 shadow-sm">
+                <div key={torneo.id} className="rounded-lg border bg-card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-sm leading-5 text-card-foreground mb-2 line-clamp-2">
@@ -557,7 +523,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                       
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span className="font-medium text-terracotta">
+                          <span className="font-medium text-foreground">
                             {getDateRange(torneo.start_date, torneo.end_date)}
                           </span>
                           <span>•</span>
@@ -565,14 +531,11 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                         </div>
                         
                         <div className="flex items-center justify-between gap-2">
-                          <Badge
-                            variant={getStatusBadgeVariant(torneo.status)}
-                            className={`text-xs ${getStatusBadgeClass(torneo.status)}`}
-                          >
+                          <InfoPill icon={STATUS_ICONS[torneo.status] ?? CalendarClock}>
                             {getStatusText(torneo.status)}
-                          </Badge>
+                          </InfoPill>
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Users className="h-3 w-3" />
+                            <Users className="h-3.5 w-3.5 text-amber" />
                             <span>{torneo.participants || 0}</span>
                           </div>
                         </div>
@@ -581,14 +544,11 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                     
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
-                          <span className="sr-only">Abrir menú</span>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Acciones" title="Acciones">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
                           <Link href={`/torneos/${torneo.id}`} target="_blank">
                             <Eye className="mr-2 h-4 w-4" />
@@ -597,14 +557,8 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link href={`/torneos/${torneo.id}/editar`}>
-                            <Edit className="mr-2 h-4 w-4" />
+                            <Pencil className="mr-2 h-4 w-4" />
                             Editar
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/torneos/${torneo.id}/inscripciones`}>
-                            <Users className="mr-2 h-4 w-4" />
-                            Ver inscripciones
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -613,7 +567,7 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
                             setTorneoToDelete(torneo.id)
                             setShowDeleteDialog(true)
                           }}
-                          className="text-red-500 focus:text-red-500"
+                          className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Eliminar

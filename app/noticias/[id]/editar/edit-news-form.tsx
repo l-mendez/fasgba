@@ -3,9 +3,8 @@
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { ArrowLeft, Save, AlertCircle } from "lucide-react"
+import { AlertCircle } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -23,6 +22,7 @@ import {
   type StoredImageBlockContent,
 } from "@/components/news/types"
 import { NewsContentBlocksEditorSimple } from "@/components/news/news-content-blocks-editor-simple"
+import { NewsFormHeader } from "@/components/news/news-form-header"
 import { useEditableNewsBlocks } from "@/components/news/use-news-content-blocks"
 
 interface News {
@@ -189,25 +189,15 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
   }
 
   return (
-    <div className="flex flex-col gap-4 md:gap-8 p-4 md:p-8">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 md:gap-4">
-          <Button variant="ghost" size="sm" className="md:size-icon" onClick={() => router.push(redirectPath)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-terracotta">Editar Noticia</h1>
-            <p className="text-sm md:text-base text-muted-foreground">
-              {news.club?.name ? `Modifica los detalles de la noticia para ${news.club.name}.` : 'Modifica los detalles de la noticia.'}
-            </p>
-          </div>
-        </div>
-        <Button onClick={handleSubmit} disabled={isSaving} className="text-sm md:text-base" size="sm">
-          <Save className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
-          <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Guardar Cambios'}</span>
-          <span className="sm:hidden">{isSaving ? 'Guardando...' : 'Guardar'}</span>
-        </Button>
-      </div>
+    <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-8">
+      <NewsFormHeader
+        title="Editar noticia"
+        saveLabel="Guardar"
+        savingLabel="Guardando..."
+        isSaving={isSaving}
+        onBack={() => router.push(redirectPath)}
+        onSubmit={handleSubmit}
+      />
 
       {error && (
         <ErrorAlert title="Error" message={error} />
@@ -218,11 +208,10 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Subiendo imágenes...</AlertTitle>
           <AlertDescription>
-            Procesando {uploadProgress.current} de {uploadProgress.total} imágenes.
-            Por favor, no cierre esta ventana.
-            <div className="mt-2 bg-gray-200 rounded-full h-2">
+            {uploadProgress.current} de {uploadProgress.total}. No cierres esta ventana.
+            <div className="mt-2 bg-muted rounded-full h-2">
               <div
-                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                className="bg-amber h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
               />
             </div>
@@ -230,46 +219,46 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4 md:space-y-8">
-        <div className="grid gap-3 md:gap-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="title" className="text-sm md:text-sm font-medium">Título</Label>
+            <Label htmlFor="title">Título</Label>
             <Input
               id="title"
               value={news.title}
               onChange={(e) => setNews({ ...news, title: e.target.value })}
               required
-              className="text-sm md:text-base"
+             
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="date" className="text-sm md:text-sm font-medium">Fecha</Label>
+            <Label htmlFor="date">Fecha</Label>
             <Input
               id="date"
               type="date"
               value={news.date}
               onChange={(e) => setNews({ ...news, date: e.target.value })}
               required
-              className="text-sm md:text-base"
+             
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="extract" className="text-sm md:text-sm font-medium">Extracto</Label>
+            <Label htmlFor="extract">Extracto</Label>
             <Textarea
               id="extract"
               value={news.extract}
               onChange={(e) => setNews({ ...news, extract: e.target.value })}
               placeholder="Breve descripción de la noticia..."
-              className="text-sm md:text-base min-h-[80px] md:min-h-[100px]"
+              className="min-h-[80px]"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="category" className="text-sm md:text-sm font-medium">Categoría</Label>
+            <Label htmlFor="category">Categoría</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger id="category" className="text-sm md:text-base">
+              <SelectTrigger id="category">
                 <SelectValue placeholder="Seleccionar categoría" />
               </SelectTrigger>
               <SelectContent>
@@ -291,7 +280,7 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
           />
 
           <div className="grid gap-2">
-            <Label className="text-sm md:text-sm font-medium">Contenido</Label>
+            <Label>Contenido</Label>
             <NewsContentBlocksEditorSimple
               blocks={contentBlocks}
               blockActions={blockActions}
@@ -320,11 +309,8 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
 
           {news.club && (
             <div className="grid gap-2">
-              <Label className="text-sm md:text-sm font-medium">Club Asociado</Label>
-              <div className="p-3 bg-muted rounded-md">
-                <p className="text-sm font-medium">{news.club.name}</p>
-                <p className="text-xs text-muted-foreground">La noticia estará asociada a este club</p>
-              </div>
+              <Label>Club</Label>
+              <p className="rounded-md bg-muted p-3 text-sm font-medium">{news.club.name}</p>
             </div>
           )}
         </div>

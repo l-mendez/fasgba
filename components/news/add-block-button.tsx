@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, ChevronDown, ImageIcon } from "lucide-react"
+import { Plus, ChevronDown, ImageIcon, Type } from "lucide-react"
 import { DiamondIcon as ChessIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -34,19 +34,20 @@ export function AddBlockButton({
         </Button>
 
         {isOpen && (
-          <div className="absolute z-10 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="absolute z-10 mt-1 w-48 bg-popover text-popover-foreground rounded-md shadow-md border overflow-hidden">
             <button
-              className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center text-gray-900 dark:text-gray-100"
+              className="w-full text-left px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground flex items-center"
               onClick={() => {
                 onAddTextBlock()
                 setIsOpen(false)
               }}
               type="button"
             >
+              <Type className="mr-2 h-4 w-4" />
               <span>Texto</span>
             </button>
             <button
-              className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center text-gray-900 dark:text-gray-100"
+              className="w-full text-left px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground flex items-center"
               onClick={() => {
                 onAddImageBlock()
                 setIsOpen(false)
@@ -57,7 +58,7 @@ export function AddBlockButton({
               <span>Imagen</span>
             </button>
             <button
-              className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center text-gray-900 dark:text-gray-100"
+              className="w-full text-left px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground flex items-center"
               onClick={() => {
                 onAddChessGameBlock()
                 setIsOpen(false)
@@ -92,19 +93,22 @@ export function SimpleAddBlockButtons({
   layout = "row",
 }: SimpleAddBlockButtonsProps) {
   const containerClass = layout === "stack"
-    ? "flex space-x-2 mt-4"
-    : "flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mt-4"
+    ? "flex flex-wrap gap-2 mt-4"
+    : "flex flex-col sm:flex-row gap-2 mt-4"
 
   return (
     <div className={containerClass}>
       <Button type="button" variant="outline" onClick={onAddTextBlock} size="sm" className="text-sm w-full sm:w-auto">
-        + Texto
+        <Plus className="h-4 w-4" />
+        Texto
       </Button>
       <Button type="button" variant="outline" onClick={onAddImageBlock} size="sm" className="text-sm w-full sm:w-auto">
-        + Imagen
+        <Plus className="h-4 w-4" />
+        Imagen
       </Button>
       <Button type="button" variant="outline" onClick={onAddChessGameBlock} size="sm" className="text-sm w-full sm:w-auto">
-        + Partida de ajedrez
+        <Plus className="h-4 w-4" />
+        Partida de ajedrez
       </Button>
       {onBulkImageUpload && (
         <Button
@@ -115,7 +119,8 @@ export function SimpleAddBlockButtons({
           className="text-sm w-full sm:w-auto"
           disabled={isUploading}
         >
-          + Múltiples Imágenes
+          <Plus className="h-4 w-4" />
+          Varias imágenes
         </Button>
       )}
     </div>

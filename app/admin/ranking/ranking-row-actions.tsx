@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Edit, Eye, RefreshCw, Save, Trash2 } from "lucide-react"
+import { CalendarClock, Eye, RefreshCw, Save, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import type { PastRanking } from "./types"
@@ -137,25 +137,26 @@ export function RankingRowActions({ ranking }: RankingRowActionsProps) {
 
   return (
     <>
-      <div className="flex items-center justify-end gap-2">
-        <Button asChild variant="outline" size="sm" className="h-8 w-8 p-0">
+      <div className="flex items-center justify-end gap-1">
+        <Button asChild variant="ghost" size="icon" className="h-8 w-8" title="Ver ranking">
           <Link href={{ pathname: "/ranking", query: { ranking: ranking.id } }}>
             <Eye className="h-4 w-4" />
             <span className="sr-only">Ver ranking</span>
           </Link>
         </Button>
 
-        <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={openEditDate}>
-          <Edit className="h-4 w-4" />
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={openEditDate} title="Editar fecha">
+          <CalendarClock className="h-4 w-4" />
           <span className="sr-only">Editar fecha</span>
         </Button>
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              title="Eliminar ranking"
               disabled={isDeleting}
             >
               {isDeleting ? (

@@ -5,8 +5,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { InfoPill } from '@/components/info-pill'
 import { Plus, Users, Trash2, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import { TeamRosterManagement } from './team-roster-management'
 import type { useTeamRoster } from '@/hooks/useTeamRoster'
@@ -67,13 +67,12 @@ export function RegisteredTeamsSection({ roster }: RegisteredTeamsSectionProps) 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold">Equipos Participantes</h3>
-          <Badge variant="outline" className="flex items-center gap-1">
-            <Users className="h-3 w-3" />
-            {registeredTeams.length} equipos
-          </Badge>
+          <h3 className="text-2xl font-bold tracking-tight text-terracotta">Equipos</h3>
+          <InfoPill icon={Users}>
+            {registeredTeams.length} {registeredTeams.length === 1 ? 'equipo' : 'equipos'}
+          </InfoPill>
         </div>
 
         <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
@@ -94,7 +93,7 @@ export function RegisteredTeamsSection({ roster }: RegisteredTeamsSectionProps) 
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Registrar Equipo en Torneo</DialogTitle>
+              <DialogTitle>Registrar Equipo</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -122,7 +121,7 @@ export function RegisteredTeamsSection({ roster }: RegisteredTeamsSectionProps) 
                   {loadingClubTeams ? (
                     <div className="flex items-center gap-2 py-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="text-sm text-gray-500">Cargando equipos...</span>
+                      <span className="text-sm text-muted-foreground">Cargando equipos...</span>
                     </div>
                   ) : isCreateTeamMode ? (
                     <div className="space-y-2">
@@ -169,7 +168,7 @@ export function RegisteredTeamsSection({ roster }: RegisteredTeamsSectionProps) 
                         </SelectContent>
                       </Select>
                       {availableTeamsForClub.length === 0 && clubTeams.length > 0 && (
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                           Todos los equipos de este club ya están registrados
                         </p>
                       )}
@@ -202,13 +201,9 @@ export function RegisteredTeamsSection({ roster }: RegisteredTeamsSectionProps) 
         </Dialog>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {registeredTeams.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-center text-gray-500">
-              No hay equipos registrados en este torneo. Registra el primer equipo.
-            </CardContent>
-          </Card>
+          <p className="py-8 text-center text-sm text-muted-foreground">No hay equipos registrados.</p>
         ) : (
           registeredTeams.map((reg) => {
             const players = teamPlayers[reg.team_id] || []
@@ -217,23 +212,21 @@ export function RegisteredTeamsSection({ roster }: RegisteredTeamsSectionProps) 
 
             return (
               <Card key={reg.team_id}>
-                <CardHeader className="pb-3">
+                <div className="p-4">
                   <div className="flex items-center justify-between">
                     <button
                       type="button"
                       className="flex items-center gap-3 text-left flex-1 min-w-0"
                       onClick={() => toggleTeamExpanded(reg.team_id)}
                     >
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full shrink-0">
-                        <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div className="min-w-0">
-                        <CardTitle className="text-base">{reg.teams.name}</CardTitle>
+                      <Users className="h-4 w-4 shrink-0 text-amber" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{reg.teams.name}</p>
                         <p className="text-sm text-muted-foreground">{reg.teams.clubs.name}</p>
                       </div>
-                      <Badge variant="secondary" className="shrink-0">
+                      <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
                         {players.length} jugador{players.length !== 1 ? 'es' : ''}
-                      </Badge>
+                      </span>
                       {isExpanded ? (
                         <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
                       ) : (
@@ -241,19 +234,21 @@ export function RegisteredTeamsSection({ roster }: RegisteredTeamsSectionProps) 
                       )}
                     </button>
                     <Button
-                      variant="outline"
-                      size="sm"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Quitar ${reg.teams.name}`}
+                      title="Quitar equipo"
                       onClick={() => handleRemoveTeam(reg.team_id, reg.teams.name)}
                       disabled={loading}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2 shrink-0"
+                      className="ml-2 h-8 w-8 shrink-0 text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                </CardHeader>
+                </div>
 
                 {isExpanded && (
-                  <CardContent className="pt-0">
+                  <CardContent className="px-4 pb-4 pt-0">
                     <TeamRosterManagement
                       teamId={reg.team_id}
                       players={players}
@@ -287,16 +282,6 @@ export function RegisteredTeamsSection({ roster }: RegisteredTeamsSectionProps) 
         )}
       </div>
 
-      {registeredTeams.length > 0 && (
-        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/50 rounded-lg border border-blue-200 dark:border-blue-800">
-          <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">Gestión de Equipos</h4>
-          <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-            <li>- Haz click en un equipo para ver y gestionar sus jugadores</li>
-            <li>- Busca jugadores existentes o crea nuevos para agregar al equipo</li>
-            <li>- Un jugador puede participar en un solo equipo por torneo</li>
-          </ul>
-        </div>
-      )}
     </div>
   )
 }

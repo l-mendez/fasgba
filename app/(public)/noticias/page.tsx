@@ -92,12 +92,9 @@ export default async function NoticiasPage() {
 
   return (
     <>
-      <PageHero
-        title="Noticias"
-        subtitle="Mantenete al día con las últimas novedades del ajedrez en la región sur de Buenos Aires"
-      />
+      <PageHero title="Noticias" />
 
-      <section className="w-full py-12 md:py-24 lg:py-32">
+      <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
         <div className="container px-4 md:px-6">
           <NewsList allNews={allNews} tags={tags} clubs={clubs} />
         </div>

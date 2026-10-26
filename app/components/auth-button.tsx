@@ -180,8 +180,7 @@ export function AuthButton({
       <Button
         onClick={handleClick}
         disabled={isLoading}
-        variant="brand"
-        className={`w-full ${className || ""}`}
+        className={`w-full bg-terracotta text-white hover:bg-terracotta/90 ${className || ""}`}
       >
         {isLoading ? (
           <>
@@ -193,7 +192,7 @@ export function AuthButton({
         )}
       </Button>
       {error && (
-        <p className="text-sm text-red-500 text-center">{error}</p>
+        <p className="text-sm text-destructive text-center">{error}</p>
       )}
     </div>
   )

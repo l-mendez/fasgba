@@ -1,13 +1,13 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Calendar, FileSpreadsheet, RefreshCw } from "lucide-react"
+import { Archive, Calendar, CheckCircle2, FileSpreadsheet, RefreshCw } from "lucide-react"
 
 import { RankingRowActions } from "./ranking-row-actions"
 import type { PaginatedPastRankings, PastRanking } from "./types"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { InfoPill } from "@/components/info-pill"
 import {
   Table,
   TableBody,
@@ -109,10 +109,10 @@ export function PastRankingsInfiniteTable({ initialData }: PastRankingsInfiniteT
           <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
-              <TableHead>Fecha</TableHead>
-              <TableHead className="text-right">Jugadores</TableHead>
+              <TableHead className="hidden md:table-cell">Fecha</TableHead>
+              <TableHead className="hidden text-right sm:table-cell">Jugadores</TableHead>
               <TableHead>Estado</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
+              <TableHead className="text-right"><span className="sr-only">Acciones</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -128,22 +128,19 @@ export function PastRankingsInfiniteTable({ initialData }: PastRankingsInfiniteT
                     </code>
                   </div>
                 </TableCell>
-                <TableCell>
-                  <div className="flex items-center text-muted-foreground">
-                    <Calendar className="mr-2 h-4 w-4" />
+                <TableCell className="hidden md:table-cell">
+                  <div className="flex items-center gap-1.5 whitespace-nowrap text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4 text-amber" />
                     {formatDate(ranking.date)}
                   </div>
                 </TableCell>
-                <TableCell className="text-right font-mono">
+                <TableCell className="hidden text-right font-mono sm:table-cell">
                   {ranking.totalPlayers}
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant={ranking.status === "current" ? "default" : "secondary"}
-                    className="text-xs"
-                  >
+                  <InfoPill icon={ranking.status === "current" ? CheckCircle2 : Archive}>
                     {ranking.status === "current" ? "Actual" : "Archivado"}
-                  </Badge>
+                  </InfoPill>
                 </TableCell>
                 <TableCell className="text-right">
                   <RankingRowActions ranking={ranking} />
@@ -156,7 +153,7 @@ export function PastRankingsInfiniteTable({ initialData }: PastRankingsInfiniteT
 
       {initialData.total === 0 ? (
         <div className="py-8 text-center text-muted-foreground">
-          <FileSpreadsheet className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
+          <FileSpreadsheet className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
           <p>No se encontraron rankings anteriores</p>
         </div>
       ) : null}

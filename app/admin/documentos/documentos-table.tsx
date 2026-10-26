@@ -29,9 +29,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -53,14 +52,13 @@ import {
 import { apiCall } from "@/lib/utils/apiClient"
 import { openDocumento } from "@/lib/documentos-client"
 import {
-  CATEGORY_COLORS,
-  DOCUMENT_CATEGORIES,
   formatArgentinaDate,
   formatFileSize,
   getDocumentoExtension,
   isSpreadsheetExtension,
 } from "@/lib/documentosUtils"
 import { SORT_OPTIONS, type SortOption } from "@/lib/schemas/documentosSchemas"
+import { CategoryPill } from "./category-pill"
 import type { Documento } from "./types"
 
 interface DocumentosTableProps {
@@ -123,9 +121,9 @@ export function DocumentosTable({
 
   const getDocumentIcon = (documento: Documento) => {
     if (isSpreadsheetExtension(getDocumentoExtension(documento.file_path))) {
-      return <FileSpreadsheet className="h-4 w-4 text-green-600" />
+      return <FileSpreadsheet className="h-4 w-4 shrink-0 text-amber" />
     }
-    return <FileText className="h-4 w-4 text-red-500" />
+    return <FileText className="h-4 w-4 shrink-0 text-terracotta" />
   }
 
   const startEditing = (documento: Documento) => {
@@ -196,17 +194,10 @@ export function DocumentosTable({
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <CardTitle>Documentos existentes</CardTitle>
-            <CardDescription>
-              Gestiona los documentos publicados en la biblioteca
-            </CardDescription>
-          </div>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <CardTitle>Documentos existentes</CardTitle>
           <div className="flex items-center gap-2">
-            <Label htmlFor="sort-select" className="text-sm whitespace-nowrap">
-              Ordenar por:
-            </Label>
+            <Label htmlFor="sort-select" className="sr-only">Ordenar por</Label>
             <Select
               value={sortOption}
               onValueChange={(value) => setSortOption(value as SortOption)}
@@ -251,8 +242,8 @@ export function DocumentosTable({
         )}
         {sortOption === "custom" && (
           <p className="text-sm text-muted-foreground mt-2">
-            <span className="hidden sm:inline">Arrastra las filas para reordenar los documentos</span>
-            <span className="sm:hidden">Usa las flechas para reordenar los documentos</span>
+            <span className="hidden sm:inline">Arrastrá las filas para reordenar</span>
+            <span className="sm:hidden">Usá las flechas para reordenar</span>
           </p>
         )}
       </CardHeader>
@@ -273,10 +264,10 @@ export function DocumentosTable({
                 <TableRow>
                   {sortOption === "custom" && <TableHead className="w-10"></TableHead>}
                   <TableHead>Nombre</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead className="text-right">Tamaño</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  <TableHead className="hidden sm:table-cell">Categoría</TableHead>
+                  <TableHead className="hidden md:table-cell">Fecha</TableHead>
+                  <TableHead className="hidden text-right lg:table-cell">Tamaño</TableHead>
+                  <TableHead className="text-right"><span className="sr-only">Acciones</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -305,6 +296,8 @@ export function DocumentosTable({
                               size="sm"
                               className="h-6 w-6 p-0"
                               onClick={() => moveDocument(documento.id, "up")}
+                              aria-label="Subir"
+                              title="Subir"
                               disabled={documents.findIndex((d) => d.id === documento.id) === 0}
                             >
                               <ChevronUp className="h-4 w-4" />
@@ -314,6 +307,8 @@ export function DocumentosTable({
                               size="sm"
                               className="h-6 w-6 p-0"
                               onClick={() => moveDocument(documento.id, "down")}
+                              aria-label="Bajar"
+                              title="Bajar"
                               disabled={documents.findIndex((d) => d.id === documento.id) === documents.length - 1}
                             >
                               <ChevronDown className="h-4 w-4" />
@@ -340,6 +335,8 @@ export function DocumentosTable({
                             size="sm"
                             className="h-8 w-8 p-0"
                             onClick={() => saveRename(documento.id)}
+                            aria-label="Guardar nombre"
+                            title="Guardar nombre"
                             disabled={isRenaming}
                           >
                             {isRenaming ? (
@@ -353,6 +350,8 @@ export function DocumentosTable({
                             size="sm"
                             className="h-8 w-8 p-0"
                             onClick={cancelEditing}
+                            aria-label="Cancelar"
+                            title="Cancelar"
                             disabled={isRenaming}
                           >
                             <X className="h-4 w-4" />
@@ -361,31 +360,26 @@ export function DocumentosTable({
                       ) : (
                         <div className="flex items-center gap-2">
                           {getDocumentIcon(documento)}
-                          <span>{documento.name}</span>
+                          <span className="min-w-0 break-words">{documento.name}</span>
                         </div>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className={CATEGORY_COLORS[documento.category]}
-                      >
-                        {DOCUMENT_CATEGORIES[documento.category]}
-                      </Badge>
+                    <TableCell className="hidden sm:table-cell">
+                      <CategoryPill category={documento.category} />
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center text-muted-foreground">
-                        <Calendar className="mr-2 h-4 w-4" />
+                    <TableCell className="hidden md:table-cell">
+                      <div className="flex items-center gap-1.5 whitespace-nowrap text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4 text-amber" />
                         {formatArgentinaDate(documento.created_at)}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right font-mono">
+                    <TableCell className="hidden text-right font-mono text-sm lg:table-cell">
                       {formatFileSize(documento.file_size)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0"
                           onClick={() => startEditing(documento)}
@@ -397,7 +391,7 @@ export function DocumentosTable({
                         </Button>
 
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0"
                           onClick={() => openDocument(documento)}
@@ -408,7 +402,7 @@ export function DocumentosTable({
                         </Button>
 
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0"
                           onClick={() => downloadDocument(documento)}
@@ -421,9 +415,10 @@ export function DocumentosTable({
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                              title="Eliminar documento"
                               disabled={deletingId === documento.id}
                             >
                               {deletingId === documento.id ? (
@@ -465,9 +460,8 @@ export function DocumentosTable({
 
             {documents.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
-                <FileText className="mx-auto h-12 w-12 mb-4 text-muted-foreground/50" />
-                <p>No se encontraron documentos</p>
-                <p className="text-sm">Sube el primer documento usando el formulario de arriba</p>
+                <FileText className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
+                <p>No hay documentos</p>
               </div>
             )}
 

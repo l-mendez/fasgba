@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Save, Users } from "lucide-react"
+import { ChevronLeft, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { toast } from "sonner"
 import { apiCall } from "@/lib/utils/apiClient"
 import { useAuth } from "@/hooks/useAuth"
@@ -52,7 +52,7 @@ export default function NuevoJugadorPage() {
       if (authLoading) return
       
       if (!user) {
-        router.push('/auth/login')
+        router.push('/login')
         return
       }
 
@@ -142,7 +142,7 @@ export default function NuevoJugadorPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-terracotta mx-auto mb-4"></div>
-          <p>Cargando...</p>
+          <p className="text-sm text-muted-foreground">Cargando...</p>
         </div>
       </div>
     )
@@ -150,43 +150,24 @@ export default function NuevoJugadorPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <div className="flex items-center space-x-4 mb-6">
-        <Link href={isAdmin ? "/admin/jugadores" : "/club-admin"}>
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Volver
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Nuevo Jugador</h1>
-          <p className="text-muted-foreground">
-            Completa el formulario para agregar un nuevo jugador
-          </p>
-        </div>
+      <div className="mb-6 flex items-center gap-2">
+        <Button asChild variant="ghost" size="icon" className="-ml-2">
+          <Link href={isAdmin ? "/admin/jugadores" : "/club-admin"} aria-label="Volver" title="Volver">
+            <ChevronLeft />
+          </Link>
+        </Button>
+        <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Nuevo Jugador</h1>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Users className="mr-2 h-5 w-5" />
-            Información del Jugador
-          </CardTitle>
-          <CardDescription>
-            {isAdmin 
-              ? "Como administrador del sitio, puedes crear jugadores para cualquier club."
-              : "Como administrador de club, puedes crear jugadores para los clubes que administras."
-            }
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <CardContent className="p-4 md:p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="full_name">Nombre Completo *</Label>
               <Input
                 id="full_name"
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                placeholder="Ingresa el nombre completo del jugador"
                 required
               />
             </div>
@@ -197,7 +178,7 @@ export default function NuevoJugadorPage() {
                 id="fide_id"
                 value={formData.fide_id}
                 onChange={(e) => setFormData({ ...formData, fide_id: e.target.value })}
-                placeholder="Opcional - ID de FIDE del jugador"
+                placeholder="Opcional"
               />
             </div>
 
@@ -210,7 +191,7 @@ export default function NuevoJugadorPage() {
                 max="4000"
                 value={formData.rating}
                 onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
-                placeholder="Opcional - Rating del jugador"
+                placeholder="Opcional"
               />
             </div>
 
@@ -239,15 +220,13 @@ export default function NuevoJugadorPage() {
               )}
             </div>
 
-            <div className="flex justify-end space-x-2 pt-4">
-              <Link href={isAdmin ? "/admin/jugadores" : "/club-admin"}>
-                <Button type="button" variant="outline">
-                  Cancelar
-                </Button>
-              </Link>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button asChild variant="outline">
+                <Link href={isAdmin ? "/admin/jugadores" : "/club-admin"}>Cancelar</Link>
+              </Button>
               <Button 
                 type="submit" 
-                className="bg-terracotta hover:bg-terracotta/90"
+                className="bg-terracotta text-white hover:bg-terracotta/90"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (

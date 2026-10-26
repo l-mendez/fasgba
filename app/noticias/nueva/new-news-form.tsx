@@ -161,10 +161,10 @@ export function NewNewsForm({ userClubs, isAdmin, defaultEntityId }: NewNewsForm
   const backPath = isAdmin ? '/admin/noticias' : '/club-admin/noticias'
 
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-8">
       <NewsFormHeader
-        title="Nueva Noticia"
-        saveLabel="Crear Noticia"
+        title="Nueva noticia"
+        saveLabel="Crear"
         savingLabel="Creando..."
         isSaving={isSaving}
         onBack={() => router.push(backPath)}
@@ -176,11 +176,10 @@ export function NewNewsForm({ userClubs, isAdmin, defaultEntityId }: NewNewsForm
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Subiendo imágenes...</AlertTitle>
           <AlertDescription>
-            Procesando {uploadProgress.current} de {uploadProgress.total} imágenes.
-            Por favor, no cierre esta ventana.
-            <div className="mt-2 bg-gray-200 rounded-full h-2">
+            {uploadProgress.current} de {uploadProgress.total}. No cierres esta ventana.
+            <div className="mt-2 bg-muted rounded-full h-2">
               <div
-                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                className="bg-amber h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
               />
             </div>
@@ -192,7 +191,7 @@ export function NewNewsForm({ userClubs, isAdmin, defaultEntityId }: NewNewsForm
         <ErrorAlert title="Error" message={error} />
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="title">Título</Label>
@@ -274,12 +273,6 @@ export function NewNewsForm({ userClubs, isAdmin, defaultEntityId }: NewNewsForm
                 ))}
               </SelectContent>
             </Select>
-            <div className="text-xs text-muted-foreground">
-              {formData.club_id ?
-                `La noticia estará asociada a ${userClubs.find((c) => c.id === formData.club_id)?.name}` :
-                'La noticia estará asociada a la Federación FASGBA'
-              }
-            </div>
           </div>
 
           <div className="grid gap-2">

@@ -3,14 +3,14 @@
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Upload, X, ImageIcon, Loader2, CheckCircle, Mail, Phone } from "lucide-react"
+import { AlertTriangle, ArrowLeft, Upload, X, ImageIcon, Loader2, CheckCircle, Mail, Phone } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { ErrorAlert } from "@/components/error-alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
   SelectContent,
@@ -245,43 +245,32 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
   }
 
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/admin/arbitros">
+          <Link href="/admin/arbitros" aria-label="Volver" title="Volver">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Editar Árbitro</h1>
-          <p className="text-muted-foreground">Modifica la información del árbitro.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Editar Árbitro</h1>
         </div>
       </div>
 
       {showSuccess && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 animate-in slide-in-from-top duration-300">
+        <div className="rounded-lg border bg-muted p-4">
           <div className="flex items-center gap-3">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            <div>
-              <h3 className="text-sm font-medium text-green-800">
-                Árbitro actualizado exitosamente
-              </h3>
-              <p className="text-sm text-green-700 mt-1">
-                Los cambios se han aplicado correctamente.
-              </p>
-            </div>
+            <CheckCircle className="h-5 w-5 shrink-0 text-amber" />
+            <p className="text-sm font-medium">Árbitro actualizado exitosamente</p>
           </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Photo Section */}
         <Card>
           <CardHeader>
             <CardTitle>Foto del Árbitro</CardTitle>
-            <CardDescription>
-              Sube una foto del árbitro (máximo 5MB)
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -298,6 +287,8 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
                       variant="destructive"
                       size="sm"
                       className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                      aria-label="Quitar imagen"
+                      title="Quitar imagen"
                       onClick={handleImageRemove}
                       disabled={isSaving}
                     >
@@ -314,10 +305,10 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
 
               {(!currentImage || pendingImageDeletion) && !imagePreview && (
                 <div
-                  className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                  className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors hover:border-amber"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <ImageIcon className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground mb-2">
                     Haz clic para subir una foto del árbitro
                   </p>
@@ -325,15 +316,16 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
                     JPG, PNG, GIF o WebP (máx. 5MB)
                   </p>
                   {pendingImageDeletion && (
-                    <div className="mt-3 pt-3 border-t border-dashed border-amber-300">
-                      <p className="text-xs text-amber-600 font-medium mb-2">
+                    <div className="mt-3 pt-3 border-t border-dashed border-amber/50">
+                      <p className="mb-2 flex items-center justify-center gap-1 text-xs font-medium text-foreground">
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber" />
                         La foto actual será eliminada al guardar
                       </p>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="text-xs h-6 border-green-200 bg-green-50 hover:bg-green-100 text-green-700"
+                        className="h-6 text-xs"
                         onClick={handleUndoImageDeletion}
                         disabled={isSaving}
                       >
@@ -372,9 +364,6 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
         <Card>
           <CardHeader>
             <CardTitle>Información del Árbitro</CardTitle>
-            <CardDescription>
-              Actualiza la información del árbitro
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
@@ -386,10 +375,10 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="Ej: Juan Pérez"
-                  className={validationErrors.name ? "border-red-500" : ""}
+                  className={validationErrors.name ? "border-destructive" : ""}
                 />
                 {validationErrors.name && (
-                  <p className="text-sm text-red-500">{validationErrors.name}</p>
+                  <p className="text-sm text-destructive">{validationErrors.name}</p>
                 )}
               </div>
 
@@ -401,10 +390,10 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
                   value={formData.title}
                   onChange={handleChange}
                   placeholder="Ej: Árbitro Internacional, Árbitro FIDE"
-                  className={validationErrors.title ? "border-red-500" : ""}
+                  className={validationErrors.title ? "border-destructive" : ""}
                 />
                 {validationErrors.title && (
-                  <p className="text-sm text-red-500">{validationErrors.title}</p>
+                  <p className="text-sm text-destructive">{validationErrors.title}</p>
                 )}
               </div>
 
@@ -438,10 +427,10 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
                   placeholder="Ej: 1985"
                   min={1900}
                   max={new Date().getFullYear()}
-                  className={validationErrors.birth_year ? "border-red-500" : ""}
+                  className={validationErrors.birth_year ? "border-destructive" : ""}
                 />
                 {validationErrors.birth_year && (
-                  <p className="text-sm text-red-500">{validationErrors.birth_year}</p>
+                  <p className="text-sm text-destructive">{validationErrors.birth_year}</p>
                 )}
               </div>
 
@@ -457,11 +446,11 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="Ej: arbitro@email.com"
-                      className={`pl-8 ${validationErrors.email ? "border-red-500" : ""}`}
+                      className={`pl-8 ${validationErrors.email ? "border-destructive" : ""}`}
                     />
                   </div>
                   {validationErrors.email && (
-                    <p className="text-sm text-red-500">{validationErrors.email}</p>
+                    <p className="text-sm text-destructive">{validationErrors.email}</p>
                   )}
                 </div>
                 <div className="grid gap-2">
@@ -497,12 +486,12 @@ export function EditarArbitroClient({ arbitro, initialClubs }: EditarArbitroClie
         </Card>
 
         {error && (
-          <div className="text-sm text-red-500">
+          <div className="text-sm text-destructive">
             {error}
           </div>
         )}
 
-        <div className="flex justify-end gap-4">
+        <div className="flex justify-end gap-3">
           <Button
             type="button"
             variant="outline"

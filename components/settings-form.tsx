@@ -3,26 +3,27 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
-import { Bell, Moon, LogOut, Trash2, Loader2, Lock, Eye, EyeOff } from "lucide-react"
+import { Bell, Moon, LogOut, Loader2, Lock, Eye, EyeOff, UserCog } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import { createClient } from "@/lib/supabase/client"
 import { PasswordRequirements } from "@/components/password-requirements"
 import { validatePassword } from "@/lib/utils/passwordValidation"
+
+const TITLE = "flex items-center gap-2 text-lg text-terracotta"
 
 export function SettingsForm({ initial }: { initial?: { type?: string; torneos?: string; noticias?: string; ranking?: boolean } }) {
   const [notificaciones, setNotificaciones] = useState<string>(initial?.type || "todas")
   const [torneos, setTorneos] = useState<string>(initial?.torneos || "todos")
   const [noticias, setNoticias] = useState<string>(initial?.noticias || "todos")
   const [ranking, setRanking] = useState<boolean>(typeof initial?.ranking === 'boolean' ? !!initial?.ranking : true)
-  const { theme, setTheme, resolvedTheme } = useTheme()
+  const { setTheme, resolvedTheme } = useTheme()
   const { toast } = useToast()
   const router = useRouter()
 
@@ -79,11 +80,6 @@ useEffect(() => {
     }
   }
 
-  const handleDeleteAccount = () => {
-    // TODO: Implement account deletion functionality
-    console.log("Eliminar cuenta")
-  }
-
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSaveNotifications = async () => {
@@ -112,7 +108,7 @@ useEffect(() => {
         title: "Cambios Guardados",
         description: "Tus preferencias de notificaciones se han actualizado correctamente.",
       })
-    } catch (e) {
+    } catch {
       console.log('Failed to save notification prefs')
       toast({
         title: "Error",
@@ -195,19 +191,16 @@ useEffect(() => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Notificaciones Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className={TITLE}>
             <Bell className="h-5 w-5 text-amber" />
             Notificaciones
           </CardTitle>
-          <CardDescription>
-            Configura cómo y cuándo quieres recibir notificaciones
-          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="notificaciones">Tipo de notificaciones</Label>
             <Select value={notificaciones} onValueChange={setNotificaciones}>
@@ -224,7 +217,7 @@ useEffect(() => {
 
           {/* Conditional sub-options when "Personalizar" is selected */}
           {notificaciones === "personalizar" && (
-            <div className="space-y-6 border-l-2 border-amber/30 pl-6 ml-4">
+            <div className="space-y-4 border-l-2 pl-4">
               <div className="space-y-2">
                 <Label htmlFor="torneos">Torneos</Label>
                 <Select value={torneos} onValueChange={setTorneos}>
@@ -258,12 +251,7 @@ useEffect(() => {
               </div>
 
               <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="ranking-notif">Ranking</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Recibir notificaciones sobre cambios en el ranking
-                  </p>
-                </div>
+                <Label htmlFor="ranking-notif">Ranking</Label>
                 <Switch
                   id="ranking-notif"
                   checked={ranking}
@@ -274,7 +262,7 @@ useEffect(() => {
           )}
 
           {/* Save and Cancel buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-amber/20">
+          <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row">
             <Button
               onClick={handleSaveNotifications}
               disabled={isSaving}
@@ -303,22 +291,14 @@ useEffect(() => {
       {/* Apariencia Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className={TITLE}>
             <Moon className="h-5 w-5 text-amber" />
             Apariencia
           </CardTitle>
-          <CardDescription>
-            Personaliza la apariencia de la aplicación
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="modo-oscuro">Modo Oscuro</Label>
-              <p className="text-sm text-muted-foreground">
-                Cambia a una interfaz con colores oscuros
-              </p>
-            </div>
+            <Label htmlFor="modo-oscuro">Modo oscuro</Label>
             <Switch
               id="modo-oscuro"
               checked={mounted && resolvedTheme === "dark"}
@@ -331,22 +311,19 @@ useEffect(() => {
       {/* Cuenta Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-terracotta">Cuenta</CardTitle>
-          <CardDescription>
-            Gestiona tu cuenta y sesión
-          </CardDescription>
+          <CardTitle className={TITLE}>
+            <UserCog className="h-5 w-5 text-amber" />
+            Cuenta
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="flex flex-col gap-3 sm:flex-row">
           {/* Password Change */}
           <Dialog open={passwordDialogOpen} onOpenChange={(open) => {
             setPasswordDialogOpen(open)
             if (!open) resetPasswordForm()
           }}>
             <DialogTrigger asChild>
-              <Button
-                variant="brandOutline"
-                className="flex items-center gap-2"
-              >
+              <Button variant="brandOutline">
                 <Lock className="h-4 w-4" />
                 Cambiar contraseña
               </Button>
@@ -427,7 +404,7 @@ useEffect(() => {
                   </div>
                 </div>
                 {passwordChangeError && (
-                  <p className="text-sm text-red-500">{passwordChangeError}</p>
+                  <p className="text-sm text-destructive">{passwordChangeError}</p>
                 )}
                 <Button
                   onClick={handleChangePassword}
@@ -447,47 +424,24 @@ useEffect(() => {
             </DialogContent>
           </Dialog>
 
-          <Separator />
-
           {/* Logout */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button
-              variant="brandOutline"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="flex items-center gap-2"
-            >
-              {isLoggingOut ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Cerrando sesión...
-                </>
-              ) : (
-                <>
-                  <LogOut className="h-4 w-4" />
-                  Cerrar Sesión
-                </>
-              )}
-            </Button>
-          </div>
-
-          <Separator />
-
-          {/* Danger Zone */}
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-destructive">Zona de Peligro</h4>
-            <p className="text-sm text-muted-foreground">
-              Esta acción eliminará permanentemente tu cuenta y todos los datos asociados.
-            </p>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteAccount}
-              className="flex items-center gap-2"
-            >
-              <Trash2 className="h-4 w-4" />
-              Eliminar mi cuenta
-            </Button>
-          </div>
+          <Button
+            variant="brandOutline"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+          >
+            {isLoggingOut ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Cerrando sesión...
+              </>
+            ) : (
+              <>
+                <LogOut className="h-4 w-4" />
+                Cerrar sesión
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
     </div>

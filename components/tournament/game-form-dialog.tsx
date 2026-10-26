@@ -76,19 +76,14 @@ export function GameFormDialog({
   }
 
   const colorAssignmentInfo = (gameFormData.match_id && (
-    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-md">
-      <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-1">
-        Asignación de Colores por Mesa
-      </p>
-      {(() => {
-        const matchInfo = getSelectedMatchInfo()
-        return matchInfo ? (
-          <p className="text-sm text-blue-700 dark:text-blue-300">
-            Mesa {gameFormData.board_number || 1}: <strong>{matchInfo.whiteTeam}</strong> juega con blancas, <strong>{matchInfo.blackTeam}</strong> juega con negras
-          </p>
-        ) : null
-      })()}
-    </div>
+    (() => {
+      const matchInfo = getSelectedMatchInfo()
+      return matchInfo ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Mesa {gameFormData.board_number || 1}: <strong>{matchInfo.whiteTeam}</strong> con blancas, <strong>{matchInfo.blackTeam}</strong> con negras
+        </p>
+      ) : null
+    })()
   )) || null
 
   const playerSelects = (
@@ -186,18 +181,6 @@ export function GameFormDialog({
         {mode === 'edit' && !editingGame ? null : (
           <div className="space-y-4 pr-2">
             {mode === 'add' && tournamentType === 'team' && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-2">
-                  Información sobre Partidas por Equipos
-                </p>
-                <p className="text-sm text-blue-700 dark:text-blue-300">
-                  En torneos por equipos, las partidas se organizan por enfrentamientos entre clubes.
-                  Cada enfrentamiento puede tener múltiples partidas individuales.
-                </p>
-              </div>
-            )}
-
-            {mode === 'add' && tournamentType === 'team' && (
               <div>
                 <Label htmlFor="match">Enfrentamiento *</Label>
                 <Select value={gameFormData.match_id?.toString() || ''} onValueChange={(value) => {
@@ -221,39 +204,24 @@ export function GameFormDialog({
                   </SelectContent>
                 </Select>
                 {matches.length === 0 && (
-                  <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-950/50 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
-                          No hay enfrentamientos configurados
-                        </p>
-                        <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                          Para torneos por equipos, primero debes configurar los enfrentamientos entre clubes
-                          al crear la ronda.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <p className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber" />
+                    No hay enfrentamientos. Configúralos al crear la ronda.
+                  </p>
                 )}
                 {colorAssignmentInfo}
               </div>
             )}
 
             {mode === 'edit' && editingGame && (
-              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Partida Original:</p>
-                  <p className="font-medium">Blancas: {editingGame.white}</p>
-                  {editingGame.whiteRating && (
-                    <p className="text-sm text-gray-500">Rating: {editingGame.whiteRating}</p>
-                  )}
+              <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted p-3 text-sm">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{editingGame.white}</p>
+                  <p className="text-muted-foreground">Blancas{editingGame.whiteRating ? ` · ${editingGame.whiteRating}` : ''}</p>
                 </div>
-                <div>
-                  <p className="font-medium">Negras: {editingGame.black}</p>
-                  {editingGame.blackRating && (
-                    <p className="text-sm text-gray-500">Rating: {editingGame.blackRating}</p>
-                  )}
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{editingGame.black}</p>
+                  <p className="text-muted-foreground">Negras{editingGame.blackRating ? ` · ${editingGame.blackRating}` : ''}</p>
                 </div>
               </div>
             )}
@@ -312,7 +280,7 @@ export function GameFormDialog({
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-white dark:bg-gray-950 border-t mt-6 -mx-6 px-6 py-4">
+            <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-background border-t mt-6 -mx-6 px-6 py-4">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>

@@ -8,11 +8,8 @@ import { getClubDashboardInitialData } from "@/lib/club-admin/initial-data"
 
 export default function ClubAdminDashboard() {
   return (
-    <div className="space-y-6 p-4 pt-6 md:p-8">
-      <AdminPageHeader
-        title="Dashboard del Club"
-        subtitle="Resumen del club seleccionado."
-      />
+    <div className="space-y-6">
+      <AdminPageHeader title="Dashboard" />
       <Suspense fallback={<AdminContentSkeleton stats={3} rows={3} filters={false} />}>
         <ClubAdminDashboardContent />
       </Suspense>

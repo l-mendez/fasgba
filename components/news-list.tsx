@@ -90,28 +90,17 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
 
   return (
     <>
-      <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold tracking-tight text-terracotta mb-4">
-            {hasActiveFilters ? "Noticias filtradas" : "Todas las noticias"}
-          </h2>
-
-          <NewsFilters
-            tags={tags}
-            clubs={clubs}
-            selectedTag={selectedTag}
-            selectedClub={selectedClub}
-            hasActiveFilters={hasActiveFilters}
-            onTagChange={handleTagChange}
-            onClubChange={handleClubChange}
-            onClear={handleClear}
-          />
-        </div>
-      </div>
-
-      <div className="mb-6 text-sm text-muted-foreground">
-        Mostrando {currentNews.length} de {total} noticias
-        {hasActiveFilters && ` (${allNews.length} total)`}
+      <div className="mb-8">
+        <NewsFilters
+          tags={tags}
+          clubs={clubs}
+          selectedTag={selectedTag}
+          selectedClub={selectedClub}
+          hasActiveFilters={hasActiveFilters}
+          onTagChange={handleTagChange}
+          onClubChange={handleClubChange}
+          onClear={handleClear}
+        />
       </div>
 
       {total === 0 ? (

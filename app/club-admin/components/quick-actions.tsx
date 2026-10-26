@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { FileText, Trophy, Users } from "lucide-react"
+import { ExternalLink, FileText, Trophy, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type { ClubAdminClub } from "@/lib/club-admin/types"
@@ -14,7 +14,7 @@ export function QuickActions({ selectedClub }: QuickActionsProps) {
     : '/noticias/nueva?source=club-admin'
 
   return (
-    <div className="grid gap-3 md:gap-4">
+    <div className="grid gap-2">
       <Button asChild variant="outline" className="w-full justify-start">
         <Link href="/club-admin/jugadores">
           <Users className="mr-2 h-4 w-4" />
@@ -36,7 +36,7 @@ export function QuickActions({ selectedClub }: QuickActionsProps) {
       {selectedClub && (
         <Button asChild variant="outline" className="w-full justify-start">
           <Link href={`/clubes/${selectedClub.id}`}>
-            <Users className="mr-2 h-4 w-4" />
+            <ExternalLink className="mr-2 h-4 w-4" />
             Ver página del club
           </Link>
         </Button>

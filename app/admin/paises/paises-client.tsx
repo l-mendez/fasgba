@@ -17,7 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
+import { InfoPill } from '@/components/info-pill'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -147,14 +147,8 @@ export function AdminPaisesClient({ initialOverview, initialLogs }: PaisesClient
     <TooltipProvider delayDuration={200}>
       <div className="space-y-6">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="default" className="gap-1">
-            <Globe className="h-3.5 w-3.5" />
-            {overview.enabledCount} de {overview.totalCount} países habilitados
-          </Badge>
-          <Badge variant="secondary" className="gap-1">
-            <Ban className="h-3.5 w-3.5" />
-            {overview.blocked7dTotal} intentos bloqueados (7 días)
-          </Badge>
+          <InfoPill icon={Globe}>{overview.enabledCount} de {overview.totalCount} países habilitados</InfoPill>
+          <InfoPill icon={Ban}>{overview.blocked7dTotal} intentos bloqueados (7 días)</InfoPill>
         </div>
 
         <PaisesMap countries={overview.countries} now={now} onToggle={handleToggle} />
@@ -233,8 +227,8 @@ export function AdminPaisesClient({ initialOverview, initialLogs }: PaisesClient
 
         {visibleCountries.length === 0 ? (
           <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              <Globe className="mx-auto mb-3 h-12 w-12 opacity-50" />
+            <CardContent className="p-6 text-center text-muted-foreground">
+              <Globe className="mx-auto mb-3 h-10 w-10 opacity-50" />
               <p>No se encontraron países.</p>
             </CardContent>
           </Card>

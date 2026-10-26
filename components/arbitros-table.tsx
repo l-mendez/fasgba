@@ -1,15 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import {
-  MoreHorizontal,
-  Trash2,
-  Edit,
-  Eye,
-  Search,
-  ChevronDown,
-  Phone,
-} from "lucide-react"
+import { ChevronDown, Pencil, Phone, Search, Trash2 } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -142,14 +134,14 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {error && (
-        <div className="bg-red-50 p-4 rounded-md text-red-800">
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-destructive">
           <p>{error}</p>
         </div>
       )}
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -219,13 +211,13 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
                   {getSortIcon('phone') && <span className="text-xs">{getSortIcon('phone')}</span>}
                 </div>
               </TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
+              <TableHead className="w-[90px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredArbitros.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-6">
+                <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
                   No se encontraron árbitros
                 </TableCell>
               </TableRow>
@@ -237,35 +229,26 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
                   <TableCell>{arbitro.club_name || "Sin club"}</TableCell>
                   <TableCell>{arbitro.phone || "—"}</TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Abrir menú</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/arbitros/${arbitro.id}/editar`}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600 focus:text-red-600"
-                          onClick={() => {
-                            setArbitroToDelete(arbitro.id)
-                            setShowDeleteDialog(true)
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex shrink-0 justify-end gap-1">
+                      <Button asChild variant="ghost" size="icon" className="h-8 w-8" aria-label="Editar" title="Editar">
+                        <Link href={`/admin/arbitros/${arbitro.id}/editar`}>
+                          <Pencil className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        aria-label="Eliminar"
+                        title="Eliminar"
+                        onClick={() => {
+                          setArbitroToDelete(arbitro.id)
+                          setShowDeleteDialog(true)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -275,15 +258,15 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
       </div>
 
       {/* Mobile Card View */}
-      <div className="md:hidden pb-8">
+      <div className="md:hidden">
         {filteredArbitros.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="text-center py-8 text-muted-foreground">
             No se encontraron árbitros
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {filteredArbitros.map((arbitro) => (
-              <div key={arbitro.id} className="bg-card rounded-lg border p-4 shadow-sm">
+              <div key={arbitro.id} className="rounded-lg border bg-card p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-sm leading-5 text-card-foreground mb-1 line-clamp-2">
@@ -296,41 +279,32 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
                       </span>
                       {arbitro.phone && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Phone className="h-3 w-3" />
+                          <Phone className="h-3.5 w-3.5 text-amber" />
                           <span>{arbitro.phone}</span>
                         </div>
                       )}
                     </div>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
-                        <span className="sr-only">Abrir menú</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/arbitros/${arbitro.id}/editar`}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-red-600 focus:text-red-600"
-                        onClick={() => {
-                          setArbitroToDelete(arbitro.id)
-                          setShowDeleteDialog(true)
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex shrink-0 justify-end gap-1">
+                    <Button asChild variant="ghost" size="icon" className="h-8 w-8" aria-label="Editar" title="Editar">
+                      <Link href={`/admin/arbitros/${arbitro.id}/editar`}>
+                        <Pencil className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      aria-label="Eliminar"
+                      title="Eliminar"
+                      onClick={() => {
+                        setArbitroToDelete(arbitro.id)
+                        setShowDeleteDialog(true)
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -358,7 +332,7 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
             <Button
               onClick={handleDeleteArbitro}
               disabled={isDeleting}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? 'Eliminando...' : 'Eliminar'}
             </Button>

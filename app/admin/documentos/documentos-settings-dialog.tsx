@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { RefreshCw } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -17,10 +16,10 @@ import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { apiCall } from "@/lib/utils/apiClient"
 import {
-  CATEGORY_COLORS,
   DOCUMENT_CATEGORIES,
   type DocumentCategory,
 } from "@/lib/documentosUtils"
+import { CategoryPill } from "./category-pill"
 import type { CategoryImportance } from "./types"
 
 interface DocumentosSettingsDialogProps {
@@ -75,21 +74,15 @@ export function DocumentosSettingsDialog({
         <DialogHeader>
           <DialogTitle>Configuración de orden</DialogTitle>
           <DialogDescription>
-            Define la importancia de cada categoría para el ordenamiento por importancia.
-            Las categorías con mayor valor aparecerán primero.
+            Las categorías con mayor valor aparecen primero.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-6 py-4">
-          {Object.entries(DOCUMENT_CATEGORIES).map(([key, label]) => (
+        <div className="grid gap-4 py-2">
+          {Object.keys(DOCUMENT_CATEGORIES).map((key) => (
             <div key={key} className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor={`importance-${key}`}>
-                  <Badge
-                    variant="secondary"
-                    className={CATEGORY_COLORS[key as DocumentCategory]}
-                  >
-                    {label}
-                  </Badge>
+                  <CategoryPill category={key as DocumentCategory} />
                 </Label>
                 <span className="text-sm text-muted-foreground">
                   {categoryImportance[key as DocumentCategory]}

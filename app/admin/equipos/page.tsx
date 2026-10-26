@@ -10,10 +10,7 @@ export const dynamic = "force-dynamic"
 export default function AdminEquiposPage() {
   return (
     <div className="space-y-6">
-      <AdminPageHeader
-        title="Equipos"
-        subtitle="Gestiona los equipos de los clubes afiliados."
-      />
+      <AdminPageHeader title="Equipos" />
       <Suspense fallback={<AdminContentSkeleton rows={5} />}>
         <AdminEquiposContent />
       </Suspense>

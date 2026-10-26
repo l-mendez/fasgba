@@ -23,14 +23,12 @@ export function NewsFormHeader({
   onSubmit,
 }: NewsFormHeaderProps) {
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={onBack}>
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-2">
+        <Button variant="ghost" size="icon" onClick={onBack} aria-label="Volver" title="Volver">
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">{title}</h1>
-        </div>
+        <h1 className="truncate text-2xl font-bold tracking-tight text-terracotta md:text-3xl">{title}</h1>
       </div>
       <Button onClick={onSubmit} disabled={isSaving}>
         <Save className="mr-2 h-4 w-4" />

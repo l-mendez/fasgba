@@ -1,37 +1,11 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { 
-  MoreHorizontal, 
-  Trash2, 
-  Edit3, 
-  Calendar, 
-  Users, 
-  Building2, 
-  Heart, 
-  FileText, 
-  MapPin, 
-  Phone, 
-  Mail,
-  ImageIcon,
-  Eye,
-  Search,
-  ChevronDown,
-  User,
-  Edit
-} from "lucide-react"
+import { useState } from "react"
+import { ChevronDown, Clock, Eye, Mail, MoreHorizontal, Pencil, Phone, Search, Trash2, User } from "lucide-react"
 import Link from "next/link"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Club } from "@/lib/clubUtils"
 import {
   Dialog,
@@ -215,14 +188,14 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {error && (
-        <div className="bg-red-50 p-4 rounded-md text-red-800">
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-destructive">
           <p>{error}</p>
         </div>
       )}
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -322,7 +295,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('schedule')}
                 >
                   <div className="flex items-center gap-1">
@@ -345,7 +318,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
             <TableBody>
               {sortedAndFilteredClubes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-6">
+                  <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
                     No se encontraron clubes
                   </TableCell>
                 </TableRow>
@@ -353,14 +326,14 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                 sortedAndFilteredClubes.map((club) => (
                   <TableRow key={club.id}>
                     <TableCell className="font-medium">{club.name}</TableCell>
-                    <TableCell>{club.address || "Sin dirección"}</TableCell>
+                    <TableCell>{club.address || "—"}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="text-xs">{club.mail || "Sin email"}</span>
-                        <span className="text-xs text-muted-foreground">{club.telephone || "Sin teléfono"}</span>
+                        <span className="text-xs">{club.mail || "—"}</span>
+                        {club.telephone && <span className="text-xs text-muted-foreground">{club.telephone}</span>}
                       </div>
                     </TableCell>
-                    <TableCell>{club.schedule || "Sin horarios"}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{club.schedule || "—"}</TableCell>
                     <TableCell>
                       <span className="text-sm font-medium">
                         {club.adminCount || 0}
@@ -369,14 +342,11 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Acciones" title="Acciones">
                             <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Abrir menú</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
                           <DropdownMenuItem asChild>
                             <Link href={`/admin/clubes/${club.id}`}>
                               <Eye className="mr-2 h-4 w-4" />
@@ -385,13 +355,13 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href={`/admin/clubes/${club.id}/editar`}>
-                              <Edit className="mr-2 h-4 w-4" />
+                              <Pencil className="mr-2 h-4 w-4" />
                               Editar
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            className="text-red-600 focus:text-red-600"
+                            className="text-destructive focus:text-destructive"
                             onClick={() => {
                               setClubToDelete(club.id)
                               setShowDeleteDialog(true)
@@ -411,57 +381,52 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
         </div>
 
         {/* Mobile Card View - Hidden on desktop */}
-        <div className="md:hidden pb-8">
+        <div className="md:hidden">
           {sortedAndFilteredClubes.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground">
               No se encontraron clubes
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {sortedAndFilteredClubes.map((club) => (
-                <div key={club.id} className="bg-card rounded-lg border p-4 shadow-sm">
+                <div key={club.id} className="rounded-lg border bg-card p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-sm leading-5 text-card-foreground mb-2 line-clamp-2">
-                        {club.name}
-                      </h3>
-                      
-                      {club.address && (
-                        <p className="text-xs text-muted-foreground mb-2">
-                          {club.address}
-                        </p>
-                      )}
-                      
-                      <div className="space-y-2">
-                        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                          <span className="font-medium text-terracotta">
-                            {club.mail || "Sin email"}
-                          </span>
-                          <span>{club.telephone || "Sin teléfono"}</span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs text-muted-foreground truncate">
-                            {club.schedule || "Sin horarios"}
-                          </span>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <User className="h-3 w-3" />
-                            <span>{club.adminCount || 0}</span>
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <h3 className="line-clamp-2 text-sm font-medium">{club.name}</h3>
+                      <div className="space-y-1 text-xs text-muted-foreground">
+                        {club.address && <p>{club.address}</p>}
+                        {club.mail && (
+                          <div className="flex items-center gap-1.5">
+                            <Mail className="h-3.5 w-3.5 shrink-0 text-amber" />
+                            <span className="truncate">{club.mail}</span>
                           </div>
+                        )}
+                        {club.telephone && (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5 shrink-0 text-amber" />
+                            <span>{club.telephone}</span>
+                          </div>
+                        )}
+                        {club.schedule && (
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 shrink-0 text-amber" />
+                            <span className="truncate">{club.schedule}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1.5" title="Delegados">
+                          <User className="h-3.5 w-3.5 shrink-0 text-amber" />
+                          <span>{club.adminCount || 0}</span>
                         </div>
                       </div>
                     </div>
-                    
+
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
-                          <span className="sr-only">Abrir menú</span>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Acciones" title="Acciones">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
                           <Link href={`/admin/clubes/${club.id}`}>
                             <Eye className="mr-2 h-4 w-4" />
@@ -470,13 +435,13 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link href={`/admin/clubes/${club.id}/editar`}>
-                            <Edit className="mr-2 h-4 w-4" />
+                            <Pencil className="mr-2 h-4 w-4" />
                             Editar
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          className="text-red-600 focus:text-red-600"
+                          className="text-destructive focus:text-destructive"
                           onClick={() => {
                             setClubToDelete(club.id)
                             setShowDeleteDialog(true)
@@ -515,7 +480,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
             <Button 
               onClick={handleDeleteClub}
               disabled={isDeleting}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? 'Eliminando...' : 'Eliminar'}
             </Button>

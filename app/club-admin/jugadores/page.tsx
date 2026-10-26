@@ -15,13 +15,12 @@ export default function ClubPlayersManagementPage() {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="Gestión de Jugadores"
-        subtitle="Administra los jugadores de tus clubes."
+        title="Jugadores"
         action={
-          <Button asChild className="bg-terracotta hover:bg-terracotta/90">
+          <Button asChild>
             <Link href="/jugadores/nuevo">
               <Plus className="mr-2 h-4 w-4" />
-              Nuevo Jugador
+              Nuevo jugador
             </Link>
           </Button>
         }

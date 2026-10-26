@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { Loader2, Save, Upload, X, ImageIcon, CheckCircle } from "lucide-react"
+import { AlertTriangle, Loader2, Save, Upload, X, ImageIcon, CheckCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 import { apiCall } from "@/lib/utils/apiClient"
@@ -14,14 +14,12 @@ import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -234,28 +232,16 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
     <div className="space-y-6">
       {/* Success Banner */}
       {showSuccess && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 animate-in slide-in-from-top duration-300">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            <div>
-              <h3 className="text-sm font-medium text-green-800">
-                ¡Configuración guardada exitosamente!
-              </h3>
-              <p className="text-sm text-green-700 mt-1">
-                Los cambios en la información del club se han aplicado correctamente.
-              </p>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 rounded-lg border bg-muted p-3 text-sm text-foreground">
+          <CheckCircle className="h-4 w-4 text-amber" />
+          Configuración guardada.
         </div>
       )}
 
       {/* Club Image Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Imagen del Club</CardTitle>
-          <CardDescription>
-            Sube una imagen representativa de tu club (máximo 5MB)
-          </CardDescription>
+          <CardTitle className="text-terracotta">Imagen</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -265,7 +251,7 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
                 <img
                   src={imagePreview || getCurrentImageUrl() || ''}
                   alt="Imagen del club"
-                  className="h-32 w-32 object-cover rounded-lg border"
+                  className="h-32 w-32 object-contain bg-white rounded-lg border"
                 />
                 {!isUploadingImage && (
                   <Button
@@ -290,26 +276,24 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
             {/* Upload Area */}
             {(!currentImage || pendingImageDeletion) && !imagePreview && (
               <div 
-                className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-amber transition-colors"
                 onClick={() => fileInputRef.current?.click()}
               >
-                <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-sm text-muted-foreground mb-2">
-                  Haz clic para subir una imagen del club
-                </p>
+                <ImageIcon className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
                 <p className="text-xs text-muted-foreground">
                   JPG, PNG, GIF o WebP (máx. 5MB)
                 </p>
                 {pendingImageDeletion && (
-                  <div className="mt-3 pt-3 border-t border-dashed border-amber-300">
-                    <p className="text-xs text-amber-600 font-medium mb-2">
-                      ⚠️ La imagen actual será eliminada al guardar
+                  <div className="mt-3 pt-3 border-t border-dashed">
+                    <p className="flex items-center justify-center gap-1 text-xs font-medium text-foreground mb-2">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber" />
+                      La imagen actual será eliminada al guardar
                     </p>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="text-xs h-6 border-green-200 bg-green-50 hover:bg-green-100 text-green-700"
+                      className="text-xs h-6"
                       onClick={handleUndoImageDeletion}
                       disabled={isLoading}
                     >
@@ -349,10 +333,7 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
       {/* Club Information Form */}
       <Card>
         <CardHeader>
-          <CardTitle>Información del Club</CardTitle>
-          <CardDescription>
-            Actualiza la información básica de tu club
-          </CardDescription>
+          <CardTitle className="text-terracotta">Información</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -362,7 +343,7 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nombre del Club *</FormLabel>
+                    <FormLabel>Nombre del club *</FormLabel>
                     <FormControl>
                       <Input placeholder="Nombre del club" {...field} />
                     </FormControl>
@@ -385,9 +366,6 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
                         value={field.value || ""}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Dirección física donde se encuentra el club
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -447,15 +425,12 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
                         value={field.value || ""}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Horarios de atención y funcionamiento del club
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               
-              <div className="flex justify-end space-x-4">
+              <div className="flex justify-end gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -472,13 +447,13 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
                     </>
                   ) : showSuccess ? (
                     <>
-                      <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                      <CheckCircle className="mr-2 h-4 w-4" />
                       ¡Guardado!
                     </>
                   ) : (
                     <>
                       <Save className="mr-2 h-4 w-4" />
-                      Guardar Cambios
+                      Guardar cambios
                     </>
                   )}
                 </Button>

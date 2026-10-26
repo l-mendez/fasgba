@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ChevronDown, Edit, Eye, MoreHorizontal, Search, Trash2 } from "lucide-react"
+import { ChevronDown, Eye, MoreHorizontal, Pencil, Search, Trash2, User } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -193,10 +193,10 @@ export function NewsTable({ initialNews }: NewsTableProps) {
   const sortedAndFilteredNews = getSortedNews(filteredNews)
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 mb-6 md:flex-row md:items-center">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar noticias..."
             value={searchTerm}
@@ -325,7 +325,7 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                 </div>
               </TableHead>
               <TableHead 
-                className="cursor-pointer hover:bg-muted/50 select-none"
+                className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 select-none"
                 onClick={() => handleSort('author')}
               >
                 <div className="flex items-center gap-1">
@@ -333,13 +333,13 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                   {getSortIcon('author') && <span className="text-xs">{getSortIcon('author')}</span>}
                 </div>
               </TableHead>
-              <TableHead>Acciones</TableHead>
+              <TableHead className="w-[60px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedAndFilteredNews.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-6">
+                <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
                   No se encontraron noticias
                 </TableCell>
               </TableRow>
@@ -349,28 +349,14 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                   <TableCell className="font-medium">{item.title}</TableCell>
                   <TableCell>{item.club?.name || FEDERATION_NAME}</TableCell>
                   <TableCell>{formatArgentinaDateOnly(item.date)}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src="" />
                         <AvatarFallback>
                           {item.author_name ? (
                             item.author_name.charAt(0).toUpperCase()
-                          ) : (
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="text-gray-600"
-                            >
-                              <path
-                                d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-                                fill="currentColor"
-                              />
-                            </svg>
-                          )}
+                          ) : <User className="h-4 w-4" />}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col">
@@ -388,13 +374,11 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Abrir menú</span>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Acciones" title="Acciones">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                         <DropdownMenuItem asChild>
                           <Link href={`/noticias/${item.id}`} className="flex items-center">
                             <Eye className="mr-2 h-4 w-4" />
@@ -403,13 +387,13 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link href={`/noticias/${item.id}/editar`} className="flex items-center">
-                            <Edit className="mr-2 h-4 w-4" />
+                            <Pencil className="mr-2 h-4 w-4" />
                             Editar
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          className="text-red-600 focus:text-red-600"
+                          className="text-destructive focus:text-destructive"
                           onClick={() => {
                             setNewsToDelete(item.id)
                             setShowDeleteDialog(true)
@@ -429,14 +413,14 @@ export function NewsTable({ initialNews }: NewsTableProps) {
       </div>
 
       {/* Mobile Card View - Hidden on desktop */}
-      <div className="md:hidden space-y-4">
+      <div className="md:hidden space-y-3">
         {sortedAndFilteredNews.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
+          <div className="text-center py-8 text-muted-foreground">
             No se encontraron noticias
           </div>
         ) : (
           sortedAndFilteredNews.map((item) => (
-            <div key={item.id} className="bg-card rounded-lg border p-4 shadow-sm">
+            <div key={item.id} className="rounded-lg border bg-card p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-sm leading-5 text-card-foreground mb-2 line-clamp-2">
@@ -458,21 +442,7 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                         <AvatarFallback className="text-xs">
                           {item.author_name ? (
                             item.author_name.charAt(0).toUpperCase()
-                          ) : (
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="text-gray-600"
-                            >
-                              <path
-                                d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-                                fill="currentColor"
-                              />
-                            </svg>
-                          )}
+                          ) : <User className="h-3 w-3" />}
                         </AvatarFallback>
                       </Avatar>
                       <span className="text-xs text-muted-foreground truncate">
@@ -484,13 +454,11 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
-                      <span className="sr-only">Abrir menú</span>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Acciones" title="Acciones">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                     <DropdownMenuItem asChild>
                       <Link href={`/noticias/${item.id}`} className="flex items-center">
                         <Eye className="mr-2 h-4 w-4" />
@@ -499,13 +467,13 @@ export function NewsTable({ initialNews }: NewsTableProps) {
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href={`/noticias/${item.id}/editar`} className="flex items-center">
-                        <Edit className="mr-2 h-4 w-4" />
+                        <Pencil className="mr-2 h-4 w-4" />
                         Editar
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="text-red-600 focus:text-red-600"
+                      className="text-destructive focus:text-destructive"
                       onClick={() => {
                         setNewsToDelete(item.id)
                         setShowDeleteDialog(true)

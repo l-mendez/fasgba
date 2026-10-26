@@ -2,7 +2,6 @@
 
 import { useClubContext } from "@/app/club-admin/context/club-context"
 import { ClubSettingsForm } from "./club-settings-form"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ErrorAlert } from "@/components/error-alert"
 
 export function ClubSettingsClient() {
@@ -18,27 +17,13 @@ export function ClubSettingsClient() {
 
   if (hasNoClubs) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Sin acceso</CardTitle>
-          <CardDescription>
-            No tienes permisos de administrador para ningún club
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <p className="text-sm text-muted-foreground">No administras ningún club.</p>
     )
   }
 
   if (!selectedClub) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Selecciona un club</CardTitle>
-          <CardDescription>
-            Por favor selecciona un club para configurar
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <p className="text-sm text-muted-foreground">Selecciona un club.</p>
     )
   }
 

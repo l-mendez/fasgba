@@ -12,7 +12,7 @@ export default function AdminPaisesPage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Países"
-        subtitle="Controlá desde qué países se puede acceder al sitio. Los cambios tardan hasta 1 minuto en aplicarse."
+        subtitle="Los cambios tardan hasta 1 minuto en aplicarse."
       />
       <Suspense fallback={<AdminContentSkeleton rows={6} />}>
         <AdminPaisesContent />

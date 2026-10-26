@@ -12,15 +12,14 @@ export const dynamic = "force-dynamic"
 
 export default function ClubAdminTorneosPage() {
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="space-y-6">
       <AdminPageHeader
         title="Torneos"
-        subtitle="Gestiona los torneos organizados por tu club."
         action={
           <Button asChild className="w-fit">
             <Link href="/torneos/nuevo">
               <Plus className="mr-2 h-4 w-4" />
-              Nuevo Torneo
+              Nuevo torneo
             </Link>
           </Button>
         }

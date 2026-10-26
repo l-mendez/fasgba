@@ -12,7 +12,7 @@ export default function AdminAlumnosPage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Alumnos"
-        subtitle="Gestionar alumnos de la escuela. Los alumnos pueden acceder a documentos protegidos de la sección Escuela."
+        subtitle="Los alumnos pueden acceder a documentos protegidos de la sección Escuela."
       />
       <Suspense fallback={<AdminContentSkeleton rows={4} />}>
         <AdminAlumnosContent />

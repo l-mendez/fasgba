@@ -219,22 +219,14 @@ export default async function NuevoTorneoPage() {
   const NuevoTorneoForm = (await import("./nuevo-torneo-form")).NuevoTorneoForm
 
   return (
-    <div className="flex flex-col gap-8 p-8">
-      <div className="flex items-center gap-4">
+    <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-8">
+      <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" asChild>
-          <Link href={isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"}>
+          <Link href={isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"} aria-label="Volver" title="Volver">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Nuevo Torneo</h1>
-          <p className="text-muted-foreground">
-            {isSiteAdmin 
-              ? 'Crea un nuevo torneo' 
-              : `Crea un nuevo torneo para ${selectedClub?.name || 'tu club'}`
-            }
-          </p>
-        </div>
+        <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Nuevo torneo</h1>
       </div>
 
       <Suspense fallback={<LoadingSpinner />}>

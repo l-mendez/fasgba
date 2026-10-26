@@ -81,10 +81,10 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
   }
 
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="space-y-6">
       <NewsFormHeader
-        title="Nueva Noticia"
-        saveLabel="Crear Noticia"
+        title="Nueva noticia"
+        saveLabel="Crear"
         savingLabel="Creando..."
         isSaving={isSaving}
         onBack={() => router.push('/club-admin/noticias')}
@@ -95,7 +95,7 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
         <ErrorAlert title="Error" message={error} />
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="title">Título</Label>
@@ -176,11 +176,8 @@ export function NewNewsForm({ selectedClub, clubs }: NewNewsFormProps) {
 
           {clubs.length === 1 && (
             <div className="grid gap-2">
-              <Label>Club Asociado</Label>
-              <div className="p-3 bg-muted rounded-md">
-                <p className="text-sm font-medium">{selectedClub.name}</p>
-                <p className="text-xs text-muted-foreground">La noticia estará asociada a este club</p>
-              </div>
+              <Label>Club</Label>
+              <p className="rounded-md bg-muted p-3 text-sm font-medium">{selectedClub.name}</p>
             </div>
           )}
         </div>

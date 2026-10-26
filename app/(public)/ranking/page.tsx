@@ -70,11 +70,8 @@ export default async function RankingPage() {
 
   return (
     <>
-      <PageHero
-        title="Ranking FASGBA"
-        subtitle="Clasificación oficial de jugadores de la Federación de Ajedrez del Sur del Gran Buenos Aires"
-      />
-      <section className="w-full py-12 md:py-24 lg:py-32">
+      <PageHero title="Ranking" />
+      <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
         <PlayerList
           initialPlayers={initialPlayers}
           availableRankings={availableRankings}

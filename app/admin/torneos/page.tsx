@@ -196,10 +196,9 @@ async function fetchTournaments(): Promise<Tournament[]> {
 
 export default function AdminTorneosPage() {
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="space-y-6">
       <AdminPageHeader
         title="Torneos"
-        subtitle="Gestiona los torneos y competiciones de FASGBA."
         action={
           <Button asChild>
             <Link href="/torneos/nuevo">
@@ -228,9 +227,7 @@ async function AdminTorneosContent() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-8">
-        <ErrorAlert message={error} />
-      </div>
+      <ErrorAlert message={error} />
     )
   }
 

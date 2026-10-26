@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Ban, CheckCircle2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { Badge } from '@/components/ui/badge'
+import { InfoPill } from '@/components/info-pill'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { CountryAccessLogItem, CountryAccessOverviewItem } from '@/lib/admin/countryAccess'
@@ -75,9 +75,9 @@ export function PaisesLogs({ logs, countries, onLogsChange }: PaisesLogsProps) {
                 <div className="flex items-center gap-2">
                   <span aria-hidden>{log.flag}</span>
                   <span className="font-medium">{log.name}</span>
-                  <Badge variant={log.action === 'enabled' ? 'default' : 'destructive'}>
+                  <InfoPill icon={log.action === 'enabled' ? CheckCircle2 : Ban}>
                     {log.action === 'enabled' ? 'Habilitado' : 'Deshabilitado'}
-                  </Badge>
+                  </InfoPill>
                 </div>
                 <div className="text-xs text-muted-foreground sm:text-right">
                   <span>{log.changedByEmail || 'sistema'}</span>

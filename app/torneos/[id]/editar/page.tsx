@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, MapPin } from "lucide-react"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 import { getTournamentGames, getTournamentRounds } from "@/lib/gameUtils"
@@ -313,22 +313,19 @@ export default async function EditarTorneoPage({ params }: PageProps) {
   }
 
   return (
-    <div className="flex flex-col gap-8 p-8">
-      <div className="flex items-center gap-4">
+    <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-8">
+      <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" asChild>
-          <Link href={isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"}>
+          <Link href={isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"} aria-label="Volver" title="Volver">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">
-            {tournament ? 'Editar Torneo' : 'Error'}
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">
+            {tournament ? 'Editar torneo' : 'Error'}
           </h1>
-          <p className="text-muted-foreground">
-            {tournament 
-              ? `Editando: ${tournament.title}` 
-              : 'No se pudo cargar el torneo'
-            }
+          <p className="truncate text-sm text-muted-foreground">
+            {tournament ? tournament.title : 'No se pudo cargar el torneo'}
           </p>
         </div>
       </div>
@@ -338,20 +335,16 @@ export default async function EditarTorneoPage({ params }: PageProps) {
       {tournament && !isAuthorized && (
         <Card>
           <CardHeader>
-            <CardTitle>Información del Torneo</CardTitle>
-            <CardDescription>Los datos del torneo están disponibles pero no tienes permisos para editarlo</CardDescription>
+            <CardTitle className="text-terracotta">{tournament.title}</CardTitle>
+            <CardDescription>No tienes permisos para editar este torneo.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <p><strong>Título:</strong> {tournament.title}</p>
+            <div className="space-y-1.5 text-sm text-muted-foreground">
               {tournament.description && (
-                <p><strong>Descripción:</strong> {tournament.description}</p>
+                <p className="whitespace-pre-line">{tournament.description}</p>
               )}
               {tournament.place && (
-                <p><strong>Lugar:</strong> {tournament.place}</p>
-              )}
-              {tournament.created_by_club_id && (
-                <p><strong>Creado por Club ID:</strong> {tournament.created_by_club_id}</p>
+                <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-amber" />{tournament.place}</p>
               )}
             </div>
           </CardContent>
@@ -362,14 +355,14 @@ export default async function EditarTorneoPage({ params }: PageProps) {
         <Suspense fallback={<LoadingSpinner />}>
           <Tabs defaultValue="info" className="w-full">
             <TabsList className={`grid w-full ${tournament.tournament_type === 'team' ? 'grid-cols-3' : 'grid-cols-2'}`}>
-              <TabsTrigger value="info">Información</TabsTrigger>
+              <TabsTrigger value="info" className="data-[state=active]:bg-background data-[state=active]:text-terracotta">Información</TabsTrigger>
               {tournament.tournament_type === 'team' && (
-                <TabsTrigger value="teams">Equipos</TabsTrigger>
+                <TabsTrigger value="teams" className="data-[state=active]:bg-background data-[state=active]:text-terracotta">Equipos</TabsTrigger>
               )}
-              <TabsTrigger value="rounds-games">Rondas y Partidas</TabsTrigger>
+              <TabsTrigger value="rounds-games" className="data-[state=active]:bg-background data-[state=active]:text-terracotta">Rondas</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="info" className="mt-6">
+            <TabsContent value="info" className="mt-4">
               <EditarTorneoForm 
                 tournament={tournament}
                 tournamentId={id}
@@ -378,7 +371,7 @@ export default async function EditarTorneoPage({ params }: PageProps) {
             </TabsContent>
 
             {TeamManagement && tournament.tournament_type === 'team' && (
-              <TabsContent value="teams" className="mt-6">
+              <TabsContent value="teams" className="mt-4">
                 <TeamManagement
                   tournamentId={id}
                   tournamentType={tournament.tournament_type as 'individual' | 'team' || 'individual'}
@@ -388,7 +381,7 @@ export default async function EditarTorneoPage({ params }: PageProps) {
             )}
             
             {RoundsGamesManagement && (
-              <TabsContent value="rounds-games" className="mt-6">
+              <TabsContent value="rounds-games" className="mt-4">
                 <RoundsGamesManagement
                   tournamentId={id}
                   tournamentType={tournament.tournament_type as 'individual' | 'team' || 'individual'}

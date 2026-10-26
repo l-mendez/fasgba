@@ -124,10 +124,9 @@ async function fetchClubs(): Promise<Club[]> {
 
 export default function AdminClubesPage() {
   return (
-    <div className="flex flex-col gap-8 p-8 pb-16 md:pb-8">
+    <div className="space-y-6">
       <AdminPageHeader
         title="Clubes"
-        subtitle="Gestiona los clubes afiliados a FASGBA."
         action={
           <Button asChild>
             <Link href="/admin/clubes/nuevo">
@@ -156,9 +155,7 @@ async function AdminClubesContent() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-8">
-        <ErrorAlert message={error} />
-      </div>
+      <ErrorAlert message={error} />
     )
   }
 

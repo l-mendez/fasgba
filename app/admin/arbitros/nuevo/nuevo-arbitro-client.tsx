@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
   SelectContent,
@@ -169,25 +169,23 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
   }
 
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/admin/arbitros">
+          <Link href="/admin/arbitros" aria-label="Volver" title="Volver">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Nuevo Árbitro</h1>
-          <p className="text-muted-foreground">Agrega un nuevo árbitro a FASGBA.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Nuevo Árbitro</h1>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Photo Section */}
         <Card>
           <CardHeader>
             <CardTitle>Foto del Árbitro</CardTitle>
-            <CardDescription>Sube una foto del árbitro (máximo 5MB)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -203,6 +201,8 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
                     variant="destructive"
                     size="sm"
                     className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                      aria-label="Quitar imagen"
+                      title="Quitar imagen"
                     onClick={handleImageRemove}
                   >
                     <X className="h-3 w-3" />
@@ -210,10 +210,10 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
                 </div>
               ) : (
                 <div
-                  className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                  className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors hover:border-amber"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <ImageIcon className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground mb-2">
                     Haz clic para subir una foto del árbitro
                   </p>
@@ -255,10 +255,10 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
               value={formData.name}
               onChange={handleChange}
               placeholder="Ej: Juan Pérez"
-              className={validationErrors.name ? "border-red-500" : ""}
+              className={validationErrors.name ? "border-destructive" : ""}
             />
             {validationErrors.name && (
-              <p className="text-sm text-red-500">{validationErrors.name}</p>
+              <p className="text-sm text-destructive">{validationErrors.name}</p>
             )}
           </div>
 
@@ -270,10 +270,10 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
               value={formData.title}
               onChange={handleChange}
               placeholder="Ej: Árbitro Internacional, Árbitro FIDE, Árbitro Nacional"
-              className={validationErrors.title ? "border-red-500" : ""}
+              className={validationErrors.title ? "border-destructive" : ""}
             />
             {validationErrors.title && (
-              <p className="text-sm text-red-500">{validationErrors.title}</p>
+              <p className="text-sm text-destructive">{validationErrors.title}</p>
             )}
           </div>
 
@@ -307,10 +307,10 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
               placeholder="Ej: 1985"
               min={1900}
               max={new Date().getFullYear()}
-              className={validationErrors.birth_year ? "border-red-500" : ""}
+              className={validationErrors.birth_year ? "border-destructive" : ""}
             />
             {validationErrors.birth_year && (
-              <p className="text-sm text-red-500">{validationErrors.birth_year}</p>
+              <p className="text-sm text-destructive">{validationErrors.birth_year}</p>
             )}
           </div>
 
@@ -326,11 +326,11 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="Ej: arbitro@email.com"
-                  className={`pl-8 ${validationErrors.email ? "border-red-500" : ""}`}
+                  className={`pl-8 ${validationErrors.email ? "border-destructive" : ""}`}
                 />
               </div>
               {validationErrors.email && (
-                <p className="text-sm text-red-500">{validationErrors.email}</p>
+                <p className="text-sm text-destructive">{validationErrors.email}</p>
               )}
             </div>
             <div className="grid gap-2">
@@ -364,12 +364,12 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
         </div>
 
         {error && (
-          <div className="text-sm text-red-500">
+          <div className="text-sm text-destructive">
             {error}
           </div>
         )}
 
-        <div className="flex justify-end gap-4">
+        <div className="flex justify-end gap-3">
           <Button
             type="button"
             variant="outline"

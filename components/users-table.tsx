@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ChevronDown, Search, GraduationCap, Loader2, Shield } from "lucide-react"
+import { BadgeCheck, Building2, ChevronDown, GraduationCap, MoreHorizontal, Search, Shield, ShieldCheck, Trash2, User } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { InfoPill } from "@/components/info-pill"
 import { apiCall } from "@/lib/utils/apiClient"
 
 // Updated interface to include additional user metadata
@@ -221,9 +222,9 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por nombre, apellido, email o club..."
             value={searchQuery}
@@ -301,7 +302,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="whitespace-nowrap cursor-pointer hover:bg-muted/50 select-none"
+                  className="hidden sm:table-cell whitespace-nowrap cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('name')}
                 >
                   <div className="flex items-center gap-1">
@@ -333,26 +334,29 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
             <TableBody>
               {sortedAndFilteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground md:table-cell">
-                    {searchQuery ? 'No se encontraron usuarios que coincidan con la búsqueda' : 'No hay usuarios registrados'}
-                  </TableCell>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground md:hidden">
-                    {searchQuery ? 'No se encontraron usuarios que coincidan con la búsqueda' : 'No hay usuarios registrados'}
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    {searchQuery ? 'No se encontraron usuarios' : 'No hay usuarios registrados'}
                   </TableCell>
                 </TableRow>
               ) : (
                 sortedAndFilteredUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="min-w-0 max-w-0 md:min-w-auto md:max-w-none">
-                      <div className="truncate pr-2 md:pr-0">{user.email}</div>
-                      {user.emailVerified && (
-                        <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900 px-2 py-0.5 text-xs font-medium text-green-800 dark:text-green-100 mt-1">
-                          <span className="md:hidden">✓</span>
-                          <span className="hidden md:inline">Verificado</span>
-                        </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate">{user.email}</span>
+                        {user.emailVerified && (
+                          <span title="Email verificado" className="shrink-0">
+                            <BadgeCheck className="h-4 w-4 text-amber" aria-label="Email verificado" />
+                          </span>
+                        )}
+                      </div>
+                      {(user.nombre || user.apellido) && (
+                        <div className="truncate text-xs text-muted-foreground sm:hidden">
+                          {[user.nombre, user.apellido].filter(Boolean).join(" ")}
+                        </div>
                       )}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
+                    <TableCell className="hidden sm:table-cell whitespace-nowrap">
                       <div className="truncate pr-2 md:pr-0">
                         {user.nombre && user.apellido 
                           ? `${user.nombre} ${user.apellido}`
@@ -363,24 +367,10 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                       </div>
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
-                      <div className="flex flex-col gap-1 items-center md:items-start md:flex-row md:flex-wrap">
-                        {user.isAdmin && (
-                          <span className="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900 px-2 md:px-2.5 py-0.5 text-xs font-medium text-red-800 dark:text-red-100">
-                            <span className="md:hidden">Admin</span>
-                            <span className="hidden md:inline">Admin</span>
-                          </span>
-                        )}
-                        {user.isClubAdmin && (
-                          <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900 px-2 md:px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-100">
-                            <span className="md:hidden">Delegado</span>
-                            <span className="hidden md:inline">Delegado</span>
-                          </span>
-                        )}
-                        {!user.isAdmin && !user.isClubAdmin && (
-                          <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 md:px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:text-gray-100">
-                            Usuario
-                          </span>
-                        )}
+                      <div className="flex flex-col items-start gap-1 md:flex-row md:flex-wrap">
+                        {user.isAdmin && <InfoPill icon={ShieldCheck}>Admin</InfoPill>}
+                        {user.isClubAdmin && <InfoPill icon={Building2}>Delegado</InfoPill>}
+                        {!user.isAdmin && !user.isClubAdmin && <InfoPill icon={User}>Usuario</InfoPill>}
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
@@ -404,15 +394,13 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Abrir menú</span>
-                            ⋯
+                          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Acciones" title="Acciones">
+                            <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuItem>
-                            <Link href={`/admin/usuarios/${user.id}/editar`} className="flex w-full items-center">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/usuarios/${user.id}/editar`}>
                               <Shield className="mr-2 h-4 w-4" />
                               Editar permisos
                             </Link>
@@ -426,10 +414,11 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            className="text-red-600"
+                            className="text-destructive focus:text-destructive"
                             onClick={() => handleDeleteUser(user.id, user.email)}
                             disabled={isDeleting === user.id}
                           >
+                            <Trash2 className="mr-2 h-4 w-4" />
                             {isDeleting === user.id ? 'Eliminando...' : 'Eliminar usuario'}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -444,7 +433,7 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
       </div>
       
       <div className="text-sm text-muted-foreground">
-        Mostrando {sortedAndFilteredUsers.length} de {users.length} usuarios registrados
+        {sortedAndFilteredUsers.length} de {users.length} usuarios
       </div>
     </div>
   )

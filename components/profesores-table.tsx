@@ -3,16 +3,10 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal, Pencil, Trash2, Search, MapPin, Monitor, Users2, Mail, Phone } from "lucide-react"
+import { Pencil, Trash2, Search, MapPin, Users2, Mail, Phone } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Table,
   TableBody,
@@ -38,7 +32,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
+import { InfoPill } from "@/components/info-pill"
+import { getModalidades } from "@/lib/profesorModalidad"
 import { apiCall } from "@/lib/utils/apiClient"
 import { toast } from "sonner"
 
@@ -61,16 +56,14 @@ interface ProfesoresTableProps {
   profesores: Profesor[]
 }
 
-const modalidadLabels: Record<string, string> = {
-  presencial: 'Presencial',
-  virtual: 'Virtual',
-  ambos: 'Ambos',
-}
-
-const modalidadColors: Record<string, string> = {
-  presencial: 'bg-green-100 text-green-800',
-  virtual: 'bg-blue-100 text-blue-800',
-  ambos: 'bg-purple-100 text-purple-800',
+function ModalidadPills({ modalidad }: { modalidad: string }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {getModalidades(modalidad).map(({ label, icon }) => (
+        <InfoPill key={label} icon={icon}>{label}</InfoPill>
+      ))}
+    </div>
+  )
 }
 
 export function ProfesoresTable({ profesores: initialProfesores }: ProfesoresTableProps) {
@@ -114,7 +107,7 @@ export function ProfesoresTable({ profesores: initialProfesores }: ProfesoresTab
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -145,8 +138,8 @@ export function ProfesoresTable({ profesores: initialProfesores }: ProfesoresTab
               <TableHead>Nombre</TableHead>
               <TableHead>Club</TableHead>
               <TableHead>Modalidad</TableHead>
-              <TableHead>Zona</TableHead>
-              <TableHead className="w-[70px]"></TableHead>
+              <TableHead className="hidden lg:table-cell">Zona</TableHead>
+              <TableHead className="w-[90px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -162,34 +155,27 @@ export function ProfesoresTable({ profesores: initialProfesores }: ProfesoresTab
                   <TableCell className="font-medium">{profesor.titulo}</TableCell>
                   <TableCell>{profesor.club_name || "—"}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className={modalidadColors[profesor.modalidad]}>
-                      {modalidadLabels[profesor.modalidad]}
-                    </Badge>
+                    <ModalidadPills modalidad={profesor.modalidad} />
                   </TableCell>
-                  <TableCell>{profesor.zona || "—"}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{profesor.zona || "—"}</TableCell>
                   <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/profesores/${profesor.id}/editar`}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Editar
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={() => setDeleteId(profesor.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex shrink-0 justify-end gap-1">
+                      <Button asChild variant="ghost" size="icon" className="h-8 w-8" aria-label="Editar" title="Editar">
+                        <Link href={`/admin/profesores/${profesor.id}/editar`}>
+                          <Pencil className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        aria-label="Eliminar"
+                        title="Eliminar"
+                        onClick={() => setDeleteId(profesor.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -209,58 +195,51 @@ export function ProfesoresTable({ profesores: initialProfesores }: ProfesoresTab
             <div key={profesor.id} className="rounded-lg border p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="font-medium">{profesor.titulo}</h3>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link href={`/admin/profesores/${profesor.id}/editar`}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Editar
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="text-red-600"
-                      onClick={() => setDeleteId(profesor.id)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Eliminar
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex shrink-0 justify-end gap-1">
+                  <Button asChild variant="ghost" size="icon" className="h-8 w-8" aria-label="Editar" title="Editar">
+                    <Link href={`/admin/profesores/${profesor.id}/editar`}>
+                      <Pencil className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    aria-label="Eliminar"
+                    title="Eliminar"
+                    onClick={() => setDeleteId(profesor.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+              <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-sm text-muted-foreground">
                 {profesor.club_name && (
                   <span className="flex items-center gap-1">
-                    <Users2 className="h-3 w-3" />
+                    <Users2 className="h-3.5 w-3.5 text-amber" />
                     {profesor.club_name}
                   </span>
                 )}
                 {profesor.zona && (
                   <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
+                    <MapPin className="h-3.5 w-3.5 text-amber" />
                     {profesor.zona}
                   </span>
                 )}
                 {profesor.email && (
                   <span className="flex items-center gap-1">
-                    <Mail className="h-3 w-3" />
+                    <Mail className="h-3.5 w-3.5 text-amber" />
                     {profesor.email}
                   </span>
                 )}
                 {profesor.telefono && (
                   <span className="flex items-center gap-1">
-                    <Phone className="h-3 w-3" />
+                    <Phone className="h-3.5 w-3.5 text-amber" />
                     {profesor.telefono}
                   </span>
                 )}
               </div>
-              <Badge variant="secondary" className={modalidadColors[profesor.modalidad]}>
-                {modalidadLabels[profesor.modalidad]}
-              </Badge>
+              <ModalidadPills modalidad={profesor.modalidad} />
             </div>
           ))
         )}
@@ -280,7 +259,7 @@ export function ProfesoresTable({ profesores: initialProfesores }: ProfesoresTab
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? "Eliminando..." : "Eliminar"}
             </AlertDialogAction>

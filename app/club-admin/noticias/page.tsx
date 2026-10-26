@@ -10,12 +10,8 @@ export const dynamic = "force-dynamic"
 
 export default function ClubAdminNoticiasPage() {
   return (
-    <div className="flex flex-col gap-8 p-8">
-      <AdminPageHeader
-        title="Noticias"
-        subtitle="Gestiona las noticias publicadas por tu club."
-        action={<NewNewsButton />}
-      />
+    <div className="space-y-6">
+      <AdminPageHeader title="Noticias" action={<NewNewsButton />} />
 
       <Suspense fallback={<AdminContentSkeleton rows={6} />}>
         <ClubAdminNoticiasContent />

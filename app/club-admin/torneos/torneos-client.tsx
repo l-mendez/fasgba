@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ChevronDown, Edit, Eye, MoreHorizontal, Plus, Search, Trash2, Users, Loader2 } from "lucide-react"
+import { CalendarClock, CheckCircle2, ChevronDown, Edit, Eye, MoreHorizontal, PlayCircle, Plus, Search, Trash2, Users, Loader2, type LucideIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
+import { InfoPill } from "@/components/info-pill"
 import { ErrorAlert } from "@/components/error-alert"
 import { useClubContext } from "../context/club-context"
 import { apiCall } from "@/lib/utils/apiClient"
@@ -96,32 +96,10 @@ function getTournamentSortDate(tournament: Tournament): Date {
   return new Date(dates[0])
 }
 
-// Get status badge variant
-const getStatusBadgeVariant = (status: string) => {
-  switch (status) {
-    case "próximo":
-      return "default"
-    case "en_curso":
-      return "default"
-    case "finalizado":
-      return "outline"
-    default:
-      return "outline"
-  }
-}
-
-// Get status badge class
-const getStatusBadgeClass = (status: string) => {
-  switch (status) {
-    case "próximo":
-      return "bg-blue-500 hover:bg-blue-500/80"
-    case "en_curso":
-      return "bg-green-500 hover:bg-green-500/80"
-    case "finalizado":
-      return "text-muted-foreground"
-    default:
-      return ""
-  }
+const STATUS_ICONS: Record<string, LucideIcon> = {
+  "próximo": CalendarClock,
+  en_curso: PlayCircle,
+  finalizado: CheckCircle2,
 }
 
 // Get status display text
@@ -306,29 +284,21 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments, showHeader
 
   if (!selectedClub) {
     return (
-      <div className="flex flex-col gap-8">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold mb-2">Selecciona un club</h3>
-          <p className="text-muted-foreground">Selecciona un club para gestionar sus torneos.</p>
-        </div>
-      </div>
+      <p className="text-center text-muted-foreground">Selecciona un club.</p>
     )
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="space-y-6">
       {showHeader ? (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-terracotta">Torneos</h1>
-            <p className="text-muted-foreground">
-              Gestiona los torneos organizados por {selectedClub.name}.
-            </p>
           </div>
           <Button asChild className="w-fit">
             <Link href="/torneos/nuevo">
               <Plus className="mr-2 h-4 w-4" />
-              Nuevo Torneo
+              Nuevo torneo
             </Link>
           </Button>
         </div>
@@ -338,13 +308,13 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments, showHeader
         <ErrorAlert title="Error" message={error} />
       )}
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Buscar por nombre, lugar o descripción..."
-            className="pl-8 w-full"
+            className="pl-9 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -405,7 +375,7 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments, showHeader
 
       <>
         {/* Desktop Table View - Hidden on mobile */}
-        <div className="rounded-md border hidden md:block">
+        <div className="rounded-md border hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -428,7 +398,7 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments, showHeader
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('location')}
                 >
                   <div className="flex items-center gap-1">
@@ -438,7 +408,7 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments, showHeader
                 </TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead 
-                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('rounds')}
                 >
                   <div className="flex items-center gap-1">
@@ -447,7 +417,7 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments, showHeader
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('participants')}
                 >
                   <div className="flex items-center gap-1">
@@ -455,22 +425,21 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments, showHeader
                     {getSortIcon('participants') && <span className="text-xs">{getSortIcon('participants')}</span>}
                   </div>
                 </TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                <TableHead className="w-[60px]"><span className="sr-only">Acciones</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                    <p className="mt-2 text-muted-foreground">Cargando torneos...</p>
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : sortedAndFilteredTorneos.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8">
                     <p className="text-muted-foreground">
-                      {searchTerm ? 'No se encontraron torneos que coincidan con la búsqueda.' : 'No hay torneos registrados.'}
+                      {searchTerm ? 'Sin resultados.' : 'No hay torneos.'}
                     </p>
                   </TableCell>
                 </TableRow>
@@ -482,29 +451,21 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments, showHeader
                   return (
                     <TableRow key={torneo.id}>
                       <TableCell className="font-medium">{torneo.title}</TableCell>
-                      <TableCell>{formattedDates}</TableCell>
-                      <TableCell>{torneo.place || "Sin lugar definido"}</TableCell>
+                      <TableCell className="whitespace-nowrap">{formattedDates}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{torneo.place || "-"}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant={getStatusBadgeVariant(status)}
-                          className={getStatusBadgeClass(status)}
-                        >
-                          {getStatusText(status)}
-                        </Badge>
+                        <InfoPill icon={STATUS_ICONS[status]}>{getStatusText(status)}</InfoPill>
                       </TableCell>
-                      <TableCell>{torneo.rounds || "N/A"}</TableCell>
-                      <TableCell>{torneo.participants || "N/A"}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{torneo.rounds || "-"}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{torneo.participants || "-"}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Acciones" title="Acciones">
                               <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Abrir menú</span>
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
                             <DropdownMenuItem asChild>
                               <Link href={`/torneos/${torneo.id}`} target="_blank">
                                 <Eye className="mr-2 h-4 w-4" />
@@ -517,19 +478,13 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments, showHeader
                                 Editar
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/club-admin/torneos/${torneo.id}/inscripciones`}>
-                                <Users className="mr-2 h-4 w-4" />
-                                Ver inscripciones
-                              </Link>
-                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => {
                                 setTournamentToDelete(torneo.id)
                                 setShowDeleteDialog(true)
                               }}
-                              className="text-red-500 focus:text-red-500"
+                              className="text-destructive focus:text-destructive"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Eliminar
@@ -546,26 +501,25 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments, showHeader
         </div>
 
         {/* Mobile Card View - Hidden on desktop */}
-        <div className="md:hidden pb-8">
+        <div className="md:hidden">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin mb-4" />
-              <p className="text-muted-foreground">Cargando torneos...</p>
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : sortedAndFilteredTorneos.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">
-                {searchTerm ? 'No se encontraron torneos que coincidan con la búsqueda.' : 'No hay torneos registrados.'}
+                {searchTerm ? 'Sin resultados.' : 'No hay torneos.'}
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {sortedAndFilteredTorneos.map((torneo) => {
                 const status = getTournamentStatus(torneo)
                 const formattedDates = formatTournamentDates(torneo)
                 
                 return (
-                  <div key={torneo.id} className="bg-card rounded-lg border p-4 shadow-sm">
+                  <div key={torneo.id} className="bg-card rounded-lg border p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium text-sm leading-5 text-card-foreground mb-2 line-clamp-2">
@@ -578,19 +532,13 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments, showHeader
                               {formattedDates}
                             </span>
                             <span>•</span>
-                            <span className="truncate">{torneo.place || "Sin lugar definido"}</span>
+                            <span className="truncate">{torneo.place || "-"}</span>
                           </div>
                           
                           <div className="flex items-center justify-between gap-2">
-                            <Badge
-                              variant={getStatusBadgeVariant(status)}
-                              className={`text-xs ${getStatusBadgeClass(status)}`}
-                            >
-                              {getStatusText(status)}
-                            </Badge>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <span>Rondas: {torneo.rounds || "N/A"}</span>
-                              <span>•</span>
+                            <InfoPill icon={STATUS_ICONS[status]}>{getStatusText(status)}</InfoPill>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span>{torneo.rounds || "-"} rondas</span>
                               <div className="flex items-center gap-1">
                                 <Users className="h-3 w-3" />
                                 <span>{torneo.participants || 0}</span>
@@ -602,14 +550,11 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments, showHeader
                       
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
-                            <span className="sr-only">Abrir menú</span>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" aria-label="Acciones" title="Acciones">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
                           <DropdownMenuItem asChild>
                             <Link href={`/torneos/${torneo.id}`} target="_blank">
                               <Eye className="mr-2 h-4 w-4" />
@@ -622,19 +567,13 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments, showHeader
                               Editar
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/club-admin/torneos/${torneo.id}/inscripciones`}>
-                              <Users className="mr-2 h-4 w-4" />
-                              Ver inscripciones
-                            </Link>
-                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => {
                               setTournamentToDelete(torneo.id)
                               setShowDeleteDialog(true)
                             }}
-                            className="text-red-500 focus:text-red-500"
+                            className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Eliminar

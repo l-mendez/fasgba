@@ -10,7 +10,7 @@ import { ErrorAlert } from "@/components/error-alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
   SelectContent,
@@ -225,40 +225,32 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
   }
 
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/admin/profesores">
+          <Link href="/admin/profesores" aria-label="Volver" title="Volver">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Editar Profesor</h1>
-          <p className="text-muted-foreground">Modifica la información del profesor.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Editar Profesor</h1>
         </div>
       </div>
 
       {showSuccess && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 animate-in slide-in-from-top duration-300">
+        <div className="rounded-lg border bg-muted p-4">
           <div className="flex items-center gap-3">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            <div>
-              <h3 className="text-sm font-medium text-green-800">
-                Profesor actualizado exitosamente
-              </h3>
-            </div>
+            <CheckCircle className="h-5 w-5 shrink-0 text-amber" />
+            <p className="text-sm font-medium">Profesor actualizado exitosamente</p>
           </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Photo Section */}
         <Card>
           <CardHeader>
             <CardTitle>Foto del Profesor</CardTitle>
-            <CardDescription>
-              Sube una foto del profesor (máximo 5MB)
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -279,10 +271,10 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
 
               {!currentImage && !imagePreview && (
                 <div
-                  className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                  className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors hover:border-amber"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <ImageIcon className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground mb-2">
                     Haz clic para subir una foto del profesor
                   </p>
@@ -320,9 +312,6 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
         <Card>
           <CardHeader>
             <CardTitle>Información del Profesor</CardTitle>
-            <CardDescription>
-              Actualiza la información del profesor
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
@@ -334,10 +323,10 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
                   value={formData.titulo}
                   onChange={handleChange}
                   placeholder="Ej: GM Roberto García"
-                  className={validationErrors.titulo ? "border-red-500" : ""}
+                  className={validationErrors.titulo ? "border-destructive" : ""}
                 />
                 {validationErrors.titulo && (
-                  <p className="text-sm text-red-500">{validationErrors.titulo}</p>
+                  <p className="text-sm text-destructive">{validationErrors.titulo}</p>
                 )}
               </div>
 
@@ -372,10 +361,10 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
                   placeholder="Ej: 1985"
                   min={1900}
                   max={new Date().getFullYear()}
-                  className={validationErrors.anio_nacimiento ? "border-red-500" : ""}
+                  className={validationErrors.anio_nacimiento ? "border-destructive" : ""}
                 />
                 {validationErrors.anio_nacimiento && (
-                  <p className="text-sm text-red-500">{validationErrors.anio_nacimiento}</p>
+                  <p className="text-sm text-destructive">{validationErrors.anio_nacimiento}</p>
                 )}
               </div>
 
@@ -417,10 +406,10 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="Ej: profesor@email.com"
-                    className={validationErrors.email ? "border-red-500" : ""}
+                    className={validationErrors.email ? "border-destructive" : ""}
                   />
                   {validationErrors.email && (
-                    <p className="text-sm text-red-500">{validationErrors.email}</p>
+                    <p className="text-sm text-destructive">{validationErrors.email}</p>
                   )}
                 </div>
 
@@ -464,12 +453,12 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
         </Card>
 
         {error && (
-          <div className="text-sm text-red-500">
+          <div className="text-sm text-destructive">
             {error}
           </div>
         )}
 
-        <div className="flex justify-end gap-4">
+        <div className="flex justify-end gap-3">
           <Button
             type="button"
             variant="outline"

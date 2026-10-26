@@ -45,9 +45,6 @@ export function ClubSelector() {
 
   return (
     <div className="px-3 py-3 border-b border-amber/20">
-      <div className="text-xs font-medium text-muted-foreground mb-3">
-        Club Seleccionado
-      </div>
       <Select
         value={selectedClub?.id.toString() || ""}
         onValueChange={handleClubChange}
@@ -64,25 +61,19 @@ export function ClubSelector() {
             </div>
           </div>
         </SelectTrigger>
-        <SelectContent className="max-h-60 border border-border shadow-lg">
+        <SelectContent className="max-h-60">
           {clubesAdministrados.map((club) => (
             <SelectItem 
               key={club.id} 
               value={club.id.toString()} 
-              className={`!py-3 !px-4 !pl-4 flex items-start min-h-[3rem] ${
-                selectedClub?.id === club.id 
-                  ? '!bg-terracotta/10 !text-terracotta dark:!bg-terracotta/20 dark:!text-terracotta' 
-                  : 'hover:!bg-muted/50 dark:!text-gray-100'
+              className={`!py-2 !px-3 flex items-start ${
+                selectedClub?.id === club.id ? '!bg-accent' : ''
               } [&>span:first-child]:hidden`}
             >
               <div className="w-full">
-                <div className="font-medium text-sm leading-tight break-words text-foreground dark:!text-gray-100">{club.name}</div>
+                <div className={`font-medium text-sm leading-tight break-words ${selectedClub?.id === club.id ? 'text-terracotta' : 'text-foreground'}`}>{club.name}</div>
                 {club.address && (
-                  <div className={`text-xs leading-tight mt-1 break-words ${
-                    selectedClub?.id === club.id 
-                      ? 'text-terracotta/70 dark:!text-terracotta/90' 
-                      : 'text-muted-foreground dark:!text-gray-100'
-                  }`}>
+                  <div className="text-xs leading-tight mt-1 break-words text-muted-foreground">
                     {club.address}
                   </div>
                 )}

@@ -38,9 +38,9 @@ const MONTH_SHORT_ES = [
 ];
 
 const SERIES = [
-  { key: "standard" as const, name: "Standard", color: "#daa056" },
-  { key: "rapid" as const, name: "Rápido", color: "#3b82f6" },
-  { key: "blitz" as const, name: "Blitz", color: "#8f3f12" },
+  { key: "standard" as const, name: "Standard", color: "var(--color-amber)" },
+  { key: "rapid" as const, name: "Rápido", color: "var(--color-terracotta)" },
+  { key: "blitz" as const, name: "Blitz", color: "hsl(var(--muted-foreground))" },
 ];
 
 export function RatingEvolutionChart({ playerId, playerName }: Props) {
@@ -59,9 +59,8 @@ export function RatingEvolutionChart({ playerId, playerName }: Props) {
       .then(res => res.json())
       .then(data => {
         if (cancelled) return;
-        const items: HistoryPoint[] = data?.success && Array.isArray(data.data?.history)
-          ? data.data.history
-          : [];
+        // apiSuccess returns the payload unwrapped: { playerId, history }
+        const items: HistoryPoint[] = Array.isArray(data?.history) ? data.history : [];
         setHistory(items.map(item => ({
           ...item,
           label: `${MONTH_SHORT_ES[item.month - 1]} ${String(item.year).slice(-2)}`,
@@ -88,7 +87,7 @@ export function RatingEvolutionChart({ playerId, playerName }: Props) {
   if (history.length < 2) {
     return (
       <p className="text-sm text-muted-foreground py-4 text-center">
-        Historial insuficiente para mostrar la evolución
+        Sin historial suficiente.
       </p>
     );
   }
@@ -96,7 +95,7 @@ export function RatingEvolutionChart({ playerId, playerName }: Props) {
   return (
     <div className="h-56 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={history} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+        <LineChart data={history} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
           <XAxis
             dataKey="label"

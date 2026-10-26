@@ -192,7 +192,7 @@ export default async function EditarUsuarioPage({
 
   if (error) {
     return (
-      <div className="flex flex-col gap-8 p-8">
+      <div className="space-y-6">
         <ErrorAlert title="Error" message={error} />
       </div>
     )

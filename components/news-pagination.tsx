@@ -1,5 +1,7 @@
 'use client'
 
+import { ChevronLeft, ChevronRight } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 
 interface NewsPaginationProps {
@@ -43,16 +45,20 @@ export function NewsPagination({
     <div className="mt-10 flex items-center justify-center gap-2">
       <Button
         variant="brandOutline"
+        size="icon"
         disabled={currentPage === 1}
         onClick={() => onPageChange(currentPage - 1)}
+        aria-label="Página anterior"
+        title="Página anterior"
       >
-        Anterior
+        <ChevronLeft className="h-4 w-4" />
       </Button>
 
       {getPageNumbers().map((pageNum) => (
         <Button
           key={pageNum}
           variant="outline"
+          size="icon"
           className={
             currentPage === pageNum
               ? "border-amber bg-amber/10 text-amber-dark hover:bg-amber/20"
@@ -66,10 +72,13 @@ export function NewsPagination({
 
       <Button
         variant="brandOutline"
+        size="icon"
         disabled={currentPage === totalPages}
         onClick={() => onPageChange(currentPage + 1)}
+        aria-label="Página siguiente"
+        title="Página siguiente"
       >
-        Siguiente
+        <ChevronRight className="h-4 w-4" />
       </Button>
     </div>
   )

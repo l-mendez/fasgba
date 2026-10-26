@@ -5,11 +5,7 @@ import { toast } from "sonner"
 import { FileText, FileSpreadsheet, Download, Eye, Calendar, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
 import {
-  DOCUMENT_CATEGORIES,
-  CATEGORY_COLORS,
   formatFileSize,
   formatArgentinaDate,
   getDocumentoExtension,
@@ -42,48 +38,34 @@ export function DocumentCard({ documento }: { documento: DocumentoSummary }) {
       disabled={loadingAction !== null}
     >
       {loadingAction === action ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <Loader2 className="h-4 w-4 animate-spin" />
       ) : (
-        <Icon className="mr-2 h-4 w-4" />
+        <Icon className="h-4 w-4" />
       )}
       {label}
     </Button>
   )
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${isExcel ? "bg-green-100" : "bg-red-100"}`}>
-            {isExcel ? (
-              <FileSpreadsheet className="h-5 w-5 text-green-600" />
-            ) : (
-              <FileText className="h-5 w-5 text-red-600" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-sm mb-1 line-clamp-2">{documento.name}</h3>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-              <Calendar className="h-3 w-3" />
-              <span>{formatArgentinaDate(documento.created_at)}</span>
-              {documento.file_size && (
-                <>
-                  <span>•</span>
-                  <span>{formatFileSize(documento.file_size)}</span>
-                </>
-              )}
-            </div>
-            <Badge variant="secondary" className={`text-xs ${CATEGORY_COLORS[documento.category]}`}>
-              {DOCUMENT_CATEGORIES[documento.category]}
-            </Badge>
-          </div>
+    <div className="flex h-full flex-col gap-3 rounded-lg border bg-card p-4">
+      <div className="flex flex-1 items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
+          {isExcel ? <FileSpreadsheet className="h-5 w-5 text-amber" /> : <FileText className="h-5 w-5 text-amber" />}
         </div>
+        <div className="min-w-0 flex-1 space-y-1">
+          <h3 className="line-clamp-2 font-medium leading-snug">{documento.name}</h3>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Calendar className="h-3.5 w-3.5 shrink-0" />
+            <span>{formatArgentinaDate(documento.created_at)}</span>
+            {documento.file_size && <span>· {formatFileSize(documento.file_size)}</span>}
+          </p>
+        </div>
+      </div>
 
-        <div className="flex gap-2 mt-4">
-          {actionButton("view", Eye, "Ver")}
-          {actionButton("download", Download, "Descargar")}
-        </div>
-      </CardContent>
-    </Card>
+      <div className="mt-auto flex gap-2">
+        {actionButton("view", Eye, "Ver")}
+        {actionButton("download", Download, "Descargar")}
+      </div>
+    </div>
   )
 }

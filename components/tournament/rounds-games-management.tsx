@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { InfoPill } from '@/components/info-pill'
 import { Separator } from '@/components/ui/separator'
-import { Plus, Users, User, Calendar, Crown } from 'lucide-react'
+import { Crown, ListOrdered, Plus, Users } from 'lucide-react'
 import { GameDisplay } from '@/lib/gameUtils-client'
 import { toast } from 'sonner'
 import { apiCall } from '@/lib/utils/apiClient'
@@ -439,34 +439,15 @@ export default function RoundsGamesManagement({
   })
 
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h3 className="text-xl font-semibold">Gestión de Rondas y Partidas</h3>
-          {tournamentType === 'team' ? (
-            <Badge variant="outline" className="flex items-center gap-1">
-              <Users className="h-3 w-3" />
-              Por Equipos
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="flex items-center gap-1">
-              <User className="h-3 w-3" />
-              Individual
-            </Badge>
-          )}
-        </div>
-      </div>
-
+    <div className="space-y-6">
       {/* Rounds Management Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h4 className="text-lg font-medium">Rondas del Torneo</h4>
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className="text-2xl font-bold tracking-tight text-terracotta">Rondas</h3>
+            <InfoPill icon={ListOrdered}>
               {rounds.length} {rounds.length === 1 ? 'ronda' : 'rondas'}
-            </Badge>
+            </InfoPill>
           </div>
 
           <Button
@@ -506,15 +487,11 @@ export default function RoundsGamesManagement({
         <>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <h4 className="text-lg font-medium">Enfrentamientos</h4>
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  Ronda {rounds.find(r => r.id === selectedRound)?.round_number || 'N/A'}
-                </Badge>
-                <Badge variant="secondary">
+              <div className="flex flex-wrap items-center gap-3">
+                <h3 className="text-2xl font-bold tracking-tight text-terracotta">Enfrentamientos</h3>
+                <InfoPill icon={Users}>
                   {matches.length} {matches.length === 1 ? 'enfrentamiento' : 'enfrentamientos'}
-                </Badge>
+                </InfoPill>
               </div>
             </div>
 
@@ -534,18 +511,12 @@ export default function RoundsGamesManagement({
       {/* Games Management Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h4 className="text-lg font-medium">Partidas</h4>
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className="text-2xl font-bold tracking-tight text-terracotta">Partidas</h3>
             {selectedRound > 0 && (
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Crown className="h-3 w-3" />
-                  Ronda {rounds.find(r => r.id === selectedRound)?.round_number || 'N/A'}
-                </Badge>
-                <Badge variant="secondary">
-                  {currentRoundGames.length} {currentRoundGames.length === 1 ? 'partida' : 'partidas'}
-                </Badge>
-              </div>
+              <InfoPill icon={Crown}>
+                Ronda {rounds.find(r => r.id === selectedRound)?.round_number || 'N/A'} · {currentRoundGames.length} {currentRoundGames.length === 1 ? 'partida' : 'partidas'}
+              </InfoPill>
             )}
           </div>
 

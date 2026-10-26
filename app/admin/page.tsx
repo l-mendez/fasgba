@@ -5,7 +5,7 @@ import { Award, FileText, FolderOpen, Globe, GraduationCap, Home, Shield, Trophy
 import { PurgeCacheMenu } from "./purge-cache-menu"
 import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
 import { AdminPageHeader } from "@/components/admin-page-header"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { getArgentinaDateInputValue } from "@/lib/dateUtils"
 import { requireAdminAction } from "@/lib/actions/auth"
@@ -161,7 +161,7 @@ async function AdminDashboardContent() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Usuarios totales</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="h-4 w-4 text-amber" />
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl md:text-2xl font-bold">
@@ -175,7 +175,7 @@ async function AdminDashboardContent() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Noticias publicadas</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <FileText className="h-4 w-4 text-amber" />
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl md:text-2xl font-bold">
@@ -189,7 +189,7 @@ async function AdminDashboardContent() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Torneos activos</CardTitle>
-            <Trophy className="h-4 w-4 text-muted-foreground" />
+            <Trophy className="h-4 w-4 text-amber" />
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl md:text-2xl font-bold">
@@ -203,7 +203,7 @@ async function AdminDashboardContent() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Clubes registrados</CardTitle>
-            <Home className="h-4 w-4 text-muted-foreground" />
+            <Home className="h-4 w-4 text-amber" />
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl md:text-2xl font-bold">
@@ -219,12 +219,9 @@ async function AdminDashboardContent() {
         <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle>Actividad reciente</CardTitle>
-            <CardDescription>
-              Últimas acciones realizadas en el sistema
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-8">
+            <div className="space-y-4">
               <div className="flex items-center">
                 <div className="space-y-1">
                   <p className="text-sm font-medium leading-none">
@@ -270,9 +267,6 @@ async function AdminDashboardContent() {
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Acciones rápidas</CardTitle>
-            <CardDescription>
-              Accede rápidamente a las funciones más utilizadas
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-2 md:gap-3">

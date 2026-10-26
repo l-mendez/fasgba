@@ -178,17 +178,14 @@ export function PlayersManagementClient({
       {showHeader ? (
         <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Gestión de Jugadores</h1>
-            <p className="text-muted-foreground">
-              Administra la información de todos los jugadores registrados
-            </p>
+            <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Jugadores</h1>
           </div>
-          <Link href="/jugadores/nuevo">
-            <Button className="bg-terracotta hover:bg-terracotta/90">
+          <Button asChild className="bg-terracotta hover:bg-terracotta/90">
+            <Link href="/jugadores/nuevo">
               <Plus className="mr-2 h-4 w-4" />
               Nuevo Jugador
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       ) : null}
 
@@ -197,7 +194,7 @@ export function PlayersManagementClient({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Jugadores</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-4 w-4 text-amber" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats?.total ?? "—"}</div>
@@ -206,7 +203,7 @@ export function PlayersManagementClient({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Con FIDE ID</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-4 w-4 text-amber" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats?.withFideId ?? "—"}</div>
@@ -215,7 +212,7 @@ export function PlayersManagementClient({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Con Club</CardTitle>
-              <Home className="h-4 w-4 text-muted-foreground" />
+              <Home className="h-4 w-4 text-amber" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats?.withClub ?? "—"}</div>
@@ -271,13 +268,13 @@ export function PlayersManagementClient({
                   <TableHead className="hidden sm:table-cell">FIDE ID</TableHead>
                   <TableHead className="hidden sm:table-cell">Rating</TableHead>
                   <TableHead className="hidden md:table-cell">Club</TableHead>
-                  <TableHead>Acciones</TableHead>
+                  <TableHead className="w-[88px]"><span className="sr-only">Acciones</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {players.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
+                    <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
                       No se encontraron jugadores
                     </TableCell>
                   </TableRow>
@@ -296,17 +293,19 @@ export function PlayersManagementClient({
                       <TableCell className="hidden sm:table-cell">{player.rating || "—"}</TableCell>
                       <TableCell className="hidden md:table-cell">{player.club?.name || "—"}</TableCell>
                       <TableCell>
-                        <div className="flex items-center space-x-1">
-                          <Link href={`/jugadores/${player.id}/editar`}>
-                            <Button variant="ghost" size="sm">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button asChild variant="ghost" size="icon" className="h-8 w-8" title="Editar jugador">
+                            <Link href={`/jugadores/${player.id}/editar`} aria-label="Editar jugador">
                               <Pencil className="h-4 w-4" />
-                            </Button>
-                          </Link>
+                            </Link>
+                          </Button>
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
                             onClick={() => openDeleteDialog(player)}
-                            className="text-red-600 hover:text-red-700"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            aria-label="Eliminar jugador"
+                            title="Eliminar jugador"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -351,7 +350,7 @@ export function PlayersManagementClient({
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isDeleting}
             >
               {isDeleting ? (

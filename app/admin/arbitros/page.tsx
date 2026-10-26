@@ -70,10 +70,9 @@ async function fetchArbitros(): Promise<ArbitroRow[]> {
 
 export default function AdminArbitrosPage() {
   return (
-    <div className="flex flex-col gap-8 p-8 pb-16 md:pb-8">
+    <div className="space-y-6">
       <AdminPageHeader
         title="Árbitros"
-        subtitle="Gestiona los árbitros de FASGBA."
         action={
           <Button asChild>
             <Link href="/admin/arbitros/nuevo">
@@ -102,9 +101,7 @@ async function AdminArbitrosContent() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-8">
-        <ErrorAlert message={error} />
-      </div>
+      <ErrorAlert message={error} />
     )
   }
 

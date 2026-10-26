@@ -32,12 +32,17 @@ export function RatingTypeSelector({ currentType }: RatingTypeSelectorProps) {
 
   return (
     <Tabs value={currentType} onValueChange={handleChange}>
-      <TabsList className="grid w-full grid-cols-3 max-w-md">
+      <TabsList className="grid grid-cols-3">
         {(Object.entries(ratingTypeConfig) as [RatingType, typeof ratingTypeConfig.standard][]).map(
           ([type, config]) => {
             const Icon = config.icon;
             return (
-              <TabsTrigger key={type} value={type} className="flex items-center gap-1.5">
+              <TabsTrigger
+                key={type}
+                value={type}
+                title={config.label}
+                className="flex items-center gap-1.5 data-[state=active]:bg-background data-[state=active]:text-terracotta"
+              >
                 <Icon className="h-4 w-4" />
                 <span className="hidden sm:inline">{config.label}</span>
               </TabsTrigger>

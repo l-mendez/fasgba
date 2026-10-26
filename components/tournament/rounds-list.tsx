@@ -24,11 +24,7 @@ export function RoundsList({
 }: RoundsListProps) {
   if (rounds.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-        <p className="text-lg font-medium mb-2">No hay rondas creadas</p>
-        <p className="text-sm">Agrega la primera ronda para comenzar a organizar las partidas</p>
-      </div>
+      <p className="py-8 text-center text-sm text-muted-foreground">No hay rondas creadas.</p>
     )
   }
 
@@ -45,41 +41,31 @@ export function RoundsList({
         return (
           <div
             key={round.id}
-            className={`flex items-center gap-3 p-3 border rounded-lg transition-colors cursor-pointer ${
-              selectedRound === round.id
-                ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800'
-                : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+            className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
+              selectedRound === round.id ? 'border-amber bg-accent' : 'bg-card hover:border-amber'
             }`}
             onClick={() => onSelectRound(round.id)}
           >
             <div className="flex items-center gap-2">
-              <div className={`p-2 rounded-full ${
-                selectedRound === round.id
-                  ? 'bg-blue-100 dark:bg-blue-900'
-                  : 'bg-gray-100 dark:bg-gray-800'
-              }`}>
-                <Calendar className={`h-4 w-4 ${
-                  selectedRound === round.id
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-gray-600 dark:text-gray-400'
-                }`} />
-              </div>
+              <Calendar className="h-4 w-4 text-amber" />
               <div>
                 <p className="font-medium text-sm">Ronda {round.round_number}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   {roundGames.length} {roundGames.length === 1 ? 'partida' : 'partidas'}
                 </p>
               </div>
             </div>
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
+              aria-label={`Eliminar ronda ${round.round_number}`}
+              title="Eliminar ronda"
               onClick={(e) => {
                 e.stopPropagation()
                 onDeleteRound(round.id, round.round_number)
               }}
               disabled={loading}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 ml-auto"
+              className="ml-auto h-8 w-8 text-destructive hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />
             </Button>

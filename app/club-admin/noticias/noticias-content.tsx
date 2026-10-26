@@ -23,7 +23,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
 import { ErrorAlert } from "@/components/error-alert"
 import { deleteNewsAction } from "@/lib/actions/news"
 import { formatArgentinaDateOnly, getDateInputValue } from "@/lib/dateUtils"
@@ -76,51 +75,9 @@ const getNewsCategory = (news: ClubNews) => {
   return 'General'
 }
 
-const getNewsStatus = () => {
-  // For now, we'll consider all news as published since we don't have a status field
-  // In the future, this could be based on a publication date or status field
-  return 'publicada'
-}
-
 // Get date for sorting (use the news date)
 const getNewsSortDate = (news: ClubNews): string => {
   return getDateInputValue(news.date)
-}
-
-// Get status badge variant
-const getStatusBadgeVariant = (status: string) => {
-  switch (status) {
-    case "publicada":
-      return "default"
-    case "borrador":
-      return "outline"
-    default:
-      return "outline"
-  }
-}
-
-// Get status badge class
-const getStatusBadgeClass = (status: string) => {
-  switch (status) {
-    case "publicada":
-      return "bg-green-500 hover:bg-green-500/80"
-    case "borrador":
-      return "text-muted-foreground"
-    default:
-      return ""
-  }
-}
-
-// Get status display text
-const getStatusText = (status: string) => {
-  switch (status) {
-    case "publicada":
-      return "Publicada"
-    case "borrador":
-      return "Borrador"
-    default:
-      return status.charAt(0).toUpperCase() + status.slice(1)
-  }
 }
 
 export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentProps) {
@@ -243,13 +200,10 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
     const searchLower = searchTerm.toLowerCase()
     const author = getAuthorName(noticia)
     const category = getNewsCategory(noticia)
-    const status = getNewsStatus()
-    
     return (
       noticia.title.toLowerCase().includes(searchLower) ||
       author.toLowerCase().includes(searchLower) ||
       category.toLowerCase().includes(searchLower) ||
-      status.toLowerCase().includes(searchLower) ||
       (noticia.extract && noticia.extract.toLowerCase().includes(searchLower)) ||
       (noticia.tags && noticia.tags.some(tag => tag.toLowerCase().includes(searchLower)))
     )
@@ -292,31 +246,16 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
 
       <div className="flex flex-col gap-4 md:flex-row md:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Buscar por título, autor, categoría o contenido..."
-            className="pl-8 w-full"
+            className="pl-9 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <div className="flex gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                Filtrar
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[200px]">
-              <DropdownMenuLabel>Filtrar por estado</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSearchTerm("")}>Todas</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchTerm("publicada")}>Publicadas</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSearchTerm("borrador")}>Borradores</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
@@ -353,12 +292,12 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
 
       <>
         {/* Desktop Table View - Hidden on mobile */}
-        <div className="rounded-md border hidden md:block">
+        <div className="rounded-md border hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead 
-                  className="w-[400px] cursor-pointer hover:bg-muted/50 select-none"
+                  className="cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('title')}
                 >
                   <div className="flex items-center gap-1">
@@ -367,7 +306,7 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('author')}
                 >
                   <div className="flex items-center gap-1">
@@ -385,7 +324,7 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  className="hidden lg:table-cell cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('category')}
                 >
                   <div className="flex items-center gap-1">
@@ -393,23 +332,21 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
                     {getSortIcon('category') && <span className="text-xs">{getSortIcon('category')}</span>}
                   </div>
                 </TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                <TableHead className="w-[60px]"><span className="sr-only">Acciones</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                    <p className="mt-2 text-muted-foreground">Cargando noticias...</p>
+                  <TableCell colSpan={5} className="text-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : sortedAndFilteredNoticias.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={5} className="text-center py-8">
                     <p className="text-muted-foreground">
-                      {searchTerm ? 'No se encontraron noticias que coincidan con la búsqueda.' : 'No hay noticias registradas.'}
+                      {searchTerm ? 'Sin resultados.' : 'No hay noticias.'}
                     </p>
                   </TableCell>
                 </TableRow>
@@ -418,33 +355,21 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
                   const author = getAuthorName(noticia)
                   const formattedDate = formatDate(noticia.date)
                   const category = getNewsCategory(noticia)
-                  const status = getNewsStatus()
                   
                   return (
                     <TableRow key={noticia.id}>
                       <TableCell className="font-medium">{noticia.title}</TableCell>
-                      <TableCell>{author}</TableCell>
-                      <TableCell>{formattedDate}</TableCell>
-                      <TableCell>{category}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={getStatusBadgeVariant(status)}
-                          className={getStatusBadgeClass(status)}
-                        >
-                          {getStatusText(status)}
-                        </Badge>
-                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">{author}</TableCell>
+                      <TableCell className="whitespace-nowrap">{formattedDate}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{category}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Acciones" title="Acciones">
                               <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Abrir menú</span>
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
                             <DropdownMenuItem asChild>
                               <Link href={`/noticias/${noticia.id}`} target="_blank">
                                 <Eye className="mr-2 h-4 w-4" />
@@ -463,7 +388,7 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
                                 setNoticiaToDelete(noticia.id)
                                 setShowDeleteDialog(true)
                               }}
-                              className="text-red-500 focus:text-red-500"
+                              className="text-destructive focus:text-destructive"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Eliminar
@@ -480,28 +405,26 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
         </div>
 
         {/* Mobile Card View - Hidden on desktop */}
-        <div className="md:hidden pb-8">
+        <div className="md:hidden">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin mb-4" />
-              <p className="text-muted-foreground">Cargando noticias...</p>
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : sortedAndFilteredNoticias.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">
-                {searchTerm ? 'No se encontraron noticias que coincidan con la búsqueda.' : 'No hay noticias registradas.'}
+                {searchTerm ? 'Sin resultados.' : 'No hay noticias.'}
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {sortedAndFilteredNoticias.map((noticia) => {
                 const author = getAuthorName(noticia)
                 const formattedDate = formatDate(noticia.date)
                 const category = getNewsCategory(noticia)
-                const status = getNewsStatus()
                 
                 return (
-                  <div key={noticia.id} className="bg-card rounded-lg border p-4 shadow-sm">
+                  <div key={noticia.id} className="bg-card rounded-lg border p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium text-sm leading-5 text-card-foreground mb-2 line-clamp-2">
@@ -525,12 +448,6 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
                           
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
-                              <Badge
-                                variant={getStatusBadgeVariant(status)}
-                                className={`text-xs ${getStatusBadgeClass(status)}`}
-                              >
-                                {getStatusText(status)}
-                              </Badge>
                               <span className="text-xs text-muted-foreground">{category}</span>
                             </div>
                           </div>
@@ -539,14 +456,11 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
                       
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
-                            <span className="sr-only">Abrir menú</span>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" aria-label="Acciones" title="Acciones">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
                           <DropdownMenuItem asChild>
                             <Link href={`/noticias/${noticia.id}`} target="_blank">
                               <Eye className="mr-2 h-4 w-4" />
@@ -565,7 +479,7 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
                               setNoticiaToDelete(noticia.id)
                               setShowDeleteDialog(true)
                             }}
-                            className="text-red-500 focus:text-red-500"
+                            className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Eliminar

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { Settings as SettingsIcon } from "lucide-react"
+import { PageHero } from "@/components/page-hero"
 import { SettingsForm } from "@/components/settings-form"
 import { createClient as createServerSupabase } from "@/lib/supabase/server"
 import UnsubscribeHandler from "@/components/unsubscribe-handler"
@@ -16,22 +16,16 @@ export default async function AjustesPage() {
   const initial = (user.user_metadata as any)?.notifications || null
   return (
     <>
-      <div className="container max-w-4xl px-4 md:px-6 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-2">
-            <SettingsIcon className="h-6 w-6 text-terracotta" />
-            <h1 className="text-3xl font-bold text-terracotta">Ajustes</h1>
+      <PageHero title="Ajustes" />
+      <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
+        <div className="container px-4 md:px-6">
+          <div className="max-w-3xl">
+            {/* Auto-unsubscribe via query param notifications=off */}
+            <UnsubscribeHandler />
+            <SettingsForm initial={initial || undefined} />
           </div>
-          <p className="text-muted-foreground">
-            Personaliza tu experiencia en FASGBA
-          </p>
         </div>
-
-        {/* Auto-unsubscribe via query param notifications=off */}
-        <UnsubscribeHandler />
-        <SettingsForm initial={initial || undefined} />
-      </div>
+      </section>
     </>
   )
 }

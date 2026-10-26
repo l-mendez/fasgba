@@ -172,20 +172,19 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
   }
 
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/admin/profesores">
+          <Link href="/admin/profesores" aria-label="Volver" title="Volver">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Nuevo Profesor</h1>
-          <p className="text-muted-foreground">Agrega un nuevo profesor de ajedrez.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Nuevo Profesor</h1>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Photo Section */}
         <div className="grid gap-2">
           <Label>Foto del Profesor</Label>
@@ -200,14 +199,16 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
                 <button
                   type="button"
                   onClick={removeImage}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  className="absolute -top-2 -right-2 rounded-full bg-destructive p-1 text-destructive-foreground hover:bg-destructive/90"
+                aria-label="Quitar foto"
+                title="Quitar foto"
                 >
                   <X className="h-3 w-3" />
                 </button>
               </div>
             ) : (
               <div
-                className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors max-w-xs"
+                className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors hover:border-amber max-w-xs"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <ImageIcon className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
@@ -249,10 +250,10 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
               value={formData.titulo}
               onChange={handleChange}
               placeholder="Ej: GM Roberto García"
-              className={validationErrors.titulo ? "border-red-500" : ""}
+              className={validationErrors.titulo ? "border-destructive" : ""}
             />
             {validationErrors.titulo && (
-              <p className="text-sm text-red-500">{validationErrors.titulo}</p>
+              <p className="text-sm text-destructive">{validationErrors.titulo}</p>
             )}
           </div>
 
@@ -287,10 +288,10 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
               placeholder="Ej: 1985"
               min={1900}
               max={new Date().getFullYear()}
-              className={validationErrors.anio_nacimiento ? "border-red-500" : ""}
+              className={validationErrors.anio_nacimiento ? "border-destructive" : ""}
             />
             {validationErrors.anio_nacimiento && (
-              <p className="text-sm text-red-500">{validationErrors.anio_nacimiento}</p>
+              <p className="text-sm text-destructive">{validationErrors.anio_nacimiento}</p>
             )}
           </div>
 
@@ -332,10 +333,10 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="Ej: profesor@email.com"
-                className={validationErrors.email ? "border-red-500" : ""}
+                className={validationErrors.email ? "border-destructive" : ""}
               />
               {validationErrors.email && (
-                <p className="text-sm text-red-500">{validationErrors.email}</p>
+                <p className="text-sm text-destructive">{validationErrors.email}</p>
               )}
             </div>
 
@@ -377,12 +378,12 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
         </div>
 
         {error && (
-          <div className="text-sm text-red-500">
+          <div className="text-sm text-destructive">
             {error}
           </div>
         )}
 
-        <div className="flex justify-end gap-4">
+        <div className="flex justify-end gap-3">
           <Button
             type="button"
             variant="outline"

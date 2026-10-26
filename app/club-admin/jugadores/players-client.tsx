@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Plus, Pencil, Trash2, Search, Users, Home, Building2 } from "lucide-react"
+import { Plus, Pencil, Trash2, Search, Users, Home, Building2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -109,13 +109,10 @@ export function ClubPlayersManagement({ initialPlayers, showHeader = true, showS
 
   if (clubesAdministrados.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-[300px]">
         <div className="text-center">
-          <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Sin clubes administrados</h3>
-          <p className="text-muted-foreground">
-            No administras ningún club actualmente.
-          </p>
+          <Building2 className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground">No administras ningún club.</p>
         </div>
       </div>
     )
@@ -126,26 +123,23 @@ export function ClubPlayersManagement({ initialPlayers, showHeader = true, showS
       {showHeader ? (
         <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Gestión de Jugadores</h1>
-            <p className="text-muted-foreground">
-              Administra los jugadores de tus clubes
-            </p>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-terracotta">Jugadores</h1>
           </div>
-          <Link href="/jugadores/nuevo">
-            <Button className="bg-terracotta hover:bg-terracotta/90">
+          <Button asChild>
+            <Link href="/jugadores/nuevo">
               <Plus className="mr-2 h-4 w-4" />
-              Nuevo Jugador
-            </Button>
-          </Link>
+              Nuevo jugador
+            </Link>
+          </Button>
         </div>
       ) : null}
 
       {showStats ? (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Jugadores</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Jugadores</CardTitle>
+              <Users className="h-4 w-4 text-amber" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{players.length}</div>
@@ -154,7 +148,7 @@ export function ClubPlayersManagement({ initialPlayers, showHeader = true, showS
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Con FIDE ID</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-4 w-4 text-amber" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -164,8 +158,8 @@ export function ClubPlayersManagement({ initialPlayers, showHeader = true, showS
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Con Club</CardTitle>
-              <Home className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Con club</CardTitle>
+              <Home className="h-4 w-4 text-amber" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -177,21 +171,20 @@ export function ClubPlayersManagement({ initialPlayers, showHeader = true, showS
       ) : null}
 
       {/* Filters */}
-      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-y-0 md:space-x-4">
-        <div className="flex items-center space-x-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="relative flex-1 md:max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por nombre o FIDE ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
+            className="pl-9"
           />
         </div>
-        
-        <div className="flex items-center space-x-2">
-          <Building2 className="h-4 w-4 text-muted-foreground" />
+
+        <div>
           <Select value={selectedClubFilter} onValueChange={setSelectedClubFilter}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full md:w-[200px]">
               <SelectValue placeholder="Filtrar por club" />
             </SelectTrigger>
             <SelectContent>
@@ -208,21 +201,21 @@ export function ClubPlayersManagement({ initialPlayers, showHeader = true, showS
       </div>
 
       {/* Players Table */}
-      <Card>
+      <Card className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
-              <TableHead>FIDE ID</TableHead>
+              <TableHead className="hidden sm:table-cell">FIDE ID</TableHead>
               <TableHead>Rating</TableHead>
-              <TableHead>Club</TableHead>
-              <TableHead>Acciones</TableHead>
+              <TableHead className="hidden md:table-cell">Club</TableHead>
+              <TableHead className="w-[88px]"><span className="sr-only">Acciones</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredPlayers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   {searchTerm || selectedClubFilter !== "all" 
                     ? "No se encontraron jugadores con los filtros aplicados"
                     : "No hay jugadores registrados"
@@ -233,24 +226,23 @@ export function ClubPlayersManagement({ initialPlayers, showHeader = true, showS
               filteredPlayers.map((player) => (
                 <TableRow key={player.id}>
                   <TableCell className="font-medium">{player.full_name}</TableCell>
-                  <TableCell>{player.fide_id || "-"}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{player.fide_id || "-"}</TableCell>
                   <TableCell>{player.rating || "-"}</TableCell>
-                  <TableCell>{player.club?.name || "Sin club"}</TableCell>
+                  <TableCell className="hidden md:table-cell">{player.club?.name || "Sin club"}</TableCell>
                   <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Link href={`/jugadores/${player.id}/editar`}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                        >
+                    <div className="flex items-center gap-1">
+                      <Button asChild variant="ghost" size="icon" className="h-8 w-8">
+                        <Link href={`/jugadores/${player.id}/editar`} aria-label="Editar" title="Editar">
                           <Pencil className="h-4 w-4" />
-                        </Button>
-                      </Link>
+                        </Link>
+                      </Button>
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={() => openDeleteDialog(player)}
-                        className="text-red-600 hover:text-red-700"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        aria-label="Eliminar"
+                        title="Eliminar"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -277,12 +269,12 @@ export function ClubPlayersManagement({ initialPlayers, showHeader = true, showS
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDelete} 
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isDeleting}
             >
               {isDeleting ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Eliminando...
                 </>
               ) : (

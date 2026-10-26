@@ -15,8 +15,7 @@ export default function PlayersManagementPage() {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="Gestión de Jugadores"
-        subtitle="Administra la información de todos los jugadores registrados"
+        title="Jugadores"
         action={
           <Button asChild className="bg-terracotta hover:bg-terracotta/90">
             <Link href="/jugadores/nuevo">

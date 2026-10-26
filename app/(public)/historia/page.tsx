@@ -1,8 +1,6 @@
-import { CalendarDays } from "lucide-react"
+import { CalendarDays, Quote } from "lucide-react"
 import type { Metadata } from 'next'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageHero } from "@/components/page-hero"
 
 // Hardcoded content — prerender once, never revalidate.
@@ -13,359 +11,172 @@ export const metadata: Metadata = {
   description: 'Conoce la historia y evolución de la Federación de Ajedrez del Sur del Gran Buenos Aires desde 1975',
 }
 
+const hitos = [
+  {
+    anio: "1975",
+    titulo: "Fundación de FASGBA",
+    texto:
+      "El 15 de mayo de 1975 se firma el acta fundacional de la Federación de Ajedrez del Sur de Buenos Aires en la ciudad de Bahía Blanca.",
+  },
+  {
+    anio: "1990",
+    titulo: "Primer Campeonato Regional",
+    texto:
+      "Se organiza el primer Campeonato Regional con la participación de jugadores de todos los clubes afiliados, coronando como campeón a Carlos Martínez del Club de Ajedrez Bahía Blanca.",
+  },
+  {
+    anio: "1995",
+    titulo: "Reconocimiento de la FADA",
+    texto:
+      "La Federación de Ajedrez reconoce oficialmente a FASGBA como entidad regional, permitiendo a sus jugadores participar en torneos nacionales.",
+  },
+  {
+    anio: "2005",
+    titulo: "Primer Gran Maestro",
+    texto:
+      "Laura Martínez se convierte en la primera Gran Maestra de la región, marcando un hito en la historia del ajedrez regional.",
+  },
+  {
+    anio: "2015",
+    titulo: "30° Aniversario",
+    texto:
+      "FASGBA celebra su 30° aniversario con un torneo internacional que contó con la participación de jugadores de Argentina, Chile, Uruguay y Brasil.",
+  },
+  {
+    anio: "2020",
+    titulo: "Digitalización",
+    texto:
+      "En respuesta a la pandemia, FASGBA implementa torneos online y digitaliza todos sus procesos administrativos, modernizando la federación.",
+  },
+]
+
+const presidentes = [
+  {
+    nombre: "Dr. Roberto Fernández",
+    periodo: "1975 - 1995",
+    texto: "Presidente fundador que estableció las bases organizativas de la federación y promovió la afiliación de nuevos clubes.",
+  },
+  {
+    nombre: "Ing. Miguel Sánchez",
+    periodo: "1995 - 2005",
+    texto: "Logró el reconocimiento oficial de la FADA y estableció el sistema de ranking regional que sigue vigente.",
+  },
+  {
+    nombre: "Prof. Ana García",
+    periodo: "2005 - 2015",
+    texto: "Impulsó la formación de jóvenes talentos y la participación femenina en el ajedrez regional.",
+  },
+  {
+    nombre: "Lic. Carlos Martínez",
+    periodo: "2015 - Actualidad",
+    texto:
+      "Modernizó la federación, implementó torneos online y expandió la presencia de FASGBA en competencias nacionales e internacionales.",
+  },
+]
+
+const testimonios = [
+  {
+    autor: "Dr. Roberto Fernández",
+    rol: "Presidente Fundador",
+    texto:
+      "Fundar FASGBA fue un sueño hecho realidad. Queríamos unir a todos los ajedrecistas de la región y crear un espacio para que creciera el ajedrez en el sur de Buenos Aires.",
+  },
+  {
+    autor: "GM Laura Martínez",
+    rol: "Primera Gran Maestra de la región",
+    texto:
+      "El ajedrez en nuestra región ha crecido enormemente gracias a FASGBA. Hoy tenemos jugadores compitiendo a nivel internacional y una estructura sólida de torneos y formación.",
+  },
+  {
+    autor: "Prof. Ana García",
+    rol: "Ex-Presidenta (2005-2015)",
+    texto:
+      "FASGBA ha sido fundamental para el desarrollo del ajedrez juvenil. Gracias a sus programas, muchos jóvenes han encontrado en el ajedrez una pasión y un camino de crecimiento personal.",
+  },
+]
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <h2 className="mb-4 text-2xl font-bold tracking-tight text-terracotta">{children}</h2>
+}
+
 export default function HistoriaPage() {
   return (
     <>
-      <PageHero
-        title="Historia de FASGBA"
-        subtitle="Conoce la historia y evolución de la Federación de Ajedrez del Sur del Gran Buenos Aires"
-      />
-      <section className="w-full py-12 md:py-24 lg:py-32">
-        <div className="container px-4 md:px-6">
-          <div className="grid gap-6 lg:grid-cols-[1fr_300px] lg:gap-12 xl:grid-cols-[1fr_400px]">
-            <div className="flex flex-col gap-8">
-              <div>
-                <h2 className="text-3xl font-bold tracking-tight">Nuestros Orígenes</h2>
-                <div className="mt-4 grid gap-6">
-                  <p>
-                    La Federación de Ajedrez del Sur del Gran Buenos Aires (FASGBA) fue fundada el 15 de mayo de 1975 por un
-                    grupo de entusiastas ajedrecistas de la región, con el objetivo de unificar y organizar la
-                    actividad ajedrecística en el sur de la provincia de Buenos Aires.
-                  </p>
-                  <p>
-                    En sus inicios, la federación contaba con apenas 5 clubes afiliados: Club de Ajedrez Bahía Blanca,
-                    Círculo de Ajedrez Punta Alta, Club de Ajedrez Tres Arroyos, Círculo de Ajedrez Coronel Suárez y
-                    Club de Ajedrez Monte Hermoso. Hoy, la federación cuenta con más de 15 clubes afiliados y organiza
-                    decenas de torneos anuales.
-                  </p>
-                  <p>
-                    El primer presidente de FASGBA fue el Dr. Roberto Fernández, reconocido ajedrecista y promotor
-                    cultural de Bahía Blanca, quien sentó las bases organizativas que perduran hasta hoy.
-                  </p>
-                </div>
-              </div>
-              <div>
-                <h2 className="text-3xl font-bold tracking-tight">Hitos Importantes</h2>
-                <div className="mt-4 space-y-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                        <CardDescription>1975</CardDescription>
-                      </div>
-                      <CardTitle>Fundación de FASGBA</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p>
-                        El 15 de mayo de 1975 se firma el acta fundacional de la Federación de Ajedrez del Sur de
-                        Buenos Aires en la ciudad de Bahía Blanca.
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                        <CardDescription>1990</CardDescription>
-                      </div>
-                      <CardTitle>Primer Campeonato Regional</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p>
-                        Se organiza el primer Campeonato Regional con la participación de jugadores de todos los
-                        clubes afiliados, coronando como campeón a Carlos Martínez del Club de Ajedrez Bahía Blanca.
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                        <CardDescription>1995</CardDescription>
-                      </div>
-                      <CardTitle>Reconocimiento de la FADA</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p>
-                        La Federación de Ajedrez reconoce oficialmente a FASGBA como entidad regional,
-                        permitiendo a sus jugadores participar en torneos nacionales.
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                        <CardDescription>2005</CardDescription>
-                      </div>
-                      <CardTitle>Primer Gran Maestro</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p>
-                        Laura Martínez se convierte en la primera Gran Maestra de la región, marcando un hito en la
-                        historia del ajedrez regional.
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                        <CardDescription>2015</CardDescription>
-                      </div>
-                      <CardTitle>30° Aniversario</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p>
-                        FASGBA celebra su 30° aniversario con un torneo internacional que contó con la participación
-                        de jugadores de Argentina, Chile, Uruguay y Brasil.
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                        <CardDescription>2020</CardDescription>
-                      </div>
-                      <CardTitle>Digitalización</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p>
-                        En respuesta a la pandemia, FASGBA implementa torneos online y digitaliza todos sus procesos
-                        administrativos, modernizando la federación.
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-              <div>
-                <h2 className="text-3xl font-bold tracking-tight">Presidentes Históricos</h2>
-                <div className="mt-4 grid gap-6 sm:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Dr. Roberto Fernández</CardTitle>
-                      <CardDescription>1975 - 1995</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p>
-                        Presidente fundador que estableció las bases organizativas de la federación y promovió la
-                        afiliación de nuevos clubes.
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Ing. Miguel Sánchez</CardTitle>
-                      <CardDescription>1995 - 2005</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p>
-                        Logró el reconocimiento oficial de la FADA y estableció el sistema de ranking regional que
-                        sigue vigente.
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Prof. Ana García</CardTitle>
-                      <CardDescription>2005 - 2015</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p>
-                        Impulsó la formación de jóvenes talentos y la participación femenina en el ajedrez regional.
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Lic. Carlos Martínez</CardTitle>
-                      <CardDescription>2015 - Actualidad</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p>
-                        Modernizó la federación, implementó torneos online y expandió la presencia de FASGBA en
-                        competencias nacionales e internacionales.
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
+      <PageHero title="Historia" />
+      <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
+        <div className="container grid gap-10 px-4 md:px-6 lg:grid-cols-[1fr_340px] lg:gap-12">
+          <div className="space-y-10">
+            <div>
+              <SectionTitle>Nuestros Orígenes</SectionTitle>
+              <div className="space-y-4 leading-relaxed">
+                <p>
+                  La Federación de Ajedrez del Sur del Gran Buenos Aires (FASGBA) fue fundada el 15 de mayo de 1975 por un
+                  grupo de entusiastas ajedrecistas de la región, con el objetivo de unificar y organizar la
+                  actividad ajedrecística en el sur de la provincia de Buenos Aires.
+                </p>
+                <p>
+                  En sus inicios, la federación contaba con apenas 5 clubes afiliados: Club de Ajedrez Bahía Blanca,
+                  Círculo de Ajedrez Punta Alta, Club de Ajedrez Tres Arroyos, Círculo de Ajedrez Coronel Suárez y
+                  Club de Ajedrez Monte Hermoso. Hoy, la federación cuenta con más de 15 clubes afiliados y organiza
+                  decenas de torneos anuales.
+                </p>
+                <p>
+                  El primer presidente de FASGBA fue el Dr. Roberto Fernández, reconocido ajedrecista y promotor
+                  cultural de Bahía Blanca, quien sentó las bases organizativas que perduran hasta hoy.
+                </p>
               </div>
             </div>
-            <div className="space-y-6">
-              <Tabs defaultValue="galeria" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="galeria">Galería</TabsTrigger>
-                  <TabsTrigger value="testimonios">Testimonios</TabsTrigger>
-                </TabsList>
-                <TabsContent value="galeria" className="mt-6 space-y-4">
-                  <div className="overflow-hidden rounded-lg">
-                    <img
-                      src="/placeholder.svg?height=300&width=400"
-                      alt="Fundación de FASGBA, 1975"
-                      className="aspect-video w-full object-cover"
-                    />
-                    <div className="bg-muted p-2 text-center text-sm">Fundación de FASGBA, 1985</div>
+
+            <div>
+              <SectionTitle>Hitos Importantes</SectionTitle>
+              <ol className="space-y-3">
+                {hitos.map((hito) => (
+                  <li key={hito.anio} className="rounded-lg border bg-card p-4">
+                    <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <CalendarDays className="h-4 w-4" />
+                      {hito.anio}
+                    </p>
+                    <h3 className="mt-1 font-semibold">{hito.titulo}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{hito.texto}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <div>
+              <SectionTitle>Presidentes Históricos</SectionTitle>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {presidentes.map((presidente) => (
+                  <div key={presidente.nombre} className="h-full rounded-lg border bg-card p-4">
+                    <h3 className="font-semibold">{presidente.nombre}</h3>
+                    <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <CalendarDays className="h-4 w-4" />
+                      {presidente.periodo}
+                    </p>
+                    <p className="mt-2 text-sm text-muted-foreground">{presidente.texto}</p>
                   </div>
-                  <div className="overflow-hidden rounded-lg">
-                    <img
-                      src="/placeholder.svg?height=300&width=400"
-                      alt="Primer Campeonato Regional, 1990"
-                      className="aspect-video w-full object-cover"
-                    />
-                    <div className="bg-muted p-2 text-center text-sm">Primer Campeonato Regional, 1990</div>
-                  </div>
-                  <div className="overflow-hidden rounded-lg">
-                    <img
-                      src="/placeholder.svg?height=300&width=400"
-                      alt="Celebración 30° Aniversario, 2015"
-                      className="aspect-video w-full object-cover"
-                    />
-                    <div className="bg-muted p-2 text-center text-sm">Celebración 30° Aniversario, 2015</div>
-                  </div>
-                  <div className="overflow-hidden rounded-lg">
-                    <img
-                      src="/placeholder.svg?height=300&width=400"
-                      alt="Sede actual de FASGBA"
-                      className="aspect-video w-full object-cover"
-                    />
-                    <div className="bg-muted p-2 text-center text-sm">Sede actual de FASGBA</div>
-                  </div>
-                </TabsContent>
-                <TabsContent value="testimonios" className="mt-6 space-y-4">
-                  <Card>
-                    <CardContent className="pt-6">
-                      <blockquote className="border-l-2 pl-4 italic">
-                        "Fundar FASGBA fue un sueño hecho realidad. Queríamos unir a todos los ajedrecistas de la
-                        región y crear un espacio para que creciera el ajedrez en el sur de Buenos Aires."
-                      </blockquote>
-                      <div className="mt-4 flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-full bg-muted" />
-                        <div>
-                          <p className="text-sm font-medium">Dr. Roberto Fernández</p>
-                          <p className="text-sm text-muted-foreground">Presidente Fundador</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <blockquote className="border-l-2 pl-4 italic">
-                        "El ajedrez en nuestra región ha crecido enormemente gracias a FASGBA. Hoy tenemos jugadores
-                        compitiendo a nivel internacional y una estructura sólida de torneos y formación."
-                      </blockquote>
-                      <div className="mt-4 flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-full bg-muted" />
-                        <div>
-                          <p className="text-sm font-medium">GM Laura Martínez</p>
-                          <p className="text-sm text-muted-foreground">Primera Gran Maestra de la región</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <blockquote className="border-l-2 pl-4 italic">
-                        "FASGBA ha sido fundamental para el desarrollo del ajedrez juvenil. Gracias a sus programas,
-                        muchos jóvenes han encontrado en el ajedrez una pasión y un camino de crecimiento personal."
-                      </blockquote>
-                      <div className="mt-4 flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-full bg-muted" />
-                        <div>
-                          <p className="text-sm font-medium">Prof. Ana García</p>
-                          <p className="text-sm text-muted-foreground">Ex-Presidenta (2005-2015)</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Línea de Tiempo</CardTitle>
-                  <CardDescription>Eventos clave en la historia de FASGBA</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex gap-4">
-                      <div className="flex flex-col items-center">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-primary text-sm font-medium">
-                          85
-                        </div>
-                        <div className="h-full w-px bg-border" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium">Fundación</h3>
-                        <p className="text-sm text-muted-foreground">Creación de FASGBA en Bahía Blanca</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-4">
-                      <div className="flex flex-col items-center">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-primary text-sm font-medium">
-                          90
-                        </div>
-                        <div className="h-full w-px bg-border" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium">Primer Campeonato</h3>
-                        <p className="text-sm text-muted-foreground">Inicio de torneos regionales</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-4">
-                      <div className="flex flex-col items-center">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-primary text-sm font-medium">
-                          95
-                        </div>
-                        <div className="h-full w-px bg-border" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium">Reconocimiento FADA</h3>
-                        <p className="text-sm text-muted-foreground">Afiliación a la federación nacional</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-4">
-                      <div className="flex flex-col items-center">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-primary text-sm font-medium">
-                          05
-                        </div>
-                        <div className="h-full w-px bg-border" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium">Primera GM</h3>
-                        <p className="text-sm text-muted-foreground">Laura Martínez logra el título</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-4">
-                      <div className="flex flex-col items-center">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-primary text-sm font-medium">
-                          15
-                        </div>
-                        <div className="h-full w-px bg-border" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium">30° Aniversario</h3>
-                        <p className="text-sm text-muted-foreground">Torneo internacional conmemorativo</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-4">
-                      <div className="flex flex-col items-center">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-primary text-sm font-medium">
-                          20
-                        </div>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium">Digitalización</h3>
-                        <p className="text-sm text-muted-foreground">Modernización de la federación</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                ))}
+              </div>
             </div>
           </div>
+
+          <aside>
+            <SectionTitle>Testimonios</SectionTitle>
+            <div className="space-y-3">
+              {testimonios.map((testimonio) => (
+                <figure key={testimonio.autor} className="rounded-lg border bg-card p-4">
+                  <Quote className="h-4 w-4 text-amber" />
+                  <blockquote className="mt-2 text-sm italic">{testimonio.texto}</blockquote>
+                  <figcaption className="mt-3 text-sm">
+                    <span className="font-medium">{testimonio.autor}</span>
+                    <span className="block text-muted-foreground">{testimonio.rol}</span>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </aside>
         </div>
       </section>
     </>
   )
 }
-

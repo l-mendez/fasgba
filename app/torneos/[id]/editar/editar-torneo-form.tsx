@@ -2,12 +2,12 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2 } from "lucide-react"
+import { AlertTriangle, Clock, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { ErrorAlert } from "@/components/error-alert"
-import { Badge } from "@/components/ui/badge"
+import { InfoPill } from "@/components/info-pill"
 import { TournamentFormFields } from "@/components/tournament/tournament-form-fields"
 import { apiCall } from "@/lib/utils/apiClient"
 import {
@@ -169,11 +169,7 @@ export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: Edit
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-2xl text-terracotta">Editar Torneo</CardTitle>
-        <CardDescription>Modifica los detalles del torneo</CardDescription>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 md:p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && <ErrorAlert message={error} />}
 
@@ -189,38 +185,32 @@ export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: Edit
             isLoading={isLoading}
             tournamentTypeExtras={
               hasTypeChanged ? (
-                <Badge variant="outline" className="text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-600 bg-orange-50 dark:bg-orange-950/50">
-                  Cambio pendiente
-                </Badge>
+                <InfoPill icon={Clock}>Cambio pendiente</InfoPill>
               ) : undefined
             }
           />
 
           {hasTypeChanged && !isLoading && (
-            <div className="p-3 bg-orange-50 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800 rounded-md">
-              <p className="text-sm text-orange-800 dark:text-orange-200">
-                <strong>Importante:</strong> El cambio de tipo de torneo eliminará datos existentes incompatibles.
-                Guarda los cambios para aplicar esta modificación.
-              </p>
+            <div className="flex items-start gap-2 rounded-md border border-amber/50 bg-amber/10 p-3 text-sm text-foreground">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber" />
+              <p>Cambiar el tipo de torneo eliminará los datos incompatibles al guardar.</p>
             </div>
           )}
 
           {isLoading && (
-            <div className="p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-md">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                <strong>Procesando cambio de tipo de torneo...</strong> La página se recargará automáticamente al completarse.
-              </p>
+            <div className="flex items-center gap-2 rounded-md border bg-muted p-3 text-sm text-foreground">
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-amber" />
+              <p>Procesando cambio de tipo. La página se recargará al terminar.</p>
             </div>
           )}
 
-          <div className="flex gap-4 pt-6">
+          <div className="flex gap-2 pt-2">
             <Button
               type="submit"
               disabled={isLoading}
-              className="bg-terracotta hover:bg-terracotta/90"
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isLoading ? "Actualizando..." : "Actualizar Torneo"}
+              {isLoading ? "Guardando..." : "Guardar cambios"}
             </Button>
 
             <Button

@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { InfoPill } from '@/components/info-pill'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Trash2, Calendar, Loader2, Users, Trophy } from 'lucide-react'
 import { toast } from 'sonner'
@@ -245,11 +245,10 @@ export default function RoundManagement({ tournamentId, tournamentType = 'indivi
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold">Gestión de Rondas</h3>
-          <Badge variant="outline" className="flex items-center gap-1">
-            {tournamentType === 'team' ? <Users className="h-3 w-3" /> : <Trophy className="h-3 w-3" />}
+          <h3 className="text-2xl font-bold tracking-tight text-terracotta">Rondas</h3>
+          <InfoPill icon={tournamentType === 'team' ? Users : Trophy}>
             {tournamentType === 'team' ? 'Por Equipos' : 'Individual'}
-          </Badge>
+          </InfoPill>
         </div>
         
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -261,10 +260,7 @@ export default function RoundManagement({ tournamentId, tournamentType = 'indivi
           </DialogTrigger>
           <DialogContent className={tournamentType === 'team' ? "max-w-2xl" : "max-w-md"}>
             <DialogHeader>
-              <DialogTitle>
-                Agregar Nueva Ronda
-                {tournamentType === 'team' && ' - Configurar Enfrentamientos'}
-              </DialogTitle>
+              <DialogTitle>Agregar Ronda</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -295,26 +291,21 @@ export default function RoundManagement({ tournamentId, tournamentType = 'indivi
                       disabled={fetchingTeams || teams.length < 2}
                     >
                       <Plus className="h-4 w-4 mr-1" />
-                      Agregar Enfrentamiento
+                      Agregar
                     </Button>
                   </div>
 
                   {fetchingTeams ? (
-                    <div className="flex items-center justify-center p-4">
+                    <div className="flex items-center justify-center p-4 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       Cargando equipos...
                     </div>
                   ) : teams.length < 2 ? (
-                    <div className="p-4 bg-yellow-50 dark:bg-yellow-950/50 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                        <strong>Importante:</strong> En torneos por equipos, crear una ronda también generará automáticamente 
-                        los enfrentamientos entre todos los equipos registrados para esa ronda.
-                      </p>
-                    </div>
+                    <p className="text-sm text-muted-foreground">Se necesitan al menos 2 equipos registrados.</p>
                   ) : (
                     <div className="space-y-3 max-h-60 overflow-y-auto">
                       {formData.matches?.map((match, index) => (
-                        <div key={index} className="flex items-center gap-2 p-3 bg-gray-50 rounded-md">
+                        <div key={index} className="flex items-center gap-2 rounded-md bg-muted p-2">
                           <div className="flex-1">
                             <Select
                               value={match.team_a_id.toString()}
@@ -333,7 +324,7 @@ export default function RoundManagement({ tournamentId, tournamentType = 'indivi
                             </Select>
                           </div>
                           
-                          <span className="text-sm font-medium text-gray-500">vs</span>
+                          <span className="text-sm font-medium text-muted-foreground">vs</span>
                           
                           <div className="flex-1">
                             <Select
@@ -355,10 +346,12 @@ export default function RoundManagement({ tournamentId, tournamentType = 'indivi
                           
                           <Button
                             type="button"
-                            variant="outline"
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Quitar enfrentamiento"
+                            title="Quitar enfrentamiento"
                             onClick={() => removeMatch(index)}
-                            className="text-red-600 hover:text-red-700"
+                            className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -366,9 +359,7 @@ export default function RoundManagement({ tournamentId, tournamentType = 'indivi
                       )) || []}
                       
                       {(!formData.matches || formData.matches.length === 0) && (
-                        <div className="p-4 text-center text-gray-500 text-sm">
-                          No hay enfrentamientos configurados. Agrega al menos uno.
-                        </div>
+                        <p className="p-4 text-center text-sm text-muted-foreground">Agrega al menos un enfrentamiento.</p>
                       )}
                     </div>
                   )}
@@ -391,36 +382,24 @@ export default function RoundManagement({ tournamentId, tournamentType = 'indivi
       {/* Rounds List */}
       <div className="grid gap-4">
         {rounds.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-center text-gray-500">
-              No hay rondas creadas para este torneo. Agrega la primera ronda.
-            </CardContent>
-          </Card>
+          <p className="py-8 text-center text-sm text-muted-foreground">No hay rondas creadas.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             {sortedRounds.map((round) => (
-              <Card key={round.id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-amber-100 rounded-full">
-                        <Calendar className="h-4 w-4 text-amber-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-base">Ronda {round.round_number}</CardTitle>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteRound(round.id, round.round_number)}
-                      disabled={loading}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
+              <Card key={round.id} className="flex items-center gap-3 p-4">
+                <Calendar className="h-4 w-4 text-amber" />
+                <p className="flex-1 font-medium">Ronda {round.round_number}</p>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Eliminar ronda ${round.round_number}`}
+                  title="Eliminar ronda"
+                  onClick={() => handleDeleteRound(round.id, round.round_number)}
+                  disabled={loading}
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </Card>
             ))}
           </div>

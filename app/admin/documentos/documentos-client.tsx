@@ -1,10 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { CheckCircle2, FileText, Settings } from "lucide-react"
+import { CheckCircle2, Settings } from "lucide-react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ErrorAlert } from "@/components/error-alert"
 import { DocumentoUploadCard } from "./documento-upload-card"
@@ -17,7 +16,6 @@ interface AdminDocumentosClientProps {
   initialDocuments: Documento[]
   initialTotalDocuments: number
   initialCategoryImportance: CategoryImportance
-  showFormatBadge?: boolean
   showHeader?: boolean
 }
 
@@ -25,7 +23,6 @@ export function AdminDocumentosClient({
   initialDocuments,
   initialTotalDocuments,
   initialCategoryImportance,
-  showFormatBadge = true,
   showHeader = true,
 }: AdminDocumentosClientProps) {
   const [errorMessage, setErrorMessage] = useState("")
@@ -43,14 +40,8 @@ export function AdminDocumentosClient({
     <div className="flex-1 space-y-6">
       {showHeader ? (
         <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-            Gestión de Documentos
-          </h2>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="w-fit">
-              <FileText className="mr-1 h-3 w-3" />
-              Archivos PDF y Excel
-            </Badge>
+          <h2 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Documentos</h2>
+          <div className="flex items-center justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
               <Settings className="mr-2 h-4 w-4" />
               Configuración
@@ -58,13 +49,7 @@ export function AdminDocumentosClient({
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-2">
-          {showFormatBadge ? (
-            <Badge variant="outline" className="w-fit">
-              <FileText className="mr-1 h-3 w-3" />
-              Archivos PDF y Excel
-            </Badge>
-          ) : null}
+        <div className="flex items-center justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
             <Settings className="mr-2 h-4 w-4" />
             Configuración
@@ -77,9 +62,9 @@ export function AdminDocumentosClient({
       {successMessage && (
         <Alert
           variant="default"
-          className="border-green-200 bg-green-50 text-green-800"
+          className="bg-muted text-foreground"
         >
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <CheckCircle2 className="h-4 w-4 text-amber" />
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       )}

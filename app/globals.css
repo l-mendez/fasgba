@@ -90,7 +90,9 @@
   --popover: 0 0% 100%;
   --popover-foreground: 20 30% 10%;
 
-  --primary: 33 65% 60%;
+  /* Primary = brand terracotta so default buttons/links are readable (white on
+     amber was ~2:1). Amber stays as the ring/accent color. */
+  --primary: 22 78% 32%;
   --primary-foreground: 0 0% 100%;
 
   --secondary: 20 78% 32%;
@@ -99,8 +101,10 @@
   --muted: 33 30% 95%;
   --muted-foreground: 20 40% 40%;
 
-  --accent: 20 78% 32%;
-  --accent-foreground: 0 0% 100%;
+  /* Hover/focus surface shared by ghost/outline buttons and menu items; matches
+     the bg-amber/10 + text-amber-dark hover used by brand buttons and chips. */
+  --accent: 36 65% 95%;
+  --accent-foreground: 33 53% 40%;
 
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 98%;
@@ -118,34 +122,42 @@
   --chart-5: 33 20% 70%;
 }
 
+/* Dark theme: warm near-neutral surfaces (low saturation, never pure black) that
+   get lighter with elevation, and brand colors shifted to lighter tints so they
+   stay legible. Terracotta is lifted from the logo's #8f3f12 to the same hue at
+   ~4.5:1 on the background while keeping white button text readable. */
 .dark {
-  --background: 20 30% 10%;
-  --foreground: 0 0% 98%;
+  --background: 30 8% 8%;
+  --foreground: 35 20% 92%;
 
-  --card: 20 25% 15%;
-  --card-foreground: 0 0% 98%;
+  --card: 30 7% 11%;
+  --card-foreground: 35 20% 92%;
 
-  --popover: 20 25% 15%;
-  --popover-foreground: 0 0% 98%;
+  --popover: 30 7% 13%;
+  --popover-foreground: 35 20% 92%;
 
-  --primary: 33 65% 60%;
+  --primary: 21 61% 48%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 20 78% 32%;
-  --secondary-foreground: 0 0% 98%;
+  --secondary: 30 8% 17%;
+  --secondary-foreground: 35 20% 92%;
 
-  --muted: 20 20% 20%;
-  --muted-foreground: 20 10% 75%;
+  --muted: 30 7% 12%;
+  --muted-foreground: 30 10% 68%;
 
-  --accent: 33 65% 60%;
-  --accent-foreground: 0 0% 100%;
+  --accent: 28 22% 15%;
+  --accent-foreground: 35 66% 70%;
 
-  --destructive: 0 62.8% 30.6%;
+  --destructive: 0 62% 50%;
   --destructive-foreground: 0 0% 98%;
 
-  --border: 20 20% 30%;
-  --input: 20 20% 30%;
+  --border: 30 8% 20%;
+  --input: 30 8% 22%;
   --ring: 33 65% 60%;
+
+  --color-terracotta: hsl(21 61% 48%);
+  --color-terracotta-light: hsl(21 61% 58%);
+  --color-terracotta-dark: hsl(21 61% 40%);
 }
 
 @layer base {

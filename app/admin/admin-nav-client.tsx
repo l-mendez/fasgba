@@ -128,8 +128,8 @@ export function AdminNavLinks({ onLinkClick }: AdminNavLinksProps) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
-                  item.isActive(pathname) ? "bg-amber/10 text-amber" : "text-muted-foreground"
+                  "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent",
+                  item.isActive(pathname) ? "bg-accent text-terracotta" : "text-muted-foreground"
                 )}
                 onClick={onLinkClick}
               >
@@ -153,11 +153,11 @@ export function AdminMobileHeader() {
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="text-terracotta hover:bg-amber/10">
             <Menu className="h-6 w-6" />
-            <span className="sr-only">Open sidebar</span>
+            <span className="sr-only">Abrir menú</span>
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-64 border-amber/20">
-          <SheetTitle className="sr-only">Admin Navigation</SheetTitle>
+          <SheetTitle className="sr-only">Navegación de administración</SheetTitle>
           <div className="flex h-14 items-center border-b border-amber/20 px-4 -mx-6 -mt-6 mb-4">
             <Link href="/admin" className="flex items-center space-x-2" onClick={() => setIsMobileOpen(false)}>
               <span className="font-bold text-terracotta">Admin</span>

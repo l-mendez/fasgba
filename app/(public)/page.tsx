@@ -1,17 +1,22 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Calendar, MapPin } from "lucide-react"
+import { Calendar, ImageIcon, MapPin } from "lucide-react"
 import { ReactNode } from "react"
 import { unstable_cache } from "next/cache"
 import { createClient } from '@supabase/supabase-js'
 
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { getAllNews } from "@/lib/newsUtils"
 import { getAllTournamentsForDisplay } from "@/lib/tournamentUtils"
 import { getAllClubs } from "@/lib/clubUtils"
-import { getImageUrl } from "@/lib/imageUtils"
+import { getImageUrl, getImageUrlNullable } from "@/lib/imageUtils"
 import { formatArgentinaDateOnly, getDateInputValue } from "@/lib/dateUtils"
+import { getCachedLatestRankingData } from "@/lib/rankingStorage"
+import { normalizePlayer, selectPlayersPage, sortPlayersByRatingType } from "@/lib/rankingDisplay"
+import type { Player } from "@/lib/rankingUtils"
+import { safe } from "@/lib/utils/safe"
+import { SectionHeader } from "@/components/home/section-header"
+import { TopRanking } from "@/components/home/top-ranking"
 
 // Cached indefinitely: each fetch is wrapped in unstable_cache with a tag
 // matching the rest of the app's invalidations, and lib/cache/{news,torneos,
@@ -139,14 +144,17 @@ const getCachedTournaments = unstable_cache(
     const allTournaments = await getAllTournamentsForDisplay(supabase)
     const upcoming = allTournaments.filter(t => t.is_upcoming)
 
-    // Sort FASGBA tournaments (no created_by_club_id) first, then by start date ascending
-    const sorted = upcoming.sort((a, b) => {
-      const aIsFasgba = !a.created_by_club_id
-      const bIsFasgba = !b.created_by_club_id
-      if (aIsFasgba && !bIsFasgba) return -1
-      if (!aIsFasgba && bIsFasgba) return 1
-      return a.start_date.getTime() - b.start_date.getTime()
-    })
+    // Sort FASGBA tournaments (no created_by_club_id) first, then by start date ascending.
+    // With nothing upcoming, fall back to the most recent ongoing/past ones.
+    const sorted = upcoming.length > 0
+      ? upcoming.sort((a, b) => {
+          const aIsFasgba = !a.created_by_club_id
+          const bIsFasgba = !b.created_by_club_id
+          if (aIsFasgba && !bIsFasgba) return -1
+          if (!aIsFasgba && bIsFasgba) return 1
+          return a.start_date.getTime() - b.start_date.getTime()
+        })
+      : allTournaments.sort((a, b) => b.start_date.getTime() - a.start_date.getTime())
 
     return sorted.slice(0, 3).map(t => ({
       id: t.id,
@@ -195,6 +203,13 @@ async function fetchClubs(): Promise<Club[]> {
     console.error('Error fetching clubs:', error)
     return []
   }
+}
+
+// Top 10 active players by standard rating, ranked as on /ranking
+async function fetchTopPlayers(): Promise<Player[]> {
+  const latest = await safe(getCachedLatestRankingData, { players: [] }, "Error fetching ranking:")
+  const players = ((latest.players as unknown[]) || []).map(normalizePlayer)
+  return selectPlayersPage(sortPlayersByRatingType(players, 'standard'), { activeFilter: 'active', pageSize: 10 }).players
 }
 
 // Helper function to convert API news to component format
@@ -290,59 +305,76 @@ function NoticiaCard({ noticia }: NoticiaProps): ReactNode {
   )
 }
 
-// Component for tournament cards
+// Component for tournament cards (same look as the /torneos cards)
 function TournamentCard({ tournament }: { tournament: Tournament }): ReactNode {
-  const clubName = tournament.place || 'Sede por confirmar'
-  
   return (
     <Link
       href={`/torneos/${tournament.id}`}
-      className="group relative block overflow-hidden rounded-lg border border-amber/20 bg-background shadow-md transition-colors hover:border-amber"
+      className="group flex h-full flex-col gap-3 rounded-lg border bg-card p-4 transition-colors hover:border-amber"
     >
-      <div className="p-6">
-        <h3 className="text-xl font-bold text-terracotta line-clamp-2 group-hover:text-terracotta/90">{tournament.title}</h3>
-        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-          <Calendar className="h-4 w-4 text-amber flex-shrink-0" />
+      <h3 className="text-lg font-semibold leading-tight text-terracotta line-clamp-2 group-hover:underline">{tournament.title}</h3>
+      <ul className="space-y-1.5 text-sm text-muted-foreground">
+        <li className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 shrink-0" />
           <span className="line-clamp-1">
             {formatTournamentDate(tournament)}
-            {tournament.time && ` - ${tournament.time}`}
+            {tournament.time && ` · ${tournament.time}`}
           </span>
-        </div>
-        <div className="mt-1 flex items-center gap-2 text-sm">
-          <MapPin className="h-4 w-4 text-amber flex-shrink-0" />
-          <span className="text-amber-dark line-clamp-1">{clubName}</span>
-        </div>
-        {tournament.description && (
-          <p className="mt-3 text-sm line-clamp-3">{tournament.description}</p>
+        </li>
+        {tournament.place && (
+          <li className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 shrink-0" />
+            <span className="line-clamp-1">{tournament.place}</span>
+          </li>
         )}
-      </div>
+      </ul>
+      {tournament.description && (
+        <p className="text-sm text-muted-foreground line-clamp-3">{tournament.description}</p>
+      )}
     </Link>
   )
 }
 
-// Component for club logos
+// Component for club image cards
 function ClubCard({ club }: { club: Club }): ReactNode {
+  const imageUrl = getImageUrlNullable(club.image)
+
   return (
     <Link
       href={`/clubes/${club.id}`}
-      className="flex h-24 items-center justify-center rounded-lg border border-amber/20 bg-background p-4 transition-colors hover:border-amber group"
+      className="group block overflow-hidden rounded-lg border border-amber/20 bg-background transition-colors hover:border-amber"
       title={club.name}
     >
-      <div className="text-center">
-        <div className="text-xs font-medium text-muted-foreground group-hover:text-amber-dark line-clamp-2">
-          {club.name}
-        </div>
+      <div className="relative aspect-square w-full bg-white">
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={`Imagen de ${club.name}`}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+            unoptimized
+            className="object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center bg-muted">
+            <ImageIcon className="h-10 w-10 text-muted-foreground" />
+          </div>
+        )}
       </div>
+      <p className="truncate p-2 text-center text-xs font-medium text-muted-foreground group-hover:text-amber-dark">
+        {club.name}
+      </p>
     </Link>
   )
 }
 
 export default async function Home() {
   // Fetch all data in parallel on the server
-  const [news, tournaments, clubs] = await Promise.all([
+  const [news, tournaments, clubs, topPlayers] = await Promise.all([
     fetchNews(),
     fetchTournaments(),
-    fetchClubs()
+    fetchClubs(),
+    fetchTopPlayers()
   ])
 
   // Process news data
@@ -355,39 +387,12 @@ export default async function Home() {
 
   return (
     <>
-      {/* Hero section */}
-      <section className="w-full py-12 md:py-24 lg:py-32 bg-[url('/placeholder.svg?height=800&width=1600')] bg-cover bg-center relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-terracotta/80 to-amber/60"></div>
-        <div className="container px-4 md:px-6 flex flex-col items-center space-y-4 text-center relative z-10">
-          <div className="space-y-2 bg-background/90 p-6 rounded-lg backdrop-blur-sm border border-amber/20 shadow-lg">
-            <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-terracotta">
-              Federación de Ajedrez del Sur del Gran Buenos Aires
-            </h1>
-            <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
-              Promoviendo el ajedrez en la región sur de Buenos Aires desde 1975
-            </p>
-            <div className="flex flex-col gap-2 min-[400px]:flex-row justify-center pt-4">
-              <Button asChild size="lg" className="bg-terracotta hover:bg-terracotta/90 text-white">
-                <Link href="/torneos">Próximos Torneos</Link>
-              </Button>
-              <Button
-                asChild
-                variant="brandOutline"
-                size="lg"
-              >
-                <Link href="/clubes">Clubes Afiliados</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <h1 className="sr-only">Federación de Ajedrez del Sur del Gran Buenos Aires</h1>
 
       {/* News section */}
       <section className="w-full py-12 md:py-16 bg-gradient-to-b from-terracotta/5 to-amber/5">
         <div className="container px-4 md:px-6">
-          <div className="mb-8 flex items-center justify-between">
-            <h2 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Últimas Noticias</h2>
-          </div>
+          <SectionHeader title="Noticias" href="/noticias" />
 
           {noticias.length > 0 ? (
             <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
@@ -414,22 +419,13 @@ export default async function Home() {
               <p className="text-muted-foreground">No hay noticias disponibles en este momento.</p>
             </div>
           )}
-
-          <div className="mt-8 text-center">
-            <Button asChild variant="brandOutline">
-              <Link href="/noticias">Ver todas las noticias</Link>
-            </Button>
-          </div>
         </div>
       </section>
 
       {/* Tournaments section */}
       <section className="w-full py-12 md:py-16 bg-muted">
         <div className="container px-4 md:px-6">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Próximos Torneos</h2>
-            <p className="mt-2 text-muted-foreground">Calendario de torneos organizados por FASGBA</p>
-          </div>
+          <SectionHeader title="Torneos" href="/torneos" />
 
           {tournaments.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -439,28 +435,24 @@ export default async function Home() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">No hay torneos próximos programados.</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Mantente atento a nuestras redes sociales para futuras actualizaciones.
-              </p>
+              <p className="text-muted-foreground">No hay torneos disponibles.</p>
             </div>
           )}
+        </div>
+      </section>
 
-          <div className="mt-8 text-center">
-            <Button asChild className="bg-terracotta hover:bg-terracotta/90 text-white">
-              <Link href="/torneos">Ver todos los torneos</Link>
-            </Button>
-          </div>
+      {/* Ranking section */}
+      <section className="w-full py-12 md:py-16">
+        <div className="container px-4 md:px-6">
+          <SectionHeader title="Ranking" href="/ranking" />
+          <TopRanking players={topPlayers} />
         </div>
       </section>
 
       {/* Clubs section */}
-      <section className="w-full py-12 md:py-16">
+      <section className="w-full py-12 md:py-16 bg-muted">
         <div className="container px-4 md:px-6">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Clubes Afiliados</h2>
-            <p className="mt-2 text-muted-foreground">Conoce los clubes que forman parte de FASGBA</p>
-          </div>
+          <SectionHeader title="Clubes" href="/clubes" />
 
           {clubs.length > 0 ? (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
@@ -473,12 +465,6 @@ export default async function Home() {
               <p className="text-muted-foreground">No hay clubes afiliados disponibles.</p>
             </div>
           )}
-
-          <div className="mt-8 text-center">
-            <Button asChild variant="brandOutline">
-              <Link href="/clubes">Ver todos los clubes</Link>
-            </Button>
-          </div>
         </div>
       </section>
     </>

@@ -1,9 +1,9 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Crown, Edit, Trash2 } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { InfoPill } from '@/components/info-pill'
+import { CheckCircle2, Pencil, PlayCircle, Trash2 } from 'lucide-react'
 import { GameDisplay } from '@/lib/gameUtils-client'
 
 interface GamesListProps {
@@ -12,15 +12,6 @@ interface GamesListProps {
   loading: boolean
   onEditGame: (game: GameDisplay) => void
   onDeleteGame: (game: GameDisplay) => void
-}
-
-function getResultBadgeClass(result: string) {
-  switch (result) {
-    case '1-0': return 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200'
-    case '0-1': return 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200'
-    case '1/2-1/2': return 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200'
-    default: return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
-  }
 }
 
 export function GamesList({
@@ -32,84 +23,67 @@ export function GamesList({
 }: GamesListProps) {
   if (selectedRound === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        <Crown className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-        <p className="text-lg font-medium mb-2">Selecciona una ronda</p>
-        <p className="text-sm">Elige una ronda para ver y gestionar sus partidas</p>
-      </div>
+      <p className="py-8 text-center text-sm text-muted-foreground">Selecciona una ronda.</p>
     )
   }
 
   if (games.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        <Crown className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-        <p className="text-lg font-medium mb-2">No hay partidas en esta ronda</p>
-        <p className="text-sm">Agrega la primera partida para comenzar</p>
-      </div>
+      <p className="py-8 text-center text-sm text-muted-foreground">No hay partidas en esta ronda.</p>
     )
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-3">
       {games.map((game) => (
-        <Card key={game.id}>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <CardTitle className="text-base">
-                  Mesa {game.board || 'N/A'}
-                </CardTitle>
-                <Badge className={getResultBadgeClass(game.result)}>
-                  {game.result === '*' ? 'En juego' : game.result}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEditGame(game)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onDeleteGame(game)}
-                  disabled={loading}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="font-medium">{game.white}</p>
-                {game.whiteRating && (
-                  <p className="text-sm text-gray-500">Rating: {game.whiteRating}</p>
-                )}
-                {game.whiteTeam && (
-                  <p className="text-sm text-blue-600 dark:text-blue-400">{game.whiteTeam}</p>
-                )}
-              </div>
-              <div>
-                <p className="font-medium">{game.black}</p>
-                {game.blackRating && (
-                  <p className="text-sm text-gray-500">Rating: {game.blackRating}</p>
-                )}
-                {game.blackTeam && (
-                  <p className="text-sm text-blue-600 dark:text-blue-400">{game.blackTeam}</p>
+        <Card key={game.id} className="p-4">
+          <div className="flex items-center gap-3">
+            <p className="font-medium">Mesa {game.board || 'N/A'}</p>
+            <InfoPill icon={game.result === '*' ? PlayCircle : CheckCircle2}>
+              {game.result === '*' ? 'En juego' : game.result}
+            </InfoPill>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-auto h-8 w-8"
+              aria-label="Editar partida"
+              title="Editar partida"
+              onClick={() => onEditGame(game)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              aria-label="Eliminar partida"
+              title="Eliminar partida"
+              onClick={() => onDeleteGame(game)}
+              disabled={loading}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+            {[
+              { name: game.white, rating: game.whiteRating, team: game.whiteTeam },
+              { name: game.black, rating: game.blackRating, team: game.blackTeam },
+            ].map((side, i) => (
+              <div key={i} className="min-w-0">
+                <p className="truncate font-medium">{side.name}</p>
+                {(side.rating || side.team) && (
+                  <p className="truncate text-muted-foreground">
+                    {[side.rating, side.team].filter(Boolean).join(' · ')}
+                  </p>
                 )}
               </div>
-            </div>
-            {(game.date || game.time) && (
-              <div className="mt-2 text-sm text-gray-500">
-                {game.date} {game.time}
-              </div>
-            )}
-          </CardContent>
+            ))}
+          </div>
+          {(game.date || game.time) && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {game.date} {game.time}
+            </p>
+          )}
         </Card>
       ))}
     </div>

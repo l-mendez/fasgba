@@ -17,7 +17,7 @@ export function NewNewsButton() {
     <Button asChild className="w-fit">
       <Link href={newNewsUrl}>
         <Plus className="mr-2 h-4 w-4" />
-        Nueva Noticia
+        Nueva noticia
       </Link>
     </Button>
   )
