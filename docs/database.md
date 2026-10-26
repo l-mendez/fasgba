@@ -91,6 +91,12 @@ Tournaments can be linked to chess-results.com and imported from it
 The sync only inserts missing rows and fills pending (`*`) results; it never
 overwrites data entered by admins.
 
+Weekly job (`lib/chess-results/weekly.ts`): Vercel cron `GET
+/api/cron/chess-results` (Mondays 06:00 UTC, 03:00 ART; needs the
+`CRON_SECRET` env var) and admin `POST /api/admin/chess-results/run[?dryRun=1]`.
+It queues FASGBA tournaments since 2025 as candidates (never creates
+tournaments) and syncs linked tournaments until 14 days after their last date.
+
 ## Types And DTOs
 
 Use three layers deliberately:
