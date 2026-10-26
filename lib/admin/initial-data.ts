@@ -50,6 +50,7 @@ export interface AdminClubEdit {
   mail: string | null
   schedule: string | null
   image: string | null
+  affiliated: boolean
 }
 
 export interface AdminProfesorEdit {
@@ -278,7 +279,7 @@ export async function getAdminClubEditData(id: string) {
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from("clubs")
-    .select("id, name, address, telephone, mail, schedule, image")
+    .select("id, name, address, telephone, mail, schedule, image, affiliated")
     .eq("id", clubId)
     .single()
 

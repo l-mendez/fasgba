@@ -17,6 +17,9 @@ export const createClubSchema = clubSchema.omit({ id: true })
 // Schema for updating a club (partial, without id)
 export const updateClubSchema = clubSchema.omit({ id: true }).partial()
 
+// Site admins can also mark a club as a guest (not a FASGBA member)
+export const adminUpdateClubSchema = updateClubSchema.extend({ affiliated: z.boolean().optional() })
+
 // Schema for club query parameters
 export const clubQuerySchema = z.object({
   search: z.string().max(255).optional(),
@@ -65,9 +68,9 @@ export function validateCreateClub(data: unknown) {
   }
 }
 
-export function validateUpdateClub(data: unknown) {
+export function validateUpdateClub(data: unknown, schema: typeof updateClubSchema | typeof adminUpdateClubSchema = updateClubSchema) {
   try {
-    return updateClubSchema.parse(data)
+    return schema.parse(data)
   } catch (error) {
     if (error instanceof z.ZodError) {
       const validationError = new Error(`Validation failed: ${error.issues.map(e => e.message).join(', ')}`)

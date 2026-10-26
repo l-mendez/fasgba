@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { getClubById, updateClub, deleteClub } from '@/lib/clubUtils'
 import { revalidateClubsCache } from '@/lib/cache/clubs'
 import { requireAdmin } from '@/lib/middleware/auth'
-import { validateClubId, validateUpdateClub, validateClubQuery } from '@/lib/schemas/clubSchemas'
+import { adminUpdateClubSchema, validateClubId, validateUpdateClub, validateClubQuery } from '@/lib/schemas/clubSchemas'
 import { apiSuccess, noContent, handleError, notFoundError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
@@ -48,7 +48,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
     
     const body = await request.json()
-    const validatedData = validateUpdateClub(body)
+    const validatedData = validateUpdateClub(body, adminUpdateClubSchema)
     
     const success = await updateClub(clubId, validatedData)
     

@@ -66,6 +66,10 @@ export function useAssignedPreview(tnr: number, tournamentId: number | null, ini
     updating,
     setTeam: (key: string, choice: TeamChoice | null) => update((a) => ({ ...a, teams: withChoice(a.teams, key, choice) })),
     setPlayer: (key: string, choice: PlayerChoice | null) => update((a) => ({ ...a, players: withChoice(a.players, key, choice) })),
+    setGuestClub: (name: string, guest: boolean) => update((a) => {
+      const rest = (a.guestClubs ?? []).filter((n) => n !== name)
+      return { ...a, guestClubs: guest ? [...rest, name] : rest }
+    }),
   }
 }
 

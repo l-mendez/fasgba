@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useId, useState } from "react"
 import { RotateCcw } from "lucide-react"
 
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { ClubRef, PlayerChoice, TeamChoice } from "@/lib/chess-results/assign"
@@ -15,6 +16,9 @@ export interface AssignProps {
   options: ChessResultsOptions
   /** Clubs to create that were already typed elsewhere in this review. */
   newClubs: string[]
+  /** New clubs marked as guests (not FASGBA members). */
+  guestClubs: string[]
+  setGuestClub: (name: string, guest: boolean) => void
   teamChoices: Record<string, TeamChoice>
   playerChoices: Record<string, PlayerChoice>
   setTeam: (key: string, choice: TeamChoice | null) => void
@@ -23,31 +27,45 @@ export interface AssignProps {
 
 const clubLabel = (club: ClubRef | null) => (!club ? "Sin club" : "id" in club ? club.name : `${club.newName} (club nuevo)`)
 
-function ClubSelect({ value, onChange, options, newClubs, allowNone, invalid }: {
+function ClubSelect({ value, onChange, assign: { options, newClubs, guestClubs, setGuestClub }, allowNone, invalid }: {
   value: ClubRef | null
   onChange: (club: ClubRef | null) => void
-  options: ChessResultsOptions
-  newClubs: string[]
+  assign: AssignProps
   allowNone?: boolean
   invalid?: boolean
 }) {
+  const id = useId()
+  const newName = value && "newName" in value ? value.newName : null
   const clubOptions = [
     ...newClubs.map((name) => ({ value: `new:${name}`, label: name, detail: "Club nuevo" })),
     ...options.clubs.map((c) => ({ value: String(c.id), label: c.name })),
   ]
   return (
-    <SearchSelect
-      label="Club"
-      display={value ? clubLabel(value) : <span className="text-muted-foreground">{allowNone ? "Sin club" : "Elegí o creá el club"}</span>}
-      options={clubOptions}
-      selected={value ? ("id" in value ? String(value.id) : `new:${value.newName}`) : null}
-      onSelect={(v) => onChange(v.startsWith("new:") ? { newName: v.slice(4) } : { id: Number(v), name: options.clubs.find((c) => String(c.id) === v)!.name })}
-      placeholder="Buscar club…"
-      createLabel={(q) => (q ? `Crear club «${q}»` : "Escribí el nombre del club nuevo")}
-      onCreate={(q) => q && onChange({ newName: q })}
-      emptyOption={allowNone ? { label: "Sin club", onSelect: () => onChange(null) } : undefined}
-      invalid={invalid}
-    />
+    <div className="space-y-2">
+      <SearchSelect
+        label="Club"
+        display={value ? clubLabel(value) : <span className="text-muted-foreground">{allowNone ? "Sin club" : "Elegí o creá el club"}</span>}
+        options={clubOptions}
+        selected={value ? ("id" in value ? String(value.id) : `new:${value.newName}`) : null}
+        onSelect={(v) => onChange(v.startsWith("new:") ? { newName: v.slice(4) } : { id: Number(v), name: options.clubs.find((c) => String(c.id) === v)!.name })}
+        placeholder="Buscar club…"
+        createLabel={(q) => (q ? `Crear club «${q}»` : "Escribí el nombre del club nuevo")}
+        onCreate={(q) => q && onChange({ newName: q })}
+        emptyOption={allowNone ? { label: "Sin club", onSelect: () => onChange(null) } : undefined}
+        invalid={invalid}
+      />
+      {newName && (
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id={id}
+            checked={!guestClubs.includes(newName)}
+            onCheckedChange={(checked) => setGuestClub(newName, !checked)}
+            className="h-5 w-5 md:h-4 md:w-4"
+          />
+          <label htmlFor={id} className="text-sm">Pertenece a FASGBA</label>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -111,8 +129,7 @@ export function TeamAssignRow({ team, assign }: { team: PlanTeam; assign: Assign
             <ClubSelect
               value={d.kind === "new" ? d.club : null}
               onChange={(club) => club && (setDraft(null), assign.setTeam(team.key, { newTeam: name, club }))}
-              options={assign.options}
-              newClubs={assign.newClubs}
+              assign={assign}
               invalid={d.kind !== "new"}
             />
           </Field>
@@ -170,8 +187,7 @@ export function PlayerAssignRow({ player, assign }: { player: PlanPlayer; assign
             <ClubSelect
               value={d.club}
               onChange={(club) => assign.setPlayer(player.key, { newPlayer: true, club })}
-              options={assign.options}
-              newClubs={assign.newClubs}
+              assign={assign}
               allowNone
             />
           </Field>

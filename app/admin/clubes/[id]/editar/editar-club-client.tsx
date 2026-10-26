@@ -6,6 +6,7 @@ import Link from "next/link"
 import { AlertTriangle, ArrowLeft, Upload, X, ImageIcon, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,6 +21,7 @@ interface FormData {
   telephone: string
   mail: string
   schedule: string
+  affiliated: boolean
 }
 
 interface Club {
@@ -30,6 +32,7 @@ interface Club {
   mail: string | null
   schedule: string | null
   image: string | null
+  affiliated: boolean
 }
 
 interface EditarClubClientProps {
@@ -45,6 +48,7 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
     telephone: club.telephone || "",
     mail: club.mail || "",
     schedule: club.schedule || "",
+    affiliated: club.affiliated,
   })
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   
@@ -184,6 +188,7 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
         telephone: formData.telephone.trim() || null,
         mail: formData.mail.trim() || null,
         schedule: formData.schedule.trim() || null,
+        affiliated: formData.affiliated,
       }
 
       await apiCall(`/api/clubs/${club.id}`, {
@@ -389,6 +394,21 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
                   onChange={handleChange}
                   placeholder="Ej: Lunes a viernes: 17:00 - 22:00"
                 />
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="affiliated"
+                    checked={formData.affiliated}
+                    onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, affiliated: checked === true }))}
+                    className="h-5 w-5 md:h-4 md:w-4"
+                  />
+                  <Label htmlFor="affiliated">Pertenece a FASGBA</Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Desmarcalo para clubes invitados: no aparecen en el listado público de clubes.
+                </p>
               </div>
             </div>
           </CardContent>

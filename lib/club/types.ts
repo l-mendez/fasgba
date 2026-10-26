@@ -7,6 +7,8 @@ export interface Club {
   mail: string | null
   schedule: string | null
   image: string | null
+  /** False for guest clubs, hidden from public listings. */
+  affiliated?: boolean
 }
 
 // Club with additional statistics

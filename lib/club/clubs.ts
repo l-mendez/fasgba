@@ -5,7 +5,7 @@ import { getClubNewsCount } from './content'
 import type { Club, ClubWithFollowState, ClubWithStats } from './types'
 
 /**
- * Gets all clubs with optional filtering
+ * Gets all FASGBA clubs (guests excluded) with optional filtering
  */
 export async function getAllClubs(options: {
   search?: string
@@ -13,7 +13,7 @@ export async function getAllClubs(options: {
   includeStats?: boolean
 } = {}): Promise<Club[] | ClubWithStats[]> {
   try {
-    let query = supabase.from('clubs').select('*')
+    let query = supabase.from('clubs').select('*').eq('affiliated', true)
 
     if (options.search) {
       query = query.ilike('name', `%${options.search}%`)

@@ -17,6 +17,8 @@ export type PlayerChoice = { playerId: number } | { newPlayer: true; club: ClubR
 export interface Assignments {
   teams?: Record<string, TeamChoice>
   players?: Record<string, PlayerChoice>
+  /** New clubs (by name) that are guests, not FASGBA members. */
+  guestClubs?: string[]
 }
 
 export type TeamDecision =
@@ -146,12 +148,13 @@ export function decidePlayers(site: SiteData, inputs: PlayerInput[], teams: Map<
 }
 
 /** Creates the new clubs, teams and players the decisions call for; returns nameKey → id maps. */
-export async function applyAssignments(db: SupabaseClient, site: SiteData, teams: Map<string, TeamDecision>, players: Map<string, PlayerDecision>) {
+export async function applyAssignments(db: SupabaseClient, site: SiteData, teams: Map<string, TeamDecision>, players: Map<string, PlayerDecision>, guestClubs: string[] = []) {
   const clubIds = new Map(site.clubs.map((c) => [nameKey(c.name), c.id]))
   const refs = [...teams.values(), ...players.values()].flatMap((d) => (d.kind === 'new' && d.club && 'newName' in d.club ? [d.club.newName.trim()] : []))
   const newClubs = [...new Map(refs.filter((n) => n && !clubIds.has(nameKey(n))).map((n) => [nameKey(n), n])).values()]
   if (newClubs.length) {
-    const { data, error } = await db.from('clubs').insert(newClubs.map((name) => ({ name }))).select('id, name')
+    const guests = new Set(guestClubs.map(nameKey))
+    const { data, error } = await db.from('clubs').insert(newClubs.map((name) => ({ name, affiliated: !guests.has(nameKey(name)) }))).select('id, name')
     fail('crear clubes', error)
     for (const c of data ?? []) clubIds.set(nameKey(c.name), c.id)
   }

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { ChevronDown, Clock, ExternalLink, Mail, Pencil, Phone, Search, Trash2, User } from "lucide-react"
 import { toast } from "sonner"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -32,6 +33,11 @@ import { apiCall } from "@/lib/utils/apiClient"
 interface ClubWithAdminInfo extends Club {
   adminCount?: number
   delegado?: string
+}
+
+function GuestBadge({ club }: { club: Club }) {
+  if (club.affiliated !== false) return null
+  return <Badge variant="secondary" className="ml-2 bg-amber/20 text-amber-dark">Invitado</Badge>
 }
 
 async function deleteClub(clubId: number): Promise<void> {
@@ -305,7 +311,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
               ) : (
                 sortedAndFilteredClubes.map((club) => (
                   <TableRow key={club.id}>
-                    <TableCell className="font-medium">{club.name}</TableCell>
+                    <TableCell className="font-medium">{club.name}<GuestBadge club={club} /></TableCell>
                     <TableCell>{club.address || "—"}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
@@ -341,7 +347,7 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
                 <div key={club.id} className="rounded-lg border bg-card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1 space-y-1.5">
-                      <h3 className="line-clamp-2 text-sm font-medium">{club.name}</h3>
+                      <h3 className="line-clamp-2 text-sm font-medium">{club.name}<GuestBadge club={club} /></h3>
                       <div className="space-y-1 text-xs text-muted-foreground">
                         {club.address && <p>{club.address}</p>}
                         {club.mail && (

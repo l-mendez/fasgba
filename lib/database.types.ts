@@ -183,6 +183,7 @@ export type Database = {
       clubs: {
         Row: {
           address: string | null
+          affiliated: boolean
           id: number
           image: string | null
           mail: string | null
@@ -192,6 +193,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          affiliated?: boolean
           id?: number
           image?: string | null
           mail?: string | null
@@ -201,6 +203,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          affiliated?: boolean
           id?: number
           image?: string | null
           mail?: string | null
