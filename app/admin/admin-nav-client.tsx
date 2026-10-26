@@ -11,6 +11,7 @@ import {
   Globe,
   GraduationCap,
   Home,
+  Inbox,
   LayoutDashboard,
   Menu,
   Shield,
@@ -46,6 +47,12 @@ const navItems: Array<{
     label: "Torneos",
     icon: Trophy,
     isActive: (pathname) => pathname.startsWith("/admin/torneos"),
+  },
+  {
+    href: "/admin/chess-results",
+    label: "Chess-results",
+    icon: Inbox,
+    isActive: (pathname) => pathname.startsWith("/admin/chess-results"),
   },
   {
     href: "/admin/clubes",
