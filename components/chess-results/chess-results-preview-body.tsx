@@ -23,6 +23,8 @@ export function useAssignProps(assigned: AssignedPreview): AssignProps | null {
   return {
     options,
     newClubs,
+    guestClubs: assignments.guestClubs ?? [],
+    setGuestClub: assigned.setGuestClub,
     teamChoices: assignments.teams ?? {},
     playerChoices: assignments.players ?? {},
     setTeam: assigned.setTeam,

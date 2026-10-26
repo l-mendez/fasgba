@@ -104,7 +104,7 @@ export async function syncTournamentFromChessResults(db: SupabaseClient, tournam
 
   const site = await loadSiteData(db, tournamentId)
   const decisions = decideAll(site, cr, assignments)
-  const applied = await applyAssignments(db, site, decisions.teams, decisions.players)
+  const applied = await applyAssignments(db, site, decisions.teams, decisions.players, assignments.guestClubs)
   const created = { playersCreated: applied.playersCreated, teamsCreated: applied.teamsCreated, clubsCreated: applied.clubsCreated }
   const counts = cr.details.isTeam
     ? { ...created, registrationsCreated: 0, ...(await syncTeams(db, tournamentId, cr, decisions.teams, applied)) }

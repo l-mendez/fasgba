@@ -72,13 +72,14 @@ async function getDashboardStats(): Promise<DashboardStats> {
         .select('*', { count: 'exact', head: true })
         .gte('created_at', startOfMonth.toISOString()),
       
-      // Total clubs
-      supabase.from('clubs').select('*', { count: 'exact', head: true }),
+      // FASGBA clubs (guests excluded)
+      supabase.from('clubs').select('*', { count: 'exact', head: true }).eq('affiliated', true),
       
       // Clubs with contact info
       supabase
         .from('clubs')
         .select('*', { count: 'exact', head: true })
+        .eq('affiliated', true)
         .or('mail.neq.null,telephone.neq.null'),
       
       // Total tournaments

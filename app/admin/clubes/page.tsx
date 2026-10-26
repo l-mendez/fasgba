@@ -21,6 +21,7 @@ interface Club {
   mail: string | null
   schedule: string | null
   image: string | null
+  affiliated: boolean
   adminCount?: number
   delegado?: string
 }

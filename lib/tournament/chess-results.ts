@@ -146,6 +146,7 @@ export const assignmentsSchema = z.object({
     z.object({ playerId: z.number().int().positive() }),
     z.object({ newPlayer: z.literal(true), club: clubRefSchema.nullable() }),
   ])).optional(),
+  guestClubs: z.array(z.string().trim().max(255)).optional(),
 }).optional().default({})
 
 /** Parses the optional `assignments` of a request body (400 when malformed). */
