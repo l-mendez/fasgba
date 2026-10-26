@@ -43,7 +43,10 @@ export function CandidatesClient({ candidates, tournaments }: CandidatesClientPr
     setBusyTnr(candidate.tnr)
     try {
       await apiCall(`/api/admin/chess-results/candidates/${candidate.tnr}`, { method: "PATCH", body: JSON.stringify({ status: next }) })
-      toast.success(next === "ignored" ? "Torneo ignorado" : "Torneo restaurado", { description: candidate.name })
+      toast.success(next === "ignored" ? "Torneo ignorado" : "Torneo restaurado", {
+        description: candidate.name,
+        action: { label: "Deshacer", onClick: () => void setCandidateStatus(candidate, next === "ignored" ? "pending" : "ignored") },
+      })
       router.refresh()
     } catch (err) {
       toast.error("No se pudo actualizar", { description: err instanceof Error ? err.message : undefined })

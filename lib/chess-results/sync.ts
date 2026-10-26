@@ -110,11 +110,26 @@ export async function syncTournamentFromChessResults(db: SupabaseClient, tournam
 }
 
 /** Creates a site tournament from chess-results and imports its data. */
-export async function createTournamentFromChessResults(db: SupabaseClient, cr: CrTournament, createdByClubId: number | null = null) {
+/** Admin edits applied on import (the type and the chess-results link always come from chess-results). */
+export type ChessResultsImportEdits = Partial<Omit<TournamentInsert, 'id' | 'tournament_type' | 'chess_results_tnr' | 'created_by_club_id'>> & {
+  dates?: string[]
+}
+
+/** Creates a site tournament from chess-results (with optional admin edits) and imports its data. */
+export async function createTournamentFromChessResults(
+  db: SupabaseClient,
+  cr: CrTournament,
+  createdByClubId: number | null = null,
+  edits: ChessResultsImportEdits = {},
+) {
+  const { dates: editedDates, ...fields } = edits
+  const dates = editedDates?.length ? editedDates : chessResultsEventDates(cr)
   // Tournaments without dates break the public listing.
-  if (chessResultsEventDates(cr).length === 0) throw new Error('El torneo de chess-results no tiene fechas')
+  if (dates.length === 0) throw new Error('El torneo de chess-results no tiene fechas')
   const { data, error } = await db.from('tournaments')
-    .insert({ ...tournamentFromChessResults(cr), created_by_club_id: createdByClubId }).select('id').single()
+    .insert({ ...tournamentFromChessResults(cr), ...fields, created_by_club_id: createdByClubId }).select('id').single()
   fail('crear el torneo', error)
+  const rows = [...new Set(dates)].sort().map((event_date) => ({ tournament_id: data!.id, event_date }))
+  fail('crear fechas', (await db.from('tournamentdates').insert(rows)).error)
   return syncTournamentFromChessResults(db, data!.id, cr)
 }

@@ -48,8 +48,9 @@ export function CandidateRow({ candidate: c, busy, onImport, onLink, onIgnore, o
           {c.players ? <Meta icon={Users}>{c.players} jugadores</Meta> : null}
         </div>
         {c.status === "pending" && c.suggested && (
-          <p className="text-xs text-muted-foreground">
-            Posible coincidencia: <span className="font-medium text-foreground">{c.suggested.title}</span>
+          <p className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-amber/40 bg-amber/10 px-2.5 py-0.5 text-xs">
+            <Link2 className="h-3.5 w-3.5 shrink-0 text-amber-dark" />
+            <span className="truncate">Coincide con <span className="font-semibold">{c.suggested.title}</span></span>
           </p>
         )}
         {c.status === "imported" && c.tournament && (
@@ -59,32 +60,31 @@ export function CandidateRow({ candidate: c, busy, onImport, onLink, onIgnore, o
         )}
       </div>
 
-      <div className="flex shrink-0 flex-wrap gap-2">
-        {busy && <Loader2 className="h-4 w-4 animate-spin self-center text-muted-foreground" />}
+      <div className="grid shrink-0 grid-cols-3 gap-2 md:flex md:items-center">
         {c.status === "pending" && (
           <>
-            <Button size="sm" onClick={onImport} disabled={busy}>
-              <Download className="mr-2 h-4 w-4" />
+            <Button size="sm" variant={c.suggested ? "outline" : "default"} onClick={onImport} disabled={busy} className="w-full md:w-auto">
+              <Download className="mr-1.5 h-4 w-4" />
               Importar
             </Button>
-            <Button size="sm" variant="outline" onClick={onLink} disabled={busy}>
-              <Link2 className="mr-2 h-4 w-4" />
+            <Button size="sm" variant={c.suggested ? "default" : "outline"} onClick={onLink} disabled={busy} className="w-full md:w-auto">
+              <Link2 className="mr-1.5 h-4 w-4" />
               Vincular
             </Button>
-            <Button size="sm" variant="ghost" onClick={onIgnore} disabled={busy}>
-              <EyeOff className="mr-2 h-4 w-4" />
+            <Button size="sm" variant="ghost" onClick={onIgnore} disabled={busy} className="w-full md:w-auto">
+              {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <EyeOff className="mr-1.5 h-4 w-4" />}
               Ignorar
             </Button>
           </>
         )}
         {c.status === "ignored" && (
-          <Button size="sm" variant="outline" onClick={onRestore} disabled={busy}>
+          <Button size="sm" variant="outline" onClick={onRestore} disabled={busy} className="col-span-3 md:col-span-1">
             <Undo2 className="mr-2 h-4 w-4" />
             Restaurar
           </Button>
         )}
         {c.status === "imported" && c.tournament && (
-          <Button size="sm" variant="outline" asChild>
+          <Button size="sm" variant="outline" asChild className="col-span-3 md:col-span-1">
             <Link href={`/torneos/${c.tournament.id}/editar`}>
               <Pencil className="mr-2 h-4 w-4" />
               Abrir torneo

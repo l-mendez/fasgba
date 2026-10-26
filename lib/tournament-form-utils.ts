@@ -1,4 +1,6 @@
 import { chessResultsUrl, parseChessResultsTnr } from "@/lib/chess-results/url"
+import type { ImportPlan } from "@/lib/chess-results/plan"
+import type { CrDetails } from "@/lib/chess-results/types"
 
 export interface TournamentFormData {
   title: string
@@ -90,6 +92,22 @@ export function tournamentToFormData(tournament: TournamentFormSource): Tourname
     registration_deadline: tournament.registration_deadline || "",
     team_match_points: tournament.team_match_points || {},
     chess_results_link: tournament.chess_results_tnr ? chessResultsUrl(tournament.chess_results_tnr) : "",
+  }
+}
+
+/** Form prefilled from chess-results, for admins to review before importing. */
+export function chessResultsToFormData(details: CrDetails, dates: string[], plan: ImportPlan | null): TournamentFormData {
+  const boards = Math.max(0, ...(plan?.rounds ?? []).flatMap((r) => r.matches.map((m) => m.games.length)))
+  return {
+    ...createEmptyTournamentFormData(),
+    title: details.name,
+    place: details.place ?? "",
+    rounds: details.rounds ? String(details.rounds) : "",
+    pace: details.timeControl ?? "",
+    dates: [...dates].sort(),
+    tournament_type: details.isTeam ? "team" : "individual",
+    players_per_team: details.isTeam && boards > 0 ? String(boards) : "",
+    chess_results_link: chessResultsUrl(details.tnr),
   }
 }
 

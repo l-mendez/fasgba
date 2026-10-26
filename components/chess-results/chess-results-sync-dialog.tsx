@@ -4,8 +4,9 @@ import { useState } from "react"
 import { Loader2, RefreshCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog } from "@/components/ui/dialog"
 import { ChessResultsPreviewBody, canConfirmPreview, useChessResultsPreview } from "./chess-results-preview-body"
+import { ReviewDialogContent } from "./review-dialog"
 
 interface ChessResultsSyncDialogProps {
   /** chess-results tournament to preview; the dialog is open while set. */
@@ -33,29 +34,29 @@ function SyncDialogContent({ tnr, tournamentId, onOpenChange, onConfirm }: Chess
     try {
       await onConfirm()
       onOpenChange(false)
+    } catch {
+      // onConfirm already told the user; keep the dialog open to retry.
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <DialogContent
-      className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"
-      onEscapeKeyDown={(e) => saving && e.preventDefault()}
-      onInteractOutside={(e) => saving && e.preventDefault()}
+    <ReviewDialogContent
+      title="Sincronizar con chess-results"
+      description="Solo se agrega lo que falta; no se modifica lo ya cargado."
+      busy={saving}
+      footer={
+        <>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
+          <Button onClick={confirm} disabled={!canConfirmPreview(state) || saving}>
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+            {saving ? "Sincronizando…" : "Confirmar e importar"}
+          </Button>
+        </>
+      }
     >
-      <DialogHeader>
-        <DialogTitle>Sincronizar con chess-results</DialogTitle>
-        <DialogDescription>Revisá lo que se va a cargar. Solo se agrega lo que falta; no se modifica lo ya cargado.</DialogDescription>
-      </DialogHeader>
       <ChessResultsPreviewBody state={state} />
-      <DialogFooter className="gap-2">
-        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
-        <Button onClick={confirm} disabled={!canConfirmPreview(state) || saving}>
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-          {saving ? "Sincronizando…" : "Confirmar e importar"}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
+    </ReviewDialogContent>
   )
 }

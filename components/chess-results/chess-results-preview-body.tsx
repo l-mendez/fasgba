@@ -6,7 +6,6 @@ import { Info, Loader2 } from "lucide-react"
 import { ErrorAlert } from "@/components/error-alert"
 import type { ChessResultsPreview } from "@/lib/tournament/chess-results-dto"
 import { apiCall } from "@/lib/utils/apiClient"
-import { ChessResultsPreviewCard } from "./chess-results-preview-card"
 import { ImportPlanView } from "./plan/plan-view"
 
 export interface PreviewState {
@@ -54,7 +53,6 @@ export function ChessResultsPreviewBody({ state }: { state: PreviewState }) {
           <span>Ese torneo de chess-results ya está vinculado a <strong>{preview.linkedTournament.title}</strong>.</span>
         </p>
       )}
-      {preview?.details && <ChessResultsPreviewCard preview={preview} hideCounts={!!preview.plan} />}
       {preview?.details && preview.plan && <ImportPlanView plan={preview.plan} details={preview.details} />}
     </div>
   )

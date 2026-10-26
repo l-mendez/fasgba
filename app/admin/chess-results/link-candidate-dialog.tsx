@@ -1,24 +1,18 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { ArrowLeft, Check, Eye, Link2, Loader2, Search } from "lucide-react"
+import { useState } from "react"
+import { ArrowLeft, Link2, Loader2, Repeat } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
+import { Dialog } from "@/components/ui/dialog"
 import { ChessResultsPreviewBody, canConfirmPreview, useChessResultsPreview } from "@/components/chess-results/chess-results-preview-body"
 import { toastSyncReport } from "@/components/chess-results/format"
-import { normalizeForSearch } from "@/lib/countries"
-import { formatArgentinaDateOnly } from "@/lib/dateUtils"
+import { ReviewDialogContent } from "@/components/chess-results/review-dialog"
 import type { ChessResultsSyncResponse } from "@/lib/tournament/chess-results-dto"
 import { apiCall } from "@/lib/utils/apiClient"
-import { cn } from "@/lib/utils"
+import { TournamentPicker } from "./tournament-picker"
 import type { CandidateItem, TournamentOption } from "./types"
-
-const MAX_OPTIONS = 50
-const dayDistance = (a: string | null, b: string | null) =>
-  a && b ? Math.abs(new Date(a).getTime() - new Date(b).getTime()) : Number.POSITIVE_INFINITY
 
 interface LinkCandidateDialogProps {
   candidate: CandidateItem | null
@@ -27,7 +21,7 @@ interface LinkCandidateDialogProps {
   onLinked: () => void
 }
 
-/** Pick an existing site tournament for a discovered chess-results tournament. */
+/** Link a discovered chess-results tournament to an existing site tournament, reviewing what gets imported. */
 export function LinkCandidateDialog(props: LinkCandidateDialogProps) {
   return (
     <Dialog open={!!props.candidate} onOpenChange={props.onOpenChange}>
@@ -37,21 +31,10 @@ export function LinkCandidateDialog(props: LinkCandidateDialogProps) {
 }
 
 function LinkCandidateContent({ candidate, tournaments, onOpenChange, onLinked }: LinkCandidateDialogProps & { candidate: CandidateItem }) {
-  const [query, setQuery] = useState("")
   const [selected, setSelected] = useState<number | null>(candidate.suggested?.id ?? null)
+  // With a suggestion, go straight to the review; "Elegir otro torneo" goes back to the picker.
+  const [reviewing, setReviewing] = useState(candidate.suggested != null)
   const [saving, setSaving] = useState(false)
-  const [reviewing, setReviewing] = useState(false)
-
-  // Suggested first, then by title match, then the tournaments closest in date.
-  const options = useMemo(() => {
-    const q = normalizeForSearch(query.trim())
-    return tournaments
-      .filter((t) => !q || normalizeForSearch(t.title).includes(q) || String(t.id) === q)
-      .sort((a, b) =>
-        Number(b.id === candidate.suggested?.id) - Number(a.id === candidate.suggested?.id) ||
-        dayDistance(a.startDate, candidate.start_date) - dayDistance(b.startDate, candidate.start_date))
-      .slice(0, MAX_OPTIONS)
-  }, [candidate, tournaments, query])
 
   const link = async () => {
     if (selected == null) return
@@ -72,105 +55,72 @@ function LinkCandidateContent({ candidate, tournaments, onOpenChange, onLinked }
   }
 
   if (reviewing && selected != null) {
-    return <ReviewStep key={selected} tnr={candidate.tnr} tournamentId={selected} saving={saving} onBack={() => setReviewing(false)} onConfirm={link} />
+    const title = tournaments.find((t) => t.id === selected)?.title
+    return (
+      <ReviewStep key={selected} tnr={candidate.tnr} tournamentId={selected} title={title} saving={saving}
+        onBack={() => setReviewing(false)} onCancel={() => onOpenChange(false)} onConfirm={link} />
+    )
   }
 
   return (
-    <DialogContent
-      className="flex max-h-[90vh] flex-col sm:max-w-lg"
-      onEscapeKeyDown={(e) => saving && e.preventDefault()}
-      onInteractOutside={(e) => saving && e.preventDefault()}
+    <ReviewDialogContent
+      title="Vincular a un torneo existente"
+      description={<span className="break-words">{candidate.name}</span>}
+      footer={
+        <>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={() => setReviewing(true)} disabled={selected == null}>
+            Continuar
+          </Button>
+        </>
+      }
     >
-      <DialogHeader>
-        <DialogTitle>Vincular a un torneo existente</DialogTitle>
-        <DialogDescription className="break-words">
-          {candidate.name}. Elegí el torneo y revisá lo que se va a importar antes de confirmar.
-        </DialogDescription>
-      </DialogHeader>
-
-      <div className="relative">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar torneo por título" className="pl-8" autoFocus />
-      </div>
-
-      <ul className="-mx-1 min-h-0 flex-1 space-y-1 overflow-y-auto px-1" role="listbox" aria-label="Torneos">
-        {options.length === 0 && <li className="py-6 text-center text-sm text-muted-foreground">Sin resultados.</li>}
-        {options.map((t) => {
-          const linkedElsewhere = t.tnr != null && t.tnr !== candidate.tnr
-          const isSelected = selected === t.id
-          return (
-            <li key={t.id}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                disabled={linkedElsewhere}
-                onClick={() => setSelected(t.id)}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50",
-                  isSelected ? "border-amber bg-accent" : "border-transparent",
-                )}
-              >
-                <Check className={cn("h-4 w-4 shrink-0 text-terracotta", !isSelected && "invisible")} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{t.title}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    {t.startDate ? formatArgentinaDateOnly(t.startDate) : "Sin fecha"}
-                    {t.id === candidate.suggested?.id && " · Sugerido"}
-                    {linkedElsewhere && " · Ya vinculado a otro torneo de chess-results"}
-                  </span>
-                </span>
-              </button>
-            </li>
-          )
-        })}
-      </ul>
-
-      <DialogFooter className="gap-2">
-        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-          Cancelar
-        </Button>
-        <Button onClick={() => setReviewing(true)} disabled={selected == null}>
-          <Eye className="mr-2 h-4 w-4" />
-          Revisar importación
-        </Button>
-      </DialogFooter>
-    </DialogContent>
+      <TournamentPicker candidate={candidate} tournaments={tournaments} selected={selected} onSelect={setSelected} />
+    </ReviewDialogContent>
   )
 }
 
 interface ReviewStepProps {
   tnr: number
   tournamentId: number
+  title?: string
   saving: boolean
   onBack: () => void
+  onCancel: () => void
   onConfirm: () => void
 }
 
-/** Second step: everything linking would import into the chosen tournament. */
-function ReviewStep({ tnr, tournamentId, saving, onBack, onConfirm }: ReviewStepProps) {
+/** Everything linking would import into the chosen tournament. */
+function ReviewStep({ tnr, tournamentId, title, saving, onBack, onCancel, onConfirm }: ReviewStepProps) {
   const state = useChessResultsPreview(tnr, tournamentId)
   return (
-    <DialogContent
-      className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"
-      onEscapeKeyDown={(e) => saving && e.preventDefault()}
-      onInteractOutside={(e) => saving && e.preventDefault()}
+    <ReviewDialogContent
+      title="Revisar y vincular"
+      description={
+        <span className="flex flex-wrap items-center gap-x-2">
+          <span>Se vincula a <strong className="text-foreground">{title}</strong>. Solo se agrega lo que falta.</span>
+          <button type="button" onClick={onBack} disabled={saving} className="inline-flex items-center gap-1 font-medium text-terracotta underline-offset-4 hover:underline">
+            <Repeat className="h-3.5 w-3.5" />
+            Elegir otro torneo
+          </button>
+        </span>
+      }
+      busy={saving}
+      footer={
+        <>
+          <Button variant="outline" onClick={onBack} disabled={saving} className="sm:mr-auto">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver
+          </Button>
+          <Button variant="outline" onClick={onCancel} disabled={saving}>Cancelar</Button>
+          <Button onClick={onConfirm} disabled={!canConfirmPreview(state) || saving}>
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
+            {saving ? "Vinculando…" : "Vincular e importar"}
+          </Button>
+        </>
+      }
     >
-      <DialogHeader>
-        <DialogTitle>Revisar importación</DialogTitle>
-        <DialogDescription>Solo se agrega lo que falta; no se modifica lo ya cargado.</DialogDescription>
-      </DialogHeader>
       <ChessResultsPreviewBody state={state} />
-      <DialogFooter className="gap-2">
-        <Button variant="outline" onClick={onBack} disabled={saving}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Volver
-        </Button>
-        <Button onClick={onConfirm} disabled={!canConfirmPreview(state) || saving}>
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
-          {saving ? "Vinculando…" : "Vincular e importar"}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
+    </ReviewDialogContent>
   )
 }

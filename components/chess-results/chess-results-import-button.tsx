@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Download } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { ChessResultsImportDialog, type ChessResultsImportDialogProps } from "./chess-results-import-dialog"
 
 type ImportButtonProps = Pick<ChessResultsImportDialogProps, "chooseClub" | "club"> & { className?: string }
@@ -13,7 +14,7 @@ export function ChessResultsImportButton({ className, ...dialogProps }: ImportBu
   const [open, setOpen] = useState(false)
   return (
     <>
-      <Button variant="outline" className={className} onClick={() => setOpen(true)}>
+      <Button variant="outline" className={cn("w-full sm:w-auto", className)} onClick={() => setOpen(true)}>
         <Download className="mr-2 h-4 w-4" />
         Importar desde chess-results
       </Button>

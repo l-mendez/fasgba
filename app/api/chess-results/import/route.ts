@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { revalidateTorneosCache } from '@/lib/cache/torneos'
-import { chessResultsEventDates, createTournamentFromChessResults } from '@/lib/chess-results/sync'
+import { chessResultsEventDates, createTournamentFromChessResults, type ChessResultsImportEdits } from '@/lib/chess-results/sync'
+import { createTournamentSchema } from '@/lib/schemas/tournamentSchemas'
 import { parseChessResultsTnr } from '@/lib/chess-results/url'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
@@ -22,10 +23,22 @@ export const maxDuration = 60
 const bodySchema = z.object({
   url: z.union([z.string(), z.number()]),
   clubId: z.number().int().positive().nullable().optional(),
+  /** Tournament data as edited by the admin (same shape as POST /api/tournaments). */
+  tournament: z.unknown().optional(),
 })
 
+const editsSchema = createTournamentSchema.omit({ created_by_club: true, tournament_type: true, chess_results_tnr: true })
+
+/** Admin edits validated like a regular tournament; type, link and club are set by the import. */
+function parseEdits(tournament: unknown): ChessResultsImportEdits {
+  if (tournament == null) return {}
+  const parsed = editsSchema.safeParse(tournament)
+  if (!parsed.success) throw new ChessResultsError(`Revisá los datos del torneo: ${parsed.error.issues.map((i) => i.message).join(', ')}`, 400)
+  return parsed.data
+}
+
 /**
- * POST /api/chess-results/import  { url, clubId? }
+ * POST /api/chess-results/import  { url, clubId?, tournament? }
  * Creates a site tournament from chess-results. Site admins may pick any club
  * (or none); club admins import for a club they administer.
  * 201 { tournamentId, report } · 409 { error, tournamentId } when already linked.
@@ -44,15 +57,16 @@ export async function POST(request: NextRequest) {
       if (!clubIds.includes(clubId)) return forbiddenError('No administrás ese club.')
     }
 
+    const edits = parseEdits(body.data.tournament)
     const db = createAdminClient()
     const linked = await findTournamentByTnr(db, tnr)
     if (linked) throw alreadyLinkedError(linked)
 
     const cr = await loadChessResultsTournament(tnr)
-    if (chessResultsEventDates(cr).length === 0) {
+    if (!edits.dates?.length && chessResultsEventDates(cr).length === 0) {
       throw new ChessResultsError('El torneo de chess-results no tiene fechas. Crealo a mano y vinculalo con el link.', 422)
     }
-    const report = await createTournamentFromChessResults(db, cr, clubId).catch(async (error) => {
+    const report = await createTournamentFromChessResults(db, cr, clubId, edits).catch(async (error) => {
       // The tournament row is inserted before the rest; surface it so the admin can retry with a sync.
       const partial = await findTournamentByTnr(db, tnr).catch(() => null)
       if (!partial || /duplicate key/i.test(String(error?.message))) throw error

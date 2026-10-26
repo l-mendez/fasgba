@@ -1,8 +1,8 @@
+import { ChevronDown } from "lucide-react"
+
 import type { CrDetails } from "@/lib/chess-results/types"
 import type { PlanField } from "@/lib/chess-results/plan"
 import { PlanStatusBadge } from "./plan-status"
-
-const ACTION = { set: { status: "new", label: "Se carga" }, fill: { status: "fill", label: "Se completa" }, keep: { status: "exists", label: "Se mantiene" } } as const
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -13,39 +13,65 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   )
 }
 
-/** Tournament fields the import writes, plus chess-results details shown for reference. */
+/**
+ * Tournament fields a sync writes into an existing tournament: what gets filled
+ * in, and where the site and chess-results disagree (the site value is kept).
+ */
 export function PlanFields({ fields, details }: { fields: PlanField[]; details: CrDetails }) {
+  const changes = fields.filter((f) => f.action !== "keep")
+  const differences = fields.filter((f) => f.action === "keep" && f.current !== f.value)
   const info: Array<[string, string | null]> = [
     ["Organizador", details.organizer],
     ["Director", details.director],
     ["Árbitro principal", details.chiefArbiter],
     ["Sistema", details.system],
+    ["Ritmo", details.timeControl],
     ["Última actualización", details.lastUpdate],
   ]
   return (
-    <div className="space-y-4">
-      <dl className="divide-y">
-        {fields.map((field) => {
-          const differs = field.action === "keep" && field.current !== field.value
-          return (
-            <Row key={field.label} label={field.label}>
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <span className="min-w-0">{field.action === "keep" ? field.current : field.value}</span>
-                <PlanStatusBadge status={ACTION[field.action].status} label={ACTION[field.action].label} />
-              </div>
-              {differs && (
-                <p className="mt-1 text-xs text-muted-foreground">En chess-results: {field.value}</p>
-              )}
-            </Row>
-          )
-        })}
-      </dl>
-      <div>
-        <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Datos de chess-results (no se guardan)</h4>
-        <dl className="divide-y">
+    <div className="space-y-5">
+      <section>
+        <h4 className="text-sm font-semibold">Se completa en el torneo</h4>
+        {changes.length === 0 ? (
+          <p className="py-2 text-sm text-muted-foreground">Nada: los datos del torneo ya están cargados.</p>
+        ) : (
+          <dl className="divide-y">
+            {changes.map((f) => (
+              <Row key={f.label} label={f.label}>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <span className="min-w-0">{f.value}</span>
+                  <PlanStatusBadge status={f.action === "set" ? "new" : "fill"} label={f.action === "set" ? "Se carga" : "Se completa"} />
+                </div>
+              </Row>
+            ))}
+          </dl>
+        )}
+      </section>
+
+      {differences.length > 0 && (
+        <section>
+          <h4 className="text-sm font-semibold">Distinto en chess-results</h4>
+          <p className="text-xs text-muted-foreground">Se mantiene lo del sitio; editalo en el torneo si chess-results tiene razón.</p>
+          <dl className="divide-y">
+            {differences.map((f) => (
+              <Row key={f.label} label={f.label}>
+                <p>{f.current}</p>
+                <p className="text-xs text-muted-foreground">chess-results: {f.value}</p>
+              </Row>
+            ))}
+          </dl>
+        </section>
+      )}
+
+      <details className="group rounded-md border px-3">
+        <summary className="flex cursor-pointer list-none items-center justify-between py-2 text-sm font-medium">
+          Más datos de chess-results
+          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+        </summary>
+        <dl className="divide-y border-t">
           {info.filter(([, value]) => value).map(([label, value]) => <Row key={label} label={label}>{value}</Row>)}
         </dl>
-      </div>
+      </details>
     </div>
   )
 }
