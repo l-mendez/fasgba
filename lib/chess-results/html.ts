@@ -16,8 +16,8 @@ const ENTITIES: Record<string, string> = {
 
 export function decodeHtml(text: string): string {
   return text
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number(dec)))
+    .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);?/g, (_, dec) => String.fromCodePoint(Number(dec)))
     .replace(/&([a-z][a-z0-9]*);/gi, (match, name) => ENTITIES[name] ?? match)
 }
 

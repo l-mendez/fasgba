@@ -43,6 +43,18 @@ export function bestNameMatch<T extends { name: string }>(name: string, candidat
   return tie ? null : best
 }
 
+// "Huanca Gaspar, Franco" ↔ "Huanca Gaspar, Franco Alberto": same surname and
+// one list of given names starts with the other. Only "Surname, Given" names.
+function splitName(full: string) {
+  const [surname, given] = full.split(',')
+  return given === undefined ? null : { surname: tokens(surname).join(' '), given: tokens(given) }
+}
+
+function extendsGiven(a: string[], b: string[]): boolean {
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a]
+  return short.length > 0 && short.every((t, i) => long[i] === t)
+}
+
 export interface PlayerInput {
   name: string
   fideId?: string | null
@@ -55,9 +67,17 @@ export async function resolvePlayers(db: SupabaseClient, inputs: PlayerInput[]) 
   if (error) throw new Error(`Error al leer jugadores: ${error.message}`)
   const byFide = new Map<string, number>()
   const byName = new Map<string, number>()
+  const bySurname = new Map<string, Array<{ id: number; given: string[] }>>()
   for (const p of data ?? []) {
     if (p.fide_id) byFide.set(String(p.fide_id), p.id)
     byName.set(nameKey(p.full_name), p.id)
+    const split = splitName(p.full_name)
+    if (split) bySurname.set(split.surname, [...(bySurname.get(split.surname) ?? []), { id: p.id, given: split.given }])
+  }
+  const bySimilarName = (name: string) => {
+    const split = splitName(name)
+    const matches = split ? (bySurname.get(split.surname) ?? []).filter((p) => extendsGiven(p.given, split.given)) : []
+    return matches.length === 1 ? matches[0].id : undefined
   }
 
   const ids = new Map<string, number>() // nameKey → players.id
@@ -65,7 +85,7 @@ export async function resolvePlayers(db: SupabaseClient, inputs: PlayerInput[]) 
   for (const input of inputs) {
     const key = nameKey(input.name)
     if (!key || ids.has(key)) continue
-    const id = (input.fideId && byFide.get(input.fideId)) || byName.get(key)
+    const id = (input.fideId && byFide.get(input.fideId)) || byName.get(key) || bySimilarName(input.name)
     if (id) ids.set(key, id)
     else if (!missing.has(key)) missing.set(key, input)
   }

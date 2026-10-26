@@ -4,6 +4,9 @@ import type {
 } from './types'
 
 const BYE_NAMES = /^(sin emparejar|bye|libre|not paired|spielfrei)$/i
+// Empty team boards are listed as a fake player.
+const PLACEHOLDER_NAMES = /^(sin jugador asignado|n\.?\s?n\.?)$/i
+const playerName = (name: string | undefined) => (name && !PLACEHOLDER_NAMES.test(name.trim()) ? name : '')
 
 function findLabel(values: Map<string, string>, test: (label: string) => boolean): string | null {
   for (const [label, value] of values) if (test(label)) return value || null
@@ -75,6 +78,7 @@ function playersFromRows(rows: CrRow[], start: number): CrPlayer[] {
   const players: CrPlayer[] = []
   for (const row of rows.slice(start + 1)) {
     if (isHeader(row) || !row.cells[name]) break
+    if (!playerName(row.cells[name])) continue
     players.push({
       startNo: toNumber(row.cells[no]),
       name: row.cells[name],
@@ -124,7 +128,7 @@ function roundDate(html: string): string | null {
 }
 
 function ref(name: string, startNo: string | number | null | undefined, rating: string | undefined): CrPlayerRef {
-  return { name, startNo: toNumber(startNo == null ? null : String(startNo)), rating: toNumber(rating) || null }
+  return { name: playerName(name), startNo: toNumber(startNo == null ? null : String(startNo)), rating: toNumber(rating) || null }
 }
 
 /** Individual pairings for one round (art=2&rd=N). Byes and double forfeits are skipped. */
@@ -172,7 +176,7 @@ export function parseTeamRound(html: string, number: number): CrRound {
     const [left, right] = row.colors.flatMap((color, i) => (color ? [i] : []))
     if (!board || !match || left === undefined || right === undefined) continue
     const score = c.slice(right + 1).map(parseScore).find((s) => s && s.result !== '*') ?? parseScore('')
-    if (!score || !c[left] || !c[right]) continue
+    if (!score || (!playerName(c[left]) && !playerName(c[right]))) continue
     const home = ref(c[left], row.snrs[left], c[left + 1])
     const away = ref(c[right], row.snrs[right], c[right + 1])
     const homeIsWhite = row.colors[left] === 'w'
