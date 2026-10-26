@@ -1,3 +1,4 @@
+import { SUPABASE_PUBLISHABLE_KEY } from '@/lib/supabase/keys'
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -8,7 +9,7 @@ export async function updateSession(request: NextRequest) {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    SUPABASE_PUBLISHABLE_KEY,
     {
       cookies: {
         getAll() {

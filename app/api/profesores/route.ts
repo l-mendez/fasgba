@@ -1,3 +1,4 @@
+import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createProfesor } from '@/lib/profesorUtils'
@@ -6,7 +7,7 @@ import { apiSuccess, handleError, unauthorizedError } from '@/lib/utils/apiRespo
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseServiceKey = SUPABASE_SECRET_KEY
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // GET /api/profesores - Get all profesores (public)

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { followClub, unfollowClub } from "@/lib/clubUtils"
+import { followClub, unfollowClub } from "@/lib/club/follow-client"
 import { useAuth } from "@/hooks/useAuth"
 
 interface ClubFollowButtonProps {

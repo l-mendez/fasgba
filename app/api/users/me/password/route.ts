@@ -1,3 +1,4 @@
+import { SUPABASE_PUBLISHABLE_KEY } from '@/lib/supabase/keys'
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuth } from '@/lib/middleware/auth'
@@ -16,7 +17,7 @@ export async function PUT(request: NextRequest) {
     // Verify current password using a temporary anon client
     const anonClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      SUPABASE_PUBLISHABLE_KEY,
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 

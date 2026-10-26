@@ -104,4 +104,6 @@ UI/API-specific names only at the feature boundary that needs them.
 - Server Components by default; use client components only for interactivity.
 - UI copy and emails are Spanish.
 - Use lucide-react icons in controls where available.
-- Do not expose `SUPABASE_SERVICE_ROLE_KEY` to the client.
+- Supabase keys: read them from `lib/supabase/keys.ts` (`SUPABASE_PUBLISHABLE_KEY`,
+  `SUPABASE_SECRET_KEY`). Never expose the secret key to the client and never
+  add it to `next.config` `env` (that inlines it into browser bundles).

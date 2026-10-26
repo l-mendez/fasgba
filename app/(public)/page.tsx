@@ -1,3 +1,4 @@
+import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
 import Link from "next/link"
 import Image from "next/image"
 import { Calendar, MapPin } from "lucide-react"
@@ -21,7 +22,7 @@ export const revalidate = false
 
 // Create Supabase client for server-side operations (tournaments only)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseServiceKey = SUPABASE_SECRET_KEY
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Types for the data structures

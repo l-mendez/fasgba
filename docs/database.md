@@ -65,9 +65,9 @@ the database backstop for direct Supabase client access.
 Geo-blocking is data-driven and managed from `/admin/paises`:
 
 - `country_access`: allowlist of ISO alpha-2 codes. Public `select` policy so the
-  edge proxy can read it with the anon key; a missing row means blocked. The
+  edge proxy can read it with the publishable key; a missing row means blocked. The
   `protect_argentina` trigger prevents disabling or deleting `AR`, even for the
-  service role.
+  secret (service role) key.
 - `country_access_log`: audit trail of every toggle. Service-role only, and its
   latest row per country is the source of truth for the 5-minute toggle cooldown.
 - `country_traffic_daily`: per-country daily allowed/blocked counters, written by

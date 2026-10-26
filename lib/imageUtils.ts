@@ -1,9 +1,16 @@
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseServiceKey = SUPABASE_SECRET_KEY
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+// Created on first use so importing this module in the browser (for the public
+// URL helpers) never builds a secret-key client.
+let serviceClient: ReturnType<typeof createClient> | null = null
+function getServiceClient() {
+  serviceClient ??= createClient(supabaseUrl, supabaseServiceKey)
+  return serviceClient
+}
 
 /**
  * Generate a hash for a file to identify duplicates (browser-compatible)
@@ -37,7 +44,7 @@ export async function generateFileHash(file: File): Promise<string> {
 export async function findExistingImage(newsId: number, fileHash: string): Promise<string | null> {
   try {
     // List all files in the news folder
-    const { data: files, error } = await supabase.storage
+    const { data: files, error } = await getServiceClient().storage
       .from('images')
       .list(`news/${newsId}`, {
         limit: 100,
@@ -91,7 +98,7 @@ export async function uploadImageWithDeduplication(
     
     const filePath = `news/${newsId}/${fileName}`
     
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await getServiceClient().storage
       .from('images')
       .upload(filePath, file)
     
@@ -162,7 +169,7 @@ export function extractImagePathsFromNews(image: string | null, text: string): s
 export async function deleteNewsImages(newsId: number): Promise<void> {
   try {
     // List all files in the news folder
-    const { data: files, error: listError } = await supabase.storage
+    const { data: files, error: listError } = await getServiceClient().storage
       .from('images')
       .list(`news/${newsId}`, {
         limit: 1000,
@@ -181,7 +188,7 @@ export async function deleteNewsImages(newsId: number): Promise<void> {
     // Delete all files in the folder
     const filePaths = files.map(file => `news/${newsId}/${file.name}`)
     
-    const { error: deleteError } = await supabase.storage
+    const { error: deleteError } = await getServiceClient().storage
       .from('images')
       .remove(filePaths)
 
@@ -212,7 +219,7 @@ export function getImageUrl(imagePath: string | null): string {
   // Create a simple Supabase client just for getting public URLs
   // This doesn't require authentication and works in all contexts
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const supabaseAnonKey = SUPABASE_PUBLISHABLE_KEY
   
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Missing Supabase environment variables')
@@ -243,7 +250,7 @@ export function getImageUrlNullable(imagePath: string | null): string | null {
   
   // Create a simple Supabase client just for getting public URLs
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const supabaseAnonKey = SUPABASE_PUBLISHABLE_KEY
   
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Missing Supabase environment variables')
