@@ -1,8 +1,8 @@
 import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
-import nodemailer from 'nodemailer'
 import { createClient } from '@supabase/supabase-js'
 import { buildEmailContent } from './templates'
 import { shouldIncludeUser } from './filter'
+import { FROM, NO_REPLY_ADDRESS, SITE_URL, transporter } from './mailer'
 import type {
   BroadcastInput,
   BroadcastResult,
@@ -14,19 +14,6 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = SUPABASE_SECRET_KEY
 
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
-
-const transporter = nodemailer.createTransport({
-  host: 'smtp.zoho.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: 'no-responder@fasgba.com',
-    pass: process.env.NO_REPLY_PASSWORD!,
-  },
-})
-
-const FROM = '"FASGBA" <no-responder@fasgba.com>'
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://fasgba.com'
 
 export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastResult> {
   let category: NotificationCategory | undefined
@@ -97,7 +84,7 @@ export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastRes
 
     const info = await transporter.sendMail({
       from: FROM,
-      to: 'no-responder@fasgba.com',
+      to: NO_REPLY_ADDRESS,
       bcc: recipients,
       subject: content.subject,
       text: content.textContent,

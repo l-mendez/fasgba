@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import type { Metadata } from "next"
 
 import { ClubAdminTorneos } from "./torneos-client"
+import { ClubAdminChessResultsImport } from "./chess-results-import"
 import { ClubAdminNewButton } from "../components/club-admin-new-button"
 import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
 import { AdminPageHeader } from "@/components/admin-page-header"
@@ -17,6 +18,7 @@ export default function ClubAdminTorneosPage() {
         title="Torneos"
         action={<ClubAdminNewButton path="/torneos/nuevo" label="Nuevo torneo" />}
       />
+      <ClubAdminChessResultsImport />
       <Suspense fallback={<AdminContentSkeleton rows={6} />}>
         <ClubAdminTorneosContent />
       </Suspense>

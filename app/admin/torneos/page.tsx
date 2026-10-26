@@ -12,6 +12,7 @@ import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
 import { AdminPageHeader } from "@/components/admin-page-header"
 import { TournamentsTable } from "@/components/tournaments-table"
 import { ErrorAlert } from "@/components/error-alert"
+import { ChessResultsImportButton } from "@/components/chess-results/chess-results-import-button"
 
 // Tournament type based on the API response format
 interface Tournament {
@@ -203,12 +204,15 @@ export default function AdminTorneosPage() {
       <AdminPageHeader
         title="Torneos"
         action={
-          <Button asChild>
-            <Link href="/torneos/nuevo">
-              <Plus className="h-4 w-4" />
-              Nuevo torneo
-            </Link>
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <ChessResultsImportButton chooseClub />
+            <Button asChild>
+              <Link href="/torneos/nuevo">
+                <Plus className="h-4 w-4" />
+                Nuevo torneo
+              </Link>
+            </Button>
+          </div>
         }
       />
       <Suspense fallback={<AdminContentSkeleton rows={6} />}>

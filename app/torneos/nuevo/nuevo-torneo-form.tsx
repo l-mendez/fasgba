@@ -19,11 +19,11 @@ import {
 } from "@/components/ui/dialog"
 import { TournamentFormFields, TOURNAMENT_FORM_ACTIONS_CLASS } from "@/components/tournament/tournament-form-fields"
 import { apiCall } from "@/lib/utils/apiClient"
+import { useTournamentForm } from "@/hooks/useTournamentForm"
 import {
   createEmptyTournamentFormData,
   validateTournamentForm,
   buildTournamentApiPayload,
-  type TournamentFormData,
 } from "@/lib/tournament-form-utils"
 
 export interface OrganizerClub {
@@ -52,8 +52,9 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, defaultClubId, returnPath,
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [createdTournamentId, setCreatedTournamentId] = useState<number | null>(null)
 
-  const [formData, setFormData] = useState<TournamentFormData>(createEmptyTournamentFormData())
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const {
+    formData, validationErrors, setValidationErrors, handleChange, handleSelectChange, addDate, removeDate,
+  } = useTournamentForm(createEmptyTournamentFormData)
 
   const selectedClubId = clubValue === FASGBA_VALUE ? undefined : Number(clubValue)
   const singleClub = !isSiteAdmin && clubs.length === 1 ? clubs[0] : null
@@ -97,53 +98,6 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, defaultClubId, returnPath,
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-    if (validationErrors[name]) {
-      setValidationErrors((prev) => ({ ...prev, [name]: "" }))
-    }
-  }
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === 'tournament_type' ? value as 'individual' | 'team' : value
-    }))
-    if (validationErrors[name]) {
-      setValidationErrors((prev) => ({ ...prev, [name]: "" }))
-    }
-
-    if (name === 'tournament_type' && value === 'individual') {
-      setFormData((prev) => ({
-        ...prev,
-        players_per_team: "",
-        max_teams: "",
-        team_match_points: {}
-      }))
-    }
-  }
-
-  const addDate = (date: string) => {
-    if (!date || formData.dates.includes(date)) return
-
-    setFormData(prev => ({
-      ...prev,
-      dates: [...prev.dates, date].sort()
-    }))
-
-    if (validationErrors.dates) {
-      setValidationErrors(prev => ({ ...prev, dates: "" }))
-    }
-  }
-
-  const removeDate = (dateToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      dates: prev.dates.filter(date => date !== dateToRemove)
-    }))
   }
 
   return (

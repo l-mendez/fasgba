@@ -30,6 +30,7 @@ import type { TournamentStatus } from "@/lib/utils/constants"
 import { formatArgentinaDateOnly } from "@/lib/dateUtils"
 import { type GameDisplay } from "@/lib/gameUtils-client"
 import RoundsSection from "./rounds-section"
+import { ChessResultsLink } from "@/components/chess-results/chess-results-link"
 
 interface TeamPlayerDisplay {
   id: number
@@ -102,6 +103,7 @@ export default function TournamentClient({
           <div className="flex flex-wrap gap-1.5">
             <InfoPill icon={STATUS_ICONS[status]}>{TOURNAMENT_STATUS_TEXT[status]}</InfoPill>
             <InfoPill icon={isTeam ? Users : User}>{isTeam ? "Por equipos" : "Individual"}</InfoPill>
+            <ChessResultsLink tnr={tournament.chess_results_tnr} />
           </div>
           {tournament.description && (
             <p className="max-w-3xl whitespace-pre-line text-muted-foreground">{tournament.description}</p>

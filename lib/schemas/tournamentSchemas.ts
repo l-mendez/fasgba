@@ -33,6 +33,7 @@ export const createTournamentSchema = z.object({
   max_teams: z.number().int().min(2, 'Max teams must be at least 2').max(100, 'Too many teams').optional(),
   registration_deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format. Use YYYY-MM-DD').optional(),
   team_match_points: z.record(z.string(), z.number()).optional(),
+  chess_results_tnr: z.number().int().positive('Link de chess-results inválido').nullable().optional(),
 })
 
 // Schema for updating tournaments (all fields optional except dates array validation)
@@ -56,6 +57,7 @@ export const updateTournamentSchema = z.object({
   max_teams: z.number().int().min(2, 'Max teams must be at least 2').max(100, 'Too many teams').optional(),
   registration_deadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format. Use YYYY-MM-DD').optional(),
   team_match_points: z.record(z.string(), z.number()).optional(),
+  chess_results_tnr: z.number().int().positive('Link de chess-results inválido').nullable().optional(),
 })
 
 // Schema for tournament query parameters

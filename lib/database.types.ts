@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "12.2.3"
   }
   public: {
     Tables: {
@@ -87,6 +87,72 @@ export type Database = {
             columns: ["club_id"]
             isOneToOne: false
             referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chess_results_candidates: {
+        Row: {
+          discovered_at: string
+          end_date: string | null
+          name: string
+          organizer: string | null
+          place: string | null
+          players: number | null
+          rounds: number | null
+          start_date: string | null
+          status: string
+          suggested_tournament_id: number | null
+          time_control: string | null
+          tnr: number
+          tournament_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          discovered_at?: string
+          end_date?: string | null
+          name: string
+          organizer?: string | null
+          place?: string | null
+          players?: number | null
+          rounds?: number | null
+          start_date?: string | null
+          status?: string
+          suggested_tournament_id?: number | null
+          time_control?: string | null
+          tnr: number
+          tournament_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          discovered_at?: string
+          end_date?: string | null
+          name?: string
+          organizer?: string | null
+          place?: string | null
+          players?: number | null
+          rounds?: number | null
+          start_date?: string | null
+          status?: string
+          suggested_tournament_id?: number | null
+          time_control?: string | null
+          tnr?: number
+          tournament_id?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chess_results_candidates_suggested_tournament_id_fkey"
+            columns: ["suggested_tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chess_results_candidates_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
             referencedColumns: ["id"]
           },
         ]
@@ -913,6 +979,8 @@ export type Database = {
       }
       tournaments: {
         Row: {
+          chess_results_synced_at: string | null
+          chess_results_tnr: number | null
           cost: string | null
           created_by_club_id: number | null
           description: string | null
@@ -934,6 +1002,8 @@ export type Database = {
           tournament_type: string | null
         }
         Insert: {
+          chess_results_synced_at?: string | null
+          chess_results_tnr?: number | null
           cost?: string | null
           created_by_club_id?: number | null
           description?: string | null
@@ -955,6 +1025,8 @@ export type Database = {
           tournament_type?: string | null
         }
         Update: {
+          chess_results_synced_at?: string | null
+          chess_results_tnr?: number | null
           cost?: string | null
           created_by_club_id?: number | null
           description?: string | null

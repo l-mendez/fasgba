@@ -11,11 +11,11 @@ import { ErrorAlert } from "@/components/error-alert"
 import { InfoPill } from "@/components/info-pill"
 import { TournamentFormFields, TOURNAMENT_FORM_ACTIONS_CLASS } from "@/components/tournament/tournament-form-fields"
 import { apiCall } from "@/lib/utils/apiClient"
+import { useTournamentForm } from "@/hooks/useTournamentForm"
 import {
   tournamentToFormData,
   validateTournamentForm,
   buildTournamentApiPayload,
-  type TournamentFormData,
   type TournamentFormSource,
 } from "@/lib/tournament-form-utils"
 
@@ -37,8 +37,9 @@ export function EditarTorneoForm({ tournament, tournamentId, returnPath }: Edita
   const [error, setError] = useState<string | null>(null)
   const [confirmTypeChange, setConfirmTypeChange] = useState(false)
 
-  const [formData, setFormData] = useState<TournamentFormData>(() => tournamentToFormData(tournament))
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const {
+    formData, validationErrors, setValidationErrors, handleChange, handleSelectChange, addDate, removeDate,
+  } = useTournamentForm(() => tournamentToFormData(tournament))
 
   const originalType = tournament.tournament_type || 'individual'
   const hasTypeChanged = formData.tournament_type !== originalType
@@ -83,52 +84,6 @@ export function EditarTorneoForm({ tournament, tournamentId, returnPath }: Edita
     void save()
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-
-    if (validationErrors[name]) {
-      setValidationErrors(prev => ({ ...prev, [name]: "" }))
-    }
-  }
-
-  const handleSelectChange = (name: string, value: string) => {
-    if (name === 'tournament_type') {
-      const newType = value as 'individual' | 'team'
-      setFormData((prev) => ({
-        ...prev,
-        tournament_type: newType,
-        ...(newType === 'individual' ? { players_per_team: "", max_teams: "", team_match_points: {} } : {}),
-      }))
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }))
-    }
-
-    if (validationErrors[name]) {
-      setValidationErrors((prev) => ({ ...prev, [name]: "" }))
-    }
-  }
-
-  const addDate = (date: string) => {
-    if (!date || formData.dates.includes(date)) return
-
-    setFormData(prev => ({
-      ...prev,
-      dates: [...prev.dates, date].sort()
-    }))
-
-    if (validationErrors.dates) {
-      setValidationErrors(prev => ({ ...prev, dates: "" }))
-    }
-  }
-
-  const removeDate = (dateToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      dates: prev.dates.filter(date => date !== dateToRemove)
-    }))
-  }
-
   return (
     <Card>
       <CardContent className="p-4 md:p-6">
@@ -137,6 +92,7 @@ export function EditarTorneoForm({ tournament, tournamentId, returnPath }: Edita
 
           <TournamentFormFields
             formData={formData}
+            tournamentId={tournamentId}
             validationErrors={validationErrors}
             onChange={handleChange}
             onSelectChange={handleSelectChange}

@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { TournamentFormData } from "@/lib/tournament-form-utils"
 import { formatTournamentDisplayDate } from "@/lib/tournament-form-utils"
+import { ChessResultsLinkField } from "@/components/chess-results/chess-results-link-field"
 
 /** Shared footer for the tournament forms: right-aligned, sticky on mobile. */
 export const TOURNAMENT_FORM_ACTIONS_CLASS =
@@ -24,6 +25,10 @@ interface TournamentFormFieldsProps {
   onRemoveDate: (date: string) => void
   isLoading?: boolean
   tournamentTypeExtras?: React.ReactNode
+  /** Existing tournament id; enables the chess-results sync action. */
+  tournamentId?: number | string
+  /** Chess-results import: the type comes from chess-results and the link is implicit. */
+  importingFromChessResults?: boolean
 }
 
 export function TournamentFormFields({
@@ -35,6 +40,8 @@ export function TournamentFormFields({
   onRemoveDate,
   isLoading = false,
   tournamentTypeExtras,
+  tournamentId,
+  importingFromChessResults = false,
 }: TournamentFormFieldsProps) {
   return (
     <>
@@ -138,7 +145,7 @@ export function TournamentFormFields({
           <Select
             value={formData.tournament_type}
             onValueChange={(value) => onSelectChange('tournament_type', value)}
-            disabled={isLoading}
+            disabled={isLoading || importingFromChessResults}
           >
             <SelectTrigger className={validationErrors.tournament_type ? "border-destructive" : ""}>
               <SelectValue placeholder="Seleccionar tipo de torneo" />
@@ -150,6 +157,9 @@ export function TournamentFormFields({
           </Select>
           {validationErrors.tournament_type && (
             <p className="text-sm text-destructive">{validationErrors.tournament_type}</p>
+          )}
+          {importingFromChessResults && (
+            <p className="text-sm text-muted-foreground">Definido por chess-results.</p>
           )}
         </div>
 
@@ -240,6 +250,15 @@ export function TournamentFormFields({
             className="min-h-[80px]"
           />
         </div>
+
+        {!importingFromChessResults && (
+          <ChessResultsLinkField
+            value={formData.chess_results_link}
+            error={validationErrors.chess_results_link}
+            onChange={onChange}
+            tournamentId={tournamentId}
+          />
+        )}
       </div>
 
       <div className="space-y-4">

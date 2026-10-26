@@ -10,6 +10,7 @@ export type DbUpdate<T extends TableName> = TablesUpdate<T>
 export type AdminRow = DbRow<'admins'>
 export type AlumnoRow = DbRow<'alumnos'>
 export type ArbitroRow = DbRow<'arbitros'>
+export type ChessResultsCandidateRow = DbRow<'chess_results_candidates'>
 export type ClubRow = DbRow<'clubs'>
 export type ClubAdminRow = DbRow<'club_admins'>
 export type CountryAccessRow = DbRow<'country_access'>
@@ -23,6 +24,7 @@ export type TeamRow = DbRow<'teams'>
 export type TournamentRow = DbRow<'tournaments'>
 
 export type ArbitroInsert = DbInsert<'arbitros'>
+export type ChessResultsCandidateInsert = DbInsert<'chess_results_candidates'>
 export type ClubInsert = DbInsert<'clubs'>
 export type DocumentoInsert = DbInsert<'documentos'>
 export type NewsInsert = DbInsert<'news'>

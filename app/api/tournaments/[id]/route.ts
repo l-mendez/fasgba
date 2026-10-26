@@ -8,6 +8,7 @@ import { apiSuccess, handleError, notFoundError, unauthorizedError, noContent, f
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { isUserClubAdmin } from '@/lib/clubUtils'
 import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
+import { tnrConflictResponse } from '@/lib/tournament/chess-results'
 
 // Create a Supabase client for server-side operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -80,6 +81,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     
     const body = await request.json()
     const validatedData = validateUpdateTournament(body)
+    const tnrConflict = await tnrConflictResponse(serverSupabase, validatedData.chess_results_tnr, tournamentId)
+    if (tnrConflict) return tnrConflict
     
     const success = await updateTournament(serverSupabase, tournamentId, validatedData)
 
@@ -173,6 +176,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     
     const body = await request.json()
     const validatedData = validateUpdateTournament(body)
+    const tnrConflict = await tnrConflictResponse(serverSupabase, validatedData.chess_results_tnr, tournamentId)
+    if (tnrConflict) return tnrConflict
     
     // Check if tournament type is being changed
     const isTypeChanging = validatedData.tournament_type && 

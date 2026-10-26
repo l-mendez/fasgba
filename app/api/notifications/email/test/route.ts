@@ -1,19 +1,8 @@
-import nodemailer from 'nodemailer'
+import { NO_REPLY_ADDRESS, SITE_URL, transporter } from '@/lib/notifications/mailer'
 import { shellHtml } from '@/lib/notifications/templates'
 import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.zoho.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: 'no-responder@fasgba.com',
-    pass: process.env.NO_REPLY_PASSWORD!,
-  },
-})
-
 const TEST_RECIPIENT = 'lolomendez985@gmail.com'
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://fasgba.com'
 
 export async function POST() {
   try {
@@ -35,7 +24,7 @@ export async function POST() {
     })
 
     const info = await transporter.sendMail({
-      from: '"FASGBA - PRUEBA" <no-responder@fasgba.com>',
+      from: `"FASGBA - PRUEBA" <${NO_REPLY_ADDRESS}>`,
       to: TEST_RECIPIENT,
       subject,
       text: textContent,

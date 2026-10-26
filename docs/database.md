@@ -76,6 +76,27 @@ Geo-blocking is data-driven and managed from `/admin/paises`:
 `proxy.ts` caches the enabled codes for 60 seconds per edge instance and falls
 back to the last known list, so a Supabase outage never blocks the site.
 
+## Chess-results Sync
+
+Tournaments can be linked to chess-results.com and imported from it
+(`lib/chess-results/`):
+
+- `tournaments.chess_results_tnr`: chess-results tournament id (unique), and
+  `chess_results_synced_at`: last successful sync.
+- `chess_results_candidates`: chess-results tournaments discovered by the weekly
+  job, queued for admin approval (`pending` → `imported` / `ignored`), with an
+  optional `suggested_tournament_id` when one already exists on the site.
+  Service-role only (RLS on, no policies); admin routes check permissions.
+
+The sync only inserts missing rows and fills pending (`*`) results; it never
+overwrites data entered by admins.
+
+Weekly job (`lib/chess-results/weekly.ts`): Vercel cron `GET
+/api/cron/chess-results` (Mondays 06:00 UTC, 03:00 ART; needs the
+`CRON_SECRET` env var) and admin `POST /api/admin/chess-results/run[?dryRun=1]`.
+It queues FASGBA tournaments since 2025 as candidates (never creates
+tournaments) and syncs linked tournaments until 14 days after their last date.
+
 ## Types And DTOs
 
 Use three layers deliberately:
