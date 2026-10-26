@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     const report = await createTournamentFromChessResults(db, cr, clubId, edits, assignments).catch(async (error) => {
       // The tournament row is inserted before the rest; surface it so the admin can retry with a sync.
       const partial = await findTournamentByTnr(db, tnr).catch(() => null)
-      if (!partial || /duplicate key/i.test(String(error?.message))) throw error
+      if (!partial || /tournaments_chess_results_tnr_key/.test(String(error?.message))) throw error
       revalidateTorneosCache()
       throw new ChessResultsError(`Se creó el torneo pero la importación quedó incompleta (${error?.message}). Abrilo y volvé a sincronizar.`, 500, partial.id)
     })

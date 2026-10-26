@@ -79,7 +79,13 @@ export function decideTeams(site: SiteData, names: string[], choices: Assignment
     const choice = choices[nameKey(name)]
     const team = choice && 'teamId' in choice ? site.teams.find((t) => t.id === choice.teamId) : null
     if (team) decisions.set(nameKey(name), asSite(team))
-    else if (choice && 'newTeam' in choice) decisions.set(nameKey(name), { kind: 'new', name: choice.newTeam.trim() || name, club: choice.club })
+    else if (choice && 'newTeam' in choice) {
+      // A "new" team that already exists in that club is that team.
+      const { club } = choice
+      const newName = choice.newTeam.trim() || name
+      const same = 'id' in club ? site.teams.find((t) => t.club_id === club.id && nameKey(t.name) === nameKey(newName)) : null
+      decisions.set(nameKey(name), same ? asSite(same) : { kind: 'new', name: newName, club })
+    }
   }
   const inTournament = () => site.teams.filter((t) => site.enrolled.has(t.id) && !used.has(t.id))
   const rest = unique.filter((name) => !decisions.has(nameKey(name)))
@@ -151,15 +157,24 @@ export async function applyAssignments(db: SupabaseClient, site: SiteData, teams
   }
   const clubId = (club: ClubRef | null) => (!club ? null : 'id' in club ? club.id : clubIds.get(nameKey(club.newName)) ?? null)
 
+  // Teams are unique per club and name: reuse one created earlier in this run (or already on the site).
+  const teamKey = (club: number, name: string) => `${club}:${nameKey(name)}`
+  const knownTeams = new Map(site.teams.map((t) => [teamKey(t.club_id, t.name), t.id]))
   const teamIds = new Map<string, number>()
   let teamsCreated = 0
   for (const [key, d] of teams) {
     if (d.kind === 'enrolled' || d.kind === 'existing') teamIds.set(key, d.teamId)
-    if (d.kind !== 'new' || clubId(d.club) == null) continue
-    const { data, error } = await db.from('teams').insert({ name: d.name, club_id: clubId(d.club)! }).select('id').single()
-    fail('crear equipo', error)
-    teamIds.set(key, data!.id)
-    teamsCreated++
+    const club = d.kind === 'new' ? clubId(d.club) : null
+    if (d.kind !== 'new' || club == null) continue
+    let id = knownTeams.get(teamKey(club, d.name))
+    if (id == null) {
+      const { data, error } = await db.from('teams').insert({ name: d.name, club_id: club }).select('id').single()
+      fail('crear equipo', error)
+      id = data!.id as number
+      knownTeams.set(teamKey(club, d.name), id)
+      teamsCreated++
+    }
+    teamIds.set(key, id)
   }
 
   const playerIds = new Map<string, number>()

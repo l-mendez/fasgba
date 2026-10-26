@@ -3,6 +3,7 @@ import Link from "next/link"
 import { FileText, FolderOpen, Home, Trophy, UserCog, Users } from "lucide-react"
 
 import { PurgeCacheMenu } from "./purge-cache-menu"
+import { ChessResultsImportButton } from "@/components/chess-results/chess-results-import-button"
 import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
 import { AdminPageHeader } from "@/components/admin-page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -224,6 +225,7 @@ async function AdminDashboardContent() {
                 </Link>
               </Button>
             ))}
+            <ChessResultsImportButton chooseClub className="justify-start sm:w-full" />
             <PurgeCacheMenu />
           </div>
         </CardContent>
