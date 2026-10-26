@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import type { TournamentFormData } from "@/lib/tournament-form-utils"
 import { formatTournamentDisplayDate } from "@/lib/tournament-form-utils"
+import { ChessResultsLinkField } from "@/components/chess-results/chess-results-link-field"
 
 interface TournamentFormFieldsProps {
   formData: TournamentFormData
@@ -22,6 +23,8 @@ interface TournamentFormFieldsProps {
   onRemoveDate: (date: string) => void
   isLoading?: boolean
   tournamentTypeExtras?: React.ReactNode
+  /** Existing tournament id; enables the chess-results sync action. */
+  tournamentId?: number | string
 }
 
 export function TournamentFormFields({
@@ -35,6 +38,7 @@ export function TournamentFormFields({
   onRemoveDate,
   isLoading = false,
   tournamentTypeExtras,
+  tournamentId,
 }: TournamentFormFieldsProps) {
   return (
     <>
@@ -252,6 +256,13 @@ export function TournamentFormFields({
             className="min-h-[80px]"
           />
         </div>
+
+        <ChessResultsLinkField
+          value={formData.chess_results_link}
+          error={validationErrors.chess_results_link}
+          onChange={onChange}
+          tournamentId={tournamentId}
+        />
       </div>
 
       <div className="space-y-4">

@@ -8,6 +8,7 @@ import { Calendar, MapPin, Trophy, Clock, Users, DollarSign, Info, ExternalLink 
 import { type TournamentDisplay } from "@/lib/tournamentUtils"
 import { type GameDisplay } from "@/lib/gameUtils-client"
 import RoundsSection from "./rounds-section"
+import { ChessResultsLink } from "@/components/chess-results/chess-results-link"
 import { cn } from "@/lib/utils"
 
 interface TeamPlayerDisplay {
@@ -70,6 +71,7 @@ export default function TournamentClient({
                 >
                   {tournament.is_ongoing ? 'En curso' : tournament.is_upcoming ? 'Próximo' : 'Finalizado'}
                 </Badge>
+                <ChessResultsLink tnr={tournament.chess_results_tnr} className="ml-2 self-center" />
               </div>
             </div>
             

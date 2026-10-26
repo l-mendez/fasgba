@@ -59,6 +59,7 @@ interface Tournament {
   max_teams?: number | null
   registration_deadline?: string | null
   team_match_points?: Record<string, number> | null
+  chess_results_tnr?: number | null
 }
 
 interface Round {
@@ -160,6 +161,7 @@ async function getTournamentData(tournamentId: string): Promise<{
           max_teams,
           registration_deadline,
           team_match_points,
+          chess_results_tnr,
           tournamentdates (
             event_date
           )
@@ -209,6 +211,7 @@ async function getTournamentData(tournamentId: string): Promise<{
       max_teams: tournamentData.max_teams,
       registration_deadline: tournamentData.registration_deadline,
       team_match_points: tournamentData.team_match_points,
+      chess_results_tnr: tournamentData.chess_results_tnr,
       all_dates: (tournamentData.tournamentdates || []).map((date: any) => date.event_date)
     }
 

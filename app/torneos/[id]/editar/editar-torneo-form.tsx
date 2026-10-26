@@ -179,6 +179,7 @@ export function EditarTorneoForm({ tournament, tournamentId, isSiteAdmin }: Edit
 
           <TournamentFormFields
             formData={formData}
+            tournamentId={tournamentId}
             validationErrors={validationErrors}
             newDate={newDate}
             setNewDate={setNewDate}

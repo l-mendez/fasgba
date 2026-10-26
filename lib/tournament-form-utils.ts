@@ -1,3 +1,5 @@
+import { chessResultsUrl, parseChessResultsTnr } from "@/lib/chess-results/url"
+
 export interface TournamentFormData {
   title: string
   description: string
@@ -16,6 +18,7 @@ export interface TournamentFormData {
   max_teams: string
   registration_deadline: string
   team_match_points: Record<string, number>
+  chess_results_link: string
 }
 
 export interface TournamentFormSource {
@@ -36,6 +39,7 @@ export interface TournamentFormSource {
   max_teams?: number | null
   registration_deadline?: string | null
   team_match_points?: Record<string, number> | null
+  chess_results_tnr?: number | null
 }
 
 export function createEmptyTournamentFormData(): TournamentFormData {
@@ -57,6 +61,7 @@ export function createEmptyTournamentFormData(): TournamentFormData {
     max_teams: "",
     registration_deadline: "",
     team_match_points: {},
+    chess_results_link: "",
   }
 }
 
@@ -84,6 +89,7 @@ export function tournamentToFormData(tournament: TournamentFormSource): Tourname
     max_teams: tournament.max_teams ? String(tournament.max_teams) : "",
     registration_deadline: tournament.registration_deadline || "",
     team_match_points: tournament.team_match_points || {},
+    chess_results_link: tournament.chess_results_tnr ? chessResultsUrl(tournament.chess_results_tnr) : "",
   }
 }
 
@@ -129,6 +135,10 @@ export function validateTournamentForm(
     }
   }
 
+  if (formData.chess_results_link.trim() && !parseChessResultsTnr(formData.chess_results_link)) {
+    errors.chess_results_link = "Link de chess-results inválido. Pegá el link del torneo o su número."
+  }
+
   if (options.isSiteAdmin === false && !options.selectedClubId) {
     errors.club = "Debe seleccionar un club"
   }
@@ -155,6 +165,8 @@ export function buildTournamentApiPayload(formData: TournamentFormData) {
     max_teams: formData.max_teams ? Number(formData.max_teams) : undefined,
     registration_deadline: formData.registration_deadline || undefined,
     team_match_points: Object.keys(formData.team_match_points).length > 0 ? formData.team_match_points : undefined,
+    // null (not undefined) so clearing the field unlinks the tournament.
+    chess_results_tnr: parseChessResultsTnr(formData.chess_results_link),
   }
 
   return Object.fromEntries(
