@@ -7,7 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TournamentInsert, TournamentUpdate } from '@/lib/db-types'
 import { nameKey, resolvePlayers } from './match'
 import { syncTeams, type TeamSyncCounts } from './sync-teams'
-import { applyResultUpdates, ensureRounds, fail, planGames } from './db'
+import { applyGameUpdates, ensureRounds, fail, planGames } from './db'
 import type { CrTournament } from './types'
 
 export interface SyncReport extends TeamSyncCounts {
@@ -60,21 +60,23 @@ async function syncIndividual(db: SupabaseClient, tournamentId: number, cr: CrTo
   const rounds = await ensureRounds(db, tournamentId, played.map((r) => r.number))
   let gamesCreated = 0
   let resultsUpdated = 0
+  let pgnsAdded = 0
   for (const round of played) {
     const roundId = rounds.ids.get(round.number)!
     const { data: games, error: gamesError } = await db.from('individual_games')
-      .select('id, white_player_id, black_player_id, result').eq('round_id', roundId)
+      .select('id, white_player_id, black_player_id, result, pgn').eq('round_id', roundId)
     fail('leer partidas', gamesError)
     const existing = new Map((games ?? []).map((g) => [`${g.white_player_id}:${g.black_player_id}`, g]))
     const plan = planGames(round.games, existing,
       (g) => { const w = idOf(g.white.name), b = idOf(g.black.name); return w && b ? `${w}:${b}` : null },
       (g) => ({ round_id: roundId, white_player_id: idOf(g.white.name), black_player_id: idOf(g.black.name), result: g.result, board_number: g.board, game_date: round.date }))
     if (plan.inserts.length) fail('crear partidas', (await db.from('individual_games').insert(plan.inserts)).error)
-    await applyResultUpdates(db, 'individual_games', plan.updates)
+    await applyGameUpdates(db, 'individual_games', plan.updates)
     gamesCreated += plan.inserts.length
-    resultsUpdated += plan.updates.length
+    resultsUpdated += plan.resultsUpdated
+    pgnsAdded += plan.pgnsAdded
   }
-  return { playersCreated, registrationsCreated: newRegs.length, roundsCreated: rounds.created, gamesCreated, resultsUpdated }
+  return { playersCreated, registrationsCreated: newRegs.length, roundsCreated: rounds.created, gamesCreated, resultsUpdated, pgnsAdded }
 }
 
 /** Links a tournament to chess-results and imports whatever is missing. */

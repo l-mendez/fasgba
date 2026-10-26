@@ -1,3 +1,5 @@
+import { FileText } from "lucide-react"
+
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { formatArgentinaDateOnly } from "@/lib/dateUtils"
 import type { PlanGame, PlanRound, PlanStatus } from "@/lib/chess-results/plan"
@@ -10,6 +12,7 @@ function GameRow({ game }: { game: PlanGame }) {
       <span className="min-w-0 truncate sm:text-right">{game.white || "—"}</span>
       <span className="col-start-3 row-start-1 text-center font-semibold tabular-nums sm:col-start-auto sm:row-start-auto">
         {RESULT_LABEL[game.result]}{game.forfeit && <span className="ml-0.5 text-xs font-normal text-muted-foreground">(F)</span>}
+        {game.hasPgn && <FileText className="ml-1 inline h-3.5 w-3.5 text-amber" aria-label="Con PGN" />}
       </span>
       <span className="col-start-2 min-w-0 truncate sm:col-start-auto">{game.black || "—"}</span>
       <span className="col-start-3 row-start-2 justify-self-end sm:col-start-auto sm:row-start-auto">

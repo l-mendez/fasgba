@@ -22,6 +22,7 @@ export function describeSyncReport(report: SyncReport): string {
     report.matchesCreated && plural(report.matchesCreated, "encuentro", "encuentros"),
     report.gamesCreated && plural(report.gamesCreated, "partida", "partidas"),
     report.resultsUpdated && plural(report.resultsUpdated, "resultado actualizado", "resultados actualizados"),
+    report.pgnsAdded && plural(report.pgnsAdded, "PGN", "PGN"),
   ].filter(Boolean)
   return parts.length ? `Se agregaron: ${parts.join(", ")}.` : "Ya estaba al día; no hubo cambios."
 }

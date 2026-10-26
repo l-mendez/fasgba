@@ -3,7 +3,7 @@ import type { PlanStatus } from "@/lib/chess-results/plan"
 
 const STYLES: Record<PlanStatus, { label: string; className: string }> = {
   new: { label: "Nuevo", className: "border-emerald-600/30 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400" },
-  fill: { label: "Completa resultado", className: "border-amber/40 bg-amber/10 text-amber-dark" },
+  fill: { label: "Se completa", className: "border-amber/40 bg-amber/10 text-amber-dark" },
   exists: { label: "Ya cargado", className: "border-border bg-muted text-muted-foreground" },
   skip: { label: "No se importa", className: "border-destructive/30 bg-destructive/10 text-destructive" },
 }

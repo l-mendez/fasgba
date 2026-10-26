@@ -1,6 +1,6 @@
 import { cellText, labelValues, tableRows, toIsoDate, toNumber, type CrRow } from './html'
 import type {
-  CrDetails, CrGame, CrPlayer, CrPlayerRef, CrResult, CrRound, CrSearchResult, CrTeam, CrTeamMatch,
+  CrDetails, CrGame, CrPgnGame, CrPlayer, CrPlayerRef, CrResult, CrRound, CrSearchResult, CrTeam, CrTeamMatch,
 } from './types'
 
 const BYE_NAMES = /^(sin emparejar|bye|libre|not paired|spielfrei)$/i
@@ -64,7 +64,18 @@ export function parseDetails(html: string, tnr: number): CrDetails {
     endDate: endDate ?? startDate ?? null,
     isTeam: /equipo/i.test(system ?? ''),
     lastUpdate: html.match(/Última actualización\s*([\d.]+ [\d:]+)/)?.[1] ?? null,
+    pgnSearchId: toNumber(html.match(/PartieSuche\.aspx\?[^"]*?\bid=(\d+)[^"]*">Hay \d+ partidas/)?.[1]),
   }
+}
+
+/** Splits a chess-results PGN download into games (headers dropped, movetext kept). */
+export function parsePgnFile(text: string): CrPgnGame[] {
+  return text.split(/\r?\n(?=\[Event )/).flatMap((chunk) => {
+    const tag = (name: string) => chunk.match(new RegExp(`^\\[${name} "(.*)"\\]`, 'm'))?.[1] ?? ''
+    const movetext = chunk.replace(/^\[.*\]\s*$/gm, '').trim()
+    const round = toNumber(tag('Round'))
+    return round && movetext ? [{ round, white: tag('White'), black: tag('Black'), movetext }] : []
+  })
 }
 
 function playersFromRows(rows: CrRow[], start: number): CrPlayer[] {

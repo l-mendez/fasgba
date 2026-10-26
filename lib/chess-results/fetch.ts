@@ -2,8 +2,9 @@
 // more than two weeks ago hide their data behind a "Mostrar detalles del
 // torneo" ASP.NET postback, so every page load replays it when present.
 
-import { parseDetails, parseIndividualRound, parsePlayers, parseSearchResults, parseTeamList, parseTeamRosters, parseTeamRound } from './parse'
-import type { CrSearchResult, CrTournament } from './types'
+import { nameKey } from './match'
+import { parseDetails, parseIndividualRound, parsePgnFile, parsePlayers, parseSearchResults, parseTeamList, parseTeamRosters, parseTeamRound } from './parse'
+import type { CrPgnGame, CrRound, CrSearchResult, CrTournament } from './types'
 import { chessResultsUrl } from './url'
 
 const BASE = 'https://s1.chess-results.com'
@@ -36,6 +37,18 @@ async function request(url: string, cookie: string, body?: Record<string, string
   return { html: await res.text(), url: res.url, cookie: setCookie || cookie }
 }
 
+/** Every field of the page's form with its default value (hidden, text inputs and selects). */
+function formFields(html: string): Record<string, string> {
+  const fields = hiddenFields(html)
+  for (const m of html.matchAll(/<input name="([^"]+)"[^>]*>/g)) {
+    if (!m[0].includes('type="submit"')) fields[m[1]] ??= m[0].match(/value="([^"]*)"/)?.[1] ?? ''
+  }
+  for (const m of html.matchAll(/<select name="([^"]+)"[^>]*>([\s\S]*?)<\/select>/g)) {
+    fields[m[1]] ??= (m[2].match(/<option selected="selected" value="([^"]*)"/) ?? m[2].match(/<option value="([^"]*)"/))?.[1] ?? ''
+  }
+  return fields
+}
+
 /** Fetches a page, pressing the "show details" button when chess-results hides the data. */
 export async function fetchChessResultsPage(url: string, extraForm: Record<string, string> = {}): Promise<string> {
   const first = await request(url, '')
@@ -53,23 +66,44 @@ async function page(tnr: number, params: Record<string, string | number> = {}) {
   return html
 }
 
-/** Downloads everything the sync needs: details, players or team rosters, and every paired round. */
+/** Games of the tournament's "Descargar en formato PGN" download (PartieSuche.aspx). */
+export async function fetchChessResultsPgns(tnr: number, searchId: number): Promise<CrPgnGame[]> {
+  const first = await request(`${BASE}/PartieSuche.aspx?lan=2&id=${searchId}&tnr=${tnr}&art=3`, '')
+  await sleep(REQUEST_GAP_MS)
+  const form = { ...formFields(first.html), 'ctl00$P1$cb_DownLoadPGN': 'Descargar en formato PGN' }
+  const file = await request(first.url, first.cookie, form)
+  return file.html.includes('[Event ') ? parsePgnFile(file.html) : []
+}
+
+/** Sets each game's PGN, matched by round and both player names. */
+function attachPgns(rounds: CrRound[], pgns: CrPgnGame[]) {
+  const byGame = new Map(pgns.map((g) => [`${g.round}|${nameKey(g.white)}|${nameKey(g.black)}`, g.movetext]))
+  for (const round of rounds) {
+    for (const game of [...round.games, ...round.matches.flatMap((m) => m.games)]) {
+      game.pgn = byGame.get(`${round.number}|${nameKey(game.white.name)}|${nameKey(game.black.name)}`) ?? null
+    }
+  }
+}
+
+/** Downloads everything the sync needs: details, players or team rosters, every paired round and the PGNs. */
 export async function fetchChessResultsTournament(tnr: number): Promise<CrTournament> {
   const details = parseDetails(await page(tnr, { turdet: 'YES' }), tnr)
   if (!details.name) throw new Error(`No se encontró el torneo ${tnr} en chess-results`)
-  const rounds = []
+  const rounds: CrRound[] = []
+  const tournament: CrTournament = { details, players: [], teams: [], rounds }
   if (details.isTeam) {
     const list = parseTeamList(await page(tnr, { art: 0, zeilen: 99999 }))
     const rosters = parseTeamRosters(await page(tnr, { art: 1, zeilen: 99999 }))
-    const teams = list.length
+    tournament.teams = list.length
       ? list.map((team) => ({ ...team, players: rosters.find((r) => r.name === team.name)?.players ?? [] }))
       : rosters
     for (let rd = 1; rd <= details.pairedRounds; rd++) rounds.push(parseTeamRound(await page(tnr, { art: 3, rd }), rd))
-    return { details, players: [], teams, rounds }
+  } else {
+    tournament.players = parsePlayers(await page(tnr, { art: 0, zeilen: 99999 }))
+    for (let rd = 1; rd <= details.pairedRounds; rd++) rounds.push(parseIndividualRound(await page(tnr, { art: 2, rd }), rd))
   }
-  const players = parsePlayers(await page(tnr, { art: 0, zeilen: 99999 }))
-  for (let rd = 1; rd <= details.pairedRounds; rd++) rounds.push(parseIndividualRound(await page(tnr, { art: 2, rd }), rd))
-  return { details, players, teams: [], rounds }
+  if (details.pgnSearchId) attachPgns(rounds, await fetchChessResultsPgns(tnr, details.pgnSearchId))
+  return tournament
 }
 
 export interface ChessResultsSearch {

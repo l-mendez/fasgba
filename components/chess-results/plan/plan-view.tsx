@@ -30,7 +30,8 @@ export function ImportPlanView({ plan, details }: { plan: ImportPlan; details: C
     ...(details.isTeam ? [{ label: "Equipos nuevos", value: s.newTeams, tone: "new" as const }] : []),
     { label: "Rondas nuevas", value: s.newRounds, tone: "new" as const },
     { label: "Partidas nuevas", value: s.newGames, tone: "new" as const },
-    { label: "Resultados a completar", value: s.filledResults, tone: "new" as const },
+    { label: "A completar (resultado/PGN)", value: s.filledResults, tone: "new" as const },
+    { label: "PGN a importar", value: s.pgns, tone: "new" as const },
     { label: "Ya cargadas", value: s.existingGames },
     ...(s.skippedGames ? [{ label: "Partidas omitidas", value: s.skippedGames, tone: "warn" as const }] : []),
   ]

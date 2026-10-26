@@ -4,7 +4,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { formatArgentinaDateOnly } from '@/lib/dateUtils'
-import { fail } from './db'
+import { fail, gameFill } from './db'
 import { matchPlayers, nameKey } from './match'
 import { matchTeams, type TeamMatch } from './sync-teams'
 import { chessResultsEventDates, tournamentFromChessResults } from './sync'
@@ -42,6 +42,7 @@ export interface PlanGame {
   black: string
   result: CrResult
   forfeit: boolean
+  hasPgn: boolean
   status: PlanStatus
 }
 
@@ -65,18 +66,18 @@ export interface ImportPlan {
   players: PlanPlayer[]
   teams: PlanTeam[]
   rounds: PlanRound[]
-  summary: Record<'newPlayers' | 'existingPlayers' | 'newTeams' | 'unmatchedTeams' | 'newRounds' | 'newGames' | 'filledResults' | 'existingGames' | 'skippedGames', number>
+  summary: Record<'newPlayers' | 'existingPlayers' | 'newTeams' | 'unmatchedTeams' | 'newRounds' | 'newGames' | 'filledResults' | 'existingGames' | 'skippedGames' | 'pgns', number>
 }
 
-type ExistingGame = { result: string | null }
+type ExistingGame = { result: string | null; pgn: string | null }
 
 function gameStatus(game: CrGame, existing: ExistingGame | undefined): PlanStatus {
   if (!existing) return 'new'
-  return (!existing.result || existing.result === '*') && game.result !== '*' ? 'fill' : 'exists'
+  return gameFill(game, existing) ? 'fill' : 'exists'
 }
 
 const toPlanGame = (g: CrGame, status: PlanStatus): PlanGame => ({
-  board: g.board, white: g.white.name, black: g.black.name, result: g.result, forfeit: g.forfeit, status,
+  board: g.board, white: g.white.name, black: g.black.name, result: g.result, forfeit: g.forfeit, hasPgn: !!g.pgn, status,
 })
 
 async function siteTournament(db: SupabaseClient, tournamentId: number | null) {
@@ -89,8 +90,8 @@ async function siteTournament(db: SupabaseClient, tournamentId: number | null) {
   fail('leer el torneo', t.error ?? dates.error ?? rounds.error)
   const roundIds = (rounds.data ?? []).map((r) => r.id)
   const [games, matches] = await Promise.all([
-    db.from('individual_games').select('round_id, white_player_id, black_player_id, result').in('round_id', roundIds),
-    db.from('matches').select('id, round_id, team_a_id, team_b_id, match_games(board_number, result)').in('round_id', roundIds),
+    db.from('individual_games').select('round_id, white_player_id, black_player_id, result, pgn').in('round_id', roundIds),
+    db.from('matches').select('id, round_id, team_a_id, team_b_id, match_games(board_number, result, pgn)').in('round_id', roundIds),
   ])
   fail('leer partidas', games.error ?? matches.error)
   return {
@@ -148,7 +149,7 @@ export async function buildImportPlan(db: SupabaseClient, cr: CrTournament, tour
       const existing = roundId && a && b
         ? site!.matches.find((x) => x.round_id === roundId && [x.team_a_id, x.team_b_id].sort().join() === [a, b].sort().join())
         : undefined
-      const boards = (existing?.match_games ?? []) as Array<{ board_number: number; result: string | null }>
+      const boards = (existing?.match_games ?? []) as Array<{ board_number: number; result: string | null; pgn: string | null }>
       return {
         home: m.home.name, away: m.away.name,
         status: unmatched ? 'skip' as const : existing ? 'exists' as const : 'new' as const,
@@ -180,6 +181,7 @@ export async function buildImportPlan(db: SupabaseClient, cr: CrTournament, tour
       filledResults: count('fill'),
       existingGames: count('exists'),
       skippedGames: count('skip'),
+      pgns: allGames.filter((g) => g.hasPgn && (g.status === 'new' || g.status === 'fill')).length,
     },
   }
 }

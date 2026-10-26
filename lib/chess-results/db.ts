@@ -21,29 +21,41 @@ export async function ensureRounds(db: SupabaseClient, tournamentId: number, num
   return { ids, created: missing.length }
 }
 
-/** Splits CR games into rows to insert and pending results to fill. */
-export function planGames<T extends { id: number; result: string | null }>(
+export type GameFill = { result?: string; pgn?: string }
+
+/** What a chess-results game fills on an existing row: a pending result and/or a missing PGN. */
+export function gameFill(game: CrGame, current: { result: string | null; pgn?: string | null }): GameFill | null {
+  const fill: GameFill = {}
+  if ((!current.result || current.result === '*') && game.result !== '*') fill.result = game.result
+  if (!current.pgn && game.pgn) fill.pgn = game.pgn
+  return fill.result || fill.pgn ? fill : null
+}
+
+/** Splits CR games into rows to insert and existing rows to fill. */
+export function planGames<T extends { id: number; result: string | null; pgn: string | null }>(
   games: CrGame[],
   existing: Map<string, T>,
   key: (game: CrGame) => string | null,
   row: (game: CrGame) => Record<string, unknown> | null,
 ) {
   const inserts: Record<string, unknown>[] = []
-  const updates: Array<{ id: number; result: string }> = []
+  const updates: Array<{ id: number; fill: GameFill }> = []
   for (const game of games) {
     const k = key(game)
     if (!k) continue
     const current = existing.get(k)
+    const fill = current ? gameFill(game, current) : null
     if (!current) {
       const r = row(game)
-      if (r) inserts.push(r)
-    } else if ((!current.result || current.result === '*') && game.result !== '*') {
-      updates.push({ id: current.id, result: game.result })
+      if (r) inserts.push({ ...r, pgn: game.pgn ?? null })
+    } else if (fill) {
+      updates.push({ id: current.id, fill })
     }
   }
-  return { inserts, updates }
+  const pgnsAdded = inserts.filter((r) => r.pgn).length + updates.filter((u) => u.fill.pgn).length
+  return { inserts, updates, resultsUpdated: updates.filter((u) => u.fill.result).length, pgnsAdded }
 }
 
-export async function applyResultUpdates(db: SupabaseClient, table: 'individual_games' | 'match_games', updates: Array<{ id: number; result: string }>) {
-  for (const u of updates) fail('actualizar resultados', (await db.from(table).update({ result: u.result }).eq('id', u.id)).error)
+export async function applyGameUpdates(db: SupabaseClient, table: 'individual_games' | 'match_games', updates: Array<{ id: number; fill: GameFill }>) {
+  for (const u of updates) fail('actualizar partidas', (await db.from(table).update(u.fill).eq('id', u.id)).error)
 }

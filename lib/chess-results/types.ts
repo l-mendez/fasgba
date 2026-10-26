@@ -25,6 +25,8 @@ export interface CrGame {
   black: CrPlayerRef
   result: CrResult
   forfeit: boolean
+  /** Movetext from the tournament's PGN download, when published. */
+  pgn?: string | null
 }
 
 export interface CrTeamRef {
@@ -67,6 +69,15 @@ export interface CrDetails {
   endDate: string | null // YYYY-MM-DD
   isTeam: boolean
   lastUpdate: string | null
+  /** Id of the PGN download (PartieSuche.aspx) when the tournament publishes games. */
+  pgnSearchId: number | null
+}
+
+export interface CrPgnGame {
+  round: number
+  white: string
+  black: string
+  movetext: string
 }
 
 export interface CrTournament {

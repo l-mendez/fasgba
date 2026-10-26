@@ -4,7 +4,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { bestNameMatch, nameKey, resolvePlayers } from './match'
-import { applyResultUpdates, ensureRounds, fail, planGames } from './db'
+import { applyGameUpdates, ensureRounds, fail, planGames } from './db'
 import type { CrTournament } from './types'
 
 export interface TeamSyncCounts {
@@ -15,6 +15,7 @@ export interface TeamSyncCounts {
   matchesCreated: number
   gamesCreated: number
   resultsUpdated: number
+  pgnsAdded: number
   unmatchedTeams: string[]
 }
 
@@ -112,6 +113,7 @@ export async function syncTeams(db: SupabaseClient, tournamentId: number, cr: Cr
   let matchesCreated = 0
   let gamesCreated = 0
   let resultsUpdated = 0
+  let pgnsAdded = 0
   for (const round of played) {
     const roundId = rounds.ids.get(round.number)!
     const { data: matches, error: matchError } = await db.from('matches').select('id, team_a_id, team_b_id').eq('round_id', roundId)
@@ -130,19 +132,20 @@ export async function syncTeams(db: SupabaseClient, tournamentId: number, cr: Cr
         matchId = data!.id as number
         matchesCreated++
       }
-      const { data: games, error: gamesError } = await db.from('match_games').select('id, board_number, result').eq('match_id', matchId)
+      const { data: games, error: gamesError } = await db.from('match_games').select('id, board_number, result, pgn').eq('match_id', matchId)
       fail('leer partidas', gamesError)
       const plan = planGames(match.games, new Map((games ?? []).map((g) => [String(g.board_number), g])),
         (g) => String(g.board),
         (g) => ({ match_id: matchId, board_number: g.board, white_player_id: playerId(g.white.name), black_player_id: playerId(g.black.name), result: g.result, game_date: round.date }))
       if (plan.inserts.length) fail('crear partidas', (await db.from('match_games').insert(plan.inserts)).error)
-      await applyResultUpdates(db, 'match_games', plan.updates)
+      await applyGameUpdates(db, 'match_games', plan.updates)
       gamesCreated += plan.inserts.length
-      resultsUpdated += plan.updates.length
+      resultsUpdated += plan.resultsUpdated
+      pgnsAdded += plan.pgnsAdded
     }
   }
   return {
     playersCreated, teamsLinked: teams.teamsLinked, teamsCreated: teams.teamsCreated, roundsCreated: rounds.created,
-    matchesCreated, gamesCreated, resultsUpdated, unmatchedTeams: teams.unmatched,
+    matchesCreated, gamesCreated, resultsUpdated, pgnsAdded, unmatchedTeams: teams.unmatched,
   }
 }
