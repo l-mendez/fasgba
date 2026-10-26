@@ -12,7 +12,6 @@ interface DashboardContentProps {
   initialOverview: ReactNode
   initialStats: ClubAdminStats
   initialRecentActivity: ClubAdminActivityItem[]
-  showHeader?: boolean
 }
 
 const emptyStats: ClubAdminStats = {
@@ -28,7 +27,6 @@ export function DashboardContent({
   initialOverview,
   initialStats,
   initialRecentActivity,
-  showHeader = true,
 }: DashboardContentProps) {
   const { selectedClub } = useClubContext()
   const [statsByClub, setStatsByClub] = useState<Record<number, ClubAdminStats>>({
@@ -80,7 +78,7 @@ export function DashboardContent({
     return (
       <div className="flex-1 space-y-4">
         <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Selecciona un club para ver el dashboard</p>
+          <p className="text-muted-foreground">Selecciona un club.</p>
         </div>
       </div>
     )
@@ -91,15 +89,6 @@ export function DashboardContent({
 
   return (
     <div className="flex-1 space-y-4">
-      {showHeader ? (
-        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard del Club</h2>
-            <p className="text-muted-foreground">{selectedClub.name}</p>
-          </div>
-        </div>
-      ) : null}
-
       {canUseInitialOverview ? initialOverview : (
         <DashboardOverview
           error={error}

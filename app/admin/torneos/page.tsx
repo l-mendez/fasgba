@@ -27,7 +27,7 @@ interface Tournament {
   cost?: string | null
   prizes?: string | null
   image?: string | null
-  start_date: Date
+  start_date: Date | null
   end_date: Date | null
   formatted_start_date: string
   formatted_end_date?: string | null
@@ -132,16 +132,18 @@ async function fetchTournaments(): Promise<Tournament[]> {
         const eventDates = tournament.tournamentdates?.map((date: any) => new Date(date.event_date)) || []
         eventDates.sort((a: Date, b: Date) => a.getTime() - b.getTime()) // Sort dates
         
-        const startDate = eventDates.length > 0 ? eventDates[0] : new Date()
+        const startDate: Date | null = eventDates.length > 0 ? eventDates[0] : null
         const endDate = eventDates.length > 1 ? eventDates[eventDates.length - 1] : null
         
         // Determine status based on dates
+        // Undated tournaments are treated as upcoming (not yet scheduled)
         let status: "upcoming" | "ongoing" | "past" = "upcoming"
-        let is_upcoming = false
+        let is_upcoming = true
         let is_ongoing = false
         let is_past = false
         
-        if (eventDates.length > 0) {
+        if (startDate) {
+          is_upcoming = false
           if (endDate && endDate < now) {
             status = "past"
             is_past = true
@@ -155,7 +157,8 @@ async function fetchTournaments(): Promise<Tournament[]> {
         }
 
         // Format dates for display
-        const formatted_start_date = startDate.toLocaleDateString('es-AR')
+        const formatted_start_date = startDate ? startDate.toLocaleDateString('es-AR') : ''
+
         const formatted_end_date = endDate ? endDate.toLocaleDateString('es-AR') : null
 
         const participants = participantsByTournament.get(tournament.id) || 0
@@ -196,15 +199,14 @@ async function fetchTournaments(): Promise<Tournament[]> {
 
 export default function AdminTorneosPage() {
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="space-y-6">
       <AdminPageHeader
         title="Torneos"
-        subtitle="Gestiona los torneos y competiciones de FASGBA."
         action={
           <Button asChild>
             <Link href="/torneos/nuevo">
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Torneo
+              <Plus className="h-4 w-4" />
+              Nuevo torneo
             </Link>
           </Button>
         }
@@ -228,9 +230,7 @@ async function AdminTorneosContent() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-8">
-        <ErrorAlert message={error} />
-      </div>
+      <ErrorAlert message={error} />
     )
   }
 

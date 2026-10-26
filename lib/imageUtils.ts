@@ -1,4 +1,4 @@
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
+import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -204,36 +204,30 @@ export async function deleteNewsImages(newsId: number): Promise<void> {
   }
 }
 
+// Public URL of a path in the "images" bucket, built as a plain string (same
+// format as supabase.storage.getPublicUrl) so no Supabase client is created per
+// call. Works in both server and client contexts.
+function buildPublicImageUrl(imagePath: string): string | null {
+  // Already a full URL: return as is
+  if (imagePath.startsWith('http')) return imagePath
+
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!baseUrl) {
+    console.error('Missing Supabase environment variables')
+    return null
+  }
+
+  const path = imagePath.replace(/^\/+/, '')
+  return encodeURI(`${baseUrl.replace(/\/+$/, '')}/storage/v1/object/public/images/${path}`)
+}
+
 /**
  * Get public URL for an image stored in Supabase Storage
- * This function works in both server and client contexts
+ * Falls back to the placeholder when there is no image
  */
 export function getImageUrl(imagePath: string | null): string {
   if (!imagePath) return "/placeholder.svg"
-  
-  // If it's already a full URL, return as is
-  if (imagePath.startsWith('http')) {
-    return imagePath
-  }
-  
-  // Create a simple Supabase client just for getting public URLs
-  // This doesn't require authentication and works in all contexts
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseAnonKey = SUPABASE_PUBLISHABLE_KEY
-  
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Missing Supabase environment variables')
-    return "/placeholder.svg"
-  }
-  
-  const supabase = createClient(supabaseUrl, supabaseAnonKey)
-  
-  // Convert Supabase Storage path to public URL
-  const { data: { publicUrl } } = supabase.storage
-    .from('images')
-    .getPublicUrl(imagePath)
-  
-  return publicUrl
+  return buildPublicImageUrl(imagePath) ?? "/placeholder.svg"
 }
 
 /**
@@ -242,27 +236,5 @@ export function getImageUrl(imagePath: string | null): string {
  */
 export function getImageUrlNullable(imagePath: string | null): string | null {
   if (!imagePath) return null
-  
-  // If it's already a full URL, return as is
-  if (imagePath.startsWith('http')) {
-    return imagePath
-  }
-  
-  // Create a simple Supabase client just for getting public URLs
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseAnonKey = SUPABASE_PUBLISHABLE_KEY
-  
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Missing Supabase environment variables')
-    return null
-  }
-  
-  const supabase = createClient(supabaseUrl, supabaseAnonKey)
-  
-  // Convert Supabase Storage path to public URL
-  const { data: { publicUrl } } = supabase.storage
-    .from('images')
-    .getPublicUrl(imagePath)
-  
-  return publicUrl
-} 
+  return buildPublicImageUrl(imagePath)
+}

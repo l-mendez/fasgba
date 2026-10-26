@@ -1,10 +1,10 @@
 import Link from "next/link"
-import { ArrowLeft, MapPin, GraduationCap, Calendar, Mail, Phone, DollarSign } from "lucide-react"
+import { Building2, Cake, ChevronLeft, DollarSign, GraduationCap, Mail, MapPin, Phone } from "lucide-react"
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { InfoPill } from "@/components/info-pill"
+import { getModalidades } from "@/lib/profesorModalidad"
 import { getProfesorById } from "@/lib/profesorUtils"
 import { getImageUrlNullable } from "@/lib/imageUtils"
 
@@ -21,34 +21,22 @@ interface PageProps {
   }>
 }
 
-const modalidadLabels: Record<string, string> = {
-  presencial: 'Presencial',
-  virtual: 'Virtual',
-  ambos: 'Presencial y Virtual',
-}
-
-const modalidadColors: Record<string, string> = {
-  presencial: 'bg-green-100 text-green-800',
-  virtual: 'bg-blue-100 text-blue-800',
-  ambos: 'bg-purple-100 text-purple-800',
-}
-
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params
   const profesorId = parseInt(id, 10)
 
   if (isNaN(profesorId)) {
-    return { title: 'Profesor no encontrado - FASGBA' }
+    return { title: 'Profesor no encontrado' }
   }
 
   const profesor = await getProfesorById(profesorId)
 
   if (!profesor) {
-    return { title: 'Profesor no encontrado - FASGBA' }
+    return { title: 'Profesor no encontrado' }
   }
 
   return {
-    title: `${profesor.titulo} - Profesores FASGBA`,
+    title: profesor.titulo,
     description: profesor.biografia || `Perfil del profesor ${profesor.titulo} en FASGBA.`,
   }
 }
@@ -68,105 +56,97 @@ export default async function ProfesorDetailPage({ params }: PageProps) {
   }
 
   const imageUrl = getImageUrlNullable(profesor.foto)
+  // "Consultar" means nothing without a way to ask, so it needs an email or phone.
+  const hasContact = Boolean(profesor.email || profesor.telefono)
+  const showTarifa = Boolean(profesor.tarifa_horaria) && (hasContact || !/^consultar$/i.test(profesor.tarifa_horaria!.trim()))
 
   return (
-    <>
-      <section className="w-full py-12 md:py-24">
-        <div className="container px-4 md:px-6">
-          <Button variant="ghost" size="sm" asChild className="mb-8">
-            <Link href="/profesores">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Volver a Profesores
-            </Link>
-          </Button>
+    <section className="container px-4 pt-8 pb-12 md:px-6 md:pt-12 md:pb-16">
+      <Link
+        href="/profesores"
+        className="inline-flex items-center gap-1 text-sm font-semibold text-terracotta underline-offset-4 hover:underline"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Profesores
+      </Link>
 
-          <div className="grid gap-8 md:grid-cols-[300px_1fr]">
-            {/* Photo */}
-            <div>
-              {imageUrl ? (
-                <img
-                  src={imageUrl}
-                  alt={`Foto de ${profesor.titulo}`}
-                  className="w-full aspect-square object-cover rounded-lg border"
-                />
-              ) : (
-                <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center">
-                  <GraduationCap className="h-20 w-20 text-muted-foreground" />
-                </div>
-              )}
-            </div>
+      <div className="mt-4 grid gap-6 md:grid-cols-[280px_1fr] md:gap-8">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={`Foto de ${profesor.titulo}`}
+            className="aspect-[4/3] w-full rounded-lg border object-cover md:aspect-square"
+          />
+        ) : (
+          <div className="flex aspect-[4/3] w-full items-center justify-center rounded-lg bg-muted md:aspect-square">
+            <GraduationCap className="h-16 w-16 text-muted-foreground" />
+          </div>
+        )}
 
-            {/* Info */}
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-terracotta mb-2">
-                  {profesor.titulo}
-                </h1>
-                <Badge variant="secondary" className={modalidadColors[profesor.modalidad]}>
-                  {modalidadLabels[profesor.modalidad]}
-                </Badge>
-              </div>
-
-              <div className="space-y-3">
-                {profesor.club_name && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <GraduationCap className="h-5 w-5 shrink-0" />
-                    <span>Club: <strong>{profesor.club_name}</strong></span>
-                  </div>
-                )}
-
-                {profesor.zona && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <MapPin className="h-5 w-5 shrink-0" />
-                    <span>{profesor.zona}</span>
-                  </div>
-                )}
-
-                {profesor.anio_nacimiento && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="h-5 w-5 shrink-0" />
-                    <span>Año de nacimiento: {profesor.anio_nacimiento}</span>
-                  </div>
-                )}
-
-                {profesor.email && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Mail className="h-5 w-5 shrink-0" />
-                    <a href={`mailto:${profesor.email}`} className="hover:underline text-amber">
-                      {profesor.email}
-                    </a>
-                  </div>
-                )}
-
-                {profesor.telefono && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="h-5 w-5 shrink-0" />
-                    <a href={`tel:${profesor.telefono}`} className="hover:underline text-amber">
-                      {profesor.telefono}
-                    </a>
-                  </div>
-                )}
-
-                {profesor.tarifa_horaria && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <DollarSign className="h-5 w-5 shrink-0" />
-                    <span>{profesor.tarifa_horaria}</span>
-                  </div>
-                )}
-              </div>
-
-              {profesor.biografia && (
-                <div>
-                  <h2 className="text-lg font-semibold mb-2">Reseña Biográfica</h2>
-                  <p className="text-muted-foreground whitespace-pre-line leading-relaxed">
-                    {profesor.biografia}
-                  </p>
-                </div>
-              )}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight text-terracotta md:text-4xl">{profesor.titulo}</h1>
+            <div className="flex flex-wrap gap-1.5">
+              {getModalidades(profesor.modalidad).map(({ label, icon }) => (
+                <InfoPill key={label} icon={icon}>{label}</InfoPill>
+              ))}
             </div>
           </div>
+
+          <ul className="space-y-1.5 text-sm text-muted-foreground">
+            {profesor.club_name && (
+              <li className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 shrink-0" />
+                {profesor.club_id ? (
+                  <Link href={`/clubes/${profesor.club_id}`} className="text-terracotta hover:underline">
+                    {profesor.club_name}
+                  </Link>
+                ) : (
+                  <span>{profesor.club_name}</span>
+                )}
+              </li>
+            )}
+            {profesor.zona && (
+              <li className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 shrink-0" />
+                <span>{profesor.zona}</span>
+              </li>
+            )}
+            {profesor.anio_nacimiento && (
+              <li className="flex items-center gap-2" title="Año de nacimiento">
+                <Cake className="h-4 w-4 shrink-0" />
+                <span>{profesor.anio_nacimiento}</span>
+              </li>
+            )}
+            {profesor.email && (
+              <li className="flex items-center gap-2">
+                <Mail className="h-4 w-4 shrink-0" />
+                <a href={`mailto:${profesor.email}`} className="break-all text-terracotta hover:underline">
+                  {profesor.email}
+                </a>
+              </li>
+            )}
+            {profesor.telefono && (
+              <li className="flex items-center gap-2">
+                <Phone className="h-4 w-4 shrink-0" />
+                <a href={`tel:${profesor.telefono}`} className="text-terracotta hover:underline">
+                  {profesor.telefono}
+                </a>
+              </li>
+            )}
+            {showTarifa && (
+              <li className="flex items-center gap-2" title="Tarifa horaria">
+                <DollarSign className="h-4 w-4 shrink-0" />
+                <span>{profesor.tarifa_horaria}</span>
+              </li>
+            )}
+          </ul>
+
+          {profesor.biografia && (
+            <p className="max-w-3xl whitespace-pre-line leading-relaxed">{profesor.biografia}</p>
+          )}
         </div>
-      </section>
-    </>
+      </div>
+    </section>
   )
 }

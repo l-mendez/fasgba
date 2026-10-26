@@ -3,14 +3,13 @@
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Upload, ImageIcon, Loader2, CheckCircle } from "lucide-react"
+import { ArrowLeft, Upload, ImageIcon, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { ErrorAlert } from "@/components/error-alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
   SelectContent,
@@ -62,7 +61,6 @@ interface EditarProfesorClientProps {
 export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorClientProps) {
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [clubs] = useState<Club[]>(initialClubs)
   const [formData, setFormData] = useState<FormData>({
     titulo: profesor.titulo || "",
@@ -81,7 +79,6 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
   const [currentImage, setCurrentImage] = useState<string | null>(profesor.foto)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const getCurrentImageUrl = () => {
@@ -99,16 +96,13 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
       const result = await uploadProfesorImageAction(profesor.id, fd)
 
       if (!result.ok) {
-        throw new Error(result.error || 'Failed to upload image')
+        throw new Error(result.error || 'No se pudo subir la imagen')
       }
 
       setCurrentImage(result.data.filePath)
       setImagePreview(null)
 
-      toast.success("Imagen subida correctamente", {
-        description: "La foto del profesor se ha actualizado",
-        duration: 4000,
-      })
+      toast.success("Foto subida correctamente")
     } catch (error) {
       console.error('Error uploading image:', error)
       toast.error(error instanceof Error ? error.message : "Error al subir la imagen")
@@ -165,7 +159,6 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
     setValidationErrors({})
 
     if (!validateForm()) return
@@ -190,16 +183,10 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
         body: JSON.stringify(profesorData)
       })
 
-      setShowSuccess(true)
-      toast.success("Profesor actualizado correctamente", {
-        description: "Los cambios se han guardado exitosamente",
-        duration: 4000,
-      })
-
-      setTimeout(() => setShowSuccess(false), 3000)
+      toast.success("Profesor actualizado correctamente")
       setTimeout(() => router.push("/admin/profesores"), 1500)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al actualizar el profesor")
+      toast.error(err instanceof Error ? err.message : "Error al actualizar el profesor")
     } finally {
       setIsSaving(false)
     }
@@ -213,52 +200,24 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
     }
   }
 
-  if (error && !formData.titulo) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <ErrorAlert message={error} className="max-w-md" />
-        <Button variant="outline" onClick={() => router.push("/admin/profesores")}>
-          Volver a la lista
-        </Button>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/admin/profesores">
+          <Link href="/admin/profesores" aria-label="Volver" title="Volver">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Editar Profesor</h1>
-          <p className="text-muted-foreground">Modifica la información del profesor.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Editar profesor</h1>
         </div>
       </div>
 
-      {showSuccess && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 animate-in slide-in-from-top duration-300">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            <div>
-              <h3 className="text-sm font-medium text-green-800">
-                Profesor actualizado exitosamente
-              </h3>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Photo Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Foto del Profesor</CardTitle>
-            <CardDescription>
-              Sube una foto del profesor (máximo 5MB)
-            </CardDescription>
+            <CardTitle>Foto del profesor</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -279,10 +238,10 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
 
               {!currentImage && !imagePreview && (
                 <div
-                  className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                  className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors hover:border-amber"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <ImageIcon className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground mb-2">
                     Haz clic para subir una foto del profesor
                   </p>
@@ -319,25 +278,22 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
         {/* Information Form */}
         <Card>
           <CardHeader>
-            <CardTitle>Información del Profesor</CardTitle>
-            <CardDescription>
-              Actualiza la información del profesor
-            </CardDescription>
+            <CardTitle>Información del profesor</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="titulo">Nombre del Profesor *</Label>
+                <Label htmlFor="titulo">Nombre del profesor *</Label>
                 <Input
                   id="titulo"
                   name="titulo"
                   value={formData.titulo}
                   onChange={handleChange}
                   placeholder="Ej: GM Roberto García"
-                  className={validationErrors.titulo ? "border-red-500" : ""}
+                  className={validationErrors.titulo ? "border-destructive" : ""}
                 />
                 {validationErrors.titulo && (
-                  <p className="text-sm text-red-500">{validationErrors.titulo}</p>
+                  <p className="text-sm text-destructive">{validationErrors.titulo}</p>
                 )}
               </div>
 
@@ -362,7 +318,7 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="anio_nacimiento">Año de Nacimiento</Label>
+                <Label htmlFor="anio_nacimiento">Año de nacimiento</Label>
                 <Input
                   id="anio_nacimiento"
                   name="anio_nacimiento"
@@ -372,10 +328,10 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
                   placeholder="Ej: 1985"
                   min={1900}
                   max={new Date().getFullYear()}
-                  className={validationErrors.anio_nacimiento ? "border-red-500" : ""}
+                  className={validationErrors.anio_nacimiento ? "border-destructive" : ""}
                 />
                 {validationErrors.anio_nacimiento && (
-                  <p className="text-sm text-red-500">{validationErrors.anio_nacimiento}</p>
+                  <p className="text-sm text-destructive">{validationErrors.anio_nacimiento}</p>
                 )}
               </div>
 
@@ -403,13 +359,13 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
                   name="zona"
                   value={formData.zona}
                   onChange={handleChange}
-                  placeholder="Ej: Zona Sur, Lomas de Zamora"
+                  placeholder="Ej: Zona sur, Lomas de Zamora"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="email">Correo Electrónico</Label>
+                  <Label htmlFor="email">Correo electrónico</Label>
                   <Input
                     id="email"
                     name="email"
@@ -417,10 +373,10 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="Ej: profesor@email.com"
-                    className={validationErrors.email ? "border-red-500" : ""}
+                    className={validationErrors.email ? "border-destructive" : ""}
                   />
                   {validationErrors.email && (
-                    <p className="text-sm text-red-500">{validationErrors.email}</p>
+                    <p className="text-sm text-destructive">{validationErrors.email}</p>
                   )}
                 </div>
 
@@ -438,7 +394,7 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="tarifa_horaria">Tarifa Horaria</Label>
+                <Label htmlFor="tarifa_horaria">Tarifa horaria</Label>
                 <Input
                   id="tarifa_horaria"
                   name="tarifa_horaria"
@@ -449,7 +405,7 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="biografia">Reseña Biográfica</Label>
+                <Label htmlFor="biografia">Reseña biográfica</Label>
                 <Textarea
                   id="biografia"
                   name="biografia"
@@ -463,13 +419,7 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
           </CardContent>
         </Card>
 
-        {error && (
-          <div className="text-sm text-red-500">
-            {error}
-          </div>
-        )}
-
-        <div className="flex justify-end gap-4">
+        <div className="flex justify-end gap-3">
           <Button
             type="button"
             variant="outline"
@@ -478,7 +428,7 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
             Cancelar
           </Button>
           <Button type="submit" disabled={isSaving}>
-            {isSaving ? "Guardando..." : "Guardar Cambios"}
+            {isSaving ? "Guardando..." : "Guardar cambios"}
           </Button>
         </div>
       </form>

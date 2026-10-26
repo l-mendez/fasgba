@@ -30,7 +30,7 @@ export function ClubSearch() {
         <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
         <Input 
           type="search" 
-          placeholder="Buscar club..." 
+          placeholder="Buscar por nombre o dirección..." 
           className="w-full pl-10" 
           value={searchTerm}
           onChange={(e) => handleSearch(e.target.value)}

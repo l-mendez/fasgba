@@ -52,14 +52,6 @@ export function getViewableCategories(roles: DocumentoViewerRoles): DocumentCate
 }
 
 // Category colors for badges
-export const CATEGORY_COLORS: Record<DocumentCategory, string> = {
-  reglamentos: 'bg-blue-100 text-blue-800',
-  actas: 'bg-green-100 text-green-800',
-  minutas: 'bg-amber-100 text-amber-800',
-  escuela: 'bg-purple-100 text-purple-800',
-  otros: 'bg-gray-100 text-gray-800',
-}
-
 // Maximum file size: 10MB
 export const MAX_FILE_SIZE = 10 * 1024 * 1024
 

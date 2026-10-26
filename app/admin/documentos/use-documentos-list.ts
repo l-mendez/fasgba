@@ -208,7 +208,7 @@ export function useDocumentosList({
 
       setDocuments(documentsToSave)
       setCurrentPage(Math.max(totalPages, currentPage))
-      setSuccessMessage("Orden guardado exitosamente")
+      setSuccessMessage("Orden guardado")
       setHasOrderChanges(false)
     } catch (error) {
       console.error("Save order error:", error)

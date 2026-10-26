@@ -1,93 +1,61 @@
 "use client"
 
 import { useState } from "react"
-import { CheckCircle2, FileText, Settings } from "lucide-react"
+import { Settings } from "lucide-react"
+import { toast } from "sonner"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
+import { AdminPageHeader } from "@/components/admin-page-header"
 import { Button } from "@/components/ui/button"
-import { ErrorAlert } from "@/components/error-alert"
 import { DocumentoUploadCard } from "./documento-upload-card"
 import { DocumentosSettingsDialog } from "./documentos-settings-dialog"
 import { DocumentosTable } from "./documentos-table"
 import { useDocumentosList } from "./use-documentos-list"
 import type { CategoryImportance, Documento } from "./types"
 
+// Feedback goes through sonner toasts; empty messages (used to "clear") are ignored.
+const notifyError = (message: string) => {
+  if (message) toast.error(message)
+}
+const notifySuccess = (message: string) => {
+  if (message) toast.success(message)
+}
+
 interface AdminDocumentosClientProps {
   initialDocuments: Documento[]
   initialTotalDocuments: number
   initialCategoryImportance: CategoryImportance
-  showFormatBadge?: boolean
-  showHeader?: boolean
 }
 
 export function AdminDocumentosClient({
   initialDocuments,
   initialTotalDocuments,
   initialCategoryImportance,
-  showFormatBadge = true,
-  showHeader = true,
 }: AdminDocumentosClientProps) {
-  const [errorMessage, setErrorMessage] = useState("")
-  const [successMessage, setSuccessMessage] = useState("")
   const [showSettings, setShowSettings] = useState(false)
 
   const list = useDocumentosList({
     initialDocuments,
     initialTotalDocuments,
-    setErrorMessage,
-    setSuccessMessage,
+    setErrorMessage: notifyError,
+    setSuccessMessage: notifySuccess,
   })
 
   return (
     <div className="flex-1 space-y-6">
-      {showHeader ? (
-        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-            Gestión de Documentos
-          </h2>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="w-fit">
-              <FileText className="mr-1 h-3 w-3" />
-              Archivos PDF y Excel
-            </Badge>
-            <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
-              <Settings className="mr-2 h-4 w-4" />
-              Configuración
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2">
-          {showFormatBadge ? (
-            <Badge variant="outline" className="w-fit">
-              <FileText className="mr-1 h-3 w-3" />
-              Archivos PDF y Excel
-            </Badge>
-          ) : null}
-          <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
-            <Settings className="mr-2 h-4 w-4" />
+      <AdminPageHeader
+        title="Documentos"
+        action={
+          <Button variant="outline" onClick={() => setShowSettings(true)}>
+            <Settings className="h-4 w-4" />
             Configuración
           </Button>
-        </div>
-      )}
-
-      {errorMessage && <ErrorAlert message={errorMessage} />}
-
-      {successMessage && (
-        <Alert
-          variant="default"
-          className="border-green-200 bg-green-50 text-green-800"
-        >
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
-          <AlertDescription>{successMessage}</AlertDescription>
-        </Alert>
-      )}
+        }
+      />
 
       <DocumentoUploadCard
         onUploaded={(documentId) => list.loadDocuments({ ensureDocumentId: documentId })}
-        setErrorMessage={setErrorMessage}
-        setSuccessMessage={setSuccessMessage}
+        setErrorMessage={notifyError}
+        setSuccessMessage={notifySuccess}
       />
 
       <DocumentosTable
@@ -110,8 +78,8 @@ export function AdminDocumentosClient({
         loadMoreRef={list.loadMoreRef}
         setDocuments={list.setDocuments}
         setTotalDocuments={list.setTotalDocuments}
-        setErrorMessage={setErrorMessage}
-        setSuccessMessage={setSuccessMessage}
+        setErrorMessage={notifyError}
+        setSuccessMessage={notifySuccess}
       />
 
       <DocumentosSettingsDialog
@@ -123,8 +91,8 @@ export function AdminDocumentosClient({
             return list.loadDocuments()
           }
         }}
-        setErrorMessage={setErrorMessage}
-        setSuccessMessage={setSuccessMessage}
+        setErrorMessage={notifyError}
+        setSuccessMessage={notifySuccess}
       />
     </div>
   )

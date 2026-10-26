@@ -7,8 +7,6 @@ import { createClient } from "@/lib/supabase/server"
 import { getTournamentGames, getTournamentRounds } from "@/lib/gameUtils"
 
 import { Button } from "@/components/ui/button"
-import { ErrorAlert } from "@/components/error-alert"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
@@ -18,24 +16,15 @@ export const dynamic = 'force-dynamic'
 // Metadata generation
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params
-  
+
   try {
     const { tournament } = await getTournamentData(id)
-    
-    if (tournament) {
-      return {
-        title: `Editar ${tournament.title} | FASGBA`,
-        description: `Editar torneo: ${tournament.title}`,
-      }
-    }
+    if (tournament) return { title: `Editar ${tournament.title}` }
   } catch (error) {
     console.error('Error generating metadata:', error)
   }
-  
-  return {
-    title: 'Editar Torneo | FASGBA',
-    description: 'Editar información del torneo',
-  }
+
+  return { title: 'Editar torneo' }
 }
 
 interface Tournament {
@@ -261,11 +250,14 @@ interface PageProps {
   params: Promise<{
     id: string
   }>
+  searchParams: Promise<{ source?: string }>
 }
 
 // Main server component
-export default async function EditarTorneoPage({ params }: PageProps) {
+export default async function EditarTorneoPage({ params, searchParams }: PageProps) {
   const { id } = await params
+  const { source } = await searchParams
+  if (!/^\d+$/.test(id)) notFound()
   
   // Check authentication first - if not authenticated, redirect to login
   const isAuthenticated = await checkAuthentication()
@@ -275,11 +267,13 @@ export default async function EditarTorneoPage({ params }: PageProps) {
   }
   
   // Get tournament data and authorization
-  const { tournament, isAuthorized, error, isSiteAdmin, isClubAdmin, rounds, userClubIds } = await getTournamentData(id)
+  const { tournament, isAuthorized, isSiteAdmin, isClubAdmin, rounds, userClubIds } = await getTournamentData(id)
+
+  if (!tournament) notFound()
 
   // Prefetch existing games if we have a tournament and user is authorized
   let initialGames: any[] = []
-  if (tournament && isAuthorized) {
+  if (isAuthorized) {
     try {
       const gamesByRound = await getTournamentGames(
         parseInt(id, 10),
@@ -303,7 +297,7 @@ export default async function EditarTorneoPage({ params }: PageProps) {
 
   // Dynamic import management components
   let RoundsGamesManagement, TeamManagement
-  if (tournament && isAuthorized) {
+  if (isAuthorized) {
     const [roundsGamesManagementModule, teamManagementModule] = await Promise.all([
       import("@/components/tournament/rounds-games-management"),
       import("@/components/tournament/team-management")
@@ -312,73 +306,48 @@ export default async function EditarTorneoPage({ params }: PageProps) {
     TeamManagement = teamManagementModule.default
   }
 
+  // Coming from club-admin wins over the site-admin role (users can be both).
+  const returnPath = source === 'club-admin' || !isSiteAdmin ? '/club-admin/torneos' : '/admin/torneos'
+
   return (
-    <div className="flex flex-col gap-8 p-8">
-      <div className="flex items-center gap-4">
+    <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-8">
+      <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" asChild>
-          <Link href={isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"}>
+          <Link href={returnPath} aria-label="Volver" title="Volver">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">
-            {tournament ? 'Editar Torneo' : 'Error'}
-          </h1>
-          <p className="text-muted-foreground">
-            {tournament 
-              ? `Editando: ${tournament.title}` 
-              : 'No se pudo cargar el torneo'
-            }
-          </p>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Editar torneo</h1>
+          <p className="truncate text-sm text-muted-foreground">{tournament.title}</p>
         </div>
       </div>
 
-      {error && <ErrorAlert message={error} />}
-
-      {tournament && !isAuthorized && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Información del Torneo</CardTitle>
-            <CardDescription>Los datos del torneo están disponibles pero no tienes permisos para editarlo</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <p><strong>Título:</strong> {tournament.title}</p>
-              {tournament.description && (
-                <p><strong>Descripción:</strong> {tournament.description}</p>
-              )}
-              {tournament.place && (
-                <p><strong>Lugar:</strong> {tournament.place}</p>
-              )}
-              {tournament.created_by_club_id && (
-                <p><strong>Creado por Club ID:</strong> {tournament.created_by_club_id}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      {!isAuthorized && (
+        <p className="text-sm text-muted-foreground">No tienes permisos para editar este torneo.</p>
       )}
 
-      {tournament && isAuthorized && (
+      {isAuthorized && (
         <Suspense fallback={<LoadingSpinner />}>
           <Tabs defaultValue="info" className="w-full">
             <TabsList className={`grid w-full ${tournament.tournament_type === 'team' ? 'grid-cols-3' : 'grid-cols-2'}`}>
-              <TabsTrigger value="info">Información</TabsTrigger>
+              <TabsTrigger value="info" className="data-[state=active]:bg-background data-[state=active]:text-terracotta">Información</TabsTrigger>
               {tournament.tournament_type === 'team' && (
-                <TabsTrigger value="teams">Equipos</TabsTrigger>
+                <TabsTrigger value="teams" className="data-[state=active]:bg-background data-[state=active]:text-terracotta">Equipos</TabsTrigger>
               )}
-              <TabsTrigger value="rounds-games">Rondas y Partidas</TabsTrigger>
+              <TabsTrigger value="rounds-games" className="data-[state=active]:bg-background data-[state=active]:text-terracotta">Rondas</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="info" className="mt-6">
+            <TabsContent value="info" className="mt-4">
               <EditarTorneoForm 
                 tournament={tournament}
                 tournamentId={id}
-                isSiteAdmin={isSiteAdmin}
+                returnPath={returnPath}
               />
             </TabsContent>
 
             {TeamManagement && tournament.tournament_type === 'team' && (
-              <TabsContent value="teams" className="mt-6">
+              <TabsContent value="teams" className="mt-4">
                 <TeamManagement
                   tournamentId={id}
                   tournamentType={tournament.tournament_type as 'individual' | 'team' || 'individual'}
@@ -388,7 +357,7 @@ export default async function EditarTorneoPage({ params }: PageProps) {
             )}
             
             {RoundsGamesManagement && (
-              <TabsContent value="rounds-games" className="mt-6">
+              <TabsContent value="rounds-games" className="mt-4">
                 <RoundsGamesManagement
                   tournamentId={id}
                   tournamentType={tournament.tournament_type as 'individual' | 'team' || 'individual'}

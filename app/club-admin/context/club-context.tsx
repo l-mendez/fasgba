@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, type ReactNode } from "react"
-import type { ClubAdminClub } from "@/lib/club-admin/types"
+import { SELECTED_CLUB_COOKIE, type ClubAdminClub } from "@/lib/club-admin/types"
 
 // Definir el tipo para el club según la API
 export type Club = ClubAdminClub
@@ -49,6 +49,8 @@ export function ClubContextProvider({
     const club = clubesAdministrados.find(c => c.id === parseInt(clubId))
     if (club) {
       setSelectedClub(club)
+      // Read by getClubAdminContext so reloads keep the selection.
+      document.cookie = `${SELECTED_CLUB_COOKIE}=${club.id}; path=/; max-age=31536000; samesite=lax`
     }
   }
 

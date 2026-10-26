@@ -19,7 +19,7 @@ export const revalidate = false
 
 // Generate metadata for better link previews
 export const metadata: Metadata = {
-  title: 'Torneos FASGBA - Calendario de Competencias',
+  title: 'Torneos',
   description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires. Consulta próximos torneos, torneos en curso y resultados.',
   keywords: ['FASGBA', 'torneos', 'ajedrez', 'competencias', 'calendario', 'federación', 'Buenos Aires', 'inscripción'],
   openGraph: {
@@ -85,12 +85,9 @@ export default async function TorneosPage() {
 
   return (
     <>
-      <PageHero
-        title="Torneos FASGBA"
-        subtitle="Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires"
-      />
+      <PageHero title="Torneos" />
 
-        <section className="w-full py-12 md:py-24 lg:py-32">
+        <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
           <div className="container px-4 md:px-6">
             {error && <ErrorAlert message={error} className="mb-6" />}
 

@@ -1,12 +1,11 @@
-import Link from "next/link"
-import { Award, Calendar, Mail, Phone, User } from "lucide-react"
+import { Building2, Cake, Mail, Phone, User } from "lucide-react"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { unstable_cache } from "next/cache"
 
 import { createAdminClient } from "@/lib/supabase/admin"
 import { PageHero } from "@/components/page-hero"
+import { getImageUrlNullable } from "@/lib/imageUtils"
 
 // Cached indefinitely, purged by revalidateArbitrosCache on mutation.
 export const revalidate = false
@@ -60,106 +59,75 @@ const getCachedArbitros = unstable_cache(
   { revalidate: false, tags: ['arbitros'] }
 )
 
-function getPhotoUrl(photo: string | null): string | null {
-  if (!photo) return null
-  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/images/${photo}`
-}
-
 export default async function ArbitrajePage() {
   const arbitros = await getCachedArbitros()
 
   return (
     <>
-      <PageHero
-        title="Arbitraje"
-        subtitle="Árbitros oficiales de la Federación de Ajedrez del Sur del Gran Buenos Aires"
-      />
-      <section className="w-full py-12 md:py-24 lg:py-32">
+      <PageHero title="Arbitraje" />
+      <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
         <div className="container px-4 md:px-6">
-          <div className="mb-10">
-            <h2 className="text-2xl font-bold tracking-tight mb-2">Árbitros Oficiales</h2>
-            <p className="text-muted-foreground">
-              Listado de árbitros habilitados por FASGBA para dirigir torneos oficiales
-            </p>
-          </div>
           {arbitros.length === 0 ? (
             <p className="text-muted-foreground text-center py-12">
               No hay árbitros registrados actualmente.
             </p>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {arbitros.map((arbitro) => (
-                <Card key={arbitro.id} className="flex flex-col">
-                  <CardHeader>
-                    <div className="flex items-center gap-3 mb-2">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={getPhotoUrl(arbitro.photo) || undefined} alt={arbitro.name} />
-                        <AvatarFallback>
-                          <User className="h-5 w-5" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <CardTitle className="text-lg">{arbitro.name}</CardTitle>
-                        <CardDescription>{arbitro.title}</CardDescription>
-                      </div>
+                <article key={arbitro.id} className="flex h-full min-w-0 flex-col gap-3 rounded-lg border bg-card p-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={getImageUrlNullable(arbitro.photo) || undefined} alt={arbitro.name} />
+                      <AvatarFallback>
+                        <User className="h-5 w-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-semibold leading-tight text-terracotta">{arbitro.name}</h3>
+                      {arbitro.title && <p className="text-sm text-muted-foreground">{arbitro.title}</p>}
                     </div>
-                  </CardHeader>
-                  <CardContent className="flex-1">
-                    <div className="space-y-3">
-                      {arbitro.club_name && (
-                        <div className="flex items-center gap-2">
-                          <Award className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <span className="text-sm">{arbitro.club_name}</span>
-                        </div>
-                      )}
-                      {arbitro.birth_year && (
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <span className="text-sm">Año de nacimiento: {arbitro.birth_year}</span>
-                        </div>
-                      )}
-                      {arbitro.email && (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <a href={`mailto:${arbitro.email}`} className="text-sm text-primary hover:underline truncate">
-                            {arbitro.email}
-                          </a>
-                        </div>
-                      )}
-                      {arbitro.phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <a href={`tel:${arbitro.phone}`} className="text-sm text-primary hover:underline">
-                            {arbitro.phone}
-                          </a>
-                        </div>
-                      )}
-                      {arbitro.bio && (
-                        <p className="text-sm text-muted-foreground line-clamp-3">
-                          {arbitro.bio}
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+
+                  <ul className="space-y-1.5 text-sm text-muted-foreground">
+                    {arbitro.club_name && (
+                      <li className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 shrink-0" />
+                        <span className="truncate" title={arbitro.club_name}>{arbitro.club_name}</span>
+                      </li>
+                    )}
+                    {arbitro.birth_year && (
+                      <li className="flex items-center gap-2" title="Año de nacimiento">
+                        <Cake className="h-4 w-4 shrink-0" />
+                        <span>{arbitro.birth_year}</span>
+                      </li>
+                    )}
+                    {arbitro.email && (
+                      <li className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 shrink-0" />
+                        <a href={`mailto:${arbitro.email}`} className="truncate hover:underline" title={arbitro.email}>
+                          {arbitro.email}
+                        </a>
+                      </li>
+                    )}
+                    {arbitro.phone && (
+                      <li className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 shrink-0" />
+                        <a href={`tel:${arbitro.phone}`} className="hover:underline">
+                          {arbitro.phone}
+                        </a>
+                      </li>
+                    )}
+                  </ul>
+
+                  {arbitro.bio && (
+                    <p className="whitespace-pre-line text-sm text-muted-foreground line-clamp-3" title={arbitro.bio}>
+                      {arbitro.bio}
+                    </p>
+                  )}
+                </article>
               ))}
             </div>
           )}
-        </div>
-      </section>
-      <section className="w-full py-12 md:py-24 lg:py-32">
-        <div className="container px-4 md:px-6">
-          <h2 className="text-2xl font-bold tracking-tight mb-6">Recursos para Árbitros</h2>
-          <Card>
-            <CardHeader>
-              <CardTitle>Documentos Oficiales</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Link href="/reglamentos/fide" className="text-primary hover:underline">
-                Leyes del Ajedrez FIDE
-              </Link>
-            </CardContent>
-          </Card>
         </div>
       </section>
     </>

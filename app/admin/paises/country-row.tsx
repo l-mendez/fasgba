@@ -29,7 +29,7 @@ export function CountryRow({ country, saving, now, onToggle }: CountryRowProps) 
   const reason = isProtected
     ? 'Argentina no puede deshabilitarse'
     : inCooldown
-      ? `Podés volver a cambiarlo en ${remainingLabel(country.cooldownUntil as string, now)}`
+      ? `Puedes volver a cambiarlo en ${remainingLabel(country.cooldownUntil as string, now)}`
       : null
 
   const control = (

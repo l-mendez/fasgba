@@ -4,9 +4,8 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 import {
-  BarChart3,
   FileText,
-  Home,
+  LayoutDashboard,
   Menu,
   Settings,
   Shield,
@@ -28,8 +27,8 @@ const navItems: Array<{
 }> = [
   {
     href: "/club-admin",
-    label: "Dashboard",
-    icon: BarChart3,
+    label: "Panel",
+    icon: LayoutDashboard,
     isActive: (pathname) => pathname === "/club-admin",
   },
   {
@@ -83,8 +82,8 @@ export function ClubAdminNavLinks({ onLinkClick }: ClubAdminNavLinksProps) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-amber/10",
-                  item.isActive(pathname) ? "bg-amber/10 text-amber" : "text-muted-foreground"
+                  "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                  item.isActive(pathname) ? "bg-accent text-terracotta" : "text-muted-foreground"
                 )}
                 onClick={onLinkClick}
               >
@@ -106,17 +105,16 @@ export function ClubAdminMobileHeader() {
     <div className="sticky top-0 z-40 flex h-14 items-center gap-x-4 border-b border-amber/20 bg-background px-4 shadow-sm lg:hidden">
       <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="text-terracotta hover:bg-amber/10">
+          <Button variant="ghost" size="icon" className="text-terracotta">
             <Menu className="h-6 w-6" />
-            <span className="sr-only">Open sidebar</span>
+            <span className="sr-only">Abrir menú</span>
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-64 border-amber/20">
-          <SheetTitle className="sr-only">Club Admin Navigation</SheetTitle>
+          <SheetTitle className="sr-only">Navegación del club</SheetTitle>
           <div className="flex h-14 items-center border-b border-amber/20 px-4 -mx-6 -mt-6 mb-4">
-            <Link href="/club-admin" className="flex items-center space-x-2" onClick={() => setIsMobileOpen(false)}>
-              <Home className="h-6 w-6 text-terracotta" />
-              <span className="font-bold text-terracotta">Club Admin</span>
+            <Link href="/" className="flex items-center space-x-2" onClick={() => setIsMobileOpen(false)}>
+              <span className="font-bold text-terracotta">FASGBA</span>
             </Link>
           </div>
           <div className="-mx-6 mb-4">

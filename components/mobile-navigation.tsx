@@ -1,194 +1,86 @@
 'use client'
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { CastleIcon as ChessKnight, Menu, User, Settings, Trophy, Home, FileText, FolderOpen, GraduationCap, Shield, LogOut, BarChart3, Award } from "lucide-react"
+import { usePathname } from "next/navigation"
 import { useState } from "react"
+import { CastleIcon, LogIn, LogOut, Menu, Settings, Shield, UserPlus, type LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
-import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
+import { cn } from "@/lib/utils"
+import { SiteLogo } from "@/components/site-logo"
+import { isActivePath, navLinks } from "@/components/main-nav"
+import { useSignOut } from "@/components/auth-buttons"
+
+// Same hover surface as ghost buttons (accent token), readable in light and dark.
+const itemClass =
+  "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent"
 
 export function MobileNavigation() {
   const { isAuthenticated, isAdmin, isClubAdmin, canViewDocumentos, isLoading } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
-  const supabase = createClient()
-  const router = useRouter()
+  const pathname = usePathname()
+  const signOut = useSignOut()
+  const close = () => setIsOpen(false)
 
-  const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (error) {
-        console.error('Error signing out:', error.message)
-        return
-      }
-      
-      // Redirect to home page after successful logout
-      router.push('/')
-      router.refresh()
-    } catch (error) {
-      console.error('Unexpected error during logout:', error)
-    }
-  }
+  const item = (href: string, label: string, Icon: LucideIcon) => (
+    <Link
+      key={href}
+      href={href}
+      onClick={close}
+      className={cn(itemClass, isActivePath(pathname, href) ? "text-terracotta" : "text-foreground")}
+    >
+      <Icon className="h-5 w-5 text-amber" />
+      {label}
+    </Link>
+  )
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button
-          variant="ghost"
-          className="mr-2 px-0 text-base hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:hidden"
-        >
-          <Menu className="h-6 w-6 text-terracotta" />
-          <span className="sr-only">Toggle Menu</span>
+        <Button variant="ghost" size="icon" aria-label="Abrir menú" title="Menú" className="text-terracotta lg:hidden [&_svg]:size-6">
+          <Menu />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[300px] sm:w-[400px] border-amber/20">
-        <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-        <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2" onClick={() => setIsOpen(false)}>
-            <span className="font-bold text-terracotta">FASGBA</span>
-          </Link>
+      <SheetContent side="left" className="w-[300px] p-4 sm:w-[360px]">
+        <SheetTitle className="sr-only">Menú</SheetTitle>
+        <div className="px-3 py-1">
+          <SiteLogo onClick={close} />
         </div>
-        <nav className="flex flex-col space-y-4 mt-6">
-          <Link
-            href="/"
-            className="flex items-center text-muted-foreground hover:text-amber"
-            onClick={() => setIsOpen(false)}
-          >
-            <Home className="mr-2 h-5 w-5 text-amber" />
-            <span>Inicio</span>
-          </Link>
-          <Link
-            href="/torneos"
-            className="flex items-center text-muted-foreground hover:text-amber"
-            onClick={() => setIsOpen(false)}
-          >
-            <Trophy className="mr-2 h-5 w-5 text-amber" />
-            <span>Torneos</span>
-          </Link>
-          <Link
-            href="/clubes"
-            className="flex items-center text-muted-foreground hover:text-amber"
-            onClick={() => setIsOpen(false)}
-          >
-            <ChessKnight className="mr-2 h-5 w-5 text-amber" />
-            <span>Clubes</span>
-          </Link>
-          <Link
-            href="/ranking"
-            className="flex items-center text-muted-foreground hover:text-amber"
-            onClick={() => setIsOpen(false)}
-          >
-            <BarChart3 className="mr-2 h-5 w-5 text-amber" />
-            <span>Ranking</span>
-          </Link>
-          <Link
-            href="/noticias"
-            className="flex items-center text-muted-foreground hover:text-amber"
-            onClick={() => setIsOpen(false)}
-          >
-            <FileText className="mr-2 h-5 w-5 text-amber" />
-            <span>Noticias</span>
-          </Link>
-          {canViewDocumentos && (
-            <Link
-              href="/documentos"
-              className="flex items-center text-muted-foreground hover:text-amber"
-              onClick={() => setIsOpen(false)}
-            >
-              <FolderOpen className="mr-2 h-5 w-5 text-amber" />
-              <span>Documentos</span>
-            </Link>
-          )}
-          <Link
-            href="/profesores"
-            className="flex items-center text-muted-foreground hover:text-amber"
-            onClick={() => setIsOpen(false)}
-          >
-            <GraduationCap className="mr-2 h-5 w-5 text-amber" />
-            <span>Profesores</span>
-          </Link>
-          <Link
-            href="/arbitraje"
-            className="flex items-center text-muted-foreground hover:text-amber"
-            onClick={() => setIsOpen(false)}
-          >
-            <Award className="mr-2 h-5 w-5 text-amber" />
-            <span>Arbitraje</span>
-          </Link>
+        <nav className="mt-4 flex flex-col gap-1">
+          {navLinks
+            .filter((link) => !link.restricted || canViewDocumentos)
+            .map(({ href, label, icon }) => item(href, label, icon))}
 
-          <div className="my-2 border-t border-amber/20" />
+          <div className="my-2 border-t" />
 
           {isLoading ? (
             // Hold space while the session resolves: no flash of logged-out state.
-            <div className="flex flex-col space-y-4" aria-hidden="true">
+            <div className="flex flex-col gap-3 px-3 py-2" aria-hidden="true">
               <Skeleton className="h-5 w-32" />
               <Skeleton className="h-5 w-28" />
             </div>
           ) : !isAuthenticated ? (
-            // Mobile login/signup buttons
             <>
-              <Link
-                href="/login"
-                className="flex items-center text-muted-foreground hover:text-amber"
-                onClick={() => setIsOpen(false)}
-              >
-                <User className="mr-2 h-5 w-5 text-amber" />
-                <span>Iniciar Sesión</span>
-              </Link>
-              <Link
-                href="/registro"
-                className="flex items-center text-muted-foreground hover:text-terracotta"
-                onClick={() => setIsOpen(false)}
-              >
-                <User className="mr-2 h-5 w-5 text-terracotta" />
-                <span>Registrarse</span>
-              </Link>
+              {item("/login", "Iniciar sesión", LogIn)}
+              {item("/registro", "Registrarse", UserPlus)}
             </>
           ) : (
-            // Mobile authenticated content
             <>
-              <Link
-                href="/ajustes"
-                className="flex items-center text-muted-foreground hover:text-amber"
-                onClick={() => setIsOpen(false)}
-              >
-                <Settings className="mr-2 h-5 w-5 text-amber" />
-                <span>Ajustes</span>
-              </Link>
-              
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  className="flex items-center text-muted-foreground hover:text-terracotta"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <Shield className="mr-2 h-5 w-5 text-amber" />
-                  <span>Admin</span>
-                </Link>
-              )}
-              
-              {isClubAdmin && (
-                <Link
-                  href="/club-admin"
-                  className="flex items-center text-muted-foreground hover:text-amber"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <ChessKnight className="mr-2 h-5 w-5 text-amber" />
-                  <span>Club Admin</span>
-                </Link>
-              )}
-              
+              {isAdmin && item("/admin", "Admin", Shield)}
+              {isClubAdmin && item("/club-admin", "Club Admin", CastleIcon)}
+              {item("/ajustes", "Ajustes", Settings)}
               <button
+                type="button"
                 onClick={() => {
-                  handleLogout()
-                  setIsOpen(false)
+                  close()
+                  signOut()
                 }}
-                className="flex items-center text-muted-foreground hover:text-red-500 text-left"
+                className={cn(itemClass, "text-foreground")}
               >
-                <LogOut className="mr-2 h-5 w-5 text-red-500" />
-                <span>Cerrar Sesión</span>
+                <LogOut className="h-5 w-5 text-amber" />
+                Cerrar sesión
               </button>
             </>
           )}
@@ -196,4 +88,4 @@ export function MobileNavigation() {
       </SheetContent>
     </Sheet>
   )
-} 
+}

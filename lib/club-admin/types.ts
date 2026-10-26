@@ -41,3 +41,16 @@ export interface ClubAdminTeam {
   club_id: number
   created_at?: string | null
 }
+
+/** Cookie that remembers the club picked in the club-admin selector. */
+export const SELECTED_CLUB_COOKIE = "club_admin_club"
+
+export const CLUB_PLAYERS_PAGE_SIZE = 25
+
+/** "none" lists players without a club (club admins may claim them). */
+export type ClubPlayersScope = number | "none"
+
+export interface ClubPlayersPage {
+  players: ClubAdminPlayer[]
+  total: number
+}

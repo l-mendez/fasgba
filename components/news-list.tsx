@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { NewsFilters } from "@/components/news-filters"
@@ -40,14 +40,19 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
   const [selectedTag, setSelectedTag] = useState("all")
   const [selectedClub, setSelectedClub] = useState("all")
   const [currentPage, setCurrentPage] = useState(1)
+  // True once the state has been seeded from the URL; until then the URL is
+  // left untouched so a deep link isn't overwritten by the defaults.
+  const [urlSeeded, setUrlSeeded] = useState(false)
+  const listTopRef = useRef<HTMLDivElement>(null)
 
-  // Seed filters from the URL once on mount so deep links from news-card tag
-  // badges (/noticias?tag=foo) still land on a filtered view. State is local
-  // afterwards, keeping the page statically prerenderable (no useSearchParams).
+  // Seed filters/page from the URL on mount so deep links (/noticias?tag=foo,
+  // tag badges on cards, Back from an article) land on the same view. Reading
+  // window.location keeps the page statically prerenderable (no useSearchParams).
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const tag = params.get("tag")
     const club = params.get("club")
+    const pageParam = Number(params.get("page"))
     if (tag && (tag === "all" || tags.includes(tag))) setSelectedTag(tag)
     if (
       club &&
@@ -55,6 +60,8 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
     ) {
       setSelectedClub(club)
     }
+    if (Number.isInteger(pageParam) && pageParam > 1) setCurrentPage(pageParam)
+    setUrlSeeded(true)
   }, [tags, clubs])
 
   const hasActiveFilters = selectedTag !== "all" || selectedClub !== "all"
@@ -74,6 +81,29 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
   const page = Math.min(currentPage, totalPages)
   const currentNews = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
 
+  // Mirror the view into the URL (shareable, kept on Back) without a navigation.
+  useEffect(() => {
+    if (!urlSeeded) return
+    const params = new URLSearchParams()
+    if (selectedTag !== "all") params.set("tag", selectedTag)
+    if (selectedClub !== "all") params.set("club", selectedClub)
+    if (page > 1) params.set("page", String(page))
+    const query = params.toString()
+    const url = `${window.location.pathname}${query ? `?${query}` : ""}`
+    if (url !== `${window.location.pathname}${window.location.search}`) {
+      window.history.replaceState(null, "", url)
+    }
+  }, [urlSeeded, selectedTag, selectedClub, page])
+
+  const handlePageChange = (nextPage: number) => {
+    setCurrentPage(nextPage)
+    // Bring the top of the list back into view (e.g. after using the bottom pagination).
+    const listTop = listTopRef.current
+    if (listTop && listTop.getBoundingClientRect().top < 80) {
+      listTop.scrollIntoView({ block: "start" })
+    }
+  }
+
   const handleTagChange = (tag: string) => {
     setSelectedTag(tag)
     setCurrentPage(1)
@@ -90,28 +120,17 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
 
   return (
     <>
-      <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold tracking-tight text-terracotta mb-4">
-            {hasActiveFilters ? "Noticias filtradas" : "Todas las noticias"}
-          </h2>
-
-          <NewsFilters
-            tags={tags}
-            clubs={clubs}
-            selectedTag={selectedTag}
-            selectedClub={selectedClub}
-            hasActiveFilters={hasActiveFilters}
-            onTagChange={handleTagChange}
-            onClubChange={handleClubChange}
-            onClear={handleClear}
-          />
-        </div>
-      </div>
-
-      <div className="mb-6 text-sm text-muted-foreground">
-        Mostrando {currentNews.length} de {total} noticias
-        {hasActiveFilters && ` (${allNews.length} total)`}
+      <div className="mb-8">
+        <NewsFilters
+          tags={tags}
+          clubs={clubs}
+          selectedTag={selectedTag}
+          selectedClub={selectedClub}
+          hasActiveFilters={hasActiveFilters}
+          onTagChange={handleTagChange}
+          onClubChange={handleClubChange}
+          onClear={handleClear}
+        />
       </div>
 
       {total === 0 ? (
@@ -132,7 +151,7 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
         </div>
       ) : (
         <>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div ref={listTopRef} className="grid scroll-mt-20 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {currentNews.map((item) => (
               <NewsCard key={item.id} news={item} />
             ))}
@@ -142,7 +161,7 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
             <NewsPagination
               currentPage={page}
               totalPages={totalPages}
-              onPageChange={setCurrentPage}
+              onPageChange={handlePageChange}
             />
           )}
         </>

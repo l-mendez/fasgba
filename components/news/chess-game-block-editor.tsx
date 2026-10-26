@@ -77,7 +77,7 @@ export function ChessGameBlockEditor({
             className="text-sm md:text-base"
           />
           <div className="space-y-2">
-            <Label htmlFor={`result-${index}`} className="text-sm md:text-sm font-medium">Resultado</Label>
+            <Label htmlFor={`result-${index}`}>Resultado</Label>
             <Select value={value.result || "1-0"} onValueChange={onResultChange}>
               <SelectTrigger id={`result-${index}`} className="text-sm md:text-base">
                 <SelectValue placeholder="Seleccionar resultado" />
@@ -89,9 +89,6 @@ export function ChessGameBlockEditor({
                 <SelectItem value="*">* (Partida en curso)</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div className="mt-2 p-2 border rounded-md bg-muted">
-            <p className="text-xs md:text-sm text-muted-foreground">Vista previa del tablero no disponible en el editor</p>
           </div>
         </div>
       </div>
@@ -108,11 +105,11 @@ export function ChessGameBlockEditor({
           </div>
           <div className="flex space-x-1">
             <CollapsibleTrigger asChild>
-              <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={isOpen ? "Contraer" : "Expandir"} title={isOpen ? "Contraer" : "Expandir"}>
                 {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             </CollapsibleTrigger>
-            <Button type="button" variant="ghost" size="sm" onClick={onMoveUp} disabled={index === 0} className="h-8 w-8 p-0">
+            <Button type="button" variant="ghost" size="sm" onClick={onMoveUp} disabled={index === 0} className="h-8 w-8 p-0" aria-label="Subir" title="Subir">
               <MoveUp className="h-4 w-4" />
             </Button>
             <Button
@@ -122,6 +119,8 @@ export function ChessGameBlockEditor({
               onClick={onMoveDown}
               disabled={index === totalBlocks - 1}
               className="h-8 w-8 p-0"
+              aria-label="Bajar"
+              title="Bajar"
             >
               <MoveDown className="h-4 w-4" />
             </Button>
@@ -130,7 +129,9 @@ export function ChessGameBlockEditor({
               size="sm"
               type="button"
               onClick={onDelete}
-              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              aria-label="Eliminar"
+              title="Eliminar"
             >
               <Trash2 className="h-4 w-4" />
             </Button>

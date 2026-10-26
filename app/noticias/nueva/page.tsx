@@ -1,29 +1,13 @@
-import React from "react"
+import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 
-import { NewNewsForm } from "./new-news-form"
+import { NewNewsForm, type NewsClubOption } from "./new-news-form"
 
 // Force dynamic rendering since we use authentication
 export const dynamic = 'force-dynamic'
 
-interface Club {
-  id: number
-  name: string
-  description?: string
-  location?: string
-  website?: string
-  email?: string
-  phone?: string
-  created_at: string
-  updated_at: string
-}
-
-interface User {
-  id: string
-  email: string
-  role?: string
-}
+export const metadata: Metadata = { title: 'Nueva noticia' }
 
 // Server component props to include searchParams
 interface PageProps {
@@ -31,20 +15,16 @@ interface PageProps {
 }
 
 // Server function to get current user
-async function getCurrentUser(): Promise<User | null> {
+async function getCurrentUser(): Promise<{ id: string } | null> {
   try {
     const supabase = await createClient()
     const { data: { user }, error } = await supabase.auth.getUser()
-    
+
     if (error || !user) {
       return null
     }
 
-    return {
-      id: user.id,
-      email: user.email || '',
-      role: user.user_metadata?.role
-    }
+    return { id: user.id }
   } catch (error) {
     console.error('Error getting current user:', error)
     return null
@@ -70,7 +50,7 @@ async function isSiteAdmin(userId: string): Promise<boolean> {
 }
 
 // Server function to get user's clubs (for club admins)
-async function getUserClubs(userId: string): Promise<Club[]> {
+async function getUserClubs(userId: string): Promise<NewsClubOption[]> {
   try {
     const supabase = await createClient()
     
@@ -81,74 +61,24 @@ async function getUserClubs(userId: string): Promise<Club[]> {
         club_id,
         clubs (
           id,
-          name,
-          address,
-          telephone,
-          mail,
-          schedule
+          name
         )
       `)
       .eq('auth_id', userId)
+      .order('club_id')
 
     if (adminError) {
       console.error('Error fetching user clubs:', adminError)
       return []
     }
 
-    // Properly type and filter the clubs data
-    const clubs: Club[] = (adminData || [])
-      .filter(item => item.clubs)
-      .map(item => {
-        const club = item.clubs as any
-        return {
-          id: club.id,
-          name: club.name,
-          description: undefined,
-          location: club.address,
-          website: undefined,
-          email: club.mail,
-          phone: club.telephone,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      })
+    const clubs = (adminData || [])
+      .map((item) => (Array.isArray(item.clubs) ? item.clubs[0] : item.clubs) as NewsClubOption | null)
+      .filter((club): club is NewsClubOption => Boolean(club))
 
     return clubs
   } catch (error) {
     console.error('Error in getUserClubs:', error)
-    return []
-  }
-}
-
-// Server function to get all clubs (for site admins)
-async function getAllClubs(): Promise<Club[]> {
-  try {
-    const supabase = await createClient()
-    
-    const { data, error } = await supabase
-      .from('clubs')
-      .select('*')
-      .order('name')
-
-    if (error) {
-      console.error('Error fetching all clubs:', error)
-      return []
-    }
-
-    // Map the database club format to our Club interface
-    return (data || []).map(club => ({
-      id: club.id,
-      name: club.name,
-      description: undefined,
-      location: club.address,
-      website: undefined,
-      email: club.mail,
-      phone: club.telephone,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }))
-  } catch (error) {
-    console.error('Error in getAllClubs:', error)
     return []
   }
 }
@@ -177,40 +107,21 @@ export default async function NuevaNoticiaPage({ searchParams }: PageProps) {
     notFound()
   }
 
-  // Determine default entity based on source
-  let defaultEntityId: number | null = null
-  let defaultEntityType: 'fasgba' | 'club' = 'fasgba'
-
-  if (source === 'admin') {
-    // Came from admin panel, default to FASGBA
-    defaultEntityId = null
-    defaultEntityType = 'fasgba'
-  } else if (source === 'club-admin' && selectedClubId) {
-    // Came from club-admin with specific club selected
-    defaultEntityId = selectedClubId
-    defaultEntityType = 'club'
-  } else if (source === 'club-admin' && userClubs.length > 0) {
-    // Came from club-admin but no specific club, use first user club
-    defaultEntityId = userClubs[0].id
-    defaultEntityType = 'club'
-  } else {
-    // Default behavior: if site admin, default to FASGBA; if club admin, default to first club
-    if (isAdmin) {
-      defaultEntityId = null
-      defaultEntityType = 'fasgba'
-    } else if (userClubs.length > 0) {
-      defaultEntityId = userClubs[0].id
-      defaultEntityType = 'club'
-    }
-  }
+  // Coming from club-admin wins over the site-admin role (users can be both):
+  // it preselects that club and returns to the club panel.
+  const fromClubAdmin = source === 'club-admin' || !isAdmin
+  const requestedClub = userClubs.find((club) => club.id === selectedClubId)
+  const defaultEntityId = fromClubAdmin
+    ? (requestedClub ?? userClubs[0])?.id ?? null
+    : isAdmin ? null : userClubs[0]?.id ?? null
 
   return (
-    <NewNewsForm 
-      user={user}
+    <NewNewsForm
       userClubs={userClubs}
       isAdmin={isAdmin}
       defaultEntityId={defaultEntityId}
-      defaultEntityType={defaultEntityType}
+      clubsFirst={fromClubAdmin}
+      returnPath={fromClubAdmin ? '/club-admin/noticias' : '/admin/noticias'}
     />
   )
-} 
+}

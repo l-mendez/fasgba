@@ -2,14 +2,13 @@
 
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { CheckCircle2, FileSpreadsheet, RefreshCw, Save, Trash2, Upload } from "lucide-react"
+import { FileSpreadsheet, RefreshCw, Save, Trash2, Upload } from "lucide-react"
 
 import type { RankingPlayer } from "./types"
 
-import { ErrorAlert } from "@/components/error-alert"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -52,8 +51,6 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
   const [previewData, setPreviewData] = useState<RankingPlayer[]>([])
   const [tempJsonPath, setTempJsonPath] = useState<string | null>(null)
   const [tempAnalyticsPath, setTempAnalyticsPath] = useState<string | null>(null)
-  const [errorMessage, setErrorMessage] = useState("")
-  const [successMessage, setSuccessMessage] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isCancelling, setIsCancelling] = useState(false)
@@ -76,8 +73,6 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
   const resetUploadMessages = () => {
     setUploadStatus("idle")
     setPreviewData([])
-    setErrorMessage("")
-    setSuccessMessage("")
   }
 
   const setExcelFile = (uploadedFile: File) => {
@@ -87,15 +82,13 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
       return
     }
 
-    setErrorMessage("Formato de archivo no válido. Solo se permiten archivos Excel (.xlsx, .xls)")
+    toast.error("Formato de archivo no válido. Solo se permiten archivos Excel (.xlsx, .xls)")
   }
 
   const handleUpload = async () => {
     if (!file) return
 
     setIsUploading(true)
-    setErrorMessage("")
-    setSuccessMessage("")
 
     try {
       const formData = new FormData()
@@ -114,11 +107,13 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
       setTempJsonPath(data.tempJsonPath)
       setTempAnalyticsPath(data.tempAnalyticsPath || null)
       setUploadStatus("success")
-      const analyticsMsg = data.hasAnalytics ? ` Se encontraron ${data.analyticsCount} registros analíticos.` : ""
-      setSuccessMessage(`Archivo procesado correctamente. Se encontraron ${data.totalPlayers || 0} jugadores.${analyticsMsg} Revisa la vista previa y guarda los cambios.`)
+      const analyticsMsg = data.hasAnalytics ? ` y ${data.analyticsCount} registros analíticos` : ""
+      toast.success(`Archivo procesado: ${data.totalPlayers || 0} jugadores${analyticsMsg}`, {
+        description: "Revisa la vista previa y guarda los cambios.",
+      })
     } catch (error) {
       console.error("Upload error:", error)
-      setErrorMessage(error instanceof Error ? error.message : "Error desconocido al procesar el archivo. Verifica el formato y vuelve a intentarlo.")
+      toast.error(error instanceof Error ? error.message : "Error al procesar el archivo. Verifica el formato y vuelve a intentarlo.")
       setUploadStatus("error")
     } finally {
       setIsUploading(false)
@@ -130,8 +125,6 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
 
     setIsProcessing(true)
     setIsSaving(true)
-    setErrorMessage("")
-    setSuccessMessage("")
 
     try {
       await apiCall("/api/admin/ranking/confirm", {
@@ -148,11 +141,11 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
       setUploadStatus("idle")
       setTempJsonPath(null)
       setTempAnalyticsPath(null)
-      setSuccessMessage(`Ranking "${generatedFilename}" guardado exitosamente. El ranking ya está disponible en el sistema.`)
+      toast.success(`Ranking "${generatedFilename}" guardado`)
       router.refresh()
     } catch (error) {
       console.error("Save error:", error)
-      setErrorMessage(error instanceof Error ? error.message : "Error desconocido al guardar el ranking. Intenta nuevamente.")
+      toast.error(error instanceof Error ? error.message : "Error al guardar el ranking. Intenta nuevamente.")
     } finally {
       setIsSaving(false)
       setIsProcessing(false)
@@ -164,7 +157,6 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
 
     setIsProcessing(true)
     setIsCancelling(true)
-    setErrorMessage("")
 
     try {
       await apiCall("/api/admin/ranking/cancel", {
@@ -181,20 +173,11 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
       setTempAnalyticsPath(null)
       setIsCancelling(false)
       setIsProcessing(false)
-      setErrorMessage("")
-    }
+      }
   }
 
   return (
     <div className="space-y-4">
-      {errorMessage ? <ErrorAlert message={errorMessage} /> : null}
-      {successMessage ? (
-        <Alert variant="default" className="border-green-200 bg-green-50 text-green-800">
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
-          <AlertDescription>{successMessage}</AlertDescription>
-        </Alert>
-      ) : null}
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
         <div className="space-y-2">
           <Label htmlFor="month-select">Mes</Label>
@@ -237,10 +220,10 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
       </div>
 
       <div
-        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
           isDragOver
-            ? "border-primary bg-primary/5"
-            : "border-muted-foreground/25 hover:border-muted-foreground/50"
+            ? "border-amber bg-amber/5"
+            : "border-border hover:border-amber"
         }`}
         onDragOver={(event) => {
           event.preventDefault()
@@ -258,10 +241,10 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
           }
         }}
       >
-        <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+        <Upload className="mx-auto mb-3 h-10 w-10 text-amber" />
         <div className="space-y-2">
           <p className="text-lg font-medium">
-            {file ? file.name : "Arrastra tu archivo aquí o haz clic para seleccionar"}
+            {file ? file.name : "Arrastra tu archivo aquí"}
           </p>
           <p className="text-sm text-muted-foreground">
             Formatos soportados: .xlsx, .xls (máximo 10MB)
@@ -285,18 +268,6 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
         </Button>
       </div>
 
-      {uploadStatus === "success" && !successMessage ? (
-        <Alert className="mt-4">
-          <CheckCircle2 className="h-4 w-4" />
-          <AlertDescription>
-            Archivo procesado correctamente. Revisa la vista previa y guarda los cambios.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      {uploadStatus === "error" && !errorMessage ? (
-        <ErrorAlert message="Error al procesar el archivo. Verifica el formato y vuelve a intentarlo." className="mt-4" />
-      ) : null}
 
       {file ? (
         <div className="flex gap-2 mt-4">
@@ -357,9 +328,6 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
         <Card>
           <CardHeader>
             <CardTitle>Vista previa del ranking</CardTitle>
-            <CardDescription>
-              Revisa los datos antes de guardar los cambios como {generatedFilename}.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -371,10 +339,10 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
                   <TableRow>
                     <TableHead className="w-16">Pos.</TableHead>
                     <TableHead>Jugador</TableHead>
-                    <TableHead>Club</TableHead>
+                    <TableHead className="hidden md:table-cell">Club</TableHead>
                     <TableHead className="text-right">Standard</TableHead>
-                    <TableHead className="text-right">Rápido</TableHead>
-                    <TableHead className="text-right">Blitz</TableHead>
+                    <TableHead className="hidden text-right sm:table-cell">Rápido</TableHead>
+                    <TableHead className="hidden text-right sm:table-cell">Blitz</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -391,14 +359,14 @@ export function RankingUploadClient({ existingRankingNames = [] }: RankingUpload
                           <span>{player.name}</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{player.club}</TableCell>
+                      <TableCell className="hidden text-muted-foreground md:table-cell">{player.club}</TableCell>
                       <TableCell className="text-right font-mono">
                         {player.ratings?.standard ? Math.round(player.ratings.standard) : "--"}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-muted-foreground">
+                      <TableCell className="hidden text-right font-mono text-muted-foreground sm:table-cell">
                         {player.ratings?.rapid ? Math.round(player.ratings.rapid) : "--"}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-muted-foreground">
+                      <TableCell className="hidden text-right font-mono text-muted-foreground sm:table-cell">
                         {player.ratings?.blitz ? Math.round(player.ratings.blitz) : "--"}
                       </TableCell>
                     </TableRow>

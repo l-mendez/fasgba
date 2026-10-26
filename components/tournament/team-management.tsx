@@ -17,8 +17,8 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
   if (tournamentType !== 'team') {
     return (
       <Card>
-        <CardContent className="p-6 text-center text-gray-500">
-          La gestión de equipos solo está disponible para torneos por equipos.
+        <CardContent className="p-4 text-center text-sm text-muted-foreground">
+          Solo disponible para torneos por equipos.
         </CardContent>
       </Card>
     )
@@ -27,8 +27,7 @@ export default function TeamManagement({ tournamentId, tournamentType = 'individ
   if (roster.fetchingTeams) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-6 w-6 animate-spin" />
-        <span className="ml-2">Cargando equipos...</span>
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     )
   }

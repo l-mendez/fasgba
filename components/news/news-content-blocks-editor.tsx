@@ -4,7 +4,7 @@ import { NEWS_BLOCK_TYPES, type NewsBlockContent } from "@/components/news/types
 import { TextBlockEditor } from "@/components/news/text-block-editor"
 import { ImageBlockEditor } from "@/components/news/image-block-editor"
 import { ChessGameBlockEditor } from "@/components/news/chess-game-block-editor"
-import { AddBlockButton } from "@/components/news/add-block-button"
+import { SimpleAddBlockButtons } from "@/components/news/add-block-button"
 import type { useNewsContentBlocks } from "@/components/news/use-news-content-blocks"
 
 interface NewsContentBlocksEditorProps {
@@ -90,7 +90,7 @@ export function NewsContentBlocksEditor({ blocks, blockActions }: NewsContentBlo
         return null
       })}
 
-      <AddBlockButton
+      <SimpleAddBlockButtons
         onAddTextBlock={addTextBlock}
         onAddImageBlock={addImageBlock}
         onAddChessGameBlock={addChessGameBlock}

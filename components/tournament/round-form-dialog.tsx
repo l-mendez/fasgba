@@ -135,7 +135,7 @@ export function RoundFormDialog({
         await Promise.all(matchPromises)
       }
 
-      toast.success('Ronda agregada exitosamente')
+      toast.success('Ronda agregada')
       onOpenChange(false)
       onSuccess()
     } catch (error) {
@@ -150,14 +150,11 @@ export function RoundFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={tournamentType === 'team' ? "max-w-2xl" : "max-w-md"}>
         <DialogHeader>
-          <DialogTitle>
-            Agregar Nueva Ronda
-            {tournamentType === 'team' && ' - Configurar Enfrentamientos'}
-          </DialogTitle>
+          <DialogTitle>Nueva ronda</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="round_number">Número de Ronda</Label>
+            <Label htmlFor="round_number">Número de ronda</Label>
             <Input
               id="round_number"
               type="number"
@@ -183,25 +180,21 @@ export function RoundFormDialog({
                   disabled={fetchingTeams}
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  Agregar Enfrentamiento
+                  Agregar
                 </Button>
               </div>
 
               {fetchingTeams ? (
-                <div className="flex items-center justify-center p-4">
+                <div className="flex items-center justify-center p-4 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   Cargando equipos...
                 </div>
               ) : teams.length === 0 ? (
-                <div className="p-4 bg-yellow-50 dark:bg-yellow-950/50 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                    <strong>No hay equipos registrados:</strong> Para crear enfrentamientos, primero deben registrarse equipos en el torneo.
-                  </p>
-                </div>
+                <p className="text-sm text-muted-foreground">No hay equipos registrados en el torneo.</p>
               ) : (
                 <div className="space-y-3 max-h-60 overflow-y-auto">
                   {roundFormData.matches?.map((match, index) => (
-                    <div key={index} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-md">
+                    <div key={index} className="flex items-center gap-2 rounded-md bg-muted p-2">
                       <div className="flex-1">
                         <Select
                           value={match.team_a_id.toString()}
@@ -220,7 +213,7 @@ export function RoundFormDialog({
                         </Select>
                       </div>
                       
-                      <span className="text-sm font-medium text-gray-500">vs</span>
+                      <span className="text-sm font-medium text-muted-foreground">vs</span>
                       
                       <div className="flex-1">
                         <Select
@@ -242,10 +235,12 @@ export function RoundFormDialog({
                       
                       <Button
                         type="button"
-                        variant="outline"
-                        size="sm"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Quitar enfrentamiento"
+                        title="Quitar enfrentamiento"
                         onClick={() => removeMatch(index)}
-                        className="text-red-600 hover:text-red-700"
+                        className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -253,9 +248,7 @@ export function RoundFormDialog({
                   )) || []}
                   
                   {(!roundFormData.matches || roundFormData.matches.length === 0) && (
-                    <div className="p-4 text-center text-gray-500 text-sm">
-                      No hay enfrentamientos configurados. Agrega al menos uno.
-                    </div>
+                    <p className="p-4 text-center text-sm text-muted-foreground">Agrega al menos un enfrentamiento.</p>
                   )}
                 </div>
               )}
@@ -267,7 +260,7 @@ export function RoundFormDialog({
               Cancelar
             </Button>
             <Button onClick={handleAddRound} disabled={loading}>
-              {loading ? 'Agregando...' : 'Agregar Ronda'}
+              {loading ? 'Agregando...' : 'Agregar ronda'}
             </Button>
           </div>
         </div>

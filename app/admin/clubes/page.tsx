@@ -53,7 +53,7 @@ async function fetchClubs(): Promise<Club[]> {
     const supabaseServiceKey = SUPABASE_SECRET_KEY
     
     if (!supabaseServiceKey) {
-      throw new Error('Service role key not configured')
+      throw new Error('Falta configurar la clave de servicio del servidor')
     }
 
     const { createClient: createServiceClient } = await import('@supabase/supabase-js')
@@ -125,15 +125,14 @@ async function fetchClubs(): Promise<Club[]> {
 
 export default function AdminClubesPage() {
   return (
-    <div className="flex flex-col gap-8 p-8 pb-16 md:pb-8">
+    <div className="space-y-6">
       <AdminPageHeader
         title="Clubes"
-        subtitle="Gestiona los clubes afiliados a FASGBA."
         action={
           <Button asChild>
             <Link href="/admin/clubes/nuevo">
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Club
+              <Plus className="h-4 w-4" />
+              Nuevo club
             </Link>
           </Button>
         }
@@ -157,9 +156,7 @@ async function AdminClubesContent() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-8">
-        <ErrorAlert message={error} />
-      </div>
+      <ErrorAlert message={error} />
     )
   }
 

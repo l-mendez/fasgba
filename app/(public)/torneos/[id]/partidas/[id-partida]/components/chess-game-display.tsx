@@ -1,12 +1,10 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Copy } from "lucide-react"
+import { Check, Copy } from "lucide-react"
 import dynamic from "next/dynamic"
 import { GameDisplay } from "@/lib/gameUtils-client"
-import { cn } from "@/lib/utils"
 
 // Dynamically import the ChessBoard component
 const ChessBoard = dynamic(() => import('@/app/components/chess-board'), { 
@@ -18,16 +16,25 @@ const ChessBoard = dynamic(() => import('@/app/components/chess-board'), {
   )
 })
 
+const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+// Board bar label: name plus rating, so no separate player card is needed.
+const playerLabel = (name: string, rating?: number) => (rating ? `${name} (${rating})` : name)
+
 interface ChessGameDisplayProps {
   game: GameDisplay
 }
 
 export default function ChessGameDisplay({ game }: ChessGameDisplayProps) {
+  const [copied, setCopied] = useState(false)
+
   const handleCopyPGN = async () => {
     if (!game.pgn) return
-    
+
     try {
       await navigator.clipboard.writeText(game.pgn)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     } catch (err) {
       console.error('Failed to copy PGN:', err)
       // Fallback for older browsers
@@ -45,136 +52,50 @@ export default function ChessGameDisplay({ game }: ChessGameDisplayProps) {
     }
   }
 
+  const hasPosition = Boolean(game.fen && game.fen !== START_FEN)
+  if (!game.pgn && !hasPosition) {
+    return (
+      <p className="max-w-3xl rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
+        Partida sin movimientos cargados.
+      </p>
+    )
+  }
+
   return (
-    <div className="grid gap-8 lg:grid-cols-12">
-      {/* Chess Board */}
-      <div className="lg:col-span-7">
-        <Card className="border-amber/20">
-          <CardHeader>
-            <CardTitle className="text-terracotta">Tablero de Juego</CardTitle>
-            <CardDescription>
-              Posición actual de la partida
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-            <ChessBoard 
-              fen={game.fen || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}
-              pgn={game.pgn}
-              whitePlayer={{ type: 'custom', value: game.white }}
-              blackPlayer={{ type: 'custom', value: game.black }}
-              result={game.result}
-              width={400}
-            />
-          </CardContent>
-        </Card>
+    <div className="grid gap-6 lg:grid-cols-12">
+      <div className="flex justify-center rounded-lg border bg-card p-4 lg:col-span-7">
+        <ChessBoard
+          fen={game.fen || START_FEN}
+          pgn={game.pgn}
+          whitePlayer={{ type: 'custom', value: playerLabel(game.white, game.whiteRating) }}
+          blackPlayer={{ type: 'custom', value: playerLabel(game.black, game.blackRating) }}
+          result={game.result}
+          width={400}
+        />
       </div>
 
-      {/* Game Information */}
       <div className="lg:col-span-5">
-        <div className="space-y-6">
-          {/* Players Info */}
-          <Card className="border-amber/20">
-            <CardHeader>
-              <CardTitle className="text-terracotta">Jugadores</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 rounded-full bg-white border-2 border-gray-400"></div>
-                  <div>
-                    <div className="font-medium">{game.white}</div>
-                    {game.whiteRating && (
-                      <div className="text-sm text-muted-foreground">Rating: {game.whiteRating}</div>
-                    )}
-                    {game.whiteTeam && (
-                      <div className="text-sm text-terracotta font-medium">{game.whiteTeam}</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 rounded-full bg-black border-2 border-gray-300"></div>
-                  <div>
-                    <div className="font-medium">{game.black}</div>
-                    {game.blackRating && (
-                      <div className="text-sm text-muted-foreground">Rating: {game.blackRating}</div>
-                    )}
-                    {game.blackTeam && (
-                      <div className="text-sm text-terracotta font-medium">{game.blackTeam}</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Game Details */}
-          <Card className="border-amber/20">
-            <CardHeader>
-              <CardTitle className="text-terracotta">Detalles de la Partida</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Ronda:</span>
-                <span className="font-medium">{game.round}</span>
-              </div>
-              {game.board && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Mesa:</span>
-                  <span className="font-medium">{game.board}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Estado:</span>
-                <Badge 
-                  variant={game.result === '*' ? 'default' : 'outline'}
-                  className={cn(
-                    "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
-                    game.result 
-                      ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700'
-                      : 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700'
-                  )}
-                >
-                  {game.result === '*' ? 'En juego' : 'Finalizada'}
-                </Badge>
-              </div>
-              {game.result !== '*' && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Resultado:</span>
-                  <span className="font-medium">{game.result}</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* PGN Section */}
-          {game.pgn && (
-            <Card className="border-amber/20">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-terracotta">PGN</CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCopyPGN}
-                    className="text-amber hover:bg-amber/10"
-                  >
-                    <Copy className="h-4 w-4 mr-1" />
-                    Copiar
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-muted/50 p-3 rounded-md overflow-x-auto">
-                  {game.pgn}
-                </pre>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        {game.pgn && (
+          <div className="rounded-lg border bg-card p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="font-semibold">PGN</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleCopyPGN}
+                aria-label="Copiar PGN"
+                title="Copiar PGN"
+              >
+                {copied ? <Check /> : <Copy />}
+              </Button>
+            </div>
+            <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-muted/50 p-3 font-mono text-xs text-muted-foreground">
+              {game.pgn}
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   )
-} 
+}

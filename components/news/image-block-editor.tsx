@@ -62,11 +62,11 @@ export function ImageBlockEditor({
           </div>
           <div className="flex space-x-1">
             <CollapsibleTrigger asChild>
-              <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={isOpen ? "Contraer" : "Expandir"} title={isOpen ? "Contraer" : "Expandir"}>
                 {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             </CollapsibleTrigger>
-            <Button type="button" variant="ghost" size="sm" onClick={onMoveUp} disabled={index === 0} className="h-8 w-8 p-0">
+            <Button type="button" variant="ghost" size="sm" onClick={onMoveUp} disabled={index === 0} className="h-8 w-8 p-0" aria-label="Subir" title="Subir">
               <MoveUp className="h-4 w-4" />
             </Button>
             <Button
@@ -76,6 +76,8 @@ export function ImageBlockEditor({
               onClick={onMoveDown}
               disabled={index === totalBlocks - 1}
               className="h-8 w-8 p-0"
+              aria-label="Bajar"
+              title="Bajar"
             >
               <MoveDown className="h-4 w-4" />
             </Button>
@@ -84,7 +86,9 @@ export function ImageBlockEditor({
               size="sm"
               type="button"
               onClick={onDelete}
-              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              aria-label="Eliminar"
+              title="Eliminar"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -93,7 +97,7 @@ export function ImageBlockEditor({
 
         <CollapsibleContent className="space-y-4">
           <div
-            className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+            className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:border-amber transition-colors"
             onClick={handleImageClick}
           >
             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
@@ -119,7 +123,7 @@ export function ImageBlockEditor({
               </div>
             ) : (
               <div className="py-8">
-                <ImageIcon className="h-12 w-12 mx-auto text-gray-400" />
+                <ImageIcon className="h-10 w-10 mx-auto text-muted-foreground" />
                 <p className="mt-2 text-sm font-medium">Haz clic para subir una imagen</p>
                 <p className="text-xs text-muted-foreground mt-1">PNG, JPG o GIF (máx. 5MB)</p>
               </div>

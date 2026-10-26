@@ -1,24 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Edit, Eye, RefreshCw, Save, Trash2 } from "lucide-react"
+import { CalendarClock, Eye, RefreshCw, Save, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import type { PastRanking } from "./types"
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+import { AdminConfirmDialog } from "@/components/admin-confirm-dialog"
+import { AdminRowActions } from "@/components/admin-row-actions"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -61,6 +51,7 @@ function formatDate(dateString: string) {
 export function RankingRowActions({ ranking }: RankingRowActionsProps) {
   const router = useRouter()
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
   const [isEditDateDialogOpen, setIsEditDateDialogOpen] = useState(false)
   const [isUpdatingDate, setIsUpdatingDate] = useState(false)
   const [editMonth, setEditMonth] = useState("")
@@ -96,7 +87,7 @@ export function RankingRowActions({ ranking }: RankingRowActionsProps) {
           toast.success("Ranking eliminado. No quedan rankings disponibles en el sistema.")
         }
       } else {
-        toast.success("Ranking eliminado exitosamente.")
+        toast.success("Ranking eliminado")
       }
 
       router.refresh()
@@ -105,6 +96,7 @@ export function RankingRowActions({ ranking }: RankingRowActionsProps) {
       toast.error(error instanceof Error ? error.message : "Error al eliminar el ranking")
     } finally {
       setIsDeleting(false)
+      setIsConfirmingDelete(false)
     }
   }
 
@@ -125,7 +117,7 @@ export function RankingRowActions({ ranking }: RankingRowActionsProps) {
 
       setIsEditDateDialogOpen(false)
       const monthName = monthNames[parseInt(editMonth, 10) - 1]
-      toast.success(`Fecha actualizada a ${monthName} ${editYear}. Se recalcularon ${result.affectedRankings} ranking(s).`)
+      toast.success(`Fecha actualizada a ${monthName} ${editYear}. Se ${result.affectedRankings === 1 ? "recalculó 1 ranking" : `recalcularon ${result.affectedRankings} rankings`}.`)
       router.refresh()
     } catch (error) {
       console.error("Update date error:", error)
@@ -137,59 +129,39 @@ export function RankingRowActions({ ranking }: RankingRowActionsProps) {
 
   return (
     <>
-      <div className="flex items-center justify-end gap-2">
-        <Button asChild variant="outline" size="sm" className="h-8 w-8 p-0">
-          <Link href={{ pathname: "/ranking", query: { ranking: ranking.id } }}>
-            <Eye className="h-4 w-4" />
-            <span className="sr-only">Ver ranking</span>
-          </Link>
-        </Button>
-
-        <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={openEditDate}>
-          <Edit className="h-4 w-4" />
-          <span className="sr-only">Editar fecha</span>
-        </Button>
-
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-              <span className="sr-only">Eliminar ranking</span>
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar ranking?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción eliminará permanentemente el ranking {ranking.displayName || ranking.name}
-                {" "}del {formatDate(ranking.date)}.
-                {ranking.status === "current"
-                  ? " Este es el ranking activo actual, y será reemplazado por el siguiente ranking cronológicamente más reciente."
-                  : ""}
-                {" "}Esta acción no se puede deshacer.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteRanking}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Eliminar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+      <div className="flex justify-end">
+        <AdminRowActions
+          actions={[
+            {
+              label: "Ver ranking",
+              icon: Eye,
+              href: `/ranking?ranking=${encodeURIComponent(ranking.id)}`,
+              external: true,
+            },
+            { label: "Editar fecha", icon: CalendarClock, onSelect: openEditDate },
+            {
+              label: "Eliminar",
+              icon: Trash2,
+              destructive: true,
+              disabled: isDeleting,
+              onSelect: () => setIsConfirmingDelete(true),
+            },
+          ]}
+        />
       </div>
+
+      <AdminConfirmDialog
+        open={isConfirmingDelete}
+        onOpenChange={setIsConfirmingDelete}
+        title="¿Eliminar ranking?"
+        description={`Se eliminará ${ranking.displayName || ranking.name} del ${formatDate(ranking.date)}.${
+          ranking.status === "current"
+            ? " Es el ranking activo: lo reemplazará el siguiente más reciente."
+            : ""
+        } Esta acción no se puede deshacer.`}
+        onConfirm={handleDeleteRanking}
+        pending={isDeleting}
+      />
 
       <Dialog open={isEditDateDialogOpen} onOpenChange={setIsEditDateDialogOpen}>
         <DialogContent>

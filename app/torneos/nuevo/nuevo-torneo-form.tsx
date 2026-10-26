@@ -7,7 +7,7 @@ import { Loader2, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { ErrorAlert } from "@/components/error-alert"
 import {
   Dialog,
@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { TournamentFormFields } from "@/components/tournament/tournament-form-fields"
+import { TournamentFormFields, TOURNAMENT_FORM_ACTIONS_CLASS } from "@/components/tournament/tournament-form-fields"
 import { apiCall } from "@/lib/utils/apiClient"
 import {
   createEmptyTournamentFormData,
@@ -26,37 +26,37 @@ import {
   type TournamentFormData,
 } from "@/lib/tournament-form-utils"
 
-interface Club {
+export interface OrganizerClub {
   id: number
   name: string
-  description?: string
-  location?: string
-  website?: string
-  email?: string
-  phone?: string
-  created_at: string
-  updated_at: string
+  address: string | null
 }
 
 interface NuevoTorneoFormProps {
   isSiteAdmin: boolean
-  clubs: Club[]
-  selectedClub: Club | null
+  clubs: OrganizerClub[]
+  /** Preselected organizer; null means FASGBA (site admins only). */
+  defaultClubId: number | null
+  returnPath: string
+  /** Query appended to the editor link so it returns to the same panel. */
+  editQuery: string
 }
 
-export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorneoFormProps) {
+const FASGBA_VALUE = "none"
+
+export function NuevoTorneoForm({ isSiteAdmin, clubs, defaultClubId, returnPath, editQuery }: NuevoTorneoFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [newDate, setNewDate] = useState("")
-  const [selectedClubId, setSelectedClubId] = useState<number | undefined>(
-    selectedClub?.id
-  )
+  const [clubValue, setClubValue] = useState(defaultClubId ? String(defaultClubId) : FASGBA_VALUE)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [createdTournamentId, setCreatedTournamentId] = useState<number | null>(null)
 
   const [formData, setFormData] = useState<TournamentFormData>(createEmptyTournamentFormData())
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+
+  const selectedClubId = clubValue === FASGBA_VALUE ? undefined : Number(clubValue)
+  const singleClub = !isSiteAdmin && clubs.length === 1 ? clubs[0] : null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -89,8 +89,7 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
         setCreatedTournamentId(result.id)
         setShowSuccessDialog(true)
       } else {
-        const redirectPath = isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"
-        router.push(redirectPath)
+        router.push(returnPath)
       }
     } catch (err) {
       console.error('Error creating tournament:', err)
@@ -127,14 +126,13 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
     }
   }
 
-  const addDate = () => {
-    if (!newDate || formData.dates.includes(newDate)) return
+  const addDate = (date: string) => {
+    if (!date || formData.dates.includes(date)) return
 
     setFormData(prev => ({
       ...prev,
-      dates: [...prev.dates, newDate].sort()
+      dates: [...prev.dates, date].sort()
     }))
-    setNewDate("")
 
     if (validationErrors.dates) {
       setValidationErrors(prev => ({ ...prev, dates: "" }))
@@ -148,92 +146,74 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
     }))
   }
 
-  const cancelPath = isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"
-
   return (
     <>
       <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl text-terracotta">Nuevo Torneo</CardTitle>
-          <CardDescription>Completa los detalles del nuevo torneo</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 md:p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && <ErrorAlert message={error} />}
 
-            {isSiteAdmin && clubs.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-terracotta">Club Organizador</h3>
-                <div className="space-y-2">
-                  <Label htmlFor="club">Club (opcional)</Label>
-                  <Select
-                    value={selectedClubId?.toString()}
-                    onValueChange={(value) => {
-                      setSelectedClubId(value === "none" ? undefined : parseInt(value))
-                      if (validationErrors.club) {
-                        setValidationErrors(prev => ({ ...prev, club: "" }))
-                      }
-                    }}
-                  >
-                    <SelectTrigger className={validationErrors.club ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Seleccionar club (opcional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">FASGBA</SelectItem>
-                      {clubs.map((club) => (
-                        <SelectItem key={club.id} value={club.id.toString()}>
-                          {club.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {validationErrors.club && (
-                    <p className="text-sm text-red-500">{validationErrors.club}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {!isSiteAdmin && selectedClub && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-terracotta">Club Organizador</h3>
+            {singleClub ? (
+              <div className="space-y-2">
+                <Label>Club organizador</Label>
                 <div className="p-3 bg-muted rounded-md">
-                  <p className="font-medium">{selectedClub.name}</p>
-                  {selectedClub.location && (
-                    <p className="text-sm text-muted-foreground">{selectedClub.location}</p>
+                  <p className="text-sm font-medium">{singleClub.name}</p>
+                  {singleClub.address && (
+                    <p className="text-sm text-muted-foreground">{singleClub.address}</p>
                   )}
                 </div>
               </div>
-            )}
+            ) : clubs.length > 0 ? (
+              <div className="space-y-2">
+                <Label htmlFor="club">Club organizador</Label>
+                <Select
+                  value={clubValue}
+                  onValueChange={(value) => {
+                    setClubValue(value)
+                    if (validationErrors.club) {
+                      setValidationErrors(prev => ({ ...prev, club: "" }))
+                    }
+                  }}
+                >
+                  <SelectTrigger id="club" className={validationErrors.club ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Seleccionar club" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isSiteAdmin && <SelectItem value={FASGBA_VALUE}>FASGBA</SelectItem>}
+                    {clubs.map((club) => (
+                      <SelectItem key={club.id} value={club.id.toString()}>
+                        {club.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {validationErrors.club && (
+                  <p className="text-sm text-destructive">{validationErrors.club}</p>
+                )}
+              </div>
+            ) : null}
 
             <TournamentFormFields
               formData={formData}
               validationErrors={validationErrors}
-              newDate={newDate}
-              setNewDate={setNewDate}
               onChange={handleChange}
               onSelectChange={handleSelectChange}
               onAddDate={addDate}
               onRemoveDate={removeDate}
             />
 
-            <div className="flex gap-4 pt-6">
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="bg-terracotta hover:bg-terracotta/90"
-              >
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isLoading ? "Creando..." : "Crear Torneo"}
-              </Button>
-
+            <div className={TOURNAMENT_FORM_ACTIONS_CLASS}>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push(cancelPath)}
+                onClick={() => router.push(returnPath)}
                 disabled={isLoading}
               >
                 Cancelar
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isLoading ? "Creando..." : "Crear torneo"}
               </Button>
             </div>
           </form>
@@ -241,60 +221,34 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, selectedClub }: NuevoTorne
       </Card>
 
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[440px]">
           <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <DialogTitle className="text-xl">¡Torneo Creado Exitosamente!</DialogTitle>
-                <DialogDescription className="mt-1">
-                  El torneo "{formData.title}" ha sido creado correctamente.
-                </DialogDescription>
-              </div>
-            </div>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-amber" />
+              Torneo creado
+            </DialogTitle>
+            <DialogDescription>
+              Configura rondas y partidas ahora o más tarde.
+            </DialogDescription>
           </DialogHeader>
-
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground mb-4">
-              ¿Qué te gustaría hacer ahora?
-            </p>
-
-            <div className="space-y-3">
-              <div className="p-4 rounded-lg border bg-muted/50">
-                <h4 className="font-medium mb-2">Configurar Torneo</h4>
-                <p className="text-sm text-muted-foreground">
-                  Ir a la página de edición para configurar equipos, rondas, partidas y jugadores.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-lg border bg-muted/50">
-                <h4 className="font-medium mb-2">Volver al Menú</h4>
-                <p className="text-sm text-muted-foreground">
-                  Regresar al panel de administración. Podrás configurar el torneo más tarde.
-                </p>
-              </div>
-            </div>
-          </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
-              onClick={() => router.push(cancelPath)}
+              onClick={() => router.push(returnPath)}
               className="w-full sm:w-auto"
             >
-              Volver al Menú
+              Volver
             </Button>
             <Button
               onClick={() => {
                 if (createdTournamentId) {
-                  router.push(`/torneos/${createdTournamentId}/editar`)
+                  router.push(`/torneos/${createdTournamentId}/editar${editQuery}`)
                 }
               }}
-              className="w-full sm:w-auto bg-terracotta hover:bg-terracotta/90"
+              className="w-full sm:w-auto"
             >
-              Configurar Torneo
+              Configurar torneo
             </Button>
           </DialogFooter>
         </DialogContent>

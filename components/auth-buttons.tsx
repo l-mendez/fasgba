@@ -2,106 +2,93 @@
 
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
-import { Settings, LogOut } from "lucide-react"
+import { CastleIcon, LogOut, Settings, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
+import { isActivePath } from "@/components/main-nav"
 
-export function AuthButtons() {
-  const { isAuthenticated, isAdmin, isClubAdmin, isLoading } = useAuth()
-  const supabase = createClient()
+// Signs out and returns to the home page. Shared with the mobile menu.
+export function useSignOut() {
   const router = useRouter()
-  const pathname = usePathname()
 
-  const handleLogout = async () => {
+  return async () => {
     try {
-      const { error } = await supabase.auth.signOut()
+      const { error } = await createClient().auth.signOut()
       if (error) {
         console.error('Error signing out:', error.message)
         return
       }
-      
-      // Redirect to home page after successful logout
       router.push('/')
       router.refresh()
     } catch (error) {
       console.error('Unexpected error during logout:', error)
     }
   }
+}
+
+export function AuthButtons() {
+  const { isAuthenticated, isAdmin, isClubAdmin, isLoading } = useAuth()
+  const signOut = useSignOut()
+  const pathname = usePathname()
 
   // While the session resolves, hold the layout with a fixed-size placeholder
   // so there's no flash of logged-out state and no layout shift.
   if (isLoading) {
     return (
-      <div className="flex items-center space-x-4" aria-hidden="true">
-        <Skeleton className="h-10 w-[124px]" />
-        <Skeleton className="h-10 w-[112px]" />
+      <div className="flex items-center gap-2" aria-hidden="true">
+        <Skeleton className="h-9 w-[118px]" />
+        <Skeleton className="h-9 w-[106px]" />
       </div>
     )
   }
 
   if (!isAuthenticated) {
     return (
-      <>
-        <Link href="/login">
-          <Button variant="brand" className="text-sm font-medium bg-background hover:bg-background border-terracotta/40 hover:border-terracotta">
-            Iniciar Sesión
-          </Button>
-        </Link>
-        <Link href="/registro">
-          <Button className="bg-terracotta hover:bg-terracotta/90 text-white text-sm font-medium">
-            Registrarse
-          </Button>
-        </Link>
-      </>
+      <div className="flex items-center gap-2">
+        <Button asChild variant="outline" size="sm" className="border-terracotta/40 text-terracotta hover:text-terracotta">
+          <Link href="/login">Iniciar sesión</Link>
+        </Button>
+        <Button asChild size="sm" className="bg-terracotta text-white hover:bg-terracotta/90">
+          <Link href="/registro">Registrarse</Link>
+        </Button>
+      </div>
     )
   }
 
-  return (
-    <>
-      <Link href="/ajustes">
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-amber dark:hover:bg-amber/20">
-          <Settings className="h-4 w-4" />
-        </Button>
+  const activeClass = (href: string) =>
+    isActivePath(pathname, href) ? "text-terracotta" : "text-muted-foreground"
+
+  // Icon-only below xl so the header fits at lg with every link shown.
+  const roleLink = (href: string, label: string, Icon: typeof Shield) => (
+    <Button asChild variant="ghost" size="sm" className={activeClass(href)}>
+      <Link href={href} title={label}>
+        <Icon />
+        <span className="sr-only xl:not-sr-only">{label}</span>
       </Link>
-      
-      {/* Show admin button only if user is admin */}
-      {isAdmin && (
-        <Link
-          href="/admin"
-          className={cn(
-            "rounded-md bg-terracotta/10 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-terracotta/20",
-            pathname.startsWith("/admin") ? "text-terracotta" : "text-muted-foreground"
-          )}
-        >
-          Admin
+    </Button>
+  )
+
+  return (
+    <div className="flex items-center gap-1">
+      {isAdmin && roleLink("/admin", "Admin", Shield)}
+      {isClubAdmin && roleLink("/club-admin", "Club Admin", CastleIcon)}
+      <Button asChild variant="ghost" size="icon" className={activeClass("/ajustes")}>
+        <Link href="/ajustes" aria-label="Ajustes" title="Ajustes">
+          <Settings />
         </Link>
-      )}
-      
-      {/* Show club admin button only if user is club admin */}
-      {isClubAdmin && (
-        <Link
-          href="/club-admin"
-          className={cn(
-            "rounded-md bg-amber/10 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-amber/20",
-            pathname.startsWith("/club-admin") ? "text-amber" : "text-muted-foreground"
-          )}
-        >
-          Club Admin
-        </Link>
-      )}
-      
-      {/* Logout button */}
+      </Button>
       <Button
         variant="ghost"
         size="icon"
-        onClick={handleLogout}
-        className="text-muted-foreground hover:text-red-500 dark:hover:bg-red-500/20"
+        onClick={signOut}
+        aria-label="Cerrar sesión"
+        title="Cerrar sesión"
+        className="text-muted-foreground"
       >
-        <LogOut className="h-4 w-4" />
+        <LogOut />
       </Button>
-    </>
+    </div>
   )
-} 
+}

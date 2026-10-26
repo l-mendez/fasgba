@@ -1,14 +1,19 @@
 import "server-only"
 
+import { cookies } from "next/headers"
 import { notFound } from "next/navigation"
 import { cache } from "react"
 
 import { getClubNews, getClubTournaments } from "@/lib/clubUtils"
-import type {
-  ClubAdminActivityItem,
-  ClubAdminClub,
-  ClubAdminPlayer,
-  ClubAdminStats,
+import {
+  CLUB_PLAYERS_PAGE_SIZE,
+  SELECTED_CLUB_COOKIE,
+  type ClubAdminActivityItem,
+  type ClubAdminClub,
+  type ClubAdminPlayer,
+  type ClubAdminStats,
+  type ClubPlayersPage,
+  type ClubPlayersScope,
 } from "@/lib/club-admin/types"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
@@ -92,10 +97,16 @@ export const getClubAdminContext = cache(async function getClubAdminContext() {
 
   if (clubs.length === 0) notFound()
 
+  // The selector stores the picked club in a cookie so reloads and round
+  // trips through the shared editors keep it.
+  const cookieStore = await cookies()
+  const preferredId = Number(cookieStore.get(SELECTED_CLUB_COOKIE)?.value)
+  const selectedClub = clubs.find((club) => club.id === preferredId) ?? clubs[0]
+
   return {
     authId,
     clubs,
-    selectedClub: clubs[0],
+    selectedClub,
   }
 })
 
@@ -197,12 +208,13 @@ export async function getClubDashboardInitialData() {
   }
 }
 
-export async function getClubPlayersInitialData() {
-  const { clubs } = await getClubAdminContext()
-  const clubIds = clubs.map((club) => club.id)
+export async function queryClubPlayers(
+  scope: ClubPlayersScope,
+  search: string,
+  page: number
+): Promise<ClubPlayersPage> {
   const supabase = createAdminClient()
-
-  const { data, error } = await supabase
+  let query = supabase
     .from("players")
     .select(`
       id,
@@ -213,13 +225,23 @@ export async function getClubPlayersInitialData() {
         id,
         name
       )
-    `)
-    .or(`club_id.is.null,club_id.in.(${clubIds.join(",")})`)
+    `, { count: "exact" })
+
+  query = scope === "none" ? query.is("club_id", null) : query.eq("club_id", scope)
+
+  // Strip characters that would break the PostgREST `or` filter syntax.
+  const term = search.replace(/[,()%*\\]/g, " ").trim()
+  if (term) query = query.or(`full_name.ilike.%${term}%,fide_id.ilike.%${term}%`)
+
+  const from = (Math.max(1, page) - 1) * CLUB_PLAYERS_PAGE_SIZE
+  const { data, error, count } = await query
     .order("full_name", { ascending: true })
+    .range(from, from + CLUB_PLAYERS_PAGE_SIZE - 1)
 
   if (error) throw error
 
   return {
+    total: count ?? 0,
     players: (data || []).map((player: any): ClubAdminPlayer => ({
       id: player.id,
       full_name: player.full_name,
@@ -227,6 +249,14 @@ export async function getClubPlayersInitialData() {
       rating: player.rating,
       club: normalizeClub(player.club),
     })),
+  }
+}
+
+export async function getClubPlayersInitialData() {
+  const { selectedClub } = await getClubAdminContext()
+  return {
+    selectedClubId: selectedClub.id,
+    ...(await queryClubPlayers(selectedClub.id, "", 1)),
   }
 }
 

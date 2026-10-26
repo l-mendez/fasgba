@@ -12,8 +12,7 @@ export function RankingUploadSection({ existingRankingNames }: RankingUploadSect
       <CardHeader>
         <CardTitle>Subir archivo de ranking</CardTitle>
         <CardDescription>
-          Selecciona un archivo Excel (.xlsx) con los datos actualizados del ranking.
-          Soporta formato con 3 hojas (Ranking, Analítico, Consolidado) o formato simple de una sola hoja.
+          Excel (.xlsx) con 3 hojas (Ranking, Analítico, Consolidado) o una sola hoja.
         </CardDescription>
       </CardHeader>
       <CardContent>

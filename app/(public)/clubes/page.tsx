@@ -21,7 +21,7 @@ const getCachedClubs = unstable_cache(
 
 // Generate metadata for better link previews
 export const metadata: Metadata = {
-  title: 'Clubes Afiliados - FASGBA',
+  title: 'Clubes',
   description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur del Gran Buenos Aires. Encuentra información de contacto, horarios y actividades.',
   keywords: ['FASGBA', 'clubes', 'ajedrez', 'afiliados', 'federación', 'Buenos Aires', 'directorio'],
   openGraph: {
@@ -65,24 +65,13 @@ export default async function ClubesPage() {
 
   return (
     <>
-      <PageHero
-        title="Clubes Afiliados"
-        subtitle="Conoce los clubes que forman parte de la Federación de Ajedrez del Sur del Gran Buenos Aires"
-      />
-      <section className="w-full py-12 md:py-24 lg:py-32">
+      <PageHero title="Clubes" />
+      <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
         <div className="container px-4 md:px-6">
-          <div className="mb-10">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight text-muted-foreground">Directorio de Clubes</h2>
-                <p className="text-muted-foreground">
-                  Encuentra información detallada sobre cada club afiliado a FASGBA
-                </p>
-              </div>
-              <Suspense fallback={<div className="w-full md:w-1/3 h-10 bg-muted animate-pulse rounded" />}>
-                <ClubSearch />
-              </Suspense>
-            </div>
+          <div className="mb-8">
+            <Suspense fallback={<div className="w-full md:w-1/3 h-10 bg-muted animate-pulse rounded" />}>
+              <ClubSearch />
+            </Suspense>
           </div>
 
           <Suspense fallback={<div className="min-h-[400px]" />}>

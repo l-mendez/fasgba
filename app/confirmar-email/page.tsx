@@ -1,73 +1,64 @@
 "use client"
 
+import Link from "next/link"
+import { useState, useSyncExternalStore } from "react"
+import { Loader2, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Mail } from "lucide-react"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { AuthShell, authLinkClass } from "@/app/auth/components/auth-shell"
+
+type ResendStatus = "idle" | "sending" | "sent" | "error"
+
+const noopSubscribe = () => () => {}
 
 export default function ConfirmEmailPage() {
-  const [isAttempting, setIsAttempting] = useState(false)
-  const router = useRouter()
-  const supabase = createClient()
+  // Set by the signup form; only the email is stored, never the password.
+  const email = useSyncExternalStore(
+    noopSubscribe,
+    () => sessionStorage.getItem("signupEmail"),
+    () => null
+  )
+  const [status, setStatus] = useState<ResendStatus>("idle")
 
-  const handleContinue = async () => {
-    setIsAttempting(true)
-    
-    // Try to sign in with stored credentials
-    if (typeof window !== 'undefined') {
-      const storedCredentials = sessionStorage.getItem('signupCredentials')
-      
-      if (storedCredentials) {
-        try {
-          const { email, password } = JSON.parse(storedCredentials)
-          
-          // Attempt to sign in
-          await supabase.auth.signInWithPassword({
-            email,
-            password,
-          })
-          
-          // Clear stored credentials regardless of success/failure
-          sessionStorage.removeItem('signupCredentials')
-          sessionStorage.removeItem('intendedDestination')
-        } catch (error) {
-          // Silently handle any errors
-          console.log('Auto sign-in attempt completed')
-        }
-      }
-    }
-    
-    // Always redirect to home page, regardless of sign-in success/failure
-    router.push('/')
-    router.refresh()
+  const resend = async () => {
+    if (!email) return
+    setStatus("sending")
+    const { error } = await createClient().auth.resend({ type: "signup", email })
+    setStatus(error ? "error" : "sent")
   }
 
   return (
-    <div className="container flex h-screen w-screen flex-col items-center justify-center">
-      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-        <div className="flex flex-col space-y-2 text-center">
-          <div className="flex justify-center">
-            <Mail className="h-12 w-12 text-terracotta" />
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Confirma tu email
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Te hemos enviado un correo electrónico con un enlace para confirmar tu cuenta.
-            Por favor, revisa tu bandeja de entrada y sigue las instrucciones.
-          </p>
-        </div>
-        <div className="flex flex-col space-y-4">
+    <AuthShell
+      title="Confirma tu email"
+      links={
+        <p>
+          ¿Ya confirmaste?{" "}
+          <Link href="/login" className={authLinkClass}>
+            Iniciar sesión
+          </Link>
+        </p>
+      }
+    >
+      <div className="space-y-4 text-center">
+        <Mail className="mx-auto h-10 w-10 text-amber" />
+        <p className="text-sm text-muted-foreground">
+          Te enviamos un enlace para confirmar tu cuenta. Revisa tu bandeja de entrada.
+        </p>
+        {email && (
           <Button
-            onClick={handleContinue}
-            disabled={isAttempting}
-            className="w-full bg-terracotta hover:bg-terracotta/90 text-white"
+            variant="outline"
+            onClick={resend}
+            disabled={status === "sending" || status === "sent"}
+            className="w-full"
           >
-            {isAttempting ? "Cargando..." : "Volver al inicio"}
+            {status === "sending" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {status === "sent" ? "Email reenviado" : "Reenviar email"}
           </Button>
-        </div>
+        )}
+        {status === "error" && (
+          <p className="text-sm text-destructive">No se pudo reenviar. Intenta en unos minutos.</p>
+        )}
       </div>
-    </div>
+    </AuthShell>
   )
-} 
+}

@@ -1,29 +1,30 @@
-import { FileSpreadsheet } from "lucide-react"
+import { Suspense } from "react"
 
 import { PastRankingsInfiniteTable } from "@/app/admin/ranking/past-rankings-infinite-table"
 import { PastRankingsSection } from "@/app/admin/ranking/past-rankings-section"
 import { RankingUploadSection } from "@/app/admin/ranking/ranking-upload-section"
+import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
 import { AdminPageHeader } from "@/components/admin-page-header"
-import { Badge } from "@/components/ui/badge"
 import { getAdminRankingInitialData } from "@/lib/admin/initial-data"
 
 export const dynamic = "force-dynamic"
 
-export default async function AdminRankingPage() {
+export default function AdminRankingPage() {
+  return (
+    <div className="space-y-6">
+      <AdminPageHeader title="Ranking" />
+      <Suspense fallback={<AdminContentSkeleton filters={false} rows={6} />}>
+        <AdminRankingContent />
+      </Suspense>
+    </div>
+  )
+}
+
+async function AdminRankingContent() {
   const { existingRankingNames, ...initialData } = await getAdminRankingInitialData()
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader
-        title="Gestión de Ranking"
-        subtitle="Actualiza el ranking oficial desde archivos Excel."
-        action={
-          <Badge variant="outline" className="w-fit">
-            <FileSpreadsheet className="mr-1 h-3 w-3" />
-            Actualización por Excel
-          </Badge>
-        }
-      />
       <RankingUploadSection existingRankingNames={existingRankingNames} />
       <PastRankingsSection>
         <PastRankingsInfiniteTable

@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 
 import { ClubAdminEquipos } from "./equipos-client"
 import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
@@ -6,33 +7,31 @@ import { AdminPageHeader } from "@/components/admin-page-header"
 import { getClubTeamsInitialData } from "@/lib/club-admin/initial-data"
 
 export const dynamic = "force-dynamic"
+export const metadata: Metadata = { title: "Equipos del club" }
 
 export default function ClubAdminEquiposPage() {
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
-        title="Equipos"
-        subtitle="Gestiona los equipos del club seleccionado."
-      />
-      <Suspense fallback={<AdminContentSkeleton rows={5} filters={false} />}>
-        <ClubAdminEquiposContent />
-      </Suspense>
-    </div>
+    // The client renders the header so "Nuevo equipo" can sit in its action slot.
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <AdminPageHeader title="Equipos" />
+          <AdminContentSkeleton rows={5} filters={false} />
+        </div>
+      }
+    >
+      <ClubAdminEquiposContent />
+    </Suspense>
   )
 }
 
 async function ClubAdminEquiposContent() {
-  const { selectedClub, selectedClubId, teams } = await getClubTeamsInitialData()
+  const { selectedClubId, teams } = await getClubTeamsInitialData()
 
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">{selectedClub.name}</p>
-      <ClubAdminEquipos
-        showHeader={false}
-        showSummary={false}
-        initialClubId={selectedClubId}
-        initialTeams={teams}
-      />
-    </div>
+    <ClubAdminEquipos
+      initialClubId={selectedClubId}
+      initialTeams={teams}
+    />
   )
 }

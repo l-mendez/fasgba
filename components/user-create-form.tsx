@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { AlertTriangle, CheckCircle2, ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface Club {
   id: number
@@ -65,33 +66,34 @@ export function UserCreateForm({ clubs }: UserCreateFormProps) {
   }
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center gap-2 md:gap-4">
-        <Button onClick={() => router.push("/admin/usuarios")} size="sm" className="md:h-10">
-          ←
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Button
+          onClick={() => router.push("/admin/usuarios")}
+          variant="outline"
+          size="icon"
+          aria-label="Volver a usuarios"
+          title="Volver a usuarios"
+        >
+          <ChevronLeft className="h-4 w-4" />
         </Button>
-        <div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-terracotta">Nuevo Usuario</h2>
-          <p className="text-sm md:text-base text-muted-foreground">Crea un nuevo usuario en el sistema.</p>
-        </div>
+        <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Nuevo usuario</h1>
       </div>
-      
+
       {error && (
-        <Alert>
-          <span className="text-red-600 mr-2">⚠️</span>
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription className="text-sm">{error}</AlertDescription>
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      
+
       {success && (
-        <Alert className="bg-green-50 border-green-500 text-green-700">
-          <span className="text-green-600 mr-2">✓</span>
-          <AlertTitle>Éxito</AlertTitle>
-          <AlertDescription className="text-sm">{success}</AlertDescription>
+        <Alert className="bg-muted">
+          <CheckCircle2 className="h-4 w-4 text-amber" />
+          <AlertDescription>{success}</AlertDescription>
         </Alert>
       )}
-      
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid gap-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -160,12 +162,12 @@ export function UserCreateForm({ clubs }: UserCreateFormProps) {
               <SelectContent>
                 <SelectItem value="user">Usuario</SelectItem>
                 <SelectItem value="admin">Administrador</SelectItem>
-                <SelectItem value="club_admin">Administrador de Club</SelectItem>
+                <SelectItem value="club_admin">Administrador de club</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
-        <div className="flex justify-end space-x-2">
+        <div className="flex justify-end gap-2">
           <Button
             type="button"
             variant="outline"
