@@ -10,7 +10,6 @@ import { fail } from './db'
 import { discoverCandidates, type DiscoverySummary } from './discover'
 import { readOnlyClient } from './dry-run'
 import { fetchChessResultsTournament } from './fetch'
-import { withoutPlaceholderPlayers } from './placeholders'
 import type { SiteTournament } from './suggest'
 import { syncTournamentFromChessResults, type SyncReport } from './sync'
 
@@ -100,7 +99,7 @@ export async function runChessResultsSync({ dryRun = false, deadlineMs = 50_000 
       continue
     }
     try {
-      const cr = withoutPlaceholderPlayers(await fetchChessResultsTournament(tnr))
+      const cr = await fetchChessResultsTournament(tnr)
       const report = await syncTournamentFromChessResults(db, site.id, cr)
       synced.push({ ...report, title: site.title, tnr })
     } catch (error) {
