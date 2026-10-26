@@ -20,6 +20,7 @@ export interface Tournament {
   max_teams?: number | null;
   registration_deadline?: string | null;
   team_match_points?: any | null;
+  chess_results_tnr?: number | null;
 }
 
 // Tournament dates from the separate table

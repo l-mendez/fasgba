@@ -7,6 +7,7 @@ import { validateCreateTournament } from '@/lib/schemas/tournamentSchemas'
 import { apiSuccess, handleError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { isUserClubAdmin } from '@/lib/clubUtils'
+import { tnrConflictResponse } from '@/lib/tournament/chess-results'
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,6 +63,9 @@ export async function POST(request: NextRequest) {
         }
       }
     }
+
+    const tnrConflict = await tnrConflictResponse(supabase, validatedData.chess_results_tnr)
+    if (tnrConflict) return tnrConflict
 
     // Create the tournament
     const newTournament = await createTournament(supabase, validatedData)

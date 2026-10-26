@@ -23,6 +23,7 @@ export async function createTournament(supabase: any, tournamentData: {
   max_teams?: number;
   registration_deadline?: string;
   team_match_points?: any;
+  chess_results_tnr?: number | null;
 }): Promise<Tournament> {
   try {
     // Extract dates from tournament data
@@ -95,6 +96,7 @@ export async function updateTournament(supabase: any, tournamentId: number, tour
   max_teams?: number;
   registration_deadline?: string;
   team_match_points?: any;
+  chess_results_tnr?: number | null;
 }): Promise<boolean> {
   try {
     // Extract dates from tournament data
