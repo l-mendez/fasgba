@@ -1,12 +1,13 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Check, Link2, Loader2, Search } from "lucide-react"
+import { ArrowLeft, Check, Eye, Link2, Loader2, Search } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { ChessResultsPreviewBody, canConfirmPreview, useChessResultsPreview } from "@/components/chess-results/chess-results-preview-body"
 import { toastSyncReport } from "@/components/chess-results/format"
 import { normalizeForSearch } from "@/lib/countries"
 import { formatArgentinaDateOnly } from "@/lib/dateUtils"
@@ -39,6 +40,7 @@ function LinkCandidateContent({ candidate, tournaments, onOpenChange, onLinked }
   const [query, setQuery] = useState("")
   const [selected, setSelected] = useState<number | null>(candidate.suggested?.id ?? null)
   const [saving, setSaving] = useState(false)
+  const [reviewing, setReviewing] = useState(false)
 
   // Suggested first, then by title match, then the tournaments closest in date.
   const options = useMemo(() => {
@@ -69,6 +71,10 @@ function LinkCandidateContent({ candidate, tournaments, onOpenChange, onLinked }
     }
   }
 
+  if (reviewing && selected != null) {
+    return <ReviewStep key={selected} tnr={candidate.tnr} tournamentId={selected} saving={saving} onBack={() => setReviewing(false)} onConfirm={link} />
+  }
+
   return (
     <DialogContent
       className="flex max-h-[90vh] flex-col sm:max-w-lg"
@@ -78,7 +84,7 @@ function LinkCandidateContent({ candidate, tournaments, onOpenChange, onLinked }
       <DialogHeader>
         <DialogTitle>Vincular a un torneo existente</DialogTitle>
         <DialogDescription className="break-words">
-          {candidate.name}. Se importarán los jugadores, rondas y resultados que falten.
+          {candidate.name}. Elegí el torneo y revisá lo que se va a importar antes de confirmar.
         </DialogDescription>
       </DialogHeader>
 
@@ -124,9 +130,45 @@ function LinkCandidateContent({ candidate, tournaments, onOpenChange, onLinked }
         <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
           Cancelar
         </Button>
-        <Button onClick={link} disabled={selected == null || saving}>
+        <Button onClick={() => setReviewing(true)} disabled={selected == null}>
+          <Eye className="mr-2 h-4 w-4" />
+          Revisar importación
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  )
+}
+
+interface ReviewStepProps {
+  tnr: number
+  tournamentId: number
+  saving: boolean
+  onBack: () => void
+  onConfirm: () => void
+}
+
+/** Second step: everything linking would import into the chosen tournament. */
+function ReviewStep({ tnr, tournamentId, saving, onBack, onConfirm }: ReviewStepProps) {
+  const state = useChessResultsPreview(tnr, tournamentId)
+  return (
+    <DialogContent
+      className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"
+      onEscapeKeyDown={(e) => saving && e.preventDefault()}
+      onInteractOutside={(e) => saving && e.preventDefault()}
+    >
+      <DialogHeader>
+        <DialogTitle>Revisar importación</DialogTitle>
+        <DialogDescription>Solo se agrega lo que falta; no se modifica lo ya cargado.</DialogDescription>
+      </DialogHeader>
+      <ChessResultsPreviewBody state={state} />
+      <DialogFooter className="gap-2">
+        <Button variant="outline" onClick={onBack} disabled={saving}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Volver
+        </Button>
+        <Button onClick={onConfirm} disabled={!canConfirmPreview(state) || saving}>
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
-          {saving ? "Vinculando…" : "Vincular"}
+          {saving ? "Vinculando…" : "Vincular e importar"}
         </Button>
       </DialogFooter>
     </DialogContent>

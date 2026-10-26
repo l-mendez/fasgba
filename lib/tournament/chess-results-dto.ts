@@ -1,9 +1,10 @@
 // Client-safe response shapes of the chess-results admin API routes.
 
 import type { SyncReport } from '@/lib/chess-results/sync'
+import type { ImportPlan } from '@/lib/chess-results/plan'
 import type { CrDetails } from '@/lib/chess-results/types'
 
-export type { SyncReport }
+export type { ImportPlan, SyncReport }
 
 export interface LinkedTournament {
   id: number
@@ -18,7 +19,10 @@ export interface ChessResultsCounts {
   games: number
 }
 
-/** GET /api/chess-results/preview. `details`/`counts` are null when the tnr is already linked. */
+/**
+ * GET /api/chess-results/preview. `details`/`counts`/`plan` are null when the tnr
+ * is already linked to a tournament other than the one being synced.
+ */
 export interface ChessResultsPreview {
   tnr: number
   url: string
@@ -26,6 +30,8 @@ export interface ChessResultsPreview {
   details: CrDetails | null
   counts: ChessResultsCounts | null
   dates: string[]
+  /** Everything the import/sync would write, item by item. */
+  plan: ImportPlan | null
 }
 
 /** POST import / sync / link responses. */

@@ -14,6 +14,7 @@ import { parseChessResultsTnr } from "@/lib/chess-results/url"
 import type { ChessResultsPreview, ChessResultsSyncResponse } from "@/lib/tournament/chess-results-dto"
 import { apiCall } from "@/lib/utils/apiClient"
 import { ChessResultsPreviewCard } from "./chess-results-preview-card"
+import { ImportPlanView } from "./plan/plan-view"
 import { toastSyncReport } from "./format"
 
 interface Club {
@@ -120,14 +121,14 @@ function ImportDialogContent({ onOpenChange, initialUrl, chooseClub, club, onImp
 
   return (
     <DialogContent
-      className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
+      className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"
       onEscapeKeyDown={(e) => busy && e.preventDefault()}
       onInteractOutside={(e) => busy && e.preventDefault()}
     >
       <DialogHeader>
         <DialogTitle>Importar desde chess-results</DialogTitle>
         <DialogDescription>
-          Crea el torneo con sus jugadores, rondas y resultados.
+          Crea el torneo con sus jugadores, rondas y resultados. Revisá todo lo que se va a cargar antes de confirmar.
         </DialogDescription>
       </DialogHeader>
 
@@ -174,7 +175,8 @@ function ImportDialogContent({ onOpenChange, initialUrl, chooseClub, club, onImp
         </div>
       )}
 
-      {preview && <ChessResultsPreviewCard preview={preview} />}
+      {preview && <ChessResultsPreviewCard preview={preview} hideCounts={!!preview.plan} />}
+      {preview?.details && preview.plan && <ImportPlanView plan={preview.plan} details={preview.details} />}
 
       {preview?.details && chooseClub && !club && (
         <div className="space-y-2">

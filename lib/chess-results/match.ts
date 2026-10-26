@@ -61,14 +61,16 @@ export interface PlayerInput {
   rating?: number | null
 }
 
-/** Maps chess-results players to players.id (by FIDE id, then name), creating the missing ones. */
-export async function resolvePlayers(db: SupabaseClient, inputs: PlayerInput[]) {
+/** Read-only: maps chess-results players to existing players (by FIDE id, then name). */
+export async function matchPlayers(db: SupabaseClient, inputs: PlayerInput[]) {
   const { data, error } = await db.from('players').select('id, full_name, fide_id').range(0, 9999)
   if (error) throw new Error(`Error al leer jugadores: ${error.message}`)
+  const siteNames = new Map<number, string>()
   const byFide = new Map<string, number>()
   const byName = new Map<string, number>()
   const bySurname = new Map<string, Array<{ id: number; given: string[] }>>()
   for (const p of data ?? []) {
+    siteNames.set(p.id, p.full_name)
     if (p.fide_id) byFide.set(String(p.fide_id), p.id)
     byName.set(nameKey(p.full_name), p.id)
     const split = splitName(p.full_name)
@@ -89,7 +91,12 @@ export async function resolvePlayers(db: SupabaseClient, inputs: PlayerInput[]) 
     if (id) ids.set(key, id)
     else if (!missing.has(key)) missing.set(key, input)
   }
+  return { ids, missing, siteNames }
+}
 
+/** Maps chess-results players to players.id, creating the missing ones. */
+export async function resolvePlayers(db: SupabaseClient, inputs: PlayerInput[]) {
+  const { ids, missing } = await matchPlayers(db, inputs)
   if (missing.size > 0) {
     const rows = [...missing.values()].map((p) => ({ full_name: p.name, fide_id: p.fideId ?? null, rating: p.rating ?? null }))
     const { data: created, error: insertError } = await db.from('players').insert(rows).select('id, full_name')

@@ -100,7 +100,8 @@ export async function syncTournamentWithChessResults(db: SupabaseClient, tournam
   if (!target) throw new ChessResultsError('Este torneo no está vinculado a chess-results. Pegá el link para vincularlo.', 400)
   await assertTnrAvailable(db, target, tournamentId)
 
-  const cr = await loadChessResultsTournament(target, true)
+  // Reuse the download the preview just showed, so what was reviewed is what gets imported.
+  const cr = await loadChessResultsTournament(target)
   const crType = cr.details.isTeam ? 'team' : 'individual'
   if ((tournament.tournament_type ?? 'individual') !== crType) {
     throw new ChessResultsError(

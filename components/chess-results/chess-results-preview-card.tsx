@@ -14,7 +14,7 @@ function Item({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode 
 }
 
 /** What an import would bring from chess-results (details + counts). */
-export function ChessResultsPreviewCard({ preview }: { preview: ChessResultsPreview }) {
+export function ChessResultsPreviewCard({ preview, hideCounts }: { preview: ChessResultsPreview; hideCounts?: boolean }) {
   const { details, counts } = preview
   if (!details || !counts) return null
   const dates = formatCrDateRange(details.startDate, details.endDate)
@@ -50,7 +50,7 @@ export function ChessResultsPreviewCard({ preview }: { preview: ChessResultsPrev
         {details.timeControl && <Item icon={Timer}>{details.timeControl}</Item>}
       </ul>
 
-      <dl className="grid grid-cols-3 gap-2 border-t pt-3 text-center">
+      {!hideCounts && <dl className="grid grid-cols-3 gap-2 border-t pt-3 text-center">
         <div>
           <dt className="text-xs text-muted-foreground">{details.isTeam ? "Equipos" : "Jugadores"}</dt>
           <dd className="font-semibold tabular-nums">{details.isTeam ? counts.teams : counts.players}</dd>
@@ -63,7 +63,7 @@ export function ChessResultsPreviewCard({ preview }: { preview: ChessResultsPrev
           <dt className="flex items-center justify-center gap-1 text-xs text-muted-foreground"><Swords className="h-3 w-3" />Partidas</dt>
           <dd className="font-semibold tabular-nums">{counts.games}</dd>
         </div>
-      </dl>
+      </dl>}
 
       {preview.dates.length === 0 && (
         <p className="flex items-start gap-2 rounded-md border border-amber/50 bg-amber/10 p-2 text-foreground">

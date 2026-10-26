@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ExternalLink, Loader2, RefreshCw } from "lucide-react"
+import { ExternalLink, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { chessResultsUrl, parseChessResultsTnr } from "@/lib/chess-results/url"
 import type { ChessResultsSyncResponse } from "@/lib/tournament/chess-results-dto"
 import { apiCall } from "@/lib/utils/apiClient"
+import { ChessResultsSyncDialog } from "./chess-results-sync-dialog"
 import { toastSyncReport } from "./format"
 
 interface ChessResultsLinkFieldProps {
@@ -24,11 +25,10 @@ interface ChessResultsLinkFieldProps {
 /** "Link de chess-results" form input, with a sync action on existing tournaments. */
 export function ChessResultsLinkField({ value, error, onChange, tournamentId }: ChessResultsLinkFieldProps) {
   const router = useRouter()
-  const [syncing, setSyncing] = useState(false)
+  const [reviewing, setReviewing] = useState<number | null>(null)
   const tnr = parseChessResultsTnr(value)
 
   const sync = async () => {
-    setSyncing(true)
     try {
       const result: ChessResultsSyncResponse = await apiCall(`/api/tournaments/${tournamentId}/chess-results`, {
         method: "POST",
@@ -40,8 +40,7 @@ export function ChessResultsLinkField({ value, error, onChange, tournamentId }: 
       router.refresh()
     } catch (err) {
       toast.error("No se pudo sincronizar", { description: err instanceof Error ? err.message : undefined })
-    } finally {
-      setSyncing(false)
+      throw err
     }
   }
 
@@ -65,18 +64,26 @@ export function ChessResultsLinkField({ value, error, onChange, tournamentId }: 
           </Button>
         )}
         {tournamentId != null && (
-          <Button type="button" variant="outline" onClick={sync} disabled={!tnr || syncing} className="shrink-0" title="Importar jugadores, rondas y resultados faltantes">
-            {syncing ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <RefreshCw className="h-4 w-4 sm:mr-2" />}
-            <span className="sr-only sm:not-sr-only">{syncing ? "Sincronizando…" : "Sincronizar"}</span>
+          <Button type="button" variant="outline" onClick={() => setReviewing(tnr)} disabled={!tnr} className="shrink-0" title="Revisar e importar jugadores, rondas y resultados faltantes">
+            <RefreshCw className="h-4 w-4 sm:mr-2" />
+            <span className="sr-only sm:not-sr-only">Sincronizar</span>
           </Button>
         )}
       </div>
+      {tournamentId != null && (
+        <ChessResultsSyncDialog
+          tnr={reviewing}
+          tournamentId={Number(tournamentId)}
+          onOpenChange={(open) => !open && setReviewing(null)}
+          onConfirm={sync}
+        />
+      )}
       {error ? (
         <p className="text-sm text-destructive">{error}</p>
       ) : (
         <p className="text-sm text-muted-foreground">
           Opcional. {tournamentId != null
-            ? "Sincronizar vincula el link e importa jugadores, rondas y resultados que falten."
+            ? "Sincronizar muestra todo lo que falta (jugadores, rondas y resultados) y lo importa al confirmar."
             : "Pegá el link o el número del torneo."}
         </p>
       )}
