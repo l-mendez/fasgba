@@ -6,7 +6,7 @@ import type { DocumentoViewerRoles } from '@/lib/documentosUtils'
 
 // Create a server-side Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export interface AuthenticatedUser extends User {

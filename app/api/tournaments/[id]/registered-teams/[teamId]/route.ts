@@ -4,7 +4,7 @@ import { apiSuccess, handleError, notFoundError, validationError } from '@/lib/u
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
 interface RouteParams {

@@ -8,7 +8,7 @@ import { updateArbitro, getArbitroById } from '@/lib/arbitroUtils'
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey)
 
 type UploadResult =

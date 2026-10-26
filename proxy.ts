@@ -7,7 +7,7 @@ const FALLBACK_ALLOWED_COUNTRIES = new Set(['AR', 'BR', 'CO'])
 const ALLOWLIST_TTL_MS = 60_000
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 // Paths that should skip session middleware for better caching
 const CACHEABLE_PATHS = ['/noticias', '/clubes', '/ranking', '/torneos', '/documentos']
