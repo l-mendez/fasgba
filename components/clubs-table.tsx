@@ -37,7 +37,7 @@ interface ClubWithAdminInfo extends Club {
 
 function GuestBadge({ club }: { club: Club }) {
   if (club.affiliated !== false) return null
-  return <Badge variant="secondary" className="ml-2 bg-amber/20 text-amber-dark">Invitado</Badge>
+  return <Badge variant="secondary" className="ml-2 bg-amber/20 text-amber-dark hover:bg-amber/20">Invitado</Badge>
 }
 
 async function deleteClub(clubId: number): Promise<void> {
