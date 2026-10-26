@@ -76,6 +76,21 @@ Geo-blocking is data-driven and managed from `/admin/paises`:
 `proxy.ts` caches the enabled codes for 60 seconds per edge instance and falls
 back to the last known list, so a Supabase outage never blocks the site.
 
+## Chess-results Sync
+
+Tournaments can be linked to chess-results.com and imported from it
+(`lib/chess-results/`):
+
+- `tournaments.chess_results_tnr`: chess-results tournament id (unique), and
+  `chess_results_synced_at`: last successful sync.
+- `chess_results_candidates`: chess-results tournaments discovered by the weekly
+  job, queued for admin approval (`pending` → `imported` / `ignored`), with an
+  optional `suggested_tournament_id` when one already exists on the site.
+  Service-role only (RLS on, no policies); admin routes check permissions.
+
+The sync only inserts missing rows and fills pending (`*`) results; it never
+overwrites data entered by admins.
+
 ## Types And DTOs
 
 Use three layers deliberately:
