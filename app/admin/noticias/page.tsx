@@ -1,3 +1,4 @@
+import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
 import { Suspense } from "react"
 import Link from "next/link"
 import { Plus } from "lucide-react"
@@ -57,10 +58,10 @@ async function fetchNews(): Promise<News[]> {
 
     // Use the service role client to fetch author information
     const supabaseServiceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const supabaseServiceKey = SUPABASE_SECRET_KEY
     
     if (!supabaseServiceKey) {
-      throw new Error('Service role key not configured')
+      throw new Error('Falta configurar la clave de servicio del servidor')
     }
 
     const { createClient: createServiceClient } = await import('@supabase/supabase-js')
@@ -151,23 +152,21 @@ async function fetchNews(): Promise<News[]> {
 
 export default function AdminNoticiasPage() {
   return (
-    <div className="container py-6">
-      <div className="space-y-6">
-        <AdminPageHeader
-          title="Noticias"
-          action={
-            <Button asChild className="bg-terracotta hover:bg-terracotta/90">
-              <Link href="/noticias/nueva?source=admin">
-                <Plus className="h-4 w-4 mr-2" />
-                Nueva noticia
-              </Link>
-            </Button>
-          }
-        />
-        <Suspense fallback={<AdminContentSkeleton rows={6} />}>
-          <AdminNoticiasContent />
-        </Suspense>
-      </div>
+    <div className="space-y-6">
+      <AdminPageHeader
+        title="Noticias"
+        action={
+          <Button asChild>
+            <Link href="/noticias/nueva?source=admin">
+              <Plus className="h-4 w-4" />
+              Nueva noticia
+            </Link>
+          </Button>
+        }
+      />
+      <Suspense fallback={<AdminContentSkeleton rows={6} />}>
+        <AdminNoticiasContent />
+      </Suspense>
     </div>
   )
 }
@@ -184,9 +183,7 @@ async function AdminNoticiasContent() {
 
   if (error) {
     return (
-      <div>
-        <ErrorAlert message={error} />
-      </div>
+      <ErrorAlert message={error} />
     )
   }
 

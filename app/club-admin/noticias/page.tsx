@@ -1,21 +1,19 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 
 import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
 import { AdminPageHeader } from "@/components/admin-page-header"
 import { getClubNewsInitialData } from "@/lib/club-admin/initial-data"
-import { NewNewsButton } from "../components/new-news-button"
+import { ClubAdminNewButton } from "../components/club-admin-new-button"
 import { NoticiasContent } from "./noticias-content"
 
 export const dynamic = "force-dynamic"
+export const metadata: Metadata = { title: "Noticias del club" }
 
 export default function ClubAdminNoticiasPage() {
   return (
-    <div className="flex flex-col gap-8 p-8">
-      <AdminPageHeader
-        title="Noticias"
-        subtitle="Gestiona las noticias publicadas por tu club."
-        action={<NewNewsButton />}
-      />
+    <div className="space-y-6">
+      <AdminPageHeader title="Noticias" action={<ClubAdminNewButton path="/noticias/nueva" label="Nueva noticia" />} />
 
       <Suspense fallback={<AdminContentSkeleton rows={6} />}>
         <ClubAdminNoticiasContent />

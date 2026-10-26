@@ -6,6 +6,16 @@ import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 
+// Pages that should never be the post-login destination.
+const AUTH_PATHS = ['/login', '/registro', '/recuperar-contrasena', '/confirmar-email', '/auth']
+
+// Only same-origin relative paths ("/x", not "//host" or "https://..."), never an auth page.
+function isSafeRedirect(path: string) {
+  if (!path.startsWith('/') || path.startsWith('//') || path.startsWith('/\\')) return false
+  const pathname = path.split(/[?#]/)[0]
+  return !AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+}
+
 export interface AuthButtonProps {
   email: string
   password: string
@@ -35,28 +45,19 @@ export function AuthButton({
   const searchParams = useSearchParams()
   const supabase = createClient()
 
-  // Get redirect destination
+  // Priority: explicit redirectTo prop > ?redirect= param > same-origin referrer > home
   const getRedirectDestination = () => {
-    // Priority: explicit redirectTo prop > URL param > referrer > default
     if (redirectTo) return redirectTo
-    
+
     const redirectParam = searchParams?.get('redirect') || searchParams?.get('redirectTo')
-    if (redirectParam) return decodeURIComponent(redirectParam)
-    
-    // Check if we have a referrer that's not a login/signup page
-    if (typeof window !== 'undefined') {
-      const referrer = document.referrer
-      const currentOrigin = window.location.origin
-      if (referrer && referrer.startsWith(currentOrigin)) {
-        const referrerPath = new URL(referrer).pathname
-        // Don't redirect back to auth pages
-        if (!referrerPath.includes('/login') && !referrerPath.includes('/signup') && !referrerPath.includes('/confirmar-email')) {
-          return referrerPath
-        }
-      }
+    if (redirectParam && isSafeRedirect(redirectParam)) return redirectParam
+
+    if (typeof window !== 'undefined' && document.referrer) {
+      const referrer = new URL(document.referrer)
+      const path = referrer.pathname + referrer.search
+      if (referrer.origin === window.location.origin && isSafeRedirect(path)) return path
     }
-    
-    // Default fallback
+
     return '/'
   }
 
@@ -124,52 +125,19 @@ export function AuthButton({
       if (data?.user) {
         const destination = getRedirectDestination()
         
-        if (mode === "signup") {
-          // Store credentials temporarily for auto sign-in attempt on confirmation page
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem('signupCredentials', JSON.stringify({ email, password }))
-            sessionStorage.setItem('intendedDestination', destination)
-          }
-          
-          // For signup, try to sign in the user automatically (silently)
-          try {
-            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-              email,
-              password,
-            })
-            
-            // If auto sign-in successful and user is confirmed, redirect to destination
-            if (!signInError && signInData?.user && signInData?.session) {
-              // Clear stored credentials since sign-in was successful
-              if (typeof window !== 'undefined') {
-                sessionStorage.removeItem('signupCredentials')
-                sessionStorage.removeItem('intendedDestination')
-              }
-              router.push(destination)
-              router.refresh()
-              return
-            }
-          } catch (autoSignInError) {
-            // Silently handle auto sign-in errors
-            console.log('Auto sign-in attempt failed, proceeding to email confirmation')
-          }
-          
-          // If auto sign-in failed or user needs confirmation, go to confirmation page
-          router.push('/confirmar-email')
-        } else {
-          // Successful sign-in - redirect to intended destination
+        if (mode === "signin" || data.session) {
+          // Signed in (signup returns a session when email confirmation is off)
           router.push(destination)
-          router.refresh() 
+          router.refresh()
+        } else {
+          // Kept only to offer "Reenviar email" on the confirmation page
+          sessionStorage.setItem('signupEmail', email)
+          router.push('/confirmar-email')
         }
       }
     } catch (error) {
-      setIsLoading(false)
-      if (error instanceof Error) {
-        console.error('Auth error:', error.message)
-        setError(error.message)
-      } else {
-        setError('An unexpected error occurred')
-      }
+      console.error('Auth error:', error)
+      setError('Error inesperado. Intenta nuevamente.')
     } finally {
       setIsLoading(false)
     }
@@ -180,8 +148,7 @@ export function AuthButton({
       <Button
         onClick={handleClick}
         disabled={isLoading}
-        variant="brand"
-        className={`w-full ${className || ""}`}
+        className={`w-full bg-terracotta text-white hover:bg-terracotta/90 ${className || ""}`}
       >
         {isLoading ? (
           <>
@@ -193,7 +160,7 @@ export function AuthButton({
         )}
       </Button>
       {error && (
-        <p className="text-sm text-red-500 text-center">{error}</p>
+        <p className="text-sm text-destructive text-center">{error}</p>
       )}
     </div>
   )

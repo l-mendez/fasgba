@@ -1,3 +1,4 @@
+import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { User } from '@supabase/supabase-js'
@@ -5,7 +6,7 @@ import { isUserClubAdmin } from '@/lib/clubUtils'
 
 // Create a Supabase client for server-side operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseServiceKey = SUPABASE_SECRET_KEY
 const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
 /**

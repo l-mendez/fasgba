@@ -1,18 +1,14 @@
+import type { Metadata } from 'next'
+import { AdminPageHeader } from '@/components/admin-page-header'
 import { ClubSettingsClient } from './components/club-settings-client'
+
+export const metadata: Metadata = { title: 'Configuración del club' }
 
 export default function ClubSettingsPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Configuración del Club</h1>
-        <p className="text-muted-foreground">
-          Modifica la información de tu club
-        </p>
-      </div>
-      
-      <div className="grid gap-6">
-        <ClubSettingsClient />
-      </div>
+      <AdminPageHeader title="Configuración" />
+      <ClubSettingsClient />
     </div>
   )
 }

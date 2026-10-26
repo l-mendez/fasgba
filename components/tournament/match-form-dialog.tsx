@@ -40,31 +40,17 @@ export function MatchFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Editar Enfrentamiento</DialogTitle>
+          <DialogTitle>Editar enfrentamiento</DialogTitle>
         </DialogHeader>
         {editingMatch && (
           <div className="space-y-4">
-            <div className="p-4 bg-yellow-50 dark:bg-yellow-950/50 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
-                    ⚠️ Advertencia Importante
-                  </p>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                    Al modificar este enfrentamiento, <strong>todas las partidas</strong> asociadas
-                    a este enfrentamiento serán eliminadas automáticamente para mantener la coherencia
-                    de los datos.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              {editingMatch.team_a.name} vs {editingMatch.team_b.name}
+            </p>
 
-            <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Enfrentamiento Original:</p>
-              <p className="font-medium">
-                {editingMatch.team_a.name} vs {editingMatch.team_b.name}
-              </p>
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>Al modificar este enfrentamiento se eliminarán <strong>todas sus partidas</strong>.</p>
             </div>
 
             <div className="space-y-4">
@@ -76,8 +62,8 @@ export function MatchFormDialog({
                     setMatchFormData(prev => ({ ...prev, team_a_id: parseInt(value) }))
                   }
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar Equipo A" />
+                  <SelectTrigger id="edit_club_a">
+                    <SelectValue placeholder="Seleccionar equipo" />
                   </SelectTrigger>
                   <SelectContent>
                     {teams.map((team) => (
@@ -97,8 +83,8 @@ export function MatchFormDialog({
                     setMatchFormData(prev => ({ ...prev, team_b_id: parseInt(value) }))
                   }
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar Equipo B" />
+                  <SelectTrigger id="edit_club_b">
+                    <SelectValue placeholder="Seleccionar equipo" />
                   </SelectTrigger>
                   <SelectContent>
                     {teams.map((team) => (
@@ -116,7 +102,7 @@ export function MatchFormDialog({
                 Cancelar
               </Button>
               <Button onClick={onSubmit} disabled={loading}>
-                {loading ? 'Guardando...' : 'Guardar Cambios'}
+                {loading ? 'Guardando...' : 'Guardar cambios'}
               </Button>
             </div>
           </div>

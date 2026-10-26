@@ -9,15 +9,16 @@ export const dynamic = "force-dynamic"
 
 export default function AdminAlumnosPage() {
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
-        title="Alumnos"
-        subtitle="Gestionar alumnos de la escuela. Los alumnos pueden acceder a documentos protegidos de la sección Escuela."
-      />
-      <Suspense fallback={<AdminContentSkeleton rows={4} />}>
-        <AdminAlumnosContent />
-      </Suspense>
-    </div>
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <AdminPageHeader title="Alumnos" />
+          <AdminContentSkeleton rows={4} filters={false} />
+        </div>
+      }
+    >
+      <AdminAlumnosContent />
+    </Suspense>
   )
 }
 
@@ -26,7 +27,6 @@ async function AdminAlumnosContent() {
 
   return (
     <AdminAlumnosClient
-      showHeader={false}
       initialAlumnos={alumnos}
       initialUsers={users}
       initialUsersTotal={usersTotal}

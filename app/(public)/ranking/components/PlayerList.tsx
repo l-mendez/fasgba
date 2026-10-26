@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RatingChange } from "@/components/rating-change";
 import { RatingTypeSelector } from "./RatingTypeSelector";
 import { PlayerDetailSheet } from "./PlayerDetailSheet";
 import { ErrorAlert } from "@/components/error-alert";
@@ -44,6 +45,9 @@ import {
 import type { Player, RatingType, RankingData } from "@/lib/rankingUtils";
 
 const PAGE_SIZE = 50;
+const SEARCH_DEBOUNCE_MS = 300;
+
+// Rating gains use the brand amber (readable in both themes); losses use destructive.
 
 interface AvailableRanking {
   filename: string;
@@ -87,6 +91,7 @@ function PaginationControls({
   const handlePageInputSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const page = parseInt(pageInput, 10);
+    if (page === currentPage) return;
     if (page >= 1 && page <= totalPages) {
       onPageChange(page);
     } else {
@@ -94,74 +99,38 @@ function PaginationControls({
     }
   };
 
+  const iconButton = (label: string, disabled: boolean, page: number, Icon: typeof ChevronLeft) => (
+    <Button
+      variant="outline"
+      size="icon"
+      className="h-8 w-8"
+      disabled={disabled}
+      onClick={() => onPageChange(page)}
+      aria-label={label}
+      title={label}
+    >
+      <Icon />
+    </Button>
+  );
+
   return (
-    <div className="flex flex-col items-center space-y-4">
-      <div className="text-sm text-muted-foreground">
-        Página {currentPage} de {totalPages}
-      </div>
-      <div className="flex items-center space-x-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={currentPage === 1}
-          onClick={() => onPageChange(1)}
-          title="Primera página"
-          className="px-2"
-        >
-          <ChevronsLeft className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={currentPage === 1}
-          onClick={() => onPageChange(currentPage - 1)}
-          title="Página anterior"
-          className="px-2"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <form
-          onSubmit={handlePageInputSubmit}
-          className="flex items-center space-x-1"
-        >
-          <Input
-            type="text"
-            value={pageInput}
-            onChange={(e) => setPageInput(e.target.value)}
-            className="w-16 h-8 text-center text-sm"
-            placeholder="1"
-          />
-          <Button
-            type="submit"
-            size="sm"
-            variant="outline"
-            className="h-8 px-2"
-            title="Ir a página"
-          >
-            <Search className="h-4 w-4" />
-          </Button>
-        </form>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={currentPage === totalPages}
-          onClick={() => onPageChange(currentPage + 1)}
-          title="Página siguiente"
-          className="px-2"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={currentPage === totalPages}
-          onClick={() => onPageChange(totalPages)}
-          title="Última página"
-          className="px-2"
-        >
-          <ChevronsRight className="h-4 w-4" />
-        </Button>
-      </div>
+    <div className="flex items-center gap-1.5">
+      {iconButton("Primera página", currentPage === 1, 1, ChevronsLeft)}
+      {iconButton("Página anterior", currentPage === 1, currentPage - 1, ChevronLeft)}
+      <form onSubmit={handlePageInputSubmit} className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <Input
+          type="text"
+          inputMode="numeric"
+          value={pageInput}
+          onChange={(e) => setPageInput(e.target.value)}
+          onBlur={handlePageInputSubmit}
+          className="h-8 w-12 text-center text-sm"
+          aria-label="Página"
+        />
+        <span className="whitespace-nowrap">/ {totalPages}</span>
+      </form>
+      {iconButton("Página siguiente", currentPage === totalPages, currentPage + 1, ChevronRight)}
+      {iconButton("Última página", currentPage === totalPages, totalPages, ChevronsRight)}
     </div>
   );
 }
@@ -182,6 +151,8 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
   const search = searchParams.get("search") || "";
   const activeFilter = normalizeActiveFilter(searchParams.get("active"));
   const sortBy = normalizeSortBy(searchParams.get("sortBy"));
+  // Deep link from the home ranking: /ranking?jugador=<id> opens that player's panel.
+  const jugadorParam = searchParams.get("jugador");
 
   const latestFilename = availableRankings[0]?.filename || "";
   // The server already rendered the latest ranking; only a past selection needs
@@ -195,10 +166,35 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
   const [searchTerm, setSearchTerm] = useState(search);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const listTopRef = useRef<HTMLDivElement>(null);
+  // Last search value this component wrote to the URL, so the URL→input sync
+  // below only reacts to outside navigation and never clobbers typing.
+  const pushedSearchRef = useRef(search);
 
   useEffect(() => {
-    setSearchTerm(search);
+    if (search !== pushedSearchRef.current) {
+      pushedSearchRef.current = search;
+      setSearchTerm(search);
+    }
   }, [search]);
+
+  // Live search: write the (debounced) term to the URL as the user types.
+  useEffect(() => {
+    const trimmed = searchTerm.trim();
+    if (trimmed === search) return;
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (trimmed) {
+        params.set("search", trimmed);
+      } else {
+        params.delete("search");
+      }
+      params.set("page", "1");
+      pushedSearchRef.current = trimmed;
+      router.replace(`?${params.toString()}`, { scroll: false });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchTerm, search, searchParams, router]);
 
   // Selecting a *past* ranking loads that specific file on the client; the
   // latest ranking (the common case) is already provided via initialPlayers.
@@ -248,23 +244,20 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
     };
   }, [players, sortBy, search, activeFilter, page]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const params = new URLSearchParams(searchParams.toString());
-    const trimmed = searchTerm.trim();
-    if (trimmed) {
-      params.set("search", trimmed);
-    } else {
-      params.delete("search");
-    }
-    params.set("page", "1");
-    router.replace(`?${params.toString()}`, { scroll: false });
-  };
+  const linkedPlayer = useMemo(
+    () => (jugadorParam && players?.find((p) => p.id === jugadorParam)) || null,
+    [jugadorParam, players]
+  );
 
   const handlePageChange = (nextPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", nextPage.toString());
     router.replace(`?${params.toString()}`, { scroll: false });
+    // Bring the top of the list back into view (e.g. after using the bottom pagination).
+    const listTop = listTopRef.current;
+    if (listTop && listTop.getBoundingClientRect().top < 80) {
+      listTop.scrollIntoView({ block: "start" });
+    }
   };
 
   const handleRankingChange = (rankingFilename: string) => {
@@ -294,42 +287,47 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
     setDetailOpen(true);
   };
 
+  // A deep-linked player keeps the panel open until it is closed, which also
+  // drops ?jugador= from the URL.
+  const handleDetailOpenChange = (open: boolean) => {
+    setDetailOpen(open);
+    if (!open && linkedPlayer) {
+      setSelectedPlayer(linkedPlayer);
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("jugador");
+      const query = params.toString();
+      router.replace(query ? `?${query}` : "/ranking", { scroll: false });
+    }
+  };
+
   return (
     <div className="container px-4 md:px-6">
-      {/* Rating Type Selector */}
-      <div className="mb-6 flex justify-center">
-        <RatingTypeSelector currentType={sortBy} />
-      </div>
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Buscar jugador o club..."
+            aria-label="Buscar jugador o club"
+            className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
 
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <form
-          onSubmit={handleSearchSubmit}
-          className="flex-1 flex items-center gap-2"
-        >
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Buscar jugador o club..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        {/* Mobile: tabs on one row, then the two selects side by side */}
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center">
+          <div className="col-span-2">
+            <RatingTypeSelector currentType={sortBy} />
           </div>
-          <Button type="submit">
-            <Search className="mr-2 h-4 w-4" />
-            Buscar
-          </Button>
-        </form>
 
-        <div className="sm:w-40">
           <Select
             value={activeFilter}
             onValueChange={(v) =>
               handleActiveChange(v as "active" | "inactive" | "all")
             }
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full sm:w-32" aria-label="Actividad">
               <SelectValue placeholder="Actividad" />
             </SelectTrigger>
             <SelectContent>
@@ -338,18 +336,14 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
               <SelectItem value="all">Todos</SelectItem>
             </SelectContent>
           </Select>
-        </div>
 
-        {availableRankings && availableRankings.length > 1 && (
-          <div className="sm:w-48">
+          {availableRankings && availableRankings.length > 1 && (
             <Select
-              value={
-                currentRanking || availableRankings[0]?.filename || ""
-              }
+              value={currentRanking || availableRankings[0]?.filename || ""}
               onValueChange={handleRankingChange}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar ranking" />
+              <SelectTrigger className="w-full sm:w-40" aria-label="Ranking">
+                <SelectValue placeholder="Ranking" />
               </SelectTrigger>
               <SelectContent>
                 {availableRankings.map((ranking) => (
@@ -359,8 +353,8 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {error ? (
@@ -369,12 +363,13 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
           message="Hubo un problema al cargar los datos del ranking. Por favor, intenta nuevamente más tarde."
         />
       ) : loading && !players ? (
-        <div className="animate-pulse space-y-4">
-          <div className="h-96 bg-muted rounded-md w-full" />
-        </div>
+        <div className="h-96 w-full animate-pulse rounded-md bg-muted" />
       ) : (
         <>
-          <div className="mb-6">
+          <div ref={listTopRef} className="mb-3 flex scroll-mt-20 flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              {totalPlayers} {totalPlayers === 1 ? "jugador" : "jugadores"}
+            </p>
             <PaginationControls
               currentPage={page}
               totalPages={totalPages}
@@ -382,32 +377,29 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
             />
           </div>
 
-          <div className="space-y-4">
-            <RankingTable
-              players={pagePlayers}
-              sortBy={sortBy}
-              onPlayerClick={handlePlayerClick}
-            />
-          </div>
+          <RankingTable
+            players={pagePlayers}
+            sortBy={sortBy}
+            onPlayerClick={handlePlayerClick}
+          />
 
-          <div className="mt-6">
-            <div className="mb-2 text-sm text-muted-foreground text-center">
-              Mostrando {pagePlayers.length} de {totalPlayers} jugadores
+          {totalPages > 1 && (
+            <div className="mt-4 flex justify-center">
+              <PaginationControls
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
             </div>
-            <PaginationControls
-              currentPage={page}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
-          </div>
+          )}
         </>
       )}
 
       <PlayerDetailSheet
-        player={selectedPlayer}
+        player={linkedPlayer ?? selectedPlayer}
         rankingFilename={currentRanking || ""}
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
+        open={detailOpen || linkedPlayer !== null}
+        onOpenChange={handleDetailOpenChange}
       />
     </div>
   );
@@ -437,7 +429,7 @@ function RankingTable({
     if (changes.isNew) {
       return (
         <div className="ml-1" title="Nuevo jugador">
-          <Circle className="h-3 w-3 text-blue-600" />
+          <Circle className="h-3 w-3 fill-amber text-amber" />
         </div>
       );
     }
@@ -445,7 +437,7 @@ function RankingTable({
     if (changes.position && changes.position > 0) {
       return (
         <div
-          className="flex items-center ml-1 text-green-600"
+          className="flex items-center ml-1 text-amber-dark dark:text-amber-light"
           title={`Subió ${changes.position} posiciones`}
         >
           <ArrowUp className="h-3 w-3" />
@@ -457,7 +449,7 @@ function RankingTable({
     if (changes.position && changes.position < 0) {
       return (
         <div
-          className="flex items-center ml-1 text-red-600"
+          className="flex items-center ml-1 text-destructive"
           title={`Bajó ${Math.abs(changes.position)} posiciones`}
         >
           <ArrowDown className="h-3 w-3" />
@@ -471,7 +463,7 @@ function RankingTable({
     if (changes.position === 0) {
       return (
         <div className="ml-1" title="Sin cambio de posición">
-          <Minus className="h-3 w-3 text-gray-500" />
+          <Minus className="h-3 w-3 text-muted-foreground" />
         </div>
       );
     }
@@ -479,43 +471,11 @@ function RankingTable({
     return null;
   };
 
-  const getRatingChangeText = (changes: Player["changes"], type: RatingType) => {
-    if (!changes?.ratings) return null;
-    const change = changes.ratings[type];
-    if (!change || change === 0) return null;
-
-    const rounded = Math.round(change);
-    const sign = rounded > 0 ? "+" : "";
-    const color = rounded > 0 ? "text-green-600" : "text-red-600";
-
-    return (
-      <span className={`text-xs ${color} ml-1`}>
-        {sign}
-        {rounded}
-      </span>
-    );
-  };
-
-  const getPointsChangeText = (changes: Player["changes"]) => {
-    if (!changes || changes.points === 0) return null;
-
-    const roundedPoints = Math.round(changes.points);
-    const sign = roundedPoints > 0 ? "+" : "";
-    const color = roundedPoints > 0 ? "text-green-600" : "text-red-600";
-
-    return (
-      <span className={`text-xs ${color} ml-1`}>
-        {sign}
-        {roundedPoints}
-      </span>
-    );
-  };
-
   const ratingTypes: RatingType[] = ["standard", "rapid", "blitz"];
 
   return (
-    <div className="rounded-md border">
-      <Table>
+    <div className="rounded-lg border">
+      <Table className="[&_td]:py-2.5">
         <TableHeader>
           <TableRow>
             <TableHead className="w-[80px]">Pos.</TableHead>
@@ -533,7 +493,7 @@ function RankingTable({
                   } ${isActive ? "font-bold" : ""}`}
                 >
                   <div className="flex items-center justify-end gap-1">
-                    <Icon className={`h-3.5 w-3.5 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+                    <Icon className={`h-3.5 w-3.5 ${isActive ? "text-amber" : "text-muted-foreground"}`} />
                     <span className="hidden lg:inline">{config.label}</span>
                     <span className="lg:hidden">{config.shortLabel}</span>
                   </div>
@@ -556,8 +516,15 @@ function RankingTable({
             players.map((player) => (
               <TableRow
                 key={`player-${player.id || player.position}`}
-                className="cursor-pointer hover:bg-muted/50"
+                className="cursor-pointer hover:bg-amber/10"
+                tabIndex={0}
                 onClick={() => onPlayerClick(player)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onPlayerClick(player);
+                  }
+                }}
               >
                 <TableCell className="font-medium">
                   <div className="flex items-center">
@@ -568,7 +535,7 @@ function RankingTable({
                 <TableCell>
                   {player.title ? (
                     <span>
-                      <span className="text-primary font-medium">
+                      <span className="font-medium text-terracotta">
                         {player.title}
                       </span>
                       <span> {player.name}</span>
@@ -594,9 +561,12 @@ function RankingTable({
                         {rating !== null && rating !== 0
                           ? Math.round(rating)
                           : "--"}
-                        {isActive && player.changes?.ratings
-                          ? getRatingChangeText(player.changes, type)
-                          : isActive && getPointsChangeText(player.changes)}
+                        {isActive && (
+                          <RatingChange
+                            className="ml-1"
+                            value={player.changes?.ratings ? player.changes.ratings[type] : player.changes?.points}
+                          />
+                        )}
                       </div>
                     </TableCell>
                   );

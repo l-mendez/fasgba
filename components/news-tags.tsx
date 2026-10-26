@@ -1,24 +1,13 @@
 import Link from "next/link"
+import { Tag } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
-import { CardContent } from "@/components/ui/card"
+import { InfoPill } from "@/components/info-pill"
 import { buildNoticiasUrl } from "@/lib/newsDisplay"
 
 const MAX_VISIBLE_TAGS = 3
 
-function TagBadge({ tag }: { tag: string }) {
-  return (
-    <Link href={buildNoticiasUrl({ tag })}>
-      <Badge
-        variant="secondary"
-        className="text-xs cursor-pointer hover:bg-amber/20 hover:text-amber-dark transition-colors"
-      >
-        {tag}
-      </Badge>
-    </Link>
-  )
-}
-
+// Tag pills linking to the filtered news list. Rendered inside stretched-link
+// cards, so each link sits above the card's overlay (relative z-10).
 export function NewsCardTags({ tags }: { tags: string[] | null }) {
   const visibleTags = tags?.slice(0, MAX_VISIBLE_TAGS) ?? []
   if (visibleTags.length === 0) {
@@ -28,17 +17,19 @@ export function NewsCardTags({ tags }: { tags: string[] | null }) {
   const hiddenCount = (tags?.length ?? 0) - visibleTags.length
 
   return (
-    <CardContent className="pt-0 px-4 pb-4">
-      <div className="flex flex-wrap gap-1">
-        {visibleTags.map((tag) => (
-          <TagBadge key={tag} tag={tag} />
-        ))}
-        {hiddenCount > 0 && (
-          <Badge variant="secondary" className="text-xs">
-            +{hiddenCount}
-          </Badge>
-        )}
-      </div>
-    </CardContent>
+    <div className="mt-auto flex flex-wrap gap-1.5">
+      {visibleTags.map((tag) => (
+        <Link
+          key={tag}
+          href={buildNoticiasUrl({ tag })}
+          className="relative z-10 rounded-full transition-colors hover:[&>span]:border-amber hover:[&>span]:text-foreground"
+        >
+          <InfoPill icon={Tag}>{tag.charAt(0).toUpperCase() + tag.slice(1)}</InfoPill>
+        </Link>
+      ))}
+      {hiddenCount > 0 && (
+        <span className="self-center text-xs text-muted-foreground">+{hiddenCount}</span>
+      )}
+    </div>
   )
 }

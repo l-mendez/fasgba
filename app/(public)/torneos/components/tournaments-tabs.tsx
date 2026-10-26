@@ -14,27 +14,23 @@ import { TournamentCard } from "./tournament-card"
 type TabConfig = {
   status: TournamentStatus
   label: string
-  shortLabel: string
   emptyMessage: string
 }
 
 const TABS: readonly TabConfig[] = [
   {
     status: TOURNAMENT_STATUS.UPCOMING,
-    label: "Próximos Torneos",
-    shortLabel: "Próximos",
+    label: "Próximos",
     emptyMessage: "No hay torneos próximos programados en este momento.",
   },
   {
     status: TOURNAMENT_STATUS.ONGOING,
-    label: "Torneos en Curso",
-    shortLabel: "En Curso",
+    label: "En curso",
     emptyMessage: "No hay torneos en curso en este momento.",
   },
   {
     status: TOURNAMENT_STATUS.PAST,
-    label: "Torneos Pasados",
-    shortLabel: "Pasados",
+    label: "Pasados",
     emptyMessage: "No hay torneos pasados registrados.",
   },
 ]
@@ -57,22 +53,28 @@ export function TournamentsTabs({ tournaments }: { tournaments: TournamentDispla
   const statusOf = (t: TournamentDisplay) =>
     now === null ? getTournamentStatus(t) : getTournamentStatusAt(t, now)
 
-  const groups = TABS.map((tab) => ({
-    ...tab,
-    tournaments: tournaments.filter((t) => statusOf(t) === tab.status),
-  }))
+  // Tournaments arrive sorted by date ascending; past ones read best newest-first.
+  const groups = TABS.map((tab) => {
+    const matching = tournaments.filter((t) => statusOf(t) === tab.status)
+    return {
+      ...tab,
+      tournaments: tab.status === TOURNAMENT_STATUS.PAST ? matching.reverse() : matching,
+    }
+  })
+
+  // Open on the first tab that has tournaments (e.g. "Pasados" when nothing is upcoming).
+  const defaultTab = (groups.find((g) => g.tournaments.length > 0) ?? groups[0]).status
 
   return (
-    <Tabs defaultValue={groups[0].status} className="w-full">
-      <TabsList className="grid w-full grid-cols-3 bg-muted border border-amber/20 mb-8">
-        {groups.map(({ status, label, shortLabel, tournaments }) => (
+    <Tabs defaultValue={defaultTab} className="w-full">
+      <TabsList className="mb-6 grid w-full grid-cols-3 sm:w-auto sm:inline-grid">
+        {groups.map(({ status, label, tournaments }) => (
           <TabsTrigger
             key={status}
             value={status}
-            className="data-[state=active]:bg-amber data-[state=active]:text-white"
+            className="data-[state=active]:bg-background data-[state=active]:text-terracotta"
           >
-            <span className="hidden sm:inline">{label} ({tournaments.length})</span>
-            <span className="sm:hidden">{shortLabel} ({tournaments.length})</span>
+            {label} ({tournaments.length})
           </TabsTrigger>
         ))}
       </TabsList>
@@ -84,7 +86,7 @@ export function TournamentsTabs({ tournaments }: { tournaments: TournamentDispla
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {tournaments.map((torneo) => (
-                <TournamentCard key={torneo.id} torneo={torneo} status={status} />
+                <TournamentCard key={torneo.id} torneo={torneo} status={status} showStatus={false} />
               ))}
             </div>
           )}

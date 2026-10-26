@@ -1,6 +1,6 @@
 'use client'
 
-import { Dispatch, SetStateAction } from 'react'
+import { Dispatch, SetStateAction, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { AlertCircle } from 'lucide-react'
 import { GameDisplay } from '@/lib/gameUtils-client'
 import { GameFormData, Match, Player } from './types'
+import { PlayerSearchField } from './player-search-field'
 
 interface GameFormDialogProps {
   mode: 'add' | 'edit'
@@ -40,6 +41,15 @@ export function GameFormDialog({
   loading,
   onSubmit,
 }: GameFormDialogProps) {
+  // Names of players picked in the search fields, by id (edit mode falls back to the game's names).
+  const [pickedNames, setPickedNames] = useState<Record<number, string>>({})
+  const getPlayerName = (playerId: number) => {
+    if (pickedNames[playerId]) return pickedNames[playerId]
+    if (editingGame?.whitePlayerId === playerId) return editingGame.white
+    if (editingGame?.blackPlayerId === playerId) return editingGame.black
+    return undefined
+  }
+
   const getWhitePlayerOptions = (): Player[] => {
     if (tournamentType !== 'team' || !gameFormData.match_id || !gameFormData.board_number) {
       return players
@@ -76,60 +86,60 @@ export function GameFormDialog({
   }
 
   const colorAssignmentInfo = (gameFormData.match_id && (
-    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-md">
-      <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-1">
-        Asignación de Colores por Mesa
-      </p>
-      {(() => {
-        const matchInfo = getSelectedMatchInfo()
-        return matchInfo ? (
-          <p className="text-sm text-blue-700 dark:text-blue-300">
-            Mesa {gameFormData.board_number || 1}: <strong>{matchInfo.whiteTeam}</strong> juega con blancas, <strong>{matchInfo.blackTeam}</strong> juega con negras
-          </p>
-        ) : null
-      })()}
-    </div>
+    (() => {
+      const matchInfo = getSelectedMatchInfo()
+      return matchInfo ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Mesa {gameFormData.board_number || 1}: <strong>{matchInfo.whiteTeam}</strong> con blancas, <strong>{matchInfo.blackTeam}</strong> con negras
+        </p>
+      ) : null
+    })()
   )) || null
+
+  const playerSelect = (color: 'white' | 'black') => {
+    const field = color === 'white' ? 'white_player_id' : 'black_player_id'
+    const options = color === 'white' ? getWhitePlayerOptions() : getBlackPlayerOptions()
+    const inputId = `${color}_player`
+
+    return (
+      <div>
+        <Label htmlFor={inputId}>{color === 'white' ? 'Blancas *' : 'Negras *'}</Label>
+        {tournamentType === 'team' ? (
+          // Team games only allow the (few) players registered to each team.
+          <Select value={gameFormData[field].toString()} onValueChange={(value) =>
+            setGameFormData(prev => ({ ...prev, [field]: parseInt(value) }))
+          }>
+            <SelectTrigger id={inputId}>
+              <SelectValue placeholder="Seleccionar jugador" />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((player) => (
+                <SelectItem key={player.id} value={player.id.toString()}>
+                  {player.full_name} {player.rating && `(${player.rating})`}
+                  {player.club && ` - ${player.club.name}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <PlayerSearchField
+            id={inputId}
+            value={gameFormData[field]}
+            selectedLabel={getPlayerName(gameFormData[field])}
+            onSelect={(player) => {
+              if (player) setPickedNames(prev => ({ ...prev, [player.id]: player.full_name }))
+              setGameFormData(prev => ({ ...prev, [field]: player?.id ?? 0 }))
+            }}
+          />
+        )}
+      </div>
+    )
+  }
 
   const playerSelects = (
     <div className="space-y-4">
-      <div>
-        <Label htmlFor="white_player">Jugador Blancas *</Label>
-        <Select value={gameFormData.white_player_id.toString()} onValueChange={(value) =>
-          setGameFormData(prev => ({ ...prev, white_player_id: parseInt(value) }))
-        }>
-          <SelectTrigger>
-            <SelectValue placeholder="Seleccionar jugador" />
-          </SelectTrigger>
-          <SelectContent>
-            {getWhitePlayerOptions().map((player) => (
-              <SelectItem key={player.id} value={player.id.toString()}>
-                {player.full_name} {player.rating && `(${player.rating})`}
-                {player.club && ` - ${player.club.name}`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label htmlFor="black_player">Jugador Negras *</Label>
-        <Select value={gameFormData.black_player_id.toString()} onValueChange={(value) =>
-          setGameFormData(prev => ({ ...prev, black_player_id: parseInt(value) }))
-        }>
-          <SelectTrigger>
-            <SelectValue placeholder="Seleccionar jugador" />
-          </SelectTrigger>
-          <SelectContent>
-            {getBlackPlayerOptions().map((player) => (
-              <SelectItem key={player.id} value={player.id.toString()}>
-                {player.full_name} {player.rating && `(${player.rating})`}
-                {player.club && ` - ${player.club.name}`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {playerSelect('white')}
+      {playerSelect('black')}
     </div>
   )
 
@@ -139,7 +149,7 @@ export function GameFormDialog({
       <Select value={gameFormData.result} onValueChange={(value: '1-0' | '0-1' | '1/2-1/2' | '*') =>
         setGameFormData(prev => ({ ...prev, result: value }))
       }>
-        <SelectTrigger>
+        <SelectTrigger id="result">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -156,6 +166,7 @@ export function GameFormDialog({
     <div>
       <Label htmlFor="game_date">Fecha</Label>
       <Input
+        id="game_date"
         type="date"
         value={gameFormData.game_date || ''}
         onChange={(e) => setGameFormData(prev => ({ ...prev, game_date: e.target.value }))}
@@ -167,6 +178,7 @@ export function GameFormDialog({
     <div>
       <Label htmlFor="game_time">Hora</Label>
       <Input
+        id="game_time"
         type="time"
         value={gameFormData.game_time || ''}
         onChange={(e) => setGameFormData(prev => ({ ...prev, game_time: e.target.value }))}
@@ -180,23 +192,11 @@ export function GameFormDialog({
         className={`${mode === 'add' ? 'max-w-lg' : 'max-w-2xl'} max-h-[90vh] overflow-y-auto`}
       >
         <DialogHeader>
-          <DialogTitle>{mode === 'add' ? 'Agregar Nueva Partida' : 'Editar Partida'}</DialogTitle>
+          <DialogTitle>{mode === 'add' ? 'Nueva partida' : 'Editar partida'}</DialogTitle>
         </DialogHeader>
 
         {mode === 'edit' && !editingGame ? null : (
           <div className="space-y-4 pr-2">
-            {mode === 'add' && tournamentType === 'team' && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-2">
-                  Información sobre Partidas por Equipos
-                </p>
-                <p className="text-sm text-blue-700 dark:text-blue-300">
-                  En torneos por equipos, las partidas se organizan por enfrentamientos entre clubes.
-                  Cada enfrentamiento puede tener múltiples partidas individuales.
-                </p>
-              </div>
-            )}
-
             {mode === 'add' && tournamentType === 'team' && (
               <div>
                 <Label htmlFor="match">Enfrentamiento *</Label>
@@ -209,7 +209,7 @@ export function GameFormDialog({
                     black_player_id: 0
                   }))
                 }}>
-                  <SelectTrigger>
+                  <SelectTrigger id="match">
                     <SelectValue placeholder="Seleccionar enfrentamiento" />
                   </SelectTrigger>
                   <SelectContent>
@@ -221,39 +221,24 @@ export function GameFormDialog({
                   </SelectContent>
                 </Select>
                 {matches.length === 0 && (
-                  <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-950/50 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
-                          No hay enfrentamientos configurados
-                        </p>
-                        <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                          Para torneos por equipos, primero debes configurar los enfrentamientos entre clubes
-                          al crear la ronda.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <p className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber" />
+                    No hay enfrentamientos. Configúralos al crear la ronda.
+                  </p>
                 )}
                 {colorAssignmentInfo}
               </div>
             )}
 
             {mode === 'edit' && editingGame && (
-              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Partida Original:</p>
-                  <p className="font-medium">Blancas: {editingGame.white}</p>
-                  {editingGame.whiteRating && (
-                    <p className="text-sm text-gray-500">Rating: {editingGame.whiteRating}</p>
-                  )}
+              <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted p-3 text-sm">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{editingGame.white}</p>
+                  <p className="text-muted-foreground">Blancas{editingGame.whiteRating ? ` · ${editingGame.whiteRating}` : ''}</p>
                 </div>
-                <div>
-                  <p className="font-medium">Negras: {editingGame.black}</p>
-                  {editingGame.blackRating && (
-                    <p className="text-sm text-gray-500">Rating: {editingGame.blackRating}</p>
-                  )}
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{editingGame.black}</p>
+                  <p className="text-muted-foreground">Negras{editingGame.blackRating ? ` · ${editingGame.blackRating}` : ''}</p>
                 </div>
               </div>
             )}
@@ -265,8 +250,9 @@ export function GameFormDialog({
             {mode === 'add' ? (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="board_number">Número de Mesa</Label>
+                  <Label htmlFor="board_number">Mesa</Label>
                   <Input
+                    id="board_number"
                     type="number"
                     min="1"
                     value={gameFormData.board_number || ''}
@@ -305,6 +291,7 @@ export function GameFormDialog({
             <div>
               <Label htmlFor="pgn">PGN</Label>
               <Textarea
+                id="pgn"
                 placeholder="Notación de la partida..."
                 value={gameFormData.pgn || ''}
                 onChange={(e) => setGameFormData(prev => ({ ...prev, pgn: e.target.value }))}
@@ -312,7 +299,7 @@ export function GameFormDialog({
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-white dark:bg-gray-950 border-t mt-6 -mx-6 px-6 py-4">
+            <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-background border-t mt-6 -mx-6 px-6 py-4">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
@@ -322,7 +309,7 @@ export function GameFormDialog({
               >
                 {loading
                   ? mode === 'add' ? 'Agregando...' : 'Guardando...'
-                  : mode === 'add' ? 'Agregar Partida' : 'Guardar Cambios'}
+                  : mode === 'add' ? 'Agregar partida' : 'Guardar cambios'}
               </Button>
             </div>
           </div>

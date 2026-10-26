@@ -1,11 +1,9 @@
-import { Calendar, Clock, ExternalLink, MapPin, Trophy, Users, type LucideIcon } from "lucide-react"
+import { Calendar, CalendarClock, CheckCircle2, ChevronRight, Clock, MapPin, PlayCircle, Ticket, Trophy, Users, type LucideIcon } from "lucide-react"
 import Link from "next/link"
 import type { ReactNode } from "react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
+import { InfoPill } from "@/components/info-pill"
 import {
   type TournamentDisplay,
   formatDateRange,
@@ -18,121 +16,96 @@ import {
 } from "@/lib/tournamentUtils"
 import { TOURNAMENT_STATUS, type TournamentStatus } from "@/lib/utils/constants"
 
-const STATUS_BADGE_STYLES: Record<TournamentStatus, string> = {
-  upcoming: "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200",
-  ongoing: "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200",
-  past: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200",
+const STATUS_ICONS: Record<TournamentStatus, LucideIcon> = {
+  upcoming: CalendarClock,
+  ongoing: PlayCircle,
+  past: CheckCircle2,
 }
 
-// A labelled row with an amber icon, used throughout the card body.
-function InfoRow({
-  icon: Icon,
-  align = "center",
-  children,
-}: {
-  icon: LucideIcon
-  align?: "center" | "start"
-  children: ReactNode
-}) {
+// Neutral status pill (icon + "Próximo" / "En curso" / "Finalizado").
+export function TournamentStatusPill({ status }: { status: TournamentStatus }) {
+  return <InfoPill icon={STATUS_ICONS[status]}>{TOURNAMENT_STATUS_TEXT[status]}</InfoPill>
+}
+
+// Icon + text row used throughout the card body.
+function InfoRow({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
   return (
-    <div className={cn("flex gap-2", align === "start" ? "items-start" : "items-center")}>
-      <Icon className={cn("h-4 w-4 text-amber", align === "start" && "shrink-0 mt-0.5")} />
-      {children}
-    </div>
+    <li className="flex items-start gap-2">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+      <div className="min-w-0 flex-1 break-words">{children}</div>
+    </li>
   )
 }
 
 export function TournamentCard({
   torneo,
   status,
+  showStatus = true,
 }: {
   torneo: TournamentDisplay
   status: TournamentStatus
+  // Hidden inside the status tabs, where the pill would repeat the tab name.
+  showStatus?: boolean
 }) {
   const isTeam = torneo.tournament_type === "team"
   // Inscription details show while a tournament is still relevant (upcoming or ongoing);
   // the registration button only makes sense before it starts.
   const showInscription = status !== TOURNAMENT_STATUS.PAST
   const showRegistration = status === TOURNAMENT_STATUS.UPCOMING
+  const showLocation = torneo.location && torneo.location !== torneo.place
 
+  // The title link stretches over the whole card; the registration link sits above it.
   return (
-    <Card className="border-amber/20 shadow-md transition-all duration-300 hover:shadow-lg">
-      <CardHeader className="pb-3 border-b border-amber/10">
-        <div className="flex items-center gap-2 flex-wrap">
-          <CardTitle className="text-terracotta">{torneo.title}</CardTitle>
-          {isTeam && (
-            <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200">
-              <Users className="h-3 w-3 mr-1" />
-              Por Equipos
-            </Badge>
-          )}
-        </div>
-        <CardDescription>{torneo.description || "Información del torneo próximamente"}</CardDescription>
-      </CardHeader>
-
-      <CardContent className="pt-4">
-        <div className="space-y-4">
-          <InfoRow icon={Calendar}>
-            <span className="text-sm">{formatDateRange(torneo.start_date, torneo.end_date)}</span>
-          </InfoRow>
-
-          <InfoRow icon={Clock}>
-            <span className="text-sm">{getTimeDisplay(torneo.time)}</span>
-          </InfoRow>
-
-          <InfoRow icon={MapPin} align="start">
-            <div className="min-w-0 flex-1">
-              {torneo.place && (
-                <span className="text-sm block text-amber-dark break-words">{torneo.place}</span>
-              )}
-              <span className="text-sm text-muted-foreground break-words">
-                {getLocationDisplay(torneo.place, torneo.location)}
-              </span>
-            </div>
-          </InfoRow>
-
-          <InfoRow icon={Trophy}>
-            <span className="text-sm">
-              {getRoundsDisplay(torneo.rounds)} - {getPaceDisplay(torneo.pace)}
-            </span>
-          </InfoRow>
-
-          {showInscription && (
-            <InfoRow icon={Users} align="start">
-              <div className="min-w-0 flex-1">
-                <span className="text-sm block break-words">
-                  {torneo.inscription_details || "Información de inscripción próximamente"}
-                </span>
-                <span className="text-sm text-muted-foreground break-words">
-                  Costo: {getCostDisplay(torneo.cost)}
-                </span>
-              </div>
-            </InfoRow>
-          )}
-
-          <InfoRow icon={Trophy}>
-            <span className={cn("text-sm font-medium px-2 py-1 rounded-full", STATUS_BADGE_STYLES[status])}>
-              {TOURNAMENT_STATUS_TEXT[status]}
-            </span>
-          </InfoRow>
-        </div>
-      </CardContent>
-
-      <CardFooter className="flex gap-2">
-        <Button asChild variant="outline" className="flex-1 border-terracotta text-terracotta hover:bg-terracotta/10">
-          <Link href={`/torneos/${torneo.id}`}>
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Ver Torneo
+    <article className="group relative flex h-full flex-col gap-3 rounded-lg border bg-card p-4 transition-colors hover:border-amber">
+      <div className="space-y-2">
+        <h3 className="text-lg font-semibold leading-tight">
+          <Link href={`/torneos/${torneo.id}`} className="text-terracotta after:absolute after:inset-0 group-hover:underline">
+            {torneo.title}
           </Link>
-        </Button>
+        </h3>
+        {(showStatus || isTeam) && (
+          <div className="flex flex-wrap gap-1.5">
+            {showStatus && <TournamentStatusPill status={status} />}
+            {isTeam && <InfoPill icon={Users}>Por equipos</InfoPill>}
+          </div>
+        )}
+      </div>
+
+      <ul className="space-y-1.5 text-sm text-muted-foreground">
+        <InfoRow icon={Calendar}>{formatDateRange(torneo.start_date, torneo.end_date)}</InfoRow>
+        {torneo.time && <InfoRow icon={Clock}>{getTimeDisplay(torneo.time)}</InfoRow>}
+        <InfoRow icon={MapPin}>
+          {torneo.place || getLocationDisplay(null, torneo.location)}
+          {torneo.place && showLocation && <span className="block">{torneo.location}</span>}
+        </InfoRow>
+        <InfoRow icon={Trophy}>
+          {getRoundsDisplay(torneo.rounds)} · {getPaceDisplay(torneo.pace)}
+        </InfoRow>
+        {showInscription && (torneo.inscription_details || torneo.cost) && (
+          <InfoRow icon={Ticket}>
+            {torneo.inscription_details && <span className="block">{torneo.inscription_details}</span>}
+            {torneo.cost && <span className="block">{getCostDisplay(torneo.cost)}</span>}
+          </InfoRow>
+        )}
+      </ul>
+
+      {torneo.description && (
+        <p className="text-sm text-muted-foreground line-clamp-3">{torneo.description}</p>
+      )}
+
+      <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+        <span className="inline-flex items-center gap-1 text-sm font-semibold text-terracotta">
+          Ver torneo
+          <ChevronRight className="h-4 w-4" />
+        </span>
         {showRegistration && torneo.registration_link && (
-          <Button asChild className="flex-1 bg-terracotta hover:bg-terracotta/90 text-white">
+          <Button asChild size="sm" className="relative z-10">
             <a href={torneo.registration_link} target="_blank" rel="noopener noreferrer">
               Inscripción
             </a>
           </Button>
         )}
-      </CardFooter>
-    </Card>
+      </div>
+    </article>
   )
 }

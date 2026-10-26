@@ -2,6 +2,7 @@
 // client `PlayerList` island to shape, filter and paginate the player list.
 
 import type { Player, RatingType, PaginatedPlayersResponse } from '@/lib/rankingUtils'
+import { normalizeForSearch } from '@/lib/countries'
 
 /**
  * Normalizes a player from the old format (no `ratings`) to the new format.
@@ -56,26 +57,29 @@ export interface SelectPlayersOptions {
 }
 
 /**
- * Applies the search/active filters then paginates an (already sorted) player
- * list, returning the same shape as the server `getPlayers`.
+ * Applies the active filter (renumbering positions within it), then the search,
+ * then paginates an (already sorted) player list.
  */
 export function selectPlayersPage(
   players: Player[],
   { search = '', activeFilter = 'all', page = 1, pageSize = 50 }: SelectPlayersOptions = {}
 ): PaginatedPlayersResponse {
-  const term = search.toLowerCase()
-  const searched = term
-    ? players.filter(
-        p => p.name.toLowerCase().includes(term) || p.club.toLowerCase().includes(term)
-      )
-    : players
+  // Filter by activity first and renumber within that view, so "Activos" reads
+  // 1, 2, 3… instead of skipping inactive players' positions.
+  const byActivity =
+    activeFilter === 'all'
+      ? players
+      : players
+          .filter(p => (activeFilter === 'active' ? p.active : !p.active))
+          .map((p, index) => ({ ...p, position: index + 1 }))
 
-  const filtered =
-    activeFilter === 'active'
-      ? searched.filter(p => p.active)
-      : activeFilter === 'inactive'
-        ? searched.filter(p => !p.active)
-        : searched
+  // Accent-insensitive, so "nunez" matches "Núñez"
+  const term = normalizeForSearch(search.trim())
+  const filtered = term
+    ? byActivity.filter(
+        p => normalizeForSearch(p.name).includes(term) || normalizeForSearch(p.club || '').includes(term)
+      )
+    : byActivity
 
   const startIndex = (page - 1) * pageSize
 

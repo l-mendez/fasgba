@@ -38,7 +38,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escribe aquí
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: 'text-blue-600 dark:text-blue-400 underline',
+          class: 'text-terracotta underline',
         },
       }),
       TextAlign.configure({
@@ -52,7 +52,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escribe aquí
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl prose-gray dark:prose-invert mx-auto focus:outline-none min-h-[200px] p-4 text-gray-900 dark:text-gray-100',
+        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl prose-gray dark:prose-invert mx-auto focus:outline-none min-h-[200px] p-4 text-foreground',
       },
       // Preserve the first pasted paragraph's text alignment: ProseMirror merges
       // the slice's open first block into the destination paragraph and drops its
@@ -105,9 +105,9 @@ export function RichTextEditor({ content, onChange, placeholder = "Escribe aquí
   }
 
   return (
-    <div className={`border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 ${className}`}>
+    <div className={`border border-input rounded-md bg-background ${className}`}>
       {/* Toolbar */}
-      <div className="border-b border-gray-200 dark:border-gray-700 p-2 flex flex-wrap gap-1 bg-gray-50 dark:bg-gray-800">
+      <div className="border-b p-2 flex flex-wrap gap-1 bg-muted">
         {/* Text formatting */}
         <Button
           variant={editor.isActive('bold') ? 'default' : 'ghost'}
@@ -127,7 +127,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escribe aquí
           <Italic className="h-4 w-4" />
         </Button>
 
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Headings */}
         <Button
@@ -157,7 +157,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escribe aquí
           H3
         </Button>
 
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Lists */}
         <Button
@@ -178,7 +178,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escribe aquí
           <ListOrdered className="h-4 w-4" />
         </Button>
 
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Quote */}
         <Button
@@ -190,7 +190,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escribe aquí
           <Quote className="h-4 w-4" />
         </Button>
 
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Text alignment */}
         <Button
@@ -220,7 +220,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escribe aquí
           <AlignRight className="h-4 w-4" />
         </Button>
 
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Link */}
         <Button
@@ -232,7 +232,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escribe aquí
           <LinkIcon className="h-4 w-4" />
         </Button>
 
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Undo/Redo */}
         <Button
@@ -257,7 +257,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escribe aquí
       </div>
 
       {/* Editor content */}
-      <div className="min-h-[200px] bg-white dark:bg-gray-900">
+      <div className="min-h-[200px] bg-background">
         <EditorContent 
           editor={editor} 
           placeholder={placeholder}

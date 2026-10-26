@@ -3,9 +3,8 @@
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { ArrowLeft, Save, AlertCircle } from "lucide-react"
+import { AlertCircle } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -23,6 +22,8 @@ import {
   type StoredImageBlockContent,
 } from "@/components/news/types"
 import { NewsContentBlocksEditorSimple } from "@/components/news/news-content-blocks-editor-simple"
+import { NewsFormActions, NewsFormHeader } from "@/components/news/news-form-header"
+import { AdminConfirmDialog } from "@/components/admin-confirm-dialog"
 import { useEditableNewsBlocks } from "@/components/news/use-news-content-blocks"
 
 interface News {
@@ -70,6 +71,8 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
     normalizeStoredNewsBlocks(initialNews.text)
   )
   const blockActions = useEditableNewsBlocks(contentBlocks, setContentBlocks)
+  // Large batches are confirmed first (they are slow and may fail).
+  const [pendingBulkFiles, setPendingBulkFiles] = useState<File[] | null>(null)
 
   const getPublicUrl = (filePath: string) => {
     if (!filePath) return null
@@ -80,15 +83,16 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
     return publicUrl
   }
 
+  const requestBulkUpload = (files: File[]) => {
+    if (files.length > 20) {
+      setPendingBulkFiles(files)
+      return
+    }
+    void addMultipleImageBlocks(files)
+  }
+
   const addMultipleImageBlocks = async (files: File[]) => {
     if (files.length === 0) return
-
-    if (files.length > 20) {
-      const proceed = confirm(
-        `Estás intentando subir ${files.length} imágenes. Esto puede tomar varios minutos y podría fallar con conexiones lentas. ¿Deseas continuar?`
-      )
-      if (!proceed) return
-    }
 
     let validFiles = files
     const oversizedFiles = files.filter(file => file.size > 5 * 1024 * 1024)
@@ -144,14 +148,11 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
         throw new Error(result.error)
       }
 
-      setTimeout(() => {
-        router.push(redirectPath)
-        router.refresh()
-      }, 500)
+      router.push(redirectPath)
+      router.refresh()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al guardar la noticia'
       setError(errorMessage)
-    } finally {
       setIsSaving(false)
     }
   }
@@ -189,40 +190,20 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
   }
 
   return (
-    <div className="flex flex-col gap-4 md:gap-8 p-4 md:p-8">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 md:gap-4">
-          <Button variant="ghost" size="sm" className="md:size-icon" onClick={() => router.push(redirectPath)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-terracotta">Editar Noticia</h1>
-            <p className="text-sm md:text-base text-muted-foreground">
-              {news.club?.name ? `Modifica los detalles de la noticia para ${news.club.name}.` : 'Modifica los detalles de la noticia.'}
-            </p>
-          </div>
-        </div>
-        <Button onClick={handleSubmit} disabled={isSaving} className="text-sm md:text-base" size="sm">
-          <Save className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
-          <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Guardar Cambios'}</span>
-          <span className="sm:hidden">{isSaving ? 'Guardando...' : 'Guardar'}</span>
-        </Button>
-      </div>
+    <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-8">
+      <NewsFormHeader title="Editar noticia" backHref={redirectPath} />
 
-      {error && (
-        <ErrorAlert title="Error" message={error} />
-      )}
+      {error && <ErrorAlert message={error} />}
 
       {uploadProgress.isUploading && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Subiendo imágenes...</AlertTitle>
           <AlertDescription>
-            Procesando {uploadProgress.current} de {uploadProgress.total} imágenes.
-            Por favor, no cierre esta ventana.
-            <div className="mt-2 bg-gray-200 rounded-full h-2">
+            {uploadProgress.current} de {uploadProgress.total}. No cierres esta ventana.
+            <div className="mt-2 bg-muted rounded-full h-2">
               <div
-                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                className="bg-amber h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
               />
             </div>
@@ -230,46 +211,45 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4 md:space-y-8">
-        <div className="grid gap-3 md:gap-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="title" className="text-sm md:text-sm font-medium">Título</Label>
+            <Label htmlFor="title">Título</Label>
             <Input
               id="title"
               value={news.title}
               onChange={(e) => setNews({ ...news, title: e.target.value })}
               required
-              className="text-sm md:text-base"
+              placeholder="Título de la noticia"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="date" className="text-sm md:text-sm font-medium">Fecha</Label>
+            <Label htmlFor="date">Fecha</Label>
             <Input
               id="date"
               type="date"
               value={news.date}
               onChange={(e) => setNews({ ...news, date: e.target.value })}
               required
-              className="text-sm md:text-base"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="extract" className="text-sm md:text-sm font-medium">Extracto</Label>
+            <Label htmlFor="extract">Extracto</Label>
             <Textarea
               id="extract"
               value={news.extract}
               onChange={(e) => setNews({ ...news, extract: e.target.value })}
               placeholder="Breve descripción de la noticia..."
-              className="text-sm md:text-base min-h-[80px] md:min-h-[100px]"
+              className="min-h-[80px]"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="category" className="text-sm md:text-sm font-medium">Categoría</Label>
+            <Label htmlFor="category">Categoría</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger id="category" className="text-sm md:text-base">
+              <SelectTrigger id="category">
                 <SelectValue placeholder="Seleccionar categoría" />
               </SelectTrigger>
               <SelectContent>
@@ -290,8 +270,15 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
             placeholder="Haz clic para subir la imagen destacada"
           />
 
+          {news.club && (
+            <div className="grid gap-2">
+              <Label>Entidad</Label>
+              <p className="rounded-md bg-muted p-3 text-sm font-medium">{news.club.name}</p>
+            </div>
+          )}
+
           <div className="grid gap-2">
-            <Label className="text-sm md:text-sm font-medium">Contenido</Label>
+            <Label>Contenido</Label>
             <NewsContentBlocksEditorSimple
               blocks={contentBlocks}
               blockActions={blockActions}
@@ -311,24 +298,36 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
               onChange={(e) => {
                 const files = Array.from(e.target.files || [])
                 if (files.length > 0) {
-                  addMultipleImageBlocks(files)
+                  requestBulkUpload(files)
                   e.target.value = ''
                 }
               }}
             />
           </div>
 
-          {news.club && (
-            <div className="grid gap-2">
-              <Label className="text-sm md:text-sm font-medium">Club Asociado</Label>
-              <div className="p-3 bg-muted rounded-md">
-                <p className="text-sm font-medium">{news.club.name}</p>
-                <p className="text-xs text-muted-foreground">La noticia estará asociada a este club</p>
-              </div>
-            </div>
-          )}
         </div>
+
+        <NewsFormActions
+          cancelHref={redirectPath}
+          saveLabel="Guardar"
+          savingLabel="Guardando..."
+          isSaving={isSaving}
+        />
       </form>
+
+      <AdminConfirmDialog
+        open={pendingBulkFiles !== null}
+        onOpenChange={(open) => !open && setPendingBulkFiles(null)}
+        title={`¿Subir ${pendingBulkFiles?.length ?? 0} imágenes?`}
+        description="Puede tardar varios minutos y fallar con conexiones lentas."
+        confirmLabel="Subir"
+        destructive={false}
+        onConfirm={() => {
+          const files = pendingBulkFiles ?? []
+          setPendingBulkFiles(null)
+          void addMultipleImageBlocks(files)
+        }}
+      />
     </div>
   )
 }

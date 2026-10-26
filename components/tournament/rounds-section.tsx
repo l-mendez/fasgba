@@ -1,14 +1,13 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronLeft, ChevronRight, Trophy, Users, User, Play, Swords, ChevronDown, ChevronUp } from "lucide-react"
 import Link from "next/link"
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, PlayCircle } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { InfoPill } from "@/components/info-pill"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { GameDisplay } from "@/lib/gameUtils-client"
-import { cn } from "@/lib/utils"
 
 interface RoundsSectionProps {
   totalRounds: number
@@ -107,309 +106,213 @@ function groupGamesByMatch(games: GameDisplay[]): MatchGroup[] {
   })
 }
 
+// Compact result label ("½-½" instead of "1/2-1/2").
+function formatResult(result: GameDisplay["result"]) {
+  return result === "*" ? null : result.replace(/1\/2/g, "½")
+}
+
+// Match points with "½" instead of ".5" (4.5 -> "4½", 0.5 -> "½").
+function formatPoints(points: number) {
+  const whole = Math.floor(points)
+  const half = points - whole >= 0.5 ? "½" : ""
+  return whole === 0 && half ? half : `${whole}${half}`
+}
+
+function PlayerCell({ name, rating, align }: { name: string; rating?: number; align: "left" | "right" }) {
+  return (
+    <div className={align === "right" ? "min-w-0 text-right" : "min-w-0"}>
+      <p className="break-words font-medium sm:truncate" title={name}>{name}</p>
+      {rating ? <p className="text-xs text-muted-foreground tabular-nums">{rating}</p> : null}
+    </div>
+  )
+}
+
+// One game per row; the whole row links to the game viewer.
+function GameRow({ game, tournamentId }: { game: GameDisplay; tournamentId: number }) {
+  const result = formatResult(game.result)
+  return (
+    <li>
+      <Link
+        href={`/torneos/${tournamentId}/partidas/${game.id}`}
+        className="flex items-center gap-3 px-3 py-2.5 text-sm transition-colors hover:bg-amber/10 sm:px-4"
+      >
+        {game.board != null && (
+          <span className="w-5 shrink-0 text-xs text-muted-foreground tabular-nums" title={`Mesa ${game.board}`}>
+            {game.board}
+          </span>
+        )}
+        <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
+          <PlayerCell name={game.white} rating={game.whiteRating} align="right" />
+          {result ? (
+            <span className="min-w-[3.25rem] rounded-md border px-2 py-0.5 text-center font-semibold tabular-nums">
+              {result}
+            </span>
+          ) : (
+            <span className="flex min-w-[3.25rem] justify-center" title="En curso">
+              <PlayCircle className="h-4 w-4 text-amber" />
+            </span>
+          )}
+          <PlayerCell name={game.black} rating={game.blackRating} align="left" />
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </Link>
+    </li>
+  )
+}
+
+// Match header: stacked "team / score" rows on mobile, "A score B" from sm up.
+function MatchHeader({ match }: { match: MatchGroup }) {
+  const started = match.status !== "not_started"
+  const scoreA = started ? formatPoints(match.totalScore.teamA) : ""
+  const scoreB = started ? formatPoints(match.totalScore.teamB) : ""
+  return (
+    <div className="min-w-0 flex-1">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 sm:hidden">
+        <span className="break-words font-semibold">{match.teamA}</span>
+        <span className="min-w-[2rem] text-center text-lg font-bold tabular-nums">{scoreA}</span>
+        <span className="break-words font-semibold">{match.teamB}</span>
+        <span className="min-w-[2rem] text-center text-lg font-bold tabular-nums">{scoreB}</span>
+      </div>
+      <div className="hidden grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:grid">
+        <span className="truncate text-right font-semibold" title={match.teamA}>{match.teamA}</span>
+        <span className="min-w-[5.5rem] rounded-md border bg-background px-3 py-1 text-center text-lg font-bold tabular-nums">
+          {started ? `${scoreA} - ${scoreB}` : "vs"}
+        </span>
+        <span className="truncate font-semibold" title={match.teamB}>{match.teamB}</span>
+      </div>
+      {match.status === "ongoing" && (
+        <div className="mt-1.5 sm:flex sm:justify-center">
+          <InfoPill icon={PlayCircle}>En curso</InfoPill>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const sortByBoard = (games: GameDisplay[]) => [...games].sort((a, b) => (a.board || 0) - (b.board || 0))
+
 export default function RoundsSection({ totalRounds, gamesByRound, tournamentId, tournamentType }: RoundsSectionProps) {
-  const [selectedRound, setSelectedRound] = useState<string>("1")
-  const [expandedMatches, setExpandedMatches] = useState<Set<string>>(new Set())
-  
+  // Rounds that actually have games; the selector covers every planned round.
+  const playedRounds = useMemo(
+    () => Object.keys(gamesByRound).map(Number).filter((r) => gamesByRound[r]?.length > 0),
+    [gamesByRound]
+  )
+  const roundCount = Math.max(totalRounds, ...playedRounds, 0)
+  const [selectedRound, setSelectedRound] = useState<string>(String(Math.max(...playedRounds, 1)))
+  // Matches start expanded so board results are visible without extra clicks.
+  const [collapsedMatches, setCollapsedMatches] = useState<Set<string>>(new Set())
+
   const roundNumber = parseInt(selectedRound)
-  const roundGames = gamesByRound[roundNumber] || []
+  const roundGames = useMemo(() => gamesByRound[roundNumber] || [], [gamesByRound, roundNumber])
   const isTeamTournament = tournamentType === 'team'
 
-  // Group team games by match
-  const matches = useMemo(() => {
-    if (isTeamTournament) {
-      return groupGamesByMatch(roundGames)
-    }
-    return []
-  }, [roundGames, isTeamTournament])
+  const matches = useMemo(
+    () => (isTeamTournament ? groupGamesByMatch(roundGames) : []),
+    [roundGames, isTeamTournament]
+  )
 
-  // Toggle match expansion
+  if (playedRounds.length === 0) return null
+
   const toggleMatch = (matchKey: string) => {
-    const newExpanded = new Set(expandedMatches)
-    if (newExpanded.has(matchKey)) {
-      newExpanded.delete(matchKey)
-    } else {
-      newExpanded.add(matchKey)
-    }
-    setExpandedMatches(newExpanded)
+    const next = new Set(collapsedMatches)
+    if (next.has(matchKey)) next.delete(matchKey)
+    else next.add(matchKey)
+    setCollapsedMatches(next)
   }
 
+  const goToRound = (round: number) => setSelectedRound(String(round))
+  const isEmpty = isTeamTournament ? matches.length === 0 : roundGames.length === 0
+
   return (
-    <div className="space-y-6 lg:space-y-8">
-      {/* Header */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-3 text-terracotta dark:text-terracotta-light">
-              {isTeamTournament ? (
-                <Swords className="h-6 w-6" />
-              ) : (
-                <Users className="h-6 w-6" />
-              )}
-              <span className="text-xl lg:text-2xl">{isTeamTournament ? 'Enfrentamientos' : 'Partidas'}</span>
-            </CardTitle>
-            
+    <div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-2xl font-bold tracking-tight text-terracotta">
+          {isTeamTournament ? "Enfrentamientos" : "Partidas"}
+        </h2>
+        {roundCount > 1 && (
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              disabled={roundNumber <= 1}
+              onClick={() => goToRound(roundNumber - 1)}
+              aria-label="Ronda anterior"
+              title="Ronda anterior"
+            >
+              <ChevronLeft />
+            </Button>
             <Select value={selectedRound} onValueChange={setSelectedRound}>
-              <SelectTrigger className="w-32 lg:w-40">
+              <SelectTrigger className="h-9 w-32" aria-label="Ronda">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Array.from({length: totalRounds}, (_, i) => i + 1).map(roundNum => (
+                {Array.from({ length: roundCount }, (_, i) => i + 1).map((roundNum) => (
                   <SelectItem key={roundNum} value={roundNum.toString()}>
                     Ronda {roundNum}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          
-          <CardDescription className="text-base lg:text-lg">
-            <span className="font-semibold text-terracotta dark:text-terracotta-light">Ronda {roundNumber}</span>
-            {" • "}
-            {isTeamTournament ? (
-              matches.length > 0 ? (
-                matches.some(m => m.status === 'ongoing') 
-                  ? 'Enfrentamientos en curso' 
-                  : matches.some(m => m.status === 'finished')
-                    ? 'Enfrentamientos finalizados'
-                    : 'Enfrentamientos programados'
-              ) : 'Ronda aún no programada'
-            ) : (
-              roundGames?.some(g => g.result === '*') 
-                ? 'Partidas en curso'
-                : roundGames?.length > 0 
-                  ? 'Partidas finalizadas'
-                  : 'Ronda aún no programada'
-            )}
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
-      {/* Games/Matches List */}
-      <div className="space-y-4 lg:space-y-6">
-        {isTeamTournament ? (
-          // Team Tournament Layout
-          matches.length > 0 ? matches.map((match, matchIndex) => {
-            const matchKey = `${match.teamA}-${match.teamB}`
-            const isExpanded = expandedMatches.has(matchKey)
-            
-            return (
-              <Card key={matchKey} className="shadow-sm overflow-hidden">
-                {/* Match Header - Clickable */}
-                <button
-                  onClick={() => toggleMatch(matchKey)}
-                  className="w-full bg-gradient-to-r from-terracotta/5 to-amber/5 dark:from-terracotta/10 dark:to-amber/10 p-4 lg:p-6 border-b border-border/50 hover:from-terracotta/10 hover:to-amber/10 dark:hover:from-terracotta/15 dark:hover:to-amber/15 transition-colors"
-                >
-                  <div className="flex items-center justify-between mb-3 lg:mb-4">
-                    <span className="text-sm lg:text-base font-medium text-muted-foreground">
-                      Enfrentamiento {matchIndex + 1}
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <Badge 
-                        variant={match.status === 'ongoing' ? 'default' : 'outline'}
-                        className={cn(
-                          "text-sm px-3 py-1",
-                          match.status === 'finished' 
-                            ? 'bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
-                            : match.status === 'ongoing'
-                              ? 'bg-yellow-50 dark:bg-yellow-950/50 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800'
-                              : 'bg-gray-50 dark:bg-gray-900/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'
-                        )}
-                      >
-                        {match.status === 'finished' ? 'Finalizado' : 
-                         match.status === 'ongoing' ? 'En curso' : 'Programado'}
-                      </Badge>
-                      {isExpanded ? (
-                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-center gap-4 lg:gap-6">
-                    <div className="flex-1 text-right">
-                      <span className="font-bold text-lg lg:text-xl text-terracotta dark:text-terracotta-light">
-                        {match.teamA}
-                      </span>
-                    </div>
-                    <div className="bg-background dark:bg-background rounded-lg px-4 py-2 lg:px-6 lg:py-3 shadow-sm border border-border/30">
-                      <span className="font-bold text-xl lg:text-2xl text-foreground">
-                        {match.totalScore.teamA} - {match.totalScore.teamB}
-                      </span>
-                    </div>
-                    <div className="flex-1 text-left">
-                      <span className="font-bold text-lg lg:text-xl text-terracotta dark:text-terracotta-light">
-                        {match.teamB}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-                
-                {/* Individual Games - Collapsible */}
-                {isExpanded && (
-                  <div className="divide-y divide-border/30">
-                    {match.games
-                      .sort((a, b) => (a.board || 0) - (b.board || 0))
-                      .map(game => (
-                      <div key={game.id} className="p-4 lg:p-6">
-                        <div className="flex items-center justify-between mb-4 lg:mb-6">
-                          <span className="text-sm lg:text-base font-medium text-muted-foreground">
-                            Mesa {game.board}
-                          </span>
-                          <div className="flex items-center gap-3">
-                            <Badge 
-                              variant={game.result === '*' ? 'default' : 'outline'}
-                              className={cn(
-                                "text-sm px-3 py-1",
-                                game.result !== '*'
-                                  ? 'bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
-                                  : 'bg-yellow-50 dark:bg-yellow-950/50 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800'
-                              )}
-                            >
-                              {game.result === '*' ? 'En curso' : game.result}
-                            </Badge>
-                            <Button
-                              asChild
-                              variant="outline"
-                              size="sm"
-                              className="text-terracotta dark:text-terracotta-light hover:bg-terracotta/10 dark:hover:bg-terracotta/20"
-                            >
-                              <Link href={`/torneos/${tournamentId}/partidas/${game.id}`}>
-                                Ver partida
-                              </Link>
-                            </Button>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 text-center">
-                          <div className="lg:text-right">
-                            <div className="font-semibold text-base lg:text-lg text-foreground mb-1">
-                              {game.white}
-                            </div>
-                            {game.whiteRating && (
-                              <div className="text-sm text-muted-foreground">
-                                Rating: {game.whiteRating}
-                              </div>
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center justify-center">
-                            <span className="text-muted-foreground text-lg font-medium">vs</span>
-                          </div>
-                          
-                          <div className="lg:text-left">
-                            <div className="font-semibold text-base lg:text-lg text-foreground mb-1">
-                              {game.black}
-                            </div>
-                            {game.blackRating && (
-                              <div className="text-sm text-muted-foreground">
-                                Rating: {game.blackRating}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </Card>
-            )
-          }) : (
-            <Card className="shadow-sm">
-              <CardContent className="p-8 lg:p-12 text-center">
-                <Trophy className="h-12 w-12 lg:h-16 lg:w-16 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground text-base lg:text-lg">
-                  {totalRounds >= roundNumber 
-                    ? 'Esta ronda aún no ha sido programada' 
-                    : 'Esta ronda no existe en el torneo'
-                  }
-                </p>
-              </CardContent>
-            </Card>
-          )
-        ) : (
-          // Individual Tournament Layout
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
-            {roundGames?.length > 0 ? roundGames.map(game => (
-              <Card key={game.id} className="shadow-sm">
-                <CardContent className="p-4 lg:p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <Badge variant="outline" className="text-sm px-3 py-1">
-                      Mesa {game.board}
-                    </Badge>
-                    <div className="flex items-center gap-3">
-                      <Badge 
-                        variant={game.result === '*' ? 'default' : 'outline'}
-                        className={cn(
-                          "text-sm px-3 py-1",
-                          game.result !== '*'
-                            ? 'bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
-                            : 'bg-yellow-50 dark:bg-yellow-950/50 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800'
-                        )}
-                      >
-                        {game.result === '*' ? 'En curso' : game.result}
-                      </Badge>
-                      <Button
-                        asChild
-                        variant="outline"
-                        size="sm"
-                        className="text-terracotta dark:text-terracotta-light hover:bg-terracotta/10 dark:hover:bg-terracotta/20"
-                      >
-                        <Link href={`/torneos/${tournamentId}/partidas/${game.id}`}>
-                          Ver
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <div className="font-semibold text-base lg:text-lg text-foreground mb-1">
-                        {game.white}
-                      </div>
-                      {game.whiteRating && (
-                        <div className="text-sm text-muted-foreground mb-2">
-                          Rating: {game.whiteRating}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="text-center">
-                      <span className="text-muted-foreground font-medium">vs</span>
-                    </div>
-                    
-                    <div className="text-center">
-                      <div className="font-semibold text-base lg:text-lg text-foreground mb-1">
-                        {game.black}
-                      </div>
-                      {game.blackRating && (
-                        <div className="text-sm text-muted-foreground">
-                          Rating: {game.blackRating}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )) : (
-              <div className="lg:col-span-2 xl:col-span-3">
-                <Card className="shadow-sm">
-                  <CardContent className="p-8 lg:p-12 text-center">
-                    <Users className="h-12 w-12 lg:h-16 lg:w-16 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground text-base lg:text-lg">
-                      {totalRounds >= roundNumber 
-                        ? 'Esta ronda aún no ha sido programada' 
-                        : 'Esta ronda no existe en el torneo'
-                      }
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              disabled={roundNumber >= roundCount}
+              onClick={() => goToRound(roundNumber + 1)}
+              aria-label="Ronda siguiente"
+              title="Ronda siguiente"
+            >
+              <ChevronRight />
+            </Button>
           </div>
         )}
       </div>
+
+      {isEmpty ? (
+        <p className="rounded-lg border bg-card p-6 text-center text-sm text-muted-foreground">
+          Ronda sin partidas cargadas.
+        </p>
+      ) : isTeamTournament ? (
+        <div className="space-y-3">
+          {matches.map((match) => {
+            const matchKey = `${match.teamA}-${match.teamB}`
+            const isExpanded = !collapsedMatches.has(matchKey)
+
+            return (
+              <div key={matchKey} className="overflow-hidden rounded-lg border bg-card">
+                <button
+                  type="button"
+                  onClick={() => toggleMatch(matchKey)}
+                  aria-expanded={isExpanded}
+                  className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-amber/10 sm:px-4"
+                >
+                  <MatchHeader match={match} />
+                  {isExpanded ? (
+                    <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
+                </button>
+
+                {isExpanded && (
+                  <ul className="divide-y border-t">
+                    {sortByBoard(match.games).map((game) => (
+                      <GameRow key={game.id} game={game} tournamentId={tournamentId} />
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <ul className="divide-y rounded-lg border bg-card">
+          {sortByBoard(roundGames).map((game) => (
+            <GameRow key={game.id} game={game} tournamentId={tournamentId} />
+          ))}
+        </ul>
+      )}
     </div>
   )
-} 
+}

@@ -1,32 +1,32 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 
 import { ClubPlayersManagement } from "./players-client"
 import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
 import { AdminPageHeader } from "@/components/admin-page-header"
-import { AdminPlayerStats } from "@/components/admin-player-stats"
 import { Button } from "@/components/ui/button"
 import { getClubPlayersInitialData } from "@/lib/club-admin/initial-data"
 
 export const dynamic = "force-dynamic"
+export const metadata: Metadata = { title: "Jugadores del club" }
 
 export default function ClubPlayersManagementPage() {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="Gestión de Jugadores"
-        subtitle="Administra los jugadores de tus clubes."
+        title="Jugadores"
         action={
-          <Button asChild className="bg-terracotta hover:bg-terracotta/90">
-            <Link href="/jugadores/nuevo">
+          <Button asChild>
+            <Link href="/jugadores/nuevo?from=club-admin">
               <Plus className="mr-2 h-4 w-4" />
-              Nuevo Jugador
+              Nuevo jugador
             </Link>
           </Button>
         }
       />
-      <Suspense fallback={<AdminContentSkeleton stats={3} />}>
+      <Suspense fallback={<AdminContentSkeleton />}>
         <ClubPlayersManagementContent />
       </Suspense>
     </div>
@@ -34,17 +34,13 @@ export default function ClubPlayersManagementPage() {
 }
 
 async function ClubPlayersManagementContent() {
-  const { players } = await getClubPlayersInitialData()
-  const stats = {
-    total: players.length,
-    withFideId: players.filter((player) => player.fide_id).length,
-    withClub: players.filter((player) => player.club).length,
-  }
+  const { selectedClubId, players, total } = await getClubPlayersInitialData()
 
   return (
-    <div className="space-y-6">
-      <AdminPlayerStats stats={stats} />
-      <ClubPlayersManagement showHeader={false} showStats={false} initialPlayers={players} />
-    </div>
+    <ClubPlayersManagement
+      initialClubId={selectedClubId}
+      initialPlayers={players}
+      initialTotal={total}
+    />
   )
 }

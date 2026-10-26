@@ -1,3 +1,4 @@
+import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ErrorAlert } from "@/components/error-alert"
@@ -62,31 +63,22 @@ async function fetchUserData(userId: string): Promise<{
 
     // Use the service role client to fetch user information
     const supabaseServiceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const supabaseServiceKey = SUPABASE_SECRET_KEY
     
     if (!supabaseServiceKey) {
-      throw new Error('Service role key not configured')
+      throw new Error('Falta configurar la clave de servicio de Supabase')
     }
 
     const { createClient: createServiceClient } = await import('@supabase/supabase-js')
     const supabaseAdmin = createServiceClient(supabaseServiceUrl, supabaseServiceKey)
 
-    // Fetch all users and find the specific one
-    const { data: { users }, error: usersError } = await supabaseAdmin.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000
-    })
+    const { data: userResult, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId)
 
-    if (usersError) {
-      console.error('Error fetching users:', usersError)
-      throw new Error('Error al obtener los usuarios del sistema de autenticación')
-    }
-
-    const userData = users.find((u: any) => u.id === userId)
-    
-    if (!userData) {
+    if (userError || !userResult?.user) {
       return { user: null, clubs: [], clubsAdmin: [] }
     }
+
+    const userData = userResult.user
 
     // Get all admins
     const { data: admins } = await supabase
@@ -119,7 +111,7 @@ async function fetchUserData(userId: string): Promise<{
     const transformedUser: UserWithPermissions = {
       id: userData.id,
       email: userData.email || 'email@no-disponible.com',
-      emailVerified: userData.email_confirmed_at !== null,
+      emailVerified: Boolean(userData.email_confirmed_at),
       lastSignIn: userData.last_sign_in_at || null,
       createdAt: userData.created_at,
       nombre: userData.user_metadata?.nombre || userData.user_metadata?.name || undefined,
@@ -192,7 +184,7 @@ export default async function EditarUsuarioPage({
 
   if (error) {
     return (
-      <div className="flex flex-col gap-8 p-8">
+      <div className="space-y-6">
         <ErrorAlert title="Error" message={error} />
       </div>
     )

@@ -6,18 +6,44 @@ import {
   type TournamentDisplay 
 } from "@/lib/tournamentUtils"
 import { getGameById, type GameDisplay } from "@/lib/gameUtils"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { ErrorAlert } from "@/components/error-alert"
-import { Calendar, MapPin, Trophy, Clock, ChevronLeft } from "lucide-react"
+import { InfoPill } from "@/components/info-pill"
+import { formatArgentinaDateOnly } from "@/lib/dateUtils"
+import { Calendar, CheckCircle2, ChevronLeft, Clock, Hash, ListOrdered, PlayCircle } from "lucide-react"
 import Link from "next/link"
 import { Metadata } from "next"
 import ChessGameDisplay from "./components/chess-game-display"
-import { cn } from "@/lib/utils"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
+
+type ServerClient = Awaited<ReturnType<typeof createClient>>
+
+// PostgREST embeds many-to-one relations as objects, but the inferred type is an array.
+const one = <T,>(value: T | T[] | null | undefined) => (Array.isArray(value) ? value[0] : value)
+
+// Game ids are per table, so make sure the game belongs to the tournament in the URL.
+async function gameBelongsToTournament(
+  supabase: ServerClient,
+  gameId: number,
+  tournamentId: number,
+  tournamentType: string
+): Promise<boolean> {
+  if (tournamentType === 'team') {
+    const { data } = await supabase
+      .from('match_games')
+      .select('match:matches(round:rounds(tournament_id))')
+      .eq('id', gameId)
+      .maybeSingle()
+    return one(one(data?.match)?.round)?.tournament_id === tournamentId
+  }
+  const { data } = await supabase
+    .from('individual_games')
+    .select('round:rounds(tournament_id)')
+    .eq('id', gameId)
+    .maybeSingle()
+  return one(data?.round)?.tournament_id === tournamentId
+}
 
 // Generate metadata
 export async function generateMetadata({ params }: { 
@@ -33,28 +59,25 @@ export async function generateMetadata({ params }: {
     const tournament = tournamentsWithDates.find(t => t.id === tournamentId)
     
     if (!tournament) {
-      return {
-        title: 'Partida no encontrada - FASGBA',
-      }
+      return { title: 'Partida no encontrada | FASGBA' }
     }
 
-    const tournamentDisplay = transformTournamentToDisplay(tournament)
-    const game = await getGameById(gameId, tournamentDisplay.tournament_type || 'individual')
-    
-    if (!game) {
-      return {
-        title: 'Partida no encontrada - FASGBA',
-      }
+    const type = transformTournamentToDisplay(tournament).tournament_type || 'individual'
+    const [game, belongs] = await Promise.all([
+      getGameById(gameId, type),
+      gameBelongsToTournament(supabase, gameId, tournamentId, type),
+    ])
+
+    if (!game || !belongs) {
+      return { title: 'Partida no encontrada | FASGBA' }
     }
 
     return {
-      title: `${game.white} vs ${game.black} - ${tournament.title} - FASGBA`,
+      title: `${game.white} vs ${game.black} · ${tournament.title} | FASGBA`,
       description: `Partida de la ronda ${game.round} entre ${game.white} y ${game.black} en el torneo ${tournament.title}`,
     }
-  } catch (error) {
-    return {
-      title: 'Partida - FASGBA',
-    }
+  } catch {
+    return { title: 'Partida | FASGBA' }
   }
 }
 
@@ -83,11 +106,16 @@ export default async function GamePage({ params }: {
     }
 
     tournament = transformTournamentToDisplay(tournamentWithDates)
-    game = await getGameById(gameId, tournament.tournament_type || 'individual')
-    
-    if (!game) {
+    const type = tournament.tournament_type || 'individual'
+    const [gameData, belongs] = await Promise.all([
+      getGameById(gameId, type),
+      gameBelongsToTournament(supabase, gameId, tournamentId, type),
+    ])
+
+    if (!gameData || !belongs) {
       notFound()
     }
+    game = gameData
   } catch (err) {
     console.error('Error loading tournament or game:', err)
     error = 'Error al cargar la partida'
@@ -97,87 +125,63 @@ export default async function GamePage({ params }: {
     notFound()
   }
 
+  const result = game.result === '*' ? null : game.result.replace(/1\/2/g, '½')
+
   return (
     <>
-      {/* Game Header */}
-        <section className="w-full py-6 md:py-8 bg-gradient-to-b from-terracotta/10 to-amber/5">
-          <div className="container px-4 md:px-6">
-            <div className="flex flex-col space-y-4">
-              <div className="flex items-center gap-4">
-                <Button asChild variant="ghost" size="sm" className="text-terracotta hover:bg-terracotta/10">
-                  <Link href={`/torneos/${tournamentId}`}>
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    Volver al torneo
-                  </Link>
-                </Button>
-              </div>
-              
-              <div className="space-y-2">
-                <h1 className="text-xl md:text-3xl font-bold tracking-tight text-terracotta">
-                  {game.whiteTeam && game.blackTeam ? (
-                    <>
-                      {game.whiteTeam} vs {game.blackTeam}
-                      <div className="text-lg md:text-xl font-medium text-muted-foreground mt-1">
-                        {game.white} vs {game.black}
-                      </div>
-                    </>
-                  ) : (
-                    `${game.white} vs ${game.black}`
-                  )}
-                </h1>
-                <p className="text-muted-foreground">
-                  {tournament.title} - Ronda {game.round}
-                  {game.whiteTeam && game.blackTeam && (
-                    <span className="ml-2 text-xs bg-terracotta/10 text-terracotta px-2 py-1 rounded">
-                      Torneo por Equipos
-                    </span>
-                  )}
-                </p>
-              </div>
-              
-              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                {game.date && (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-amber" />
-                    <span>{new Date(game.date).toLocaleDateString('es-ES')}</span>
-                  </div>
-                )}
-                {game.time && (
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-amber" />
-                    <span>{game.time}</span>
-                  </div>
-                )}
-                {game.board && (
-                  <div className="flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-amber" />
-                    <span>Mesa {game.board}</span>
-                  </div>
-                )}
-                <Badge 
-                  variant={game.result === '*' ? 'default' : 'outline'}
-                  className={cn(
-                    "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
-                    game.result 
-                      ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700'
-                      : 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700'
-                  )}
-                >
-                  {game.result === '*' ? 'En juego' : `Resultado: ${game.result}`}
-                </Badge>
-              </div>
-            </div>
+      <section className="w-full pt-8 md:pt-12">
+        <div className="container space-y-3 px-4 md:px-6">
+          <Link
+            href={`/torneos/${tournamentId}`}
+            className="inline-flex max-w-full items-center gap-1 text-sm font-semibold text-terracotta underline-offset-4 hover:underline"
+          >
+            <ChevronLeft className="h-4 w-4 shrink-0" />
+            <span className="truncate">{tournament.title}</span>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">
+              {game.white} vs {game.black}
+            </h1>
+            {game.whiteTeam && game.blackTeam && (
+              <p className="mt-1 text-muted-foreground">
+                {game.whiteTeam} vs {game.blackTeam}
+              </p>
+            )}
           </div>
-        </section>
-
-        {/* Game Content */}
-        <section className="w-full py-8 md:py-12">
-          <div className="container px-4 md:px-6">
-            {error && <ErrorAlert message={error} className="mb-6" />}
-
-            <ChessGameDisplay game={game} />
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+            <InfoPill icon={result ? CheckCircle2 : PlayCircle}>{result ?? 'En juego'}</InfoPill>
+            <span className="flex items-center gap-1.5">
+              <ListOrdered className="h-4 w-4 text-amber" />
+              Ronda {game.round}
+            </span>
+            {game.board && (
+              <span className="flex items-center gap-1.5">
+                <Hash className="h-4 w-4 text-amber" />
+                Mesa {game.board}
+              </span>
+            )}
+            {game.date && (
+              <span className="flex items-center gap-1.5">
+                <Calendar className="h-4 w-4 text-amber" />
+                {formatArgentinaDateOnly(game.date)}
+              </span>
+            )}
+            {game.time && (
+              <span className="flex items-center gap-1.5">
+                <Clock className="h-4 w-4 text-amber" />
+                {game.time.slice(0, 5)}
+              </span>
+            )}
           </div>
-        </section>
+        </div>
+      </section>
+
+      <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
+        <div className="container px-4 md:px-6">
+          {error && <ErrorAlert message={error} className="mb-6" />}
+          <ChessGameDisplay game={game} />
+        </div>
+      </section>
     </>
   )
-} 
+}

@@ -1,15 +1,24 @@
 import { Suspense } from "react"
 import Link from "next/link"
-import { Award, FileText, FolderOpen, Globe, GraduationCap, Home, Shield, Trophy, Users } from "lucide-react"
+import { FileText, FolderOpen, Home, Trophy, UserCog, Users } from "lucide-react"
 
 import { PurgeCacheMenu } from "./purge-cache-menu"
 import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
 import { AdminPageHeader } from "@/components/admin-page-header"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { getArgentinaDateInputValue } from "@/lib/dateUtils"
 import { requireAdminAction } from "@/lib/actions/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
+
+// Create shortcuts only; icons match the sidebar.
+const QUICK_ACTIONS = [
+  { href: "/torneos/nuevo", label: "Nuevo torneo", icon: Trophy },
+  { href: "/admin/clubes/nuevo", label: "Nuevo club", icon: Home },
+  { href: "/noticias/nueva?source=admin", label: "Nueva noticia", icon: FileText },
+  { href: "/jugadores/nuevo", label: "Nuevo jugador", icon: Users },
+  { href: "/admin/documentos", label: "Nuevo documento", icon: FolderOpen },
+]
 
 // Mark this page as dynamic since it requires server-side authentication
 export const dynamic = 'force-dynamic'
@@ -18,8 +27,6 @@ export const dynamic = 'force-dynamic'
 interface DashboardStats {
   usuarios: number
   usuariosNuevos: number
-  usuariosNuevosHoy: number
-  usuariosVerificados: number
   noticias: number
   noticiasEstesMes: number
   clubes: number
@@ -27,7 +34,6 @@ interface DashboardStats {
   torneos: number
   torneosActivos: number
   torneosProximos: number
-  crecimientoMensual: string
 }
 
 // Server-side function to fetch dashboard statistics
@@ -40,7 +46,6 @@ async function getDashboardStats(): Promise<DashboardStats> {
     // Get current date information
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const today = getArgentinaDateInputValue(now)
     
     // Fetch all statistics in parallel
@@ -95,19 +100,13 @@ async function getDashboardStats(): Promise<DashboardStats> {
       throw usersResult.error
     }
 
-    // Calculate growth percentage
     const authUsers = usersResult.data.users || []
     const totalUsers = authUsers.length
     const newUsersThisMonth = authUsers.filter((user) => new Date(user.created_at) >= startOfMonth).length
-    const newUsersToday = authUsers.filter((user) => new Date(user.created_at) >= startOfToday).length
-    const verifiedUsers = authUsers.filter((user) => Boolean(user.email_confirmed_at)).length
-    const growthRate = totalUsers > 0 ? ((newUsersThisMonth / totalUsers) * 100).toFixed(1) : "0"
 
     return {
       usuarios: totalUsers,
       usuariosNuevos: newUsersThisMonth,
-      usuariosNuevosHoy: newUsersToday,
-      usuariosVerificados: verifiedUsers,
       noticias: newsCount.count || 0,
       noticiasEstesMes: newsThisMonth.count || 0,
       clubes: clubsCount.count || 0,
@@ -115,7 +114,6 @@ async function getDashboardStats(): Promise<DashboardStats> {
       torneos: tournamentsCount.count || 0,
       torneosActivos: countUniqueTournamentIds(activeTournaments.data),
       torneosProximos: countUniqueTournamentIds(upcomingTournaments.data),
-      crecimientoMensual: `${growthRate}%`
     }
   } catch (error) {
     console.error('Error fetching dashboard stats:', error)
@@ -123,8 +121,6 @@ async function getDashboardStats(): Promise<DashboardStats> {
     return {
       usuarios: 0,
       usuariosNuevos: 0,
-      usuariosNuevosHoy: 0,
-      usuariosVerificados: 0,
       noticias: 0,
       noticiasEstesMes: 0,
       clubes: 0,
@@ -132,7 +128,6 @@ async function getDashboardStats(): Promise<DashboardStats> {
       torneos: 0,
       torneosActivos: 0,
       torneosProximos: 0,
-      crecimientoMensual: "0%"
     }
   }
 }
@@ -143,8 +138,8 @@ function countUniqueTournamentIds(rows: Array<{ tournament_id: number | null }> 
 
 export default function AdminDashboard() {
   return (
-    <div className="flex-1 space-y-4">
-      <AdminPageHeader title="Dashboard" />
+    <div className="flex-1 space-y-6">
+      <AdminPageHeader title="Panel" />
       <Suspense fallback={<AdminContentSkeleton stats={4} rows={3} filters={false} />}>
         <AdminDashboardContent />
       </Suspense>
@@ -161,7 +156,7 @@ async function AdminDashboardContent() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Usuarios totales</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <UserCog className="h-4 w-4 text-amber" />
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl md:text-2xl font-bold">
@@ -175,7 +170,7 @@ async function AdminDashboardContent() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Noticias publicadas</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <FileText className="h-4 w-4 text-amber" />
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl md:text-2xl font-bold">
@@ -189,7 +184,7 @@ async function AdminDashboardContent() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Torneos activos</CardTitle>
-            <Trophy className="h-4 w-4 text-muted-foreground" />
+            <Trophy className="h-4 w-4 text-amber" />
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl md:text-2xl font-bold">
@@ -203,7 +198,7 @@ async function AdminDashboardContent() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Clubes registrados</CardTitle>
-            <Home className="h-4 w-4 text-muted-foreground" />
+            <Home className="h-4 w-4 text-amber" />
           </CardHeader>
           <CardContent className="pb-3">
             <div className="text-xl md:text-2xl font-bold">
@@ -215,134 +210,24 @@ async function AdminDashboardContent() {
           </CardContent>
         </Card>
       </div>
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
-        <Card className="lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Actividad reciente</CardTitle>
-            <CardDescription>
-              Últimas acciones realizadas en el sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-8">
-              <div className="flex items-center">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {stats.usuariosNuevosHoy > 0 ? 
-                      `${stats.usuariosNuevosHoy} nuevo${stats.usuariosNuevosHoy > 1 ? 's' : ''} usuario${stats.usuariosNuevosHoy > 1 ? 's' : ''} registrado${stats.usuariosNuevosHoy > 1 ? 's' : ''} hoy` :
-                      stats.usuariosNuevos > 0 ? "Nuevos usuarios este mes" : "Sistema inicializado"
-                    }
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {stats.usuariosVerificados} usuarios verificados
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {stats.noticiasEstesMes > 0 ? 
-                      `${stats.noticiasEstesMes} noticia${stats.noticiasEstesMes > 1 ? 's' : ''} este mes` :
-                      stats.noticias > 0 ? "Noticias disponibles" : "Sistema configurado"
-                    }
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Crecimiento: {stats.crecimientoMensual}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {stats.torneosActivos > 0 ? 
-                      `${stats.torneosActivos} torneo${stats.torneosActivos > 1 ? 's' : ''} activo${stats.torneosActivos > 1 ? 's' : ''}` :
-                      stats.torneosProximos > 0 ? `${stats.torneosProximos} torneos próximos` : "Torneos listos"
-                    }
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Total: {stats.torneos} torneos
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Acciones rápidas</CardTitle>
-            <CardDescription>
-              Accede rápidamente a las funciones más utilizadas
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-2 md:gap-3">
-              <Button asChild className="w-full justify-start" variant="outline">
-                <Link href="/torneos/nuevo">
-                  <Trophy className="mr-2 h-4 w-4" />
-                  Nuevo torneo
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Acciones rápidas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {QUICK_ACTIONS.map(({ href, label, icon: Icon }) => (
+              <Button key={href} asChild className="w-full justify-start" variant="outline">
+                <Link href={href}>
+                  <Icon className="h-4 w-4" />
+                  {label}
                 </Link>
               </Button>
-              <Button asChild className="w-full justify-start" variant="outline">
-                <Link href="/admin/clubes/nuevo">
-                  <Home className="mr-2 h-4 w-4" />
-                  Nuevo club
-                </Link>
-              </Button>
-              <Button asChild className="w-full justify-start" variant="outline">
-                <Link href="/admin/ranking">
-                  <Trophy className="mr-2 h-4 w-4" />
-                  Gestionar ranking
-                </Link>
-              </Button>
-              <Button asChild className="w-full justify-start" variant="outline">
-                <Link href="/noticias/nueva?source=admin">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Nueva noticia
-                </Link>
-              </Button>
-              <Button asChild className="w-full justify-start" variant="outline">
-                <Link href="/admin/jugadores">
-                  <Users className="mr-2 h-4 w-4" />
-                  Gestionar jugadores
-                </Link>
-              </Button>
-              <Button asChild className="w-full justify-start" variant="outline">
-                <Link href="/admin/equipos">
-                  <Shield className="mr-2 h-4 w-4" />
-                  Gestionar equipos
-                </Link>
-              </Button>
-              <Button asChild className="w-full justify-start" variant="outline">
-                <Link href="/admin/documentos">
-                  <FolderOpen className="mr-2 h-4 w-4" />
-                  Agregar documento nuevo
-                </Link>
-              </Button>
-              <Button asChild className="w-full justify-start" variant="outline">
-                <Link href="/admin/alumnos">
-                  <GraduationCap className="mr-2 h-4 w-4" />
-                  Gestionar alumnos
-                </Link>
-              </Button>
-              <Button asChild className="w-full justify-start" variant="outline">
-                <Link href="/admin/arbitros">
-                  <Award className="mr-2 h-4 w-4" />
-                  Gestionar árbitros
-                </Link>
-              </Button>
-              <Button asChild className="w-full justify-start" variant="outline">
-                <Link href="/admin/paises">
-                  <Globe className="mr-2 h-4 w-4" />
-                  Gestionar países
-                </Link>
-              </Button>
-              <div className="mt-1 border-t pt-3">
-                <PurgeCacheMenu />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            ))}
+            <PurgeCacheMenu />
+          </div>
+        </CardContent>
+      </Card>
     </>
   )
 }

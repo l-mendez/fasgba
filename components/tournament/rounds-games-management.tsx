@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Plus, Users, User, Calendar, Crown } from 'lucide-react'
+import { AdminConfirmDialog } from '@/components/admin-confirm-dialog'
+import { Plus } from 'lucide-react'
 import { GameDisplay } from '@/lib/gameUtils-client'
 import { toast } from 'sonner'
 import { apiCall } from '@/lib/utils/apiClient'
@@ -56,6 +56,13 @@ export default function RoundsGamesManagement({
   const [loading, setLoading] = useState(false)
   const [fetchingTeams, setFetchingTeams] = useState(false)
 
+  // Pending destructive action, confirmed through an AlertDialog
+  const [pendingDelete, setPendingDelete] = useState<{
+    title: string
+    description: string
+    run: () => Promise<void>
+  } | null>(null)
+
   // State for match management
   const [isEditMatchDialogOpen, setIsEditMatchDialogOpen] = useState(false)
   const [editingMatch, setEditingMatch] = useState<Match | null>(null)
@@ -68,16 +75,13 @@ export default function RoundsGamesManagement({
   })
 
   // Game management functions
+  // Team games pick from the players registered to each team. Individual
+  // games search all players in the dialog (PlayerSearchField).
   const fetchPlayers = async () => {
+    if (tournamentType !== 'team') return
     try {
-      if (tournamentType === 'team') {
-        // Only players registered to a team for this tournament are eligible.
-        const data = await apiCall(`/api/tournaments/${tournamentId}/players`)
-        setPlayers(data.players || [])
-      } else {
-        const data = await apiCall('/api/players')
-        setPlayers(data.players || [])
-      }
+      const data = await apiCall(`/api/tournaments/${tournamentId}/players`)
+      setPlayers(data.players || [])
     } catch (error) {
       console.error('Error fetching players:', error)
       toast.error('Error al cargar jugadores')
@@ -188,7 +192,7 @@ export default function RoundsGamesManagement({
         body: JSON.stringify(gameData),
       })
 
-      toast.success('Partida agregada exitosamente')
+      toast.success('Partida agregada')
       setIsAddGameDialogOpen(false)
       resetGameForm()
 
@@ -242,7 +246,7 @@ export default function RoundsGamesManagement({
         }
       )
 
-      toast.success('Partida actualizada exitosamente')
+      toast.success('Partida actualizada')
       setIsEditGameDialogOpen(false)
       setEditingGame(null)
       resetGameForm()
@@ -258,10 +262,6 @@ export default function RoundsGamesManagement({
   }
 
   const handleDeleteGame = async (game: GameDisplay) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar esta partida?')) {
-      return
-    }
-
     // Find the round ID from the round number
     const roundData = rounds.find(r => r.round_number === game.round)
     if (!roundData) {
@@ -278,7 +278,7 @@ export default function RoundsGamesManagement({
         }
       )
 
-      toast.success('Partida eliminada exitosamente')
+      toast.success('Partida eliminada')
       await fetchGames()
       onGameUpdate?.()
     } catch (error) {
@@ -289,18 +289,14 @@ export default function RoundsGamesManagement({
     }
   }
 
-  const handleDeleteRound = async (roundId: number, roundNumber: number) => {
-    if (!confirm(`¿Estás seguro de que quieres eliminar la Ronda ${roundNumber}? Esto eliminará todas las partidas de esta ronda.`)) {
-      return
-    }
-
+  const handleDeleteRound = async (roundId: number) => {
     setLoading(true)
     try {
       await apiCall(`/api/tournaments/${tournamentId}/rounds/${roundId}`, {
         method: 'DELETE',
       })
 
-      toast.success('Ronda eliminada exitosamente')
+      toast.success('Ronda eliminada')
       await fetchRounds()
     } catch (error) {
       console.error('Error deleting round:', error)
@@ -334,7 +330,7 @@ export default function RoundsGamesManagement({
         }),
       })
 
-      toast.success('Enfrentamiento actualizado exitosamente. Todas las partidas de este enfrentamiento han sido eliminadas para mantener la coherencia.')
+      toast.success('Enfrentamiento actualizado')
       setIsEditMatchDialogOpen(false)
       setEditingMatch(null)
       resetMatchForm()
@@ -355,17 +351,13 @@ export default function RoundsGamesManagement({
   }
 
   const handleDeleteMatch = async (match: Match) => {
-    if (!confirm(`¿Estás seguro de que quieres eliminar el enfrentamiento ${match.team_a.name} vs ${match.team_b.name}? Esto eliminará todas las partidas de este enfrentamiento.`)) {
-      return
-    }
-
     setLoading(true)
     try {
       await apiCall(`/api/tournaments/${tournamentId}/rounds/${selectedRound}/matches/${match.id}`, {
         method: 'DELETE',
       })
 
-      toast.success('Enfrentamiento eliminado exitosamente')
+      toast.success('Enfrentamiento eliminado')
 
       // Refresh data
       await Promise.all([
@@ -381,6 +373,24 @@ export default function RoundsGamesManagement({
       setLoading(false)
     }
   }
+
+  const confirmDeleteGame = (game: GameDisplay) => setPendingDelete({
+    title: `¿Eliminar la partida de la mesa ${game.board || '–'}?`,
+    description: `${game.white} vs ${game.black}`,
+    run: () => handleDeleteGame(game),
+  })
+
+  const confirmDeleteRound = (roundId: number, roundNumber: number) => setPendingDelete({
+    title: `¿Eliminar la ronda ${roundNumber}?`,
+    description: 'También se eliminarán sus partidas.',
+    run: () => handleDeleteRound(roundId),
+  })
+
+  const confirmDeleteMatch = (match: Match) => setPendingDelete({
+    title: '¿Eliminar enfrentamiento?',
+    description: `${match.team_a.name} vs ${match.team_b.name}. También se eliminarán sus partidas.`,
+    run: () => handleDeleteMatch(match),
+  })
 
   const openEditMatchDialog = (match: Match) => {
     setEditingMatch(match)
@@ -438,56 +448,29 @@ export default function RoundsGamesManagement({
     return game.round === selectedRoundData.round_number
   })
 
+  const selectedRoundNumber = rounds.find(r => r.id === selectedRound)?.round_number
+
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h3 className="text-xl font-semibold">Gestión de Rondas y Partidas</h3>
-          {tournamentType === 'team' ? (
-            <Badge variant="outline" className="flex items-center gap-1">
-              <Users className="h-3 w-3" />
-              Por Equipos
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="flex items-center gap-1">
-              <User className="h-3 w-3" />
-              Individual
-            </Badge>
-          )}
-        </div>
-      </div>
-
-      {/* Rounds Management Section */}
+    <div className="space-y-6">
+      {/* Rounds (the tab label already says "Rondas") */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h4 className="text-lg font-medium">Rondas del Torneo</h4>
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {rounds.length} {rounds.length === 1 ? 'ronda' : 'rondas'}
-            </Badge>
-          </div>
-
-          <Button
-            onClick={() => setIsAddRoundDialogOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Nueva Ronda
+        <div className="flex justify-end">
+          <Button onClick={() => setIsAddRoundDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva ronda
           </Button>
-
-          <RoundFormDialog
-            open={isAddRoundDialogOpen}
-            onOpenChange={setIsAddRoundDialogOpen}
-            tournamentId={tournamentId}
-            tournamentType={tournamentType}
-            existingRounds={rounds}
-            teams={teams}
-            fetchingTeams={fetchingTeams}
-            onSuccess={fetchRounds}
-          />
         </div>
+
+        <RoundFormDialog
+          open={isAddRoundDialogOpen}
+          onOpenChange={setIsAddRoundDialogOpen}
+          tournamentId={tournamentId}
+          tournamentType={tournamentType}
+          existingRounds={rounds}
+          teams={teams}
+          fetchingTeams={fetchingTeams}
+          onSuccess={fetchRounds}
+        />
 
         <RoundsList
           rounds={rounds}
@@ -495,7 +478,7 @@ export default function RoundsGamesManagement({
           selectedRound={selectedRound}
           onSelectRound={setSelectedRound}
           loading={loading}
-          onDeleteRound={handleDeleteRound}
+          onDeleteRound={confirmDeleteRound}
         />
       </div>
 
@@ -505,25 +488,14 @@ export default function RoundsGamesManagement({
       {tournamentType === 'team' && selectedRound > 0 && (
         <>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <h4 className="text-lg font-medium">Enfrentamientos</h4>
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  Ronda {rounds.find(r => r.id === selectedRound)?.round_number || 'N/A'}
-                </Badge>
-                <Badge variant="secondary">
-                  {matches.length} {matches.length === 1 ? 'enfrentamiento' : 'enfrentamientos'}
-                </Badge>
-              </div>
-            </div>
+            <h3 className="text-2xl font-bold tracking-tight text-terracotta">Enfrentamientos</h3>
 
             <MatchesList
               matches={matches}
               games={games}
               loading={loading}
               onEditMatch={openEditMatchDialog}
-              onDeleteMatch={handleDeleteMatch}
+              onDeleteMatch={confirmDeleteMatch}
             />
           </div>
 
@@ -533,26 +505,15 @@ export default function RoundsGamesManagement({
 
       {/* Games Management Section */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h4 className="text-lg font-medium">Partidas</h4>
-            {selectedRound > 0 && (
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Crown className="h-3 w-3" />
-                  Ronda {rounds.find(r => r.id === selectedRound)?.round_number || 'N/A'}
-                </Badge>
-                <Badge variant="secondary">
-                  {currentRoundGames.length} {currentRoundGames.length === 1 ? 'partida' : 'partidas'}
-                </Badge>
-              </div>
-            )}
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-2xl font-bold tracking-tight text-terracotta">
+            {selectedRoundNumber ? `Partidas de la ronda ${selectedRoundNumber}` : 'Partidas'}
+          </h3>
 
           {selectedRound > 0 && (
-            <Button className="flex items-center gap-2" onClick={() => setIsAddGameDialogOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Nueva Partida
+            <Button onClick={() => setIsAddGameDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nueva partida
             </Button>
           )}
         </div>
@@ -562,9 +523,21 @@ export default function RoundsGamesManagement({
           games={currentRoundGames}
           loading={loading}
           onEditGame={openEditGameDialog}
-          onDeleteGame={handleDeleteGame}
+          onDeleteGame={confirmDeleteGame}
         />
       </div>
+
+      <AdminConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+        title={pendingDelete?.title ?? ''}
+        description={pendingDelete?.description}
+        onConfirm={async () => {
+          await pendingDelete?.run()
+          setPendingDelete(null)
+        }}
+        pending={loading}
+      />
 
       {/* Add Game Dialog */}
       <GameFormDialog

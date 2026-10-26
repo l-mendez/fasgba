@@ -1,116 +1,97 @@
 import Link from "next/link"
-import { CastleIcon as ChessKnight, Mail, Phone } from "lucide-react"
+import { Mail, Phone } from "lucide-react"
 
 import { Facebook, Instagram } from "@/components/icons/social-icons"
+import { SiteLogo } from "@/components/site-logo"
 import { Button } from "@/components/ui/button"
+
+const FILES = "https://uxtfxazbikfqcnnmhufh.supabase.co/storage/v1/object/public/footer-files"
+
+const siteLinks = [
+  { href: "/torneos", label: "Torneos" },
+  { href: "/clubes", label: "Clubes" },
+  { href: "/ranking", label: "Ranking" },
+  { href: "/noticias", label: "Noticias" },
+  { href: "/profesores", label: "Profesores" },
+  { href: "/arbitraje", label: "Arbitraje" },
+]
+
+const resources = [
+  { href: `${FILES}/cd2025-2027.xlsx`, label: "Comisión Directiva" },
+  { href: `${FILES}/estatuto.pdf`, label: "Estatuto" },
+]
+
+const socials = [
+  { href: "https://facebook.com/FASGBA", label: "Facebook", Icon: Facebook },
+  { href: "https://www.instagram.com/fasgba_ok", label: "Instagram", Icon: Instagram },
+]
+
+const linkClass = "text-muted-foreground underline-offset-4 hover:underline"
+const headingClass = "mb-3 text-sm font-semibold text-terracotta"
 
 export function SiteFooter() {
   return (
-    <footer className="w-full border-t border-amber/20 bg-gradient-to-b from-background to-amber/5">
-      <div className="container grid gap-8 py-8 md:grid-cols-2 lg:grid-cols-4">
-        <div className="flex flex-col gap-2">
-          <Link href="/" className="flex items-center gap-2">
-            <ChessKnight className="h-6 w-6 text-terracotta" />
-            <span className="font-bold text-terracotta">FASGBA</span>
-          </Link>
-          <p className="text-sm text-muted-foreground">
-            Federación de Ajedrez del Sur del Gran Buenos Aires - Promoviendo el ajedrez en la región desde 1985
-          </p>
-          <div className="mt-4 flex gap-4">
-            <Button variant="ghost" size="icon" asChild className="text-amber hover:text-amber-dark hover:bg-amber/10">
-              <Link href="https://facebook.com/FASGBA" target="_blank" rel="noopener noreferrer">
-                <Facebook className="h-5 w-5" />
-                <span className="sr-only">Facebook</span>
-              </Link>
-            </Button>
-            <Button variant="ghost" size="icon" asChild className="text-amber hover:text-amber-dark hover:bg-amber/10">
-              <Link href="https://www.instagram.com/fasgba_ok" target="_blank" rel="noopener noreferrer">
-                <Instagram className="h-5 w-5" />
-                <span className="sr-only">Instagram</span>
-              </Link>
-            </Button>
+    <footer className="w-full border-t border-amber/20 bg-muted/40">
+      <div className="container grid grid-cols-2 gap-8 py-8 text-sm lg:grid-cols-4">
+        <div className="col-span-2 flex flex-col gap-3 lg:col-span-1">
+          <SiteLogo />
+          <div className="-ml-2 flex gap-1">
+            {socials.map(({ href, label, Icon }) => (
+              <Button key={label} asChild variant="ghost" size="icon" className="text-terracotta">
+                <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}>
+                  <Icon className="h-5 w-5" />
+                </a>
+              </Button>
+            ))}
           </div>
         </div>
+        <nav aria-label="Sitio">
+          <h3 className={headingClass}>Sitio</h3>
+          <ul className="space-y-2">
+            {siteLinks.map(({ href, label }) => (
+              <li key={href}>
+                <Link href={href} className={linkClass}>{label}</Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
         <div>
-          <h3 className="mb-4 text-lg font-medium text-terracotta">Enlaces Rápidos</h3>
-          <ul className="space-y-2 text-sm">
-            <li>
-              <Link href="/clubes" className="text-muted-foreground hover:text-amber-dark">
-                Clubes Afiliados
-              </Link>
-            </li>
-            <li>
-              <Link href="/torneos" className="text-muted-foreground hover:text-amber-dark">
-                Próximos Torneos
-              </Link>
-            </li>
-            <li>
-              <Link href="/ranking" className="text-muted-foreground hover:text-amber-dark">
-                Ranking FASGBA
-              </Link>
-            </li>
-            {/* <li>
-              <Link href="/reglamentos/fide" className="text-muted-foreground hover:text-amber-dark">
-                Reglamentos
-              </Link>
-            </li>
-            <li>
-              <Link href="/cursos" className="text-muted-foreground hover:text-amber-dark">
-                Cursos y Clases
-              </Link>
-            </li>
-            <li>
-              <Link href="/historia" className="text-muted-foreground hover:text-amber-dark">
-                Historia de FASGBA
-              </Link>
-            </li> */}
+          <h3 className={headingClass}>Recursos</h3>
+          <ul className="space-y-2">
+            {resources.map(({ href, label }) => (
+              <li key={label}>
+                <a href={href} target="_blank" rel="noopener noreferrer" className={linkClass}>{label}</a>
+              </li>
+            ))}
           </ul>
         </div>
-        <div>
-          <h3 className="mb-4 text-lg font-medium text-terracotta">Recursos</h3>
-          <ul className="space-y-2 text-sm">
+        <div className="col-span-2 lg:col-span-1">
+          <h3 className={headingClass}>Contacto</h3>
+          <ul className="space-y-2">
             <li>
-              <Link href="https://uxtfxazbikfqcnnmhufh.supabase.co/storage/v1/object/public/footer-files/cd2025-2027.xlsx" className="text-muted-foreground hover:text-amber-dark">
-                Comisión Directiva
-              </Link>
-            </li>
-            <li>
-              <Link href="https://uxtfxazbikfqcnnmhufh.supabase.co/storage/v1/object/public/footer-files/calendario2025.xlsx" className="text-muted-foreground hover:text-amber-dark">
-                Calendario Anual
-              </Link>
+              <a href="tel:+5491140282610" className={`inline-flex items-center gap-2 ${linkClass}`}>
+                <Phone className="h-4 w-4 text-amber" />
+                +54 911 4028 2610
+              </a>
             </li>
             <li>
-              <Link href="https://uxtfxazbikfqcnnmhufh.supabase.co/storage/v1/object/public/footer-files/estatuto.pdf" className="text-muted-foreground hover:text-amber-dark">
-                Estatuto
-              </Link>
-            </li>
-          </ul>
-        </div>
-        <div>
-          <h3 className="mb-4 text-lg font-medium text-terracotta">Contacto</h3>
-          <ul className="space-y-3 text-sm">
-            <li className="flex items-center gap-2">
-              <Phone className="h-5 w-5 text-amber" />
-              <span className="text-muted-foreground">+54 911 4028 2610</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-amber" />
-              <span className="text-muted-foreground">secretaria@fasgba.com</span>
+              <a href="mailto:secretaria@fasgba.com" className={`inline-flex items-center gap-2 ${linkClass}`}>
+                <Mail className="h-4 w-4 text-amber" />
+                secretaria@fasgba.com
+              </a>
             </li>
           </ul>
         </div>
       </div>
-      <div className="border-t border-amber/20 py-6">
-        <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
-          <p className="text-center text-sm text-muted-foreground md:text-left">
-            © {new Date().getFullYear()} Federación de Ajedrez del Sur del Gran Buenos Aires. Todos los derechos reservados.
-          </p>
-          <div className="flex gap-4 text-sm text-muted-foreground">
-            <Link href="/politica-privacidad" className="hover:text-amber-dark">
-              Política de Privacidad
+      <div className="border-t border-amber/20">
+        <div className="container flex flex-col items-center justify-between gap-2 py-4 text-xs text-muted-foreground sm:flex-row">
+          <p>© {new Date().getFullYear()} FASGBA</p>
+          <div className="flex gap-4">
+            <Link href="/politica-privacidad" className="underline-offset-4 hover:underline">
+              Privacidad
             </Link>
-            <Link href="/terminos-condiciones" className="hover:text-amber-dark">
-              Términos y Condiciones
+            <Link href="/terminos-condiciones" className="underline-offset-4 hover:underline">
+              Términos
             </Link>
           </div>
         </div>
@@ -118,4 +99,3 @@ export function SiteFooter() {
     </footer>
   )
 }
-

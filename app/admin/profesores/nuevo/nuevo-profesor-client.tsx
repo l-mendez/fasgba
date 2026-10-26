@@ -44,7 +44,6 @@ interface NuevoProfesorClientProps {
 export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [clubs] = useState<Club[]>(initialClubs)
   const [formData, setFormData] = useState<FormData>({
     titulo: "",
@@ -67,13 +66,13 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
     if (!file) return
 
     if (file.size > 5 * 1024 * 1024) {
-      setError("El archivo es demasiado grande. El tamaño máximo es 5MB.")
+      toast.error("El archivo es demasiado grande. El tamaño máximo es 5MB.")
       return
     }
 
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
     if (!allowedTypes.includes(file.type)) {
-      setError("Tipo de archivo no válido. Solo se permiten imágenes JPG, PNG, GIF y WebP.")
+      toast.error("Tipo de archivo no válido. Solo se permiten imágenes JPG, PNG, GIF y WebP.")
       return
     }
 
@@ -113,7 +112,6 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
     setValidationErrors({})
 
     if (!validateForm()) {
@@ -140,6 +138,7 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
         body: JSON.stringify(profesorData)
       })
 
+      let photoFailed = false
       // Upload image if selected
       if (selectedImage && result?.id) {
         try {
@@ -147,17 +146,19 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
           imageForm.append('image', selectedImage)
           const uploadResult = await uploadProfesorImageAction(Number(result.id), imageForm)
           if (!uploadResult.ok) {
-            throw new Error(uploadResult.error || 'Failed to upload image')
+            throw new Error(uploadResult.error || 'No se pudo subir la foto')
           }
         } catch (uploadErr) {
           console.error('Error uploading photo:', uploadErr)
-          toast.error("Profesor creado, pero hubo un error al subir la foto.")
+          photoFailed = true
+          toast.error("Profesor creado, pero hubo un error al subir la foto")
         }
       }
 
+      if (!photoFailed) toast.success("Profesor creado correctamente")
       router.push("/admin/profesores")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al crear el profesor")
+      toast.error(err instanceof Error ? err.message : "Error al crear el profesor")
     } finally {
       setIsLoading(false)
     }
@@ -172,23 +173,22 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
   }
 
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/admin/profesores">
+          <Link href="/admin/profesores" aria-label="Volver" title="Volver">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Nuevo Profesor</h1>
-          <p className="text-muted-foreground">Agrega un nuevo profesor de ajedrez.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Nuevo profesor</h1>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Photo Section */}
         <div className="grid gap-2">
-          <Label>Foto del Profesor</Label>
+          <Label>Foto del profesor</Label>
           <div className="space-y-3">
             {imagePreview ? (
               <div className="relative inline-block">
@@ -200,14 +200,16 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
                 <button
                   type="button"
                   onClick={removeImage}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  className="absolute -top-2 -right-2 rounded-full bg-destructive p-1 text-destructive-foreground hover:bg-destructive/90"
+                  aria-label="Quitar foto"
+                  title="Quitar foto"
                 >
                   <X className="h-3 w-3" />
                 </button>
               </div>
             ) : (
               <div
-                className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors max-w-xs"
+                className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors hover:border-amber max-w-xs"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <ImageIcon className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
@@ -242,17 +244,17 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
 
         <div className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="titulo">Nombre del Profesor *</Label>
+            <Label htmlFor="titulo">Nombre del profesor *</Label>
             <Input
               id="titulo"
               name="titulo"
               value={formData.titulo}
               onChange={handleChange}
               placeholder="Ej: GM Roberto García"
-              className={validationErrors.titulo ? "border-red-500" : ""}
+              className={validationErrors.titulo ? "border-destructive" : ""}
             />
             {validationErrors.titulo && (
-              <p className="text-sm text-red-500">{validationErrors.titulo}</p>
+              <p className="text-sm text-destructive">{validationErrors.titulo}</p>
             )}
           </div>
 
@@ -277,7 +279,7 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="anio_nacimiento">Año de Nacimiento</Label>
+            <Label htmlFor="anio_nacimiento">Año de nacimiento</Label>
             <Input
               id="anio_nacimiento"
               name="anio_nacimiento"
@@ -287,10 +289,10 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
               placeholder="Ej: 1985"
               min={1900}
               max={new Date().getFullYear()}
-              className={validationErrors.anio_nacimiento ? "border-red-500" : ""}
+              className={validationErrors.anio_nacimiento ? "border-destructive" : ""}
             />
             {validationErrors.anio_nacimiento && (
-              <p className="text-sm text-red-500">{validationErrors.anio_nacimiento}</p>
+              <p className="text-sm text-destructive">{validationErrors.anio_nacimiento}</p>
             )}
           </div>
 
@@ -318,13 +320,13 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
               name="zona"
               value={formData.zona}
               onChange={handleChange}
-              placeholder="Ej: Zona Sur, Lomas de Zamora"
+              placeholder="Ej: Zona sur, Lomas de Zamora"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="email">Correo Electrónico</Label>
+              <Label htmlFor="email">Correo electrónico</Label>
               <Input
                 id="email"
                 name="email"
@@ -332,10 +334,10 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="Ej: profesor@email.com"
-                className={validationErrors.email ? "border-red-500" : ""}
+                className={validationErrors.email ? "border-destructive" : ""}
               />
               {validationErrors.email && (
-                <p className="text-sm text-red-500">{validationErrors.email}</p>
+                <p className="text-sm text-destructive">{validationErrors.email}</p>
               )}
             </div>
 
@@ -353,7 +355,7 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="tarifa_horaria">Tarifa Horaria</Label>
+            <Label htmlFor="tarifa_horaria">Tarifa horaria</Label>
             <Input
               id="tarifa_horaria"
               name="tarifa_horaria"
@@ -364,7 +366,7 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="biografia">Reseña Biográfica</Label>
+            <Label htmlFor="biografia">Reseña biográfica</Label>
             <Textarea
               id="biografia"
               name="biografia"
@@ -376,13 +378,7 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
           </div>
         </div>
 
-        {error && (
-          <div className="text-sm text-red-500">
-            {error}
-          </div>
-        )}
-
-        <div className="flex justify-end gap-4">
+        <div className="flex justify-end gap-3">
           <Button
             type="button"
             variant="outline"
@@ -391,7 +387,7 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
             Cancelar
           </Button>
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Creando..." : "Crear Profesor"}
+            {isLoading ? "Creando..." : "Crear profesor"}
           </Button>
         </div>
       </form>

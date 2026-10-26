@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { useState } from "react"
 
 export interface ForgotPasswordButtonProps {
@@ -73,7 +74,7 @@ export function ForgotPasswordButton({
       <Button
         onClick={handleClick}
         disabled={isLoading}
-        className={`w-full bg-terracotta hover:bg-terracotta/90 text-white ${className || ""}`}
+        className={cn("w-full bg-terracotta text-white hover:bg-terracotta/90", className)}
       >
         {isLoading ? (
           <>
@@ -85,7 +86,7 @@ export function ForgotPasswordButton({
         )}
       </Button>
       {error && (
-        <p className="text-sm text-red-500 text-center">{error}</p>
+        <p className="text-center text-sm text-destructive">{error}</p>
       )}
     </div>
   )

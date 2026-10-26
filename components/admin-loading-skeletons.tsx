@@ -15,7 +15,13 @@ export function AdminContentSkeleton({
   return (
     <div className="space-y-6" aria-label="Cargando contenido">
       {stats > 0 ? (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div
+          className={
+            stats === 4
+              ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+              : "grid gap-4 md:grid-cols-3"
+          }
+        >
           {Array.from({ length: stats }).map((_, index) => (
             <Card key={index}>
               <CardHeader className="space-y-0 pb-2">

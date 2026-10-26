@@ -109,7 +109,7 @@ export function validateTournamentForm(
   }
 
   if (formData.dates.length === 0) {
-    errors.dates = "Debe agregar al menos una fecha"
+    errors.dates = "Agrega al menos una fecha"
   }
 
   if (formData.rounds && (isNaN(Number(formData.rounds)) || Number(formData.rounds) <= 0)) {
@@ -140,7 +140,7 @@ export function validateTournamentForm(
   }
 
   if (options.isSiteAdmin === false && !options.selectedClubId) {
-    errors.club = "Debe seleccionar un club"
+    errors.club = "Selecciona un club"
   }
 
   return errors

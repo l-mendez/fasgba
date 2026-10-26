@@ -24,7 +24,8 @@ interface HistoryPoint {
 }
 
 interface ChartPoint extends HistoryPoint {
-  label: string;
+  // First day of the ranking month (UTC ms), so the x-axis is time-scaled.
+  t: number;
 }
 
 interface Props {
@@ -37,11 +38,48 @@ const MONTH_SHORT_ES = [
   "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
 ];
 
+// Distinct color + dash per series so lines stay distinguishable in both themes.
 const SERIES = [
-  { key: "standard" as const, name: "Standard", color: "#daa056" },
-  { key: "rapid" as const, name: "Rápido", color: "#3b82f6" },
-  { key: "blitz" as const, name: "Blitz", color: "#8f3f12" },
+  { key: "standard" as const, name: "Standard", color: "var(--color-amber)", dash: undefined },
+  { key: "rapid" as const, name: "Rápido", color: "var(--color-terracotta)", dash: "6 3" },
+  { key: "blitz" as const, name: "Blitz", color: "hsl(var(--muted-foreground))", dash: "2 3" },
 ];
+const SERIES_ORDER: Record<string, number> = Object.fromEntries(SERIES.map((s, i) => [s.name, i]));
+
+const monthLabel = (t: number) => {
+  const d = new Date(t);
+  return `${MONTH_SHORT_ES[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(-2)}`;
+};
+
+// Month-aligned ticks (every 1/2/3/6/12/24 months), at most ~5 across the range.
+function timeTicks(min: number, max: number): number[] {
+  const start = new Date(min);
+  const end = new Date(max);
+  const span = (end.getUTCFullYear() - start.getUTCFullYear()) * 12 + end.getUTCMonth() - start.getUTCMonth();
+  const step = [1, 2, 3, 6, 12, 24].find((s) => span / s <= 5) ?? 36;
+  let month = start.getUTCFullYear() * 12 + start.getUTCMonth();
+  month = Math.ceil(month / step) * step;
+  const ticks: number[] = [];
+  const monthStart = (m: number) => Date.UTC(Math.floor(m / 12), m % 12, 1);
+  for (let t = monthStart(month); t <= max; month += step, t = monthStart(month)) {
+    ticks.push(t);
+  }
+  return ticks;
+}
+
+// Rating ticks on round numbers (multiples of 10/25/50/100/200), ~4-6 ticks.
+function ratingTicks(points: ChartPoint[]): number[] | undefined {
+  const values = points.flatMap((p) => SERIES.map((s) => p[s.key])).filter((v): v is number => v != null);
+  if (values.length === 0) return undefined;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const step = [10, 25, 50, 100, 200].find((s) => (max - min) / s <= 5) ?? 500;
+  const lo = Math.floor(min / step) * step;
+  const hi = Math.ceil(max / step) * step;
+  const ticks: number[] = [];
+  for (let v = lo; v <= Math.max(hi, lo + step); v += step) ticks.push(v);
+  return ticks;
+}
 
 export function RatingEvolutionChart({ playerId, playerName }: Props) {
   const [history, setHistory] = useState<ChartPoint[]>([]);
@@ -59,13 +97,11 @@ export function RatingEvolutionChart({ playerId, playerName }: Props) {
       .then(res => res.json())
       .then(data => {
         if (cancelled) return;
-        const items: HistoryPoint[] = data?.success && Array.isArray(data.data?.history)
-          ? data.data.history
-          : [];
-        setHistory(items.map(item => ({
-          ...item,
-          label: `${MONTH_SHORT_ES[item.month - 1]} ${String(item.year).slice(-2)}`,
-        })));
+        // apiSuccess returns the payload unwrapped: { playerId, history }
+        const items: HistoryPoint[] = Array.isArray(data?.history) ? data.history : [];
+        setHistory(items
+          .map(item => ({ ...item, t: Date.UTC(item.year, item.month - 1, 1) }))
+          .sort((a, b) => a.t - b.t));
       })
       .catch(() => {
         if (!cancelled) setHistory([]);
@@ -88,27 +124,35 @@ export function RatingEvolutionChart({ playerId, playerName }: Props) {
   if (history.length < 2) {
     return (
       <p className="text-sm text-muted-foreground py-4 text-center">
-        Historial insuficiente para mostrar la evolución
+        Sin historial suficiente.
       </p>
     );
   }
 
+  const xTicks = timeTicks(history[0].t, history[history.length - 1].t);
+  const yTicks = ratingTicks(history);
+
   return (
     <div className="h-56 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={history} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+        <LineChart data={history} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
           <XAxis
-            dataKey="label"
+            dataKey="t"
+            type="number"
+            scale="time"
+            domain={["dataMin", "dataMax"]}
+            ticks={xTicks}
+            tickFormatter={monthLabel}
             tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
             stroke="hsl(var(--muted-foreground))"
-            minTickGap={20}
           />
           <YAxis
             tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
             stroke="hsl(var(--muted-foreground))"
-            domain={["dataMin - 30", "dataMax + 30"]}
-            tickFormatter={v => String(Math.round(v))}
+            domain={yTicks ? [yTicks[0], yTicks[yTicks.length - 1]] : ["auto", "auto"]}
+            ticks={yTicks}
+            interval={0}
             width={48}
           />
           <Tooltip
@@ -119,11 +163,16 @@ export function RatingEvolutionChart({ playerId, playerName }: Props) {
               fontSize: 12,
             }}
             labelStyle={{ color: "hsl(var(--foreground))" }}
+            labelFormatter={(t) => monthLabel(Number(t))}
             formatter={(value) =>
               value == null ? "--" : Math.round(Number(value)).toString()
             }
           />
-          <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} iconSize={10} />
+          <Legend
+            wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+            iconSize={10}
+            itemSorter={(item) => SERIES_ORDER[String(item.value)] ?? 0}
+          />
           {SERIES.map(s => (
             <Line
               key={s.key}
@@ -131,6 +180,7 @@ export function RatingEvolutionChart({ playerId, playerName }: Props) {
               dataKey={s.key}
               name={s.name}
               stroke={s.color}
+              strokeDasharray={s.dash}
               strokeWidth={2}
               dot={{ r: 2 }}
               activeDot={{ r: 4 }}

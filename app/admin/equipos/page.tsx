@@ -9,33 +9,21 @@ export const dynamic = "force-dynamic"
 
 export default function AdminEquiposPage() {
   return (
-    <div className="space-y-6">
-      <AdminPageHeader
-        title="Equipos"
-        subtitle="Gestiona los equipos de los clubes afiliados."
-      />
-      <Suspense fallback={<AdminContentSkeleton rows={5} />}>
-        <AdminEquiposContent />
-      </Suspense>
-    </div>
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <AdminPageHeader title="Equipos" />
+          <AdminContentSkeleton rows={5} />
+        </div>
+      }
+    >
+      <AdminEquiposContent />
+    </Suspense>
   )
 }
 
 async function AdminEquiposContent() {
   const { clubs, teamsByClub } = await getAdminEquiposInitialData()
-  const totalTeams = Object.values(teamsByClub).flat().length
 
-  return (
-    <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">
-        {totalTeams} equipo{totalTeams !== 1 ? 's' : ''} en {clubs.length} clubes
-      </p>
-      <AdminEquiposClient
-        showHeader={false}
-        showSummary={false}
-        initialClubs={clubs}
-        initialTeamsByClub={teamsByClub}
-      />
-    </div>
-  )
+  return <AdminEquiposClient initialClubs={clubs} initialTeamsByClub={teamsByClub} />
 }

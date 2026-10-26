@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { FileText, RefreshCw, Upload } from "lucide-react"
+import { FileText, RefreshCw, Upload, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -89,7 +89,7 @@ export function DocumentoUploadCard({
 
   const handleUpload = async () => {
     if (!file || !documentName.trim()) {
-      setErrorMessage("Por favor, selecciona un archivo y proporciona un nombre")
+      setErrorMessage("Selecciona un archivo e ingresa un nombre")
       return
     }
 
@@ -135,9 +135,6 @@ export function DocumentoUploadCard({
     <Card>
       <CardHeader>
         <CardTitle>Subir documento</CardTitle>
-        <CardDescription>
-          Selecciona un archivo PDF o Excel para subir a la biblioteca de documentos
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Category Selection */}
@@ -177,19 +174,19 @@ export function DocumentoUploadCard({
 
         {/* Drag and Drop Zone */}
         <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+          className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
             isDragOver
-              ? "border-primary bg-primary/5"
-              : "border-muted-foreground/25 hover:border-muted-foreground/50"
+              ? "border-amber bg-amber/5"
+              : "border-border hover:border-amber"
           }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+          <Upload className="mx-auto mb-3 h-10 w-10 text-amber" />
           <div className="space-y-2">
             <p className="text-lg font-medium">
-              {file ? file.name : "Arrastra tu archivo aquí o haz clic para seleccionar"}
+              {file ? file.name : "Arrastra tu archivo aquí"}
             </p>
             <p className="text-sm text-muted-foreground">
               Archivos PDF y Excel (máximo 10MB)
@@ -215,8 +212,8 @@ export function DocumentoUploadCard({
               </label>
             </Button>
             {file && (
-              <Button variant="ghost" onClick={handleClearFile} disabled={isUploading}>
-                Limpiar
+              <Button variant="ghost" size="icon" onClick={handleClearFile} disabled={isUploading} aria-label="Quitar archivo" title="Quitar archivo">
+                <X className="h-4 w-4" />
               </Button>
             )}
           </div>

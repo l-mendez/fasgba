@@ -1,3 +1,4 @@
+import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
 import { NextRequest, after } from 'next/server'
 import { sendBroadcast } from '@/lib/notifications/sendBroadcast'
 import { createClient } from '@supabase/supabase-js'
@@ -9,7 +10,7 @@ import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
 // Create a Supabase client for server-side operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseServiceKey = SUPABASE_SECRET_KEY
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function POST(request: NextRequest) {

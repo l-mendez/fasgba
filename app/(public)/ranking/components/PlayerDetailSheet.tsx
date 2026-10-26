@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Crown, Timer, Zap, Loader2, ArrowUp, ArrowDown } from "lucide-react";
+import { Crown, Timer, Zap, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -9,7 +9,6 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -49,7 +48,7 @@ function RatingCard({
   return (
     <div className="flex flex-col items-center p-3 rounded-lg border bg-card">
       <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-1">
-        <Icon className="h-4 w-4" />
+        <Icon className="h-4 w-4 text-amber" />
         <span>{config.label}</span>
       </div>
       <div className="text-2xl font-bold">
@@ -58,7 +57,7 @@ function RatingCard({
       {change !== undefined && change !== 0 && rating !== null && rating !== 0 && (
         <div
           className={`flex items-center text-sm mt-0.5 ${
-            change > 0 ? "text-green-600" : "text-red-600"
+            change > 0 ? "text-amber-dark dark:text-amber-light" : "text-destructive"
           }`}
         >
           {change > 0 ? (
@@ -83,34 +82,29 @@ export function PlayerDetailSheet({
   onOpenChange,
 }: PlayerDetailSheetProps) {
   const [details, setDetails] = useState<TournamentDetail[]>([]);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!open || !player) {
-      setDetails([]);
-      return;
-    }
+    // Clear the previous player's history right away so it never shows under
+    // the newly selected player while the new request is in flight.
+    setDetails([]);
+    const playerId = player?.id;
+    if (!open || !playerId) return;
 
-    const playerId = player.id;
-    if (!playerId) {
-      setDetails([]);
-      return;
-    }
-
-    setLoading(true);
+    const controller = new AbortController();
     fetch(
-      `/api/ranking/analytics?ranking=${encodeURIComponent(rankingFilename)}&playerId=${encodeURIComponent(playerId)}`
+      `/api/ranking/analytics?ranking=${encodeURIComponent(rankingFilename)}&playerId=${encodeURIComponent(playerId)}`,
+      { signal: controller.signal }
     )
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
       .then((data) => {
-        if (data.success && data.data?.details) {
-          setDetails(data.data.details);
-        } else {
-          setDetails([]);
-        }
+        // apiSuccess returns the payload unwrapped: { details }
+        setDetails(Array.isArray(data?.details) ? data.details : []);
       })
-      .catch(() => setDetails([]))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (!controller.signal.aborted) setDetails([]);
+      });
+
+    return () => controller.abort();
   }, [open, player, rankingFilename]);
 
   if (!player) return null;
@@ -121,12 +115,8 @@ export function PlayerDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            {player.title && (
-              <Badge variant="secondary" className="text-primary font-medium">
-                {player.title}
-              </Badge>
-            )}
+          <SheetTitle className="flex items-center gap-2 pr-6">
+            {player.title && <span className="text-terracotta">{player.title}</span>}
             {player.name}
           </SheetTitle>
           <SheetDescription>
@@ -136,7 +126,7 @@ export function PlayerDetailSheet({
         </SheetHeader>
 
         {/* Rating cards */}
-        <div className="grid grid-cols-3 gap-3 mt-6">
+        <div className="mt-4 grid grid-cols-3 gap-3">
           <RatingCard
             type="standard"
             rating={player.ratings.standard}
@@ -156,38 +146,25 @@ export function PlayerDetailSheet({
 
         {/* Rating evolution chart */}
         <div className="mt-6">
-          <h3 className="text-sm font-semibold mb-3">Evolución del rating</h3>
+          <h3 className="mb-2 text-sm font-semibold text-terracotta">Evolución del rating</h3>
           <RatingEvolutionChart playerId={player.id} playerName={player.name} />
         </div>
 
-        {/* Tournament history */}
-        <div className="mt-6">
-          <h3 className="text-sm font-semibold mb-3">Historial de torneos</h3>
-
-          {loading && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          )}
-
-          {!loading && details.length === 0 && (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              Sin datos analíticos disponibles
-            </p>
-          )}
-
-          {!loading && details.length > 0 && (
+        {/* Tournament history: only shown when the ranking has analytics data */}
+        {details.length > 0 && (
+          <div className="mt-6">
+            <h3 className="mb-2 text-sm font-semibold text-terracotta">Historial de torneos</h3>
             <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Torneo</TableHead>
-                    <TableHead className="text-center w-10">Tipo</TableHead>
-                    <TableHead className="text-right">Elo</TableHead>
-                    <TableHead className="text-center">W/n</TableHead>
-                    <TableHead className="text-right">Rp</TableHead>
-                    <TableHead className="text-right">K</TableHead>
-                    <TableHead className="text-right">+/-</TableHead>
+                    <TableHead className="text-center w-10" title="Ritmo de juego">Ritmo</TableHead>
+                    <TableHead className="text-right" title="Elo antes del torneo">Elo</TableHead>
+                    <TableHead className="text-center" title="Puntos / partidas">Pts</TableHead>
+                    <TableHead className="text-right" title="Performance">Perf.</TableHead>
+                    <TableHead className="text-right" title="Factor K">K</TableHead>
+                    <TableHead className="text-right" title="Variación de Elo">+/-</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -220,9 +197,9 @@ export function PlayerDetailSheet({
                         <TableCell
                           className={`text-right text-xs font-medium ${
                             detail.eloChange > 0
-                              ? "text-green-600"
+                              ? "text-amber-dark dark:text-amber-light"
                               : detail.eloChange < 0
-                              ? "text-red-600"
+                              ? "text-destructive"
                               : ""
                           }`}
                         >
@@ -235,8 +212,8 @@ export function PlayerDetailSheet({
                 </TableBody>
               </Table>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );

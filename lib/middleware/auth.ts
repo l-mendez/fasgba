@@ -1,3 +1,4 @@
+import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
@@ -6,7 +7,7 @@ import type { DocumentoViewerRoles } from '@/lib/documentosUtils'
 
 // Create a server-side Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseServiceKey = SUPABASE_SECRET_KEY
 const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export interface AuthenticatedUser extends User {

@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
@@ -7,47 +8,17 @@ import { createClient } from "@/lib/supabase/server"
 
 import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { OrganizerClub } from "./nuevo-torneo-form"
 
 // Force dynamic rendering since we use authentication
 export const dynamic = 'force-dynamic'
 
-// Database Club interface (matches actual schema)
-interface DbClub {
-  id: number
-  name: string
-  address?: string
-  telephone?: string
-  mail?: string
-  schedule?: string
+export const metadata: Metadata = {
+  title: 'Nuevo torneo',
 }
 
-// Expected Club interface (matches ClubProvider context)
-interface Club {
-  id: number
-  name: string
-  description?: string
-  location?: string
-  website?: string
-  email?: string
-  phone?: string
-  created_at: string
-  updated_at: string
-}
-
-// Function to map database club to expected club format
-function mapDbClubToClub(dbClub: DbClub): Club {
-  return {
-    id: dbClub.id,
-    name: dbClub.name,
-    description: undefined,
-    location: dbClub.address,
-    website: undefined,
-    email: dbClub.mail,
-    phone: dbClub.telephone,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  }
+interface PageProps {
+  searchParams: Promise<{ source?: string; clubId?: string }>
 }
 
 // Check authentication early
@@ -65,8 +36,7 @@ async function checkAuthentication(): Promise<boolean> {
 async function getUserData(): Promise<{
   isSiteAdmin: boolean
   isClubAdmin: boolean
-  clubs: Club[]
-  selectedClub: Club | null
+  clubs: OrganizerClub[]
   error: string | null
 }> {
   try {
@@ -79,7 +49,6 @@ async function getUserData(): Promise<{
         isSiteAdmin: false,
         isClubAdmin: false,
         clubs: [],
-        selectedClub: null,
         error: 'Usuario no autenticado'
       }
     }
@@ -95,15 +64,14 @@ async function getUserData(): Promise<{
 
     const isSiteAdmin = !siteAdminError && !!siteAdminData
 
-    let clubs: Club[] = []
+    let clubs: OrganizerClub[] = []
     let isClubAdmin = false
-    let selectedClub: Club | null = null
 
     if (isSiteAdmin) {
       // Site admins can see ALL clubs to create tournaments for any club
       const { data: allClubsData, error: allClubsError } = await adminClient
         .from('clubs')
-        .select('id, name, address, telephone, mail, schedule')
+        .select('id, name, address')
         .order('name')
 
       if (allClubsError) {
@@ -112,15 +80,12 @@ async function getUserData(): Promise<{
           isSiteAdmin,
           isClubAdmin: false,
           clubs: [],
-          selectedClub: null,
           error: 'Error cargando clubs'
         }
       }
 
-      // Convert to expected Club format
-      clubs = (allClubsData || []).map(mapDbClubToClub)
+      clubs = allClubsData || []
       isClubAdmin = true // Site admins have club admin privileges
-      selectedClub = null // No default selection for site admins
     } else {
       // Get user's admin clubs (for club admins)
       const { data: adminData, error: adminError } = await adminClient
@@ -130,13 +95,11 @@ async function getUserData(): Promise<{
           clubs (
             id,
             name,
-            address,
-            telephone,
-            mail,
-            schedule
+            address
           )
         `)
         .eq('auth_id', user.id)
+        .order('club_id')
 
       if (adminError) {
         console.error('Error fetching user clubs:', adminError)
@@ -144,37 +107,20 @@ async function getUserData(): Promise<{
           isSiteAdmin,
           isClubAdmin: false,
           clubs: [],
-          selectedClub: null,
           error: 'Error verificando permisos de club'
         }
       }
 
-      // Properly type and filter the clubs data
-      const dbClubs: DbClub[] = (adminData || [])
-        .filter(item => item.clubs)
-        .map(item => {
-          const club = item.clubs as any
-          return {
-            id: club.id,
-            name: club.name,
-            address: club.address,
-            telephone: club.telephone,
-            mail: club.mail,
-            schedule: club.schedule
-          }
-        })
-
-      // Convert to expected Club format
-      clubs = dbClubs.map(mapDbClubToClub)
+      clubs = (adminData || [])
+        .map((item) => (Array.isArray(item.clubs) ? item.clubs[0] : item.clubs) as OrganizerClub | null)
+        .filter((club): club is OrganizerClub => Boolean(club))
       isClubAdmin = clubs.length > 0
-      selectedClub = clubs.length > 0 ? clubs[0] : null
     }
 
     return {
       isSiteAdmin,
       isClubAdmin,
       clubs,
-      selectedClub,
       error: null
     }
 
@@ -184,66 +130,60 @@ async function getUserData(): Promise<{
       isSiteAdmin: false,
       isClubAdmin: false,
       clubs: [],
-      selectedClub: null,
       error: error instanceof Error ? error.message : 'Error desconocido'
     }
   }
 }
 
-// Metadata generation
-export async function generateMetadata() {
-  return {
-    title: 'Nuevo Torneo | FASGBA',
-    description: 'Crear un nuevo torneo de ajedrez',
-  }
-}
-
 // Main server component
-export default async function NuevoTorneoPage() {
+export default async function NuevoTorneoPage({ searchParams }: PageProps) {
   // Check authentication first - if not authenticated, redirect to login
   const isAuthenticated = await checkAuthentication()
-  
+
   if (!isAuthenticated) {
     redirect('/login')
   }
-  
+
+  const { source, clubId } = await searchParams
+
   // Get user data and permissions
-  const { isSiteAdmin, isClubAdmin, clubs, selectedClub, error } = await getUserData()
+  const { isSiteAdmin, isClubAdmin, clubs } = await getUserData()
 
   // If user has no permissions at all, return not found
   if (!isSiteAdmin && !isClubAdmin) {
     notFound()
   }
 
+  // Coming from club-admin wins over the site-admin role (users can be both).
+  const fromClubAdmin = source === 'club-admin' || !isSiteAdmin
+  const returnPath = fromClubAdmin ? '/club-admin/torneos' : '/admin/torneos'
+  const requestedClub = clubs.find((club) => club.id === Number(clubId))
+  // Site admins default to FASGBA (no club); club admins to their first club.
+  const defaultClubId = requestedClub?.id ?? (isSiteAdmin ? null : clubs[0]?.id ?? null)
+
   // Dynamic import the form component only when we need it
   const NuevoTorneoForm = (await import("./nuevo-torneo-form")).NuevoTorneoForm
 
   return (
-    <div className="flex flex-col gap-8 p-8">
-      <div className="flex items-center gap-4">
+    <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-8">
+      <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" asChild>
-          <Link href={isSiteAdmin ? "/admin/torneos" : "/club-admin/torneos"}>
+          <Link href={returnPath} aria-label="Volver" title="Volver">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-terracotta">Nuevo Torneo</h1>
-          <p className="text-muted-foreground">
-            {isSiteAdmin 
-              ? 'Crea un nuevo torneo' 
-              : `Crea un nuevo torneo para ${selectedClub?.name || 'tu club'}`
-            }
-          </p>
-        </div>
+        <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Nuevo torneo</h1>
       </div>
 
       <Suspense fallback={<LoadingSpinner />}>
-        <NuevoTorneoForm 
+        <NuevoTorneoForm
           isSiteAdmin={isSiteAdmin}
           clubs={clubs}
-          selectedClub={selectedClub}
+          defaultClubId={defaultClubId}
+          returnPath={returnPath}
+          editQuery={fromClubAdmin ? '?source=club-admin' : ''}
         />
       </Suspense>
     </div>
   )
-} 
+}

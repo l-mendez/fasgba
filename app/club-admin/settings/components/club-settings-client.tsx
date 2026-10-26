@@ -2,7 +2,6 @@
 
 import { useClubContext } from "@/app/club-admin/context/club-context"
 import { ClubSettingsForm } from "./club-settings-form"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ErrorAlert } from "@/components/error-alert"
 
 export function ClubSettingsClient() {
@@ -13,34 +12,21 @@ export function ClubSettingsClient() {
   }
 
   if (error) {
-    return <ErrorAlert title="Error" message={`Error al cargar los datos del club: ${error}`} />
+    return <ErrorAlert message={`Error al cargar el club: ${error}`} />
   }
 
   if (hasNoClubs) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Sin acceso</CardTitle>
-          <CardDescription>
-            No tienes permisos de administrador para ningún club
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <p className="text-sm text-muted-foreground">No administras ningún club.</p>
     )
   }
 
   if (!selectedClub) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Selecciona un club</CardTitle>
-          <CardDescription>
-            Por favor selecciona un club para configurar
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <p className="text-sm text-muted-foreground">Selecciona un club.</p>
     )
   }
 
-  return <ClubSettingsForm club={selectedClub} />
+  // key: remount per club so the form never keeps another club's values.
+  return <ClubSettingsForm key={selectedClub.id} club={selectedClub} />
 } 
