@@ -4,9 +4,9 @@ import { runChessResultsSync } from '@/lib/chess-results/weekly'
 import { apiSuccess, handleError, unauthorizedError } from '@/lib/utils/apiResponse'
 
 export const dynamic = 'force-dynamic'
-// 60 s is the Hobby ceiling without Fluid compute; the run stops 10 s early
-// and leaves the remaining tournaments for the next week.
-export const maxDuration = 60
+// Fluid compute allows 300 s; the run stops 10 s early and leaves the
+// remaining tournaments for the next week.
+export const maxDuration = 300
 
 /**
  * GET /api/cron/chess-results
