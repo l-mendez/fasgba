@@ -79,9 +79,12 @@ async function syncIndividual(db: SupabaseClient, tournamentId: number, cr: CrTo
 
 /** Links a tournament to chess-results and imports whatever is missing. */
 export async function syncTournamentFromChessResults(db: SupabaseClient, tournamentId: number, cr: CrTournament): Promise<SyncReport> {
-  const { data: t, error } = await db.from('tournaments').select('id, pace, place, rounds, players_per_team').eq('id', tournamentId).single()
+  const { data: t, error } = await db.from('tournaments').select('id, tournament_type, pace, place, rounds, players_per_team').eq('id', tournamentId).single()
   fail('leer el torneo', error)
   if (!t) throw new Error(`No existe el torneo ${tournamentId}`)
+  if ((t.tournament_type ?? 'individual') !== (cr.details.isTeam ? 'team' : 'individual')) {
+    throw new Error('El tipo de torneo (individual / por equipos) no coincide con chess-results')
+  }
   const fields = tournamentFromChessResults(cr)
   const patch: TournamentUpdate = { chess_results_tnr: cr.details.tnr, chess_results_synced_at: new Date().toISOString() }
   if (!t.pace && fields.pace) patch.pace = fields.pace
@@ -106,6 +109,8 @@ export async function syncTournamentFromChessResults(db: SupabaseClient, tournam
 
 /** Creates a site tournament from chess-results and imports its data. */
 export async function createTournamentFromChessResults(db: SupabaseClient, cr: CrTournament, createdByClubId: number | null = null) {
+  // Tournaments without dates break the public listing.
+  if (chessResultsEventDates(cr).length === 0) throw new Error('El torneo de chess-results no tiene fechas')
   const { data, error } = await db.from('tournaments')
     .insert({ ...tournamentFromChessResults(cr), created_by_club_id: createdByClubId }).select('id').single()
   fail('crear el torneo', error)
