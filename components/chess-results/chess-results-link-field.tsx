@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { chessResultsUrl, parseChessResultsTnr } from "@/lib/chess-results/url"
 import type { ChessResultsSyncResponse } from "@/lib/tournament/chess-results-dto"
 import { apiCall } from "@/lib/utils/apiClient"
+import type { Assignments } from "@/lib/chess-results/assign"
 import { ChessResultsSyncDialog } from "./chess-results-sync-dialog"
 import { toastSyncReport } from "./format"
 
@@ -28,11 +29,11 @@ export function ChessResultsLinkField({ value, error, onChange, tournamentId }: 
   const [reviewing, setReviewing] = useState<number | null>(null)
   const tnr = parseChessResultsTnr(value)
 
-  const sync = async () => {
+  const sync = async (assignments: Assignments) => {
     try {
       const result: ChessResultsSyncResponse = await apiCall(`/api/tournaments/${tournamentId}/chess-results`, {
         method: "POST",
-        body: JSON.stringify({ url: tnr }),
+        body: JSON.stringify({ url: tnr, assignments }),
       })
       // Rounds/teams tabs keep their own state, so offer a reload to see new data.
       const reload = result.report.changed ? { label: "Recargar", onClick: () => window.location.reload() } : undefined

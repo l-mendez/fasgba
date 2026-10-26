@@ -1,13 +1,14 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { AlertTriangle, ExternalLink, User, Users } from "lucide-react"
+import { AlertTriangle, ExternalLink, Loader2, User, Users } from "lucide-react"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ImportPlan } from "@/lib/chess-results/plan"
 import type { CrDetails } from "@/lib/chess-results/types"
 import { chessResultsUrl } from "@/lib/chess-results/url"
 import { cn } from "@/lib/utils"
+import type { AssignProps } from "../assign/assign-rows"
 import { formatCrDateRange } from "../format"
 import { PlanFields } from "./plan-fields"
 import { PlanPlayers, PlanTeams } from "./plan-players"
@@ -21,6 +22,7 @@ function PlanSummary({ plan, isTeam }: { plan: ImportPlan; isTeam: boolean }) {
   const chips: Array<[number, string, "new" | "muted" | "warn"]> = [
     [s.newPlayers, plural(s.newPlayers, "jugador nuevo", "jugadores nuevos"), "new"],
     [isTeam ? s.newTeams : 0, plural(s.newTeams, "equipo nuevo", "equipos nuevos"), "new"],
+    [s.newClubs, plural(s.newClubs, "club nuevo", "clubes nuevos"), "new"],
     [s.newRounds, plural(s.newRounds, "ronda nueva", "rondas nuevas"), "new"],
     [s.newGames, plural(s.newGames, "partida nueva", "partidas nuevas"), "new"],
     [s.filledResults, plural(s.filledResults, "partida a completar", "partidas a completar"), "new"],
@@ -52,7 +54,7 @@ function PlanSummary({ plan, isTeam }: { plan: ImportPlan; isTeam: boolean }) {
       {s.unmatchedTeams > 0 && (
         <p className="flex items-start gap-2 rounded-md border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          {s.unmatchedTeams === 1 ? "Un equipo no coincide" : `${s.unmatchedTeams} equipos no coinciden`} con ningún club: sus partidas no se importan. Revisá la pestaña Equipos.
+          {s.unmatchedTeams === 1 ? "Un equipo no coincide" : `${s.unmatchedTeams} equipos no coinciden`} con ningún equipo ni club: sus partidas no se importan. Asignalos en la pestaña Equipos.
         </p>
       )}
     </div>
@@ -92,10 +94,14 @@ interface ImportPlanViewProps {
   dataTab?: { label: string; content: ReactNode; invalid?: boolean }
   tab?: string
   onTabChange?: (tab: string) => void
+  /** Lets the admin choose the team/club/player for each chess-results item. */
+  assign?: AssignProps
+  /** The plan is being recalculated after a change. */
+  updating?: boolean
 }
 
 /** Full, item-by-item preview of a chess-results import or sync. */
-export function ImportPlanView({ plan, details, dataTab, tab, onTabChange }: ImportPlanViewProps) {
+export function ImportPlanView({ plan, details, dataTab, tab, onTabChange, assign, updating }: ImportPlanViewProps) {
   const tabs = [
     { value: "datos", label: dataTab?.label ?? "Torneo", invalid: dataTab?.invalid },
     ...(details.isTeam ? [{ value: "equipos", label: `Equipos (${plan.teams.length})` }] : []),
@@ -107,6 +113,12 @@ export function ImportPlanView({ plan, details, dataTab, tab, onTabChange }: Imp
       <div className="space-y-3">
         <PlanHeading details={details} />
         <PlanSummary plan={plan} isTeam={details.isTeam} />
+        {updating && (
+          <p className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Actualizando la vista previa…
+          </p>
+        )}
       </div>
       <Tabs value={tab} defaultValue={tab ? undefined : "datos"} onValueChange={onTabChange}>
         <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
@@ -119,8 +131,8 @@ export function ImportPlanView({ plan, details, dataTab, tab, onTabChange }: Imp
           </TabsList>
         </div>
         <TabsContent value="datos" className="mt-5">{dataTab?.content ?? <PlanFields fields={plan.fields} details={details} />}</TabsContent>
-        {details.isTeam && <TabsContent value="equipos" className="mt-5"><PlanTeams teams={plan.teams} /></TabsContent>}
-        <TabsContent value="jugadores" className="mt-5"><PlanPlayers players={plan.players} /></TabsContent>
+        {details.isTeam && <TabsContent value="equipos" className="mt-5"><PlanTeams teams={plan.teams} assign={assign} /></TabsContent>}
+        <TabsContent value="jugadores" className="mt-5"><PlanPlayers players={plan.players} assign={assign} /></TabsContent>
         <TabsContent value="rondas" className="mt-5"><PlanRounds rounds={plan.rounds} /></TabsContent>
       </Tabs>
     </div>

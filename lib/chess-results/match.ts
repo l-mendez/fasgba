@@ -1,7 +1,5 @@
 // Name matching between chess-results and our DB (players, teams, clubs).
 
-import type { SupabaseClient } from '@supabase/supabase-js'
-
 const STOPWORDS = new Set(['club', 'de', 'del', 'la', 'el', 'los', 'las', 'y', 'ajedrez', 'atletico', 'circulo', 'social', 'deportivo', 'a', 'c'])
 
 function tokens(name: string): string[] {
@@ -45,63 +43,12 @@ export function bestNameMatch<T extends { name: string }>(name: string, candidat
 
 // "Huanca Gaspar, Franco" ↔ "Huanca Gaspar, Franco Alberto": same surname and
 // one list of given names starts with the other. Only "Surname, Given" names.
-function splitName(full: string) {
+export function splitName(full: string) {
   const [surname, given] = full.split(',')
   return given === undefined ? null : { surname: tokens(surname).join(' '), given: tokens(given) }
 }
 
-function extendsGiven(a: string[], b: string[]): boolean {
+export function extendsGiven(a: string[], b: string[]): boolean {
   const [short, long] = a.length <= b.length ? [a, b] : [b, a]
   return short.length > 0 && short.every((t, i) => long[i] === t)
-}
-
-export interface PlayerInput {
-  name: string
-  fideId?: string | null
-  rating?: number | null
-}
-
-/** Read-only: maps chess-results players to existing players (by FIDE id, then name). */
-export async function matchPlayers(db: SupabaseClient, inputs: PlayerInput[]) {
-  const { data, error } = await db.from('players').select('id, full_name, fide_id').range(0, 9999)
-  if (error) throw new Error(`Error al leer jugadores: ${error.message}`)
-  const siteNames = new Map<number, string>()
-  const byFide = new Map<string, number>()
-  const byName = new Map<string, number>()
-  const bySurname = new Map<string, Array<{ id: number; given: string[] }>>()
-  for (const p of data ?? []) {
-    siteNames.set(p.id, p.full_name)
-    if (p.fide_id) byFide.set(String(p.fide_id), p.id)
-    byName.set(nameKey(p.full_name), p.id)
-    const split = splitName(p.full_name)
-    if (split) bySurname.set(split.surname, [...(bySurname.get(split.surname) ?? []), { id: p.id, given: split.given }])
-  }
-  const bySimilarName = (name: string) => {
-    const split = splitName(name)
-    const matches = split ? (bySurname.get(split.surname) ?? []).filter((p) => extendsGiven(p.given, split.given)) : []
-    return matches.length === 1 ? matches[0].id : undefined
-  }
-
-  const ids = new Map<string, number>() // nameKey → players.id
-  const missing = new Map<string, PlayerInput>()
-  for (const input of inputs) {
-    const key = nameKey(input.name)
-    if (!key || ids.has(key)) continue
-    const id = (input.fideId && byFide.get(input.fideId)) || byName.get(key) || bySimilarName(input.name)
-    if (id) ids.set(key, id)
-    else if (!missing.has(key)) missing.set(key, input)
-  }
-  return { ids, missing, siteNames }
-}
-
-/** Maps chess-results players to players.id, creating the missing ones. */
-export async function resolvePlayers(db: SupabaseClient, inputs: PlayerInput[]) {
-  const { ids, missing } = await matchPlayers(db, inputs)
-  if (missing.size > 0) {
-    const rows = [...missing.values()].map((p) => ({ full_name: p.name, fide_id: p.fideId ?? null, rating: p.rating ?? null }))
-    const { data: created, error: insertError } = await db.from('players').insert(rows).select('id, full_name')
-    if (insertError) throw new Error(`Error al crear jugadores: ${insertError.message}`)
-    for (const p of created ?? []) ids.set(nameKey(p.full_name), p.id)
-  }
-  return { ids, created: missing.size }
 }

@@ -5,7 +5,7 @@ import { parseChessResultsTnr } from '@/lib/chess-results/url'
 import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
 import { validateTournamentId } from '@/lib/schemas/tournamentSchemas'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { chessResultsErrorResponse, syncTournamentWithChessResults } from '@/lib/tournament/chess-results'
+import { chessResultsErrorResponse, parseAssignments, syncTournamentWithChessResults } from '@/lib/tournament/chess-results'
 import type { ChessResultsSyncResponse } from '@/lib/tournament/chess-results-dto'
 import { apiSuccess, forbiddenError, notFoundError, unauthorizedError, validationError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
@@ -13,14 +13,14 @@ import { ERROR_MESSAGES } from '@/lib/utils/constants'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const bodySchema = z.object({ url: z.union([z.string(), z.number()]).nullable().optional() })
+const bodySchema = z.object({ url: z.union([z.string(), z.number()]).nullable().optional(), assignments: z.unknown().optional() })
 
 interface RouteParams {
   params: Promise<{ id: string }>
 }
 
 /**
- * POST /api/tournaments/:id/chess-results  { url? }
+ * POST /api/tournaments/:id/chess-results  { url?, assignments? }
  * Links the tournament to the given chess-results link (optional when already
  * linked) and imports missing players, rounds, games and results.
  * 200 { tournamentId, report } · 409 { error, tournamentId } when the link belongs to another tournament.
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return validationError('Link de chess-results inválido. Pegá el link del torneo o su número.')
     }
 
-    const report = await syncTournamentWithChessResults(createAdminClient(), tournamentId, tnr)
+    const report = await syncTournamentWithChessResults(createAdminClient(), tournamentId, tnr, parseAssignments(body.data.assignments))
     if (report.changed) revalidateTorneosCache()
     const response: ChessResultsSyncResponse = { tournamentId, report }
     return apiSuccess(response)

@@ -5,7 +5,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { fetchChessResultsTournament } from '@/lib/chess-results/fetch'
 import { syncTournamentFromChessResults, type SyncReport } from '@/lib/chess-results/sync'
+import type { Assignments } from '@/lib/chess-results/assign'
 import type { CrTournament } from '@/lib/chess-results/types'
+import { z } from 'zod'
 import { ForbiddenError, UnauthorizedError, getAuthenticatedUser, getClubAdminClubIds } from '@/lib/middleware/auth'
 import { handleError } from '@/lib/utils/apiResponse'
 import type { ChessResultsCounts, LinkedTournament } from './chess-results-dto'
@@ -91,7 +93,7 @@ export async function markCandidateImported(db: SupabaseClient, tnr: number, tou
 }
 
 /** Links a tournament to `tnr` (when given) and imports whatever is missing from chess-results. */
-export async function syncTournamentWithChessResults(db: SupabaseClient, tournamentId: number, tnr?: number | null): Promise<SyncReport> {
+export async function syncTournamentWithChessResults(db: SupabaseClient, tournamentId: number, tnr?: number | null, assignments: Assignments = {}): Promise<SyncReport> {
   const { data: tournament, error } = await db.from('tournaments')
     .select('id, tournament_type, chess_results_tnr').eq('id', tournamentId).maybeSingle()
   if (error) throw new Error(`Error al leer el torneo: ${error.message}`)
@@ -109,7 +111,7 @@ export async function syncTournamentWithChessResults(db: SupabaseClient, tournam
       422,
     )
   }
-  const report = await syncTournamentFromChessResults(db, tournamentId, cr)
+  const report = await syncTournamentFromChessResults(db, tournamentId, cr, assignments)
   await markCandidateImported(db, target, tournamentId)
   return report
 }
@@ -127,4 +129,28 @@ export function chessResultsErrorResponse(error: unknown): NextResponse {
     return NextResponse.json({ error: 'Ese torneo de chess-results ya está vinculado a otro torneo.', code: 'ALREADY_LINKED' }, { status: 409 })
   }
   return handleError(error)
+}
+
+const clubRefSchema = z.union([
+  z.object({ id: z.number().int().positive(), name: z.string() }),
+  z.object({ newName: z.string().trim().min(1, 'Poné el nombre del club nuevo').max(255) }),
+])
+
+/** Admin's team/player assignments from the import review (see lib/chess-results/assign.ts). */
+export const assignmentsSchema = z.object({
+  teams: z.record(z.string(), z.union([
+    z.object({ teamId: z.number().int().positive() }),
+    z.object({ newTeam: z.string().trim().min(1, 'Poné el nombre del equipo').max(255), club: clubRefSchema }),
+  ])).optional(),
+  players: z.record(z.string(), z.union([
+    z.object({ playerId: z.number().int().positive() }),
+    z.object({ newPlayer: z.literal(true), club: clubRefSchema.nullable() }),
+  ])).optional(),
+}).optional().default({})
+
+/** Parses the optional `assignments` of a request body (400 when malformed). */
+export function parseAssignments(value: unknown): Assignments {
+  const parsed = assignmentsSchema.safeParse(value)
+  if (!parsed.success) throw new ChessResultsError(`Revisá equipos y jugadores: ${parsed.error.issues.map((i) => i.message).join(', ')}`, 400)
+  return parsed.data
 }

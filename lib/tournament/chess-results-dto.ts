@@ -39,3 +39,10 @@ export interface ChessResultsSyncResponse {
   tournamentId: number
   report: SyncReport
 }
+
+/** GET /api/chess-results/options: what an admin can assign chess-results teams and players to. */
+export interface ChessResultsOptions {
+  teams: Array<{ id: number; name: string; clubName: string | null }>
+  clubs: Array<{ id: number; name: string }>
+  players: Array<{ id: number; name: string; fideId: string | null; clubName: string | null }>
+}

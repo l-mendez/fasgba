@@ -5,7 +5,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TournamentInsert, TournamentUpdate } from '@/lib/db-types'
-import { nameKey, resolvePlayers } from './match'
+import { applyAssignments, decideAll, loadSiteData, type Assignments } from './assign'
+import { nameKey } from './match'
 import { syncTeams, type TeamSyncCounts } from './sync-teams'
 import { applyGameUpdates, ensureRounds, fail, planGames } from './db'
 import type { CrTournament } from './types'
@@ -13,6 +14,8 @@ import type { CrTournament } from './types'
 export interface SyncReport extends TeamSyncCounts {
   tournamentId: number
   playersCreated: number
+  teamsCreated: number
+  clubsCreated: number
   registrationsCreated: number
   roundsCreated: number
   gamesCreated: number
@@ -43,9 +46,7 @@ export function tournamentFromChessResults(cr: CrTournament): TournamentInsert {
   }
 }
 
-async function syncIndividual(db: SupabaseClient, tournamentId: number, cr: CrTournament) {
-  const refs = cr.rounds.flatMap((r) => r.games.flatMap((g) => [g.white, g.black]))
-  const { ids, created: playersCreated } = await resolvePlayers(db, [...cr.players, ...refs])
+async function syncIndividual(db: SupabaseClient, tournamentId: number, cr: CrTournament, ids: Map<string, number>) {
   const idOf = (name: string) => ids.get(nameKey(name)) ?? null
 
   const { data: regs, error } = await db.from('tournament_registrations').select('player_id').eq('tournament_id', tournamentId)
@@ -76,11 +77,11 @@ async function syncIndividual(db: SupabaseClient, tournamentId: number, cr: CrTo
     resultsUpdated += plan.resultsUpdated
     pgnsAdded += plan.pgnsAdded
   }
-  return { playersCreated, registrationsCreated: newRegs.length, roundsCreated: rounds.created, gamesCreated, resultsUpdated, pgnsAdded }
+  return { registrationsCreated: newRegs.length, roundsCreated: rounds.created, gamesCreated, resultsUpdated, pgnsAdded }
 }
 
 /** Links a tournament to chess-results and imports whatever is missing. */
-export async function syncTournamentFromChessResults(db: SupabaseClient, tournamentId: number, cr: CrTournament): Promise<SyncReport> {
+export async function syncTournamentFromChessResults(db: SupabaseClient, tournamentId: number, cr: CrTournament, assignments: Assignments = {}): Promise<SyncReport> {
   const { data: t, error } = await db.from('tournaments').select('id, tournament_type, pace, place, rounds, players_per_team').eq('id', tournamentId).single()
   fail('leer el torneo', error)
   if (!t) throw new Error(`No existe el torneo ${tournamentId}`)
@@ -101,9 +102,13 @@ export async function syncTournamentFromChessResults(db: SupabaseClient, tournam
     fail('crear fechas', (await db.from('tournamentdates').insert(dates.map((event_date) => ({ tournament_id: tournamentId, event_date })))).error)
   }
 
+  const site = await loadSiteData(db, tournamentId)
+  const decisions = decideAll(site, cr, assignments)
+  const applied = await applyAssignments(db, site, decisions.teams, decisions.players)
+  const created = { playersCreated: applied.playersCreated, teamsCreated: applied.teamsCreated, clubsCreated: applied.clubsCreated }
   const counts = cr.details.isTeam
-    ? { registrationsCreated: 0, ...(await syncTeams(db, tournamentId, cr)) }
-    : { teamsLinked: 0, teamsCreated: 0, matchesCreated: 0, unmatchedTeams: [], ...(await syncIndividual(db, tournamentId, cr)) }
+    ? { ...created, registrationsCreated: 0, ...(await syncTeams(db, tournamentId, cr, decisions.teams, applied)) }
+    : { ...created, teamsLinked: 0, matchesCreated: 0, unmatchedTeams: [], ...(await syncIndividual(db, tournamentId, cr, applied.playerIds)) }
   const changed = Object.keys(patch).length > 2 || dates.length > 0 ||
     Object.values(counts).some((v) => typeof v === 'number' && v > 0)
   return { tournamentId, ...counts, changed }
@@ -121,6 +126,7 @@ export async function createTournamentFromChessResults(
   cr: CrTournament,
   createdByClubId: number | null = null,
   edits: ChessResultsImportEdits = {},
+  assignments: Assignments = {},
 ) {
   const { dates: editedDates, ...fields } = edits
   const dates = editedDates?.length ? editedDates : chessResultsEventDates(cr)
@@ -131,5 +137,5 @@ export async function createTournamentFromChessResults(
   fail('crear el torneo', error)
   const rows = [...new Set(dates)].sort().map((event_date) => ({ tournament_id: data!.id, event_date }))
   fail('crear fechas', (await db.from('tournamentdates').insert(rows)).error)
-  return syncTournamentFromChessResults(db, data!.id, cr)
+  return syncTournamentFromChessResults(db, data!.id, cr, assignments)
 }

@@ -1,16 +1,15 @@
-// Team-tournament half of the chess-results sync: teams, rosters, matches
-// and board games. Teams are matched by name; unknown teams are created under
-// the club whose name they contain, or reported in `unmatchedTeams`.
+// Team-tournament half of the chess-results sync: enrolment, rosters, matches
+// and board games. Teams and players are already resolved (see assign.ts);
+// teams that couldn't be resolved are reported in `unmatchedTeams`.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { bestNameMatch, nameKey, resolvePlayers } from './match'
+import type { TeamDecision } from './assign'
+import { nameKey } from './match'
 import { applyGameUpdates, ensureRounds, fail, planGames } from './db'
 import type { CrTournament } from './types'
 
 export interface TeamSyncCounts {
-  playersCreated: number
   teamsLinked: number
-  teamsCreated: number
   roundsCreated: number
   matchesCreated: number
   gamesCreated: number
@@ -19,85 +18,24 @@ export interface TeamSyncCounts {
   unmatchedTeams: string[]
 }
 
-export type TeamMatch =
-  | { kind: 'enrolled' | 'existing'; teamId: number; siteName: string } // in the tournament / elsewhere on the site
-  | { kind: 'new'; club: { id: number; name: string } } // created under that club
-  | { kind: 'unmatched' }
+export async function syncTeams(
+  db: SupabaseClient,
+  tournamentId: number,
+  cr: CrTournament,
+  decisions: Map<string, TeamDecision>,
+  ids: { teamIds: Map<string, number>; playerIds: Map<string, number> },
+): Promise<TeamSyncCounts> {
+  const teamId = (name: string) => ids.teamIds.get(nameKey(name)) ?? null
+  const playerId = (name: string) => ids.playerIds.get(nameKey(name)) ?? null
 
-/** Read-only: decides how each chess-results team maps to our teams (keyed by nameKey). */
-export async function matchTeams(db: SupabaseClient, tournamentId: number | null, names: string[]) {
-  const [linked, all, clubs] = await Promise.all([
-    tournamentId
-      ? db.from('tournament_teams').select('team_id, teams(id, name)').eq('tournament_id', tournamentId)
-      : Promise.resolve({ data: [], error: null }),
-    db.from('teams').select('id, name').range(0, 9999),
-    db.from('clubs').select('id, name').range(0, 9999),
-  ])
-  fail('leer equipos', linked.error ?? all.error ?? clubs.error)
-  const inTournament = (linked.data ?? [])
-    .map((row) => row.teams as unknown as { id: number; name: string } | null)
-    .filter((t): t is { id: number; name: string } => !!t)
-  const global = new Map((all.data ?? []).map((t) => [nameKey(t.name), t]))
-
-  // Exact names first, so fuzzy matching only sees the leftovers on both sides.
-  const matches = new Map<string, TeamMatch>()
-  const used = new Set<number>()
-  const pending: string[] = []
-  for (const name of new Set(names)) {
-    const exact = inTournament.find((t) => nameKey(t.name) === nameKey(name))
-    if (exact) {
-      matches.set(nameKey(name), { kind: 'enrolled', teamId: exact.id, siteName: exact.name })
-      used.add(exact.id)
-    } else pending.push(name)
-  }
-  for (const name of pending) {
-    const fuzzy = bestNameMatch(name, inTournament.filter((t) => !used.has(t.id)))
-    const site = global.get(nameKey(name))
-    const club = fuzzy || site ? null : bestNameMatch(name, clubs.data ?? [])
-    const match: TeamMatch = fuzzy ? { kind: 'enrolled', teamId: fuzzy.id, siteName: fuzzy.name }
-      : site ? { kind: inTournament.some((t) => t.id === site.id) ? 'enrolled' : 'existing', teamId: site.id, siteName: site.name }
-      : club ? { kind: 'new', club }
-      : { kind: 'unmatched' }
-    if ('teamId' in match) used.add(match.teamId)
-    matches.set(nameKey(name), match)
-  }
-  return matches
-}
-
-async function resolveTeams(db: SupabaseClient, tournamentId: number, names: string[]) {
-  const matches = await matchTeams(db, tournamentId, names)
-  const ids = new Map<string, number>()
-  const toLink: number[] = []
-  const unmatched: string[] = []
-  let teamsCreated = 0
-  for (const name of new Set(names)) {
-    const match = matches.get(nameKey(name))!
-    if (match.kind === 'unmatched') { unmatched.push(name); continue }
-    let id = 'teamId' in match ? match.teamId : 0
-    if (match.kind === 'new') {
-      const { data, error } = await db.from('teams').insert({ name, club_id: match.club.id }).select('id').single()
-      fail('crear equipo', error)
-      id = data!.id as number
-      teamsCreated++
-    }
-    ids.set(nameKey(name), id)
-    if (match.kind !== 'enrolled') toLink.push(id)
-  }
+  // Enroll every resolved team that isn't in the tournament yet.
+  const toLink = [...new Set([...decisions].filter(([, d]) => d.kind !== 'enrolled').map(([key]) => ids.teamIds.get(key)))]
+    .filter((id): id is number => id != null)
   if (toLink.length) {
-    const rows = [...new Set(toLink)].map((team_id) => ({ tournament_id: tournamentId, team_id }))
-    fail('inscribir equipos', (await db.from('tournament_teams').insert(rows)).error)
+    fail('inscribir equipos', (await db.from('tournament_teams').insert(toLink.map((team_id) => ({ tournament_id: tournamentId, team_id })))).error)
   }
-  return { ids, teamsLinked: new Set(toLink).size, teamsCreated, unmatched }
-}
-
-export async function syncTeams(db: SupabaseClient, tournamentId: number, cr: CrTournament): Promise<TeamSyncCounts> {
-  const teamNames = [...cr.teams.map((t) => t.name), ...cr.rounds.flatMap((r) => r.matches.flatMap((m) => [m.home.name, m.away.name]))]
-  const teams = await resolveTeams(db, tournamentId, teamNames)
-  const teamId = (name: string) => teams.ids.get(nameKey(name)) ?? null
-
-  const refs = cr.rounds.flatMap((r) => r.matches.flatMap((m) => m.games.flatMap((g) => [g.white, g.black])))
-  const { ids: players, created: playersCreated } = await resolvePlayers(db, [...cr.teams.flatMap((t) => t.players), ...refs])
-  const playerId = (name: string) => players.get(nameKey(name)) ?? null
+  const unmatched = [...new Set([...cr.teams.map((t) => t.name), ...cr.rounds.flatMap((r) => r.matches.flatMap((m) => [m.home.name, m.away.name]))])]
+    .filter((name) => teamId(name) == null)
 
   // Rosters
   const { data: roster, error } = await db.from('tournament_team_players').select('player_id').eq('tournament_id', tournamentId)
@@ -145,7 +83,7 @@ export async function syncTeams(db: SupabaseClient, tournamentId: number, cr: Cr
     }
   }
   return {
-    playersCreated, teamsLinked: teams.teamsLinked, teamsCreated: teams.teamsCreated, roundsCreated: rounds.created,
-    matchesCreated, gamesCreated, resultsUpdated, pgnsAdded, unmatchedTeams: teams.unmatched,
+    teamsLinked: toLink.length, roundsCreated: rounds.created,
+    matchesCreated, gamesCreated, resultsUpdated, pgnsAdded, unmatchedTeams: unmatched,
   }
 }

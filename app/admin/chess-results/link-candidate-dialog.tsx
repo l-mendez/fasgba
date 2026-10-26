@@ -6,7 +6,9 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Dialog } from "@/components/ui/dialog"
-import { ChessResultsPreviewBody, canConfirmPreview, useChessResultsPreview } from "@/components/chess-results/chess-results-preview-body"
+import { ChessResultsPreviewBody, canConfirmPreview } from "@/components/chess-results/chess-results-preview-body"
+import { useAssignedPreview } from "@/components/chess-results/assign/use-assigned-preview"
+import type { Assignments } from "@/lib/chess-results/assign"
 import { toastSyncReport } from "@/components/chess-results/format"
 import { ReviewDialogContent } from "@/components/chess-results/review-dialog"
 import type { ChessResultsSyncResponse } from "@/lib/tournament/chess-results-dto"
@@ -36,13 +38,13 @@ function LinkCandidateContent({ candidate, tournaments, onOpenChange, onLinked }
   const [reviewing, setReviewing] = useState(candidate.suggested != null)
   const [saving, setSaving] = useState(false)
 
-  const link = async () => {
+  const link = async (assignments: Assignments) => {
     if (selected == null) return
     setSaving(true)
     try {
       const result: ChessResultsSyncResponse = await apiCall(`/api/admin/chess-results/candidates/${candidate.tnr}/link`, {
         method: "POST",
-        body: JSON.stringify({ tournamentId: selected }),
+        body: JSON.stringify({ tournamentId: selected, assignments }),
       })
       toastSyncReport("Torneo vinculado", result.report)
       onOpenChange(false)
@@ -86,12 +88,12 @@ interface ReviewStepProps {
   saving: boolean
   onBack: () => void
   onCancel: () => void
-  onConfirm: () => void
+  onConfirm: (assignments: Assignments) => void
 }
 
 /** Everything linking would import into the chosen tournament. */
 function ReviewStep({ tnr, tournamentId, title, saving, onBack, onCancel, onConfirm }: ReviewStepProps) {
-  const state = useChessResultsPreview(tnr, tournamentId)
+  const assigned = useAssignedPreview(tnr, tournamentId)
   return (
     <ReviewDialogContent
       title="Revisar y vincular"
@@ -99,7 +101,7 @@ function ReviewStep({ tnr, tournamentId, title, saving, onBack, onCancel, onConf
       footer={
         <>
           <Button variant="outline" onClick={onCancel} disabled={saving}>Cancelar</Button>
-          <Button onClick={onConfirm} disabled={!canConfirmPreview(state) || saving}>
+          <Button onClick={() => onConfirm(assigned.assignments)} disabled={!canConfirmPreview(assigned) || saving}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
             {saving ? "Vinculando…" : "Vincular e importar"}
           </Button>
@@ -114,7 +116,7 @@ function ReviewStep({ tnr, tournamentId, title, saving, onBack, onCancel, onConf
             Elegir otro torneo
           </Button>
         </div>
-        <ChessResultsPreviewBody state={state} />
+        <ChessResultsPreviewBody assigned={assigned} />
       </div>
     </ReviewDialogContent>
   )

@@ -1,12 +1,12 @@
 // Read-only preview of what syncing a chess-results tournament would write:
 // every field, player, team, round and game, each marked new / fill / exists.
-// Uses the same matching as the sync, so the preview is what gets imported.
+// Uses the same decisions as the sync (assign.ts), so the preview is what gets imported.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { formatArgentinaDateOnly } from '@/lib/dateUtils'
 import { fail, gameFill } from './db'
-import { matchPlayers, nameKey } from './match'
-import { matchTeams, type TeamMatch } from './sync-teams'
+import { decideAll, loadSiteData, type Assignments, type PlayerDecision, type TeamDecision } from './assign'
+import { nameKey } from './match'
 import { chessResultsEventDates, tournamentFromChessResults } from './sync'
 import type { CrGame, CrResult, CrTournament } from './types'
 
@@ -21,19 +21,22 @@ export interface PlanField {
 }
 
 export interface PlanPlayer {
+  /** nameKey of the chess-results name: the key for the admin's assignment. */
+  key: string
   name: string
   title: string | null
   fideId: string | null
   rating: number | null
-  club: string | null
+  club: string | null // as chess-results shows it
   team: string | null
-  siteName: string | null // null → new player
+  decision: PlayerDecision
 }
 
 export interface PlanTeam {
+  key: string
   name: string
   players: number
-  match: TeamMatch
+  decision: TeamDecision
 }
 
 export interface PlanGame {
@@ -66,7 +69,7 @@ export interface ImportPlan {
   players: PlanPlayer[]
   teams: PlanTeam[]
   rounds: PlanRound[]
-  summary: Record<'newPlayers' | 'existingPlayers' | 'newTeams' | 'unmatchedTeams' | 'newRounds' | 'newGames' | 'filledResults' | 'existingGames' | 'skippedGames' | 'pgns', number>
+  summary: Record<'newPlayers' | 'existingPlayers' | 'newTeams' | 'newClubs' | 'unmatchedTeams' | 'newRounds' | 'newGames' | 'filledResults' | 'existingGames' | 'skippedGames' | 'pgns', number>
 }
 
 type ExistingGame = { result: string | null; pgn: string | null }
@@ -125,27 +128,23 @@ function planFields(cr: CrTournament, site: Awaited<ReturnType<typeof siteTourna
     })
 }
 
-export async function buildImportPlan(db: SupabaseClient, cr: CrTournament, tournamentId: number | null = null): Promise<ImportPlan> {
-  const site = await siteTournament(db, tournamentId)
-  const roster = cr.details.isTeam ? cr.teams.flatMap((t) => t.players.map((p) => ({ ...p, team: t.name }))) : cr.players.map((p) => ({ ...p, team: null }))
-  const refs = cr.rounds.flatMap((r) => [...r.games, ...r.matches.flatMap((m) => m.games)]).flatMap((g) => [g.white, g.black])
-  const { ids, siteNames } = await matchPlayers(db, [...roster, ...refs])
-  const playerId = (name: string) => ids.get(nameKey(name)) ?? null
-
-  const teamNames = [...cr.teams.map((t) => t.name), ...cr.rounds.flatMap((r) => r.matches.flatMap((m) => [m.home.name, m.away.name]))]
-  const teamMatches = cr.details.isTeam ? await matchTeams(db, tournamentId, teamNames) : new Map<string, TeamMatch>()
-  const teamId = (name: string) => { const m = teamMatches.get(nameKey(name)); return m && 'teamId' in m ? m.teamId : null }
+export async function buildImportPlan(db: SupabaseClient, cr: CrTournament, tournamentId: number | null = null, assignments: Assignments = {}): Promise<ImportPlan> {
+  const [site, siteData] = await Promise.all([siteTournament(db, tournamentId), loadSiteData(db, tournamentId)])
+  const decisions = decideAll(siteData, cr, assignments)
+  const playerId = (name: string) => { const d = decisions.players.get(nameKey(name)); return d?.kind === 'existing' ? d.playerId : null }
+  const teamDecision = (name: string) => decisions.teams.get(nameKey(name))
+  const teamId = (name: string) => { const d = teamDecision(name); return d && 'teamId' in d ? d.teamId : null }
 
   const rounds: PlanRound[] = cr.rounds.filter((r) => r.games.length || r.matches.length).map((round) => {
     const roundId = site?.rounds.get(round.number)
     const games = round.games.map((g) => {
       const w = playerId(g.white.name), b = playerId(g.black.name)
-      const existing = roundId ? site!.games.find((x) => x.round_id === roundId && x.white_player_id === w && x.black_player_id === b) : undefined
+      const existing = roundId && w && b ? site!.games.find((x) => x.round_id === roundId && x.white_player_id === w && x.black_player_id === b) : undefined
       return toPlanGame(g, gameStatus(g, existing))
     })
     const matches = round.matches.map((m) => {
       const a = teamId(m.home.name), b = teamId(m.away.name)
-      const unmatched = [m.home.name, m.away.name].some((n) => teamMatches.get(nameKey(n))?.kind === 'unmatched')
+      const unmatched = [m.home.name, m.away.name].some((n) => teamDecision(n)?.kind === 'unmatched')
       const existing = roundId && a && b
         ? site!.matches.find((x) => x.round_id === roundId && [x.team_a_id, x.team_b_id].sort().join() === [a, b].sort().join())
         : undefined
@@ -159,11 +158,16 @@ export async function buildImportPlan(db: SupabaseClient, cr: CrTournament, tour
     return { number: round.number, date: round.date, status: roundId ? 'exists' as const : 'new' as const, games, matches }
   })
 
-  const players = [...new Map(roster.map((p) => [nameKey(p.name), p])).values()].map((p) => {
-    const id = playerId(p.name)
-    return { name: p.name, title: p.title, fideId: p.fideId, rating: p.rating, club: p.club, team: p.team, siteName: id ? siteNames.get(id) ?? null : null }
+  const listed = cr.details.isTeam ? cr.teams.flatMap((t) => t.players.map((p) => ({ ...p, team: t.name }))) : cr.players.map((p) => ({ ...p, team: null }))
+  const players: PlanPlayer[] = [...new Map(listed.map((p) => [nameKey(p.name), p])).values()].flatMap((p) => {
+    const decision = decisions.players.get(nameKey(p.name))
+    return decision ? [{ key: nameKey(p.name), name: p.name, title: p.title, fideId: p.fideId, rating: p.rating, club: p.club, team: p.team, decision }] : []
   })
-  const teams = cr.teams.map((t) => ({ name: t.name, players: t.players.length, match: teamMatches.get(nameKey(t.name)) ?? { kind: 'unmatched' as const } }))
+  const teams: PlanTeam[] = cr.teams.map((t) => ({
+    key: nameKey(t.name), name: t.name, players: t.players.length, decision: teamDecision(t.name) ?? { kind: 'unmatched' as const },
+  }))
+  const newClubs = new Set([...decisions.teams.values(), ...decisions.players.values()]
+    .flatMap((d) => (d.kind === 'new' && d.club && 'newName' in d.club ? [nameKey(d.club.newName)] : [])))
   const allGames = rounds.flatMap((r) => [...r.games, ...r.matches.flatMap((m) => m.games)])
   const count = (status: PlanStatus) => allGames.filter((g) => g.status === status).length
   return {
@@ -172,10 +176,11 @@ export async function buildImportPlan(db: SupabaseClient, cr: CrTournament, tour
     teams,
     rounds,
     summary: {
-      newPlayers: players.filter((p) => !p.siteName).length,
-      existingPlayers: players.filter((p) => p.siteName).length,
-      newTeams: teams.filter((t) => t.match.kind === 'new').length,
-      unmatchedTeams: teams.filter((t) => t.match.kind === 'unmatched').length,
+      newPlayers: players.filter((p) => p.decision.kind === 'new').length,
+      existingPlayers: players.filter((p) => p.decision.kind === 'existing').length,
+      newTeams: teams.filter((t) => t.decision.kind === 'new').length,
+      newClubs: newClubs.size,
+      unmatchedTeams: teams.filter((t) => t.decision.kind === 'unmatched').length,
       newRounds: rounds.filter((r) => r.status === 'new').length,
       newGames: count('new'),
       filledResults: count('fill'),

@@ -12,6 +12,7 @@ import {
   findTournamentByTnr,
   loadChessResultsTournament,
   markCandidateImported,
+  parseAssignments,
   requireTournamentManager,
 } from '@/lib/tournament/chess-results'
 import type { ChessResultsSyncResponse } from '@/lib/tournament/chess-results-dto'
@@ -25,6 +26,7 @@ const bodySchema = z.object({
   clubId: z.number().int().positive().nullable().optional(),
   /** Tournament data as edited by the admin (same shape as POST /api/tournaments). */
   tournament: z.unknown().optional(),
+  assignments: z.unknown().optional(),
 })
 
 const editsSchema = createTournamentSchema.omit({ created_by_club: true, tournament_type: true, chess_results_tnr: true })
@@ -38,7 +40,7 @@ function parseEdits(tournament: unknown): ChessResultsImportEdits {
 }
 
 /**
- * POST /api/chess-results/import  { url, clubId?, tournament? }
+ * POST /api/chess-results/import  { url, clubId?, tournament?, assignments? }
  * Creates a site tournament from chess-results. Site admins may pick any club
  * (or none); club admins import for a club they administer.
  * 201 { tournamentId, report } · 409 { error, tournamentId } when already linked.
@@ -58,6 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     const edits = parseEdits(body.data.tournament)
+    const assignments = parseAssignments(body.data.assignments)
     const db = createAdminClient()
     const linked = await findTournamentByTnr(db, tnr)
     if (linked) throw alreadyLinkedError(linked)
@@ -66,7 +69,7 @@ export async function POST(request: NextRequest) {
     if (!edits.dates?.length && chessResultsEventDates(cr).length === 0) {
       throw new ChessResultsError('El torneo de chess-results no tiene fechas. Crealo a mano y vinculalo con el link.', 422)
     }
-    const report = await createTournamentFromChessResults(db, cr, clubId, edits).catch(async (error) => {
+    const report = await createTournamentFromChessResults(db, cr, clubId, edits, assignments).catch(async (error) => {
       // The tournament row is inserted before the rest; surface it so the admin can retry with a sync.
       const partial = await findTournamentByTnr(db, tnr).catch(() => null)
       if (!partial || /duplicate key/i.test(String(error?.message))) throw error

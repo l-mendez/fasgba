@@ -15,6 +15,8 @@ import type { ChessResultsPreview, ChessResultsSyncResponse } from "@/lib/tourna
 import { apiCall } from "@/lib/utils/apiClient"
 import { toastSyncReport } from "./format"
 import { ImportPlanView } from "./plan/plan-view"
+import { useAssignedPreview } from "./assign/use-assigned-preview"
+import { useAssignProps } from "./chess-results-preview-body"
 import { ReviewDialogContent } from "./review-dialog"
 
 export interface ImportClub {
@@ -42,6 +44,9 @@ export function ChessResultsImportReview({ preview, chooseClub, club, onOpenChan
   const router = useRouter()
   const details = preview.details!
   const form = useTournamentForm(() => chessResultsToFormData(details, preview.dates, preview.plan))
+  const assigned = useAssignedPreview(preview.tnr, null, preview)
+  const assign = useAssignProps(assigned)
+  const plan = assigned.state.preview?.plan ?? preview.plan!
   const [tab, setTab] = useState("datos")
   const [clubs, setClubs] = useState<ImportClub[]>([])
   const [clubValue, setClubValue] = useState(FASGBA)
@@ -70,7 +75,7 @@ export function ChessResultsImportReview({ preview, chooseClub, club, onOpenChan
       const clubId = club?.id ?? (clubValue === FASGBA ? null : Number(clubValue))
       const result: ChessResultsSyncResponse = await apiCall("/api/chess-results/import", {
         method: "POST",
-        body: JSON.stringify({ url: preview.tnr, clubId, tournament: buildTournamentApiPayload(form.formData) }),
+        body: JSON.stringify({ url: preview.tnr, clubId, tournament: buildTournamentApiPayload(form.formData), assignments: assigned.assignments }),
       })
       const title = `Torneo importado: ${form.formData.title}`
       if (onImported) {
@@ -137,7 +142,7 @@ export function ChessResultsImportReview({ preview, chooseClub, club, onOpenChan
           {existingId && (
             <Button variant="outline" onClick={() => onOpenTournament(existingId)}>Abrir torneo</Button>
           )}
-          <Button onClick={importTournament} disabled={saving || !!existingId}>
+          <Button onClick={importTournament} disabled={saving || !!existingId || assigned.updating}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
             {saving ? "Importando…" : "Importar torneo"}
           </Button>
@@ -157,9 +162,12 @@ export function ChessResultsImportReview({ preview, chooseClub, club, onOpenChan
           </div>
         )}
         {error && <ErrorAlert message={error} />}
+        {assigned.state.error && <ErrorAlert message={assigned.state.error} />}
         <ImportPlanView
-          plan={preview.plan!}
+          plan={plan}
           details={details}
+          assign={assign ?? undefined}
+          updating={assigned.updating}
           tab={tab}
           onTabChange={setTab}
           dataTab={{ label: "Datos del torneo", content: dataTab, invalid }}
