@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     return unauthorizedError('No autorizado')
   }
   try {
-    const summary = await runChessResultsSync({ deadlineMs: maxDuration * 1000 - 10_000 })
+    const summary = await runChessResultsSync({ deadlineMs: maxDuration * 1000 - 10_000, notifyAdmins: true })
     console.log('[cron/chess-results]', JSON.stringify(summary))
     return apiSuccess(summary)
   } catch (error) {

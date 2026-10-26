@@ -110,7 +110,7 @@ export async function buildEmailContent(
   return null
 }
 
-function plainText(lines: string[]): string {
+export function plainText(lines: string[]): string {
   return '\n' + lines.filter(Boolean).join('\n\n') + '\n\n---\nFederación de Ajedrez del Sur del Gran Buenos Aires'
 }
 
@@ -122,7 +122,13 @@ interface ShellOptions {
   body: string | null
   ctaLabel: string
   ctaUrl: string
-  unsubscribeUrl: string
+  /** Omit for operational emails users can't opt out of (e.g. admin alerts). */
+  unsubscribeUrl?: string
+}
+
+/** Escapes text from external sources before it goes into email HTML. */
+export function escapeHtml(text: string): string {
+  return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 }
 
 // Exported so the test-email endpoint can render in the same shell.
@@ -193,7 +199,7 @@ body { margin:0; padding:0; background:#f8f9fa; font-family:'Segoe UI', Tahoma, 
     <div class="footer">
       <div class="footer-logo">FASGBA</div>
       <p class="footer-text">Federación de Ajedrez del Sur del Gran Buenos Aires</p>
-      <p class="footer-text"><a class="footer-link" href="${opts.unsubscribeUrl}">Desactivar notificaciones</a></p>
+      ${opts.unsubscribeUrl ? `<p class="footer-text"><a class="footer-link" href="${opts.unsubscribeUrl}">Desactivar notificaciones</a></p>` : ''}
     </div>
   </div>
 </div>

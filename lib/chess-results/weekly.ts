@@ -10,6 +10,7 @@ import { fail } from './db'
 import { discoverCandidates, type DiscoverySummary } from './discover'
 import { readOnlyClient } from './dry-run'
 import { fetchChessResultsTournament } from './fetch'
+import { notifyNewCandidates, type NotifyResult } from './notify'
 import type { SiteTournament } from './suggest'
 import { syncTournamentFromChessResults, type SyncReport } from './sync'
 
@@ -23,6 +24,8 @@ export interface RunOptions {
   dryRun?: boolean
   /** Time budget in ms, measured from the start of the run. */
   deadlineMs?: number
+  /** Email site admins about newly queued candidates (scheduled cron only). */
+  notifyAdmins?: boolean
 }
 
 export interface SyncedTournament extends SyncReport {
@@ -46,6 +49,8 @@ export interface ChessResultsRunSummary {
   /** Linked tournaments not synced because they ended long before their last sync. */
   upToDate: number
   errors: RunError[]
+  /** Admin email about new candidates; null when none was due. */
+  notified: NotifyResult | null
   changed: boolean
   durationMs: number
 }
@@ -75,7 +80,9 @@ export function planSync(sites: SiteTournament[]): { queue: SiteTournament[]; up
   return { queue, upToDate: linked.length - queue.length }
 }
 
-export async function runChessResultsSync({ dryRun = false, deadlineMs = 50_000 }: RunOptions = {}): Promise<ChessResultsRunSummary> {
+export async function runChessResultsSync(
+  { dryRun = false, deadlineMs = 50_000, notifyAdmins = false }: RunOptions = {},
+): Promise<ChessResultsRunSummary> {
   const startedAt = Date.now()
   const admin = createAdminClient()
   const db = dryRun ? readOnlyClient(admin) : admin
@@ -88,6 +95,10 @@ export async function runChessResultsSync({ dryRun = false, deadlineMs = 50_000 
   } catch (error) {
     errors.push({ step: 'discovery', message: message(error) })
   }
+  const newCandidates = discovered?.newCandidates ?? []
+  const notified = notifyAdmins && !dryRun && newCandidates.length
+    ? await notifyNewCandidates(admin, newCandidates)
+    : null
 
   const { queue, upToDate } = planSync(sites)
   const synced: SyncedTournament[] = []
@@ -109,5 +120,5 @@ export async function runChessResultsSync({ dryRun = false, deadlineMs = 50_000 
 
   const changed = synced.some((s) => s.changed)
   if (changed && !dryRun) revalidateTorneosCache()
-  return { dryRun, discovered, synced, deferred, upToDate, errors, changed, durationMs: Date.now() - startedAt }
+  return { dryRun, discovered, synced, deferred, upToDate, errors, notified, changed, durationMs: Date.now() - startedAt }
 }
