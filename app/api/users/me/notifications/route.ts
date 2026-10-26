@@ -5,7 +5,7 @@ import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
 // Create a Supabase client for server-side operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function PUT(request: NextRequest) {

@@ -9,7 +9,7 @@
  *   pnpm exec tsx scripts/send-admin-update.ts
  * 
  * Requisitos:
- *   - Variables de entorno configuradas (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NO_REPLY_PASSWORD)
+ *   - Variables de entorno configuradas (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY, NO_REPLY_PASSWORD)
  *   - Email template en email-templates/admin-update.html
  */
 
@@ -25,7 +25,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
 // Verificar variables de entorno requeridas
 const requiredEnvVars = [
   'NEXT_PUBLIC_SUPABASE_URL',
-  'SUPABASE_SERVICE_ROLE_KEY',
+  'SUPABASE_SECRET_KEY',
   'NO_REPLY_PASSWORD'
 ]
 
@@ -38,7 +38,7 @@ for (const envVar of requiredEnvVars) {
 
 // Configurar Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Configurar nodemailer con Zoho SMTP

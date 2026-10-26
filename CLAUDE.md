@@ -104,4 +104,4 @@ UI/API-specific names only at the feature boundary that needs them.
 - Server Components by default; use client components only for interactivity.
 - UI copy and emails are Spanish.
 - Use lucide-react icons in controls where available.
-- Do not expose `SUPABASE_SERVICE_ROLE_KEY` to the client.
+- Do not expose `SUPABASE_SECRET_KEY` to the client.

@@ -62,7 +62,7 @@ async function fetchUserData(userId: string): Promise<{
 
     // Use the service role client to fetch user information
     const supabaseServiceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY!
     
     if (!supabaseServiceKey) {
       throw new Error('Falta configurar la clave de servicio de Supabase')
