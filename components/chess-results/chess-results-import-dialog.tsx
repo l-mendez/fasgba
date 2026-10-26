@@ -26,6 +26,9 @@ export interface ChessResultsImportDialogProps {
   club?: ImportClub | null
   /** Called after importing (the toast offers to open it); by default the new tournament opens. */
   onImported?: (tournamentId: number) => void
+  /** Site tournament this one probably is; the review offers linking instead of duplicating it. */
+  suggestion?: { id: number; title: string } | null
+  onLinkInstead?: () => void
 }
 
 export function ChessResultsImportDialog(props: ChessResultsImportDialogProps) {

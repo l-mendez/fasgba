@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Download, Loader2 } from "lucide-react"
+import { ArrowLeft, Download, Link2, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -31,12 +31,14 @@ interface ChessResultsImportReviewProps {
   onOpenTournament: (id: number) => void
   /** Back to the link step (not shown when opened from a detected tournament). */
   onBack?: () => void
+  suggestion?: { id: number; title: string } | null
+  onLinkInstead?: () => void
 }
 
 const FASGBA = "none"
 
 /** Second step of the import: edit the tournament data and review everything that comes with it. */
-export function ChessResultsImportReview({ preview, chooseClub, club, onOpenChange, onImported, onOpenTournament, onBack }: ChessResultsImportReviewProps) {
+export function ChessResultsImportReview({ preview, chooseClub, club, onOpenChange, onImported, onOpenTournament, onBack, suggestion, onLinkInstead }: ChessResultsImportReviewProps) {
   const router = useRouter()
   const details = preview.details!
   const form = useTournamentForm(() => chessResultsToFormData(details, preview.dates, preview.plan))
@@ -142,7 +144,18 @@ export function ChessResultsImportReview({ preview, chooseClub, club, onOpenChan
         </>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-5">
+        {suggestion && onLinkInstead && (
+          <div className="flex flex-col gap-3 rounded-lg border border-amber/50 bg-amber/15 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <p className="min-w-0">
+              Parece ser <strong className="break-words">{suggestion.title}</strong>, que ya está en el sitio. Si es el mismo, vinculalo para no duplicarlo.
+            </p>
+            <Button variant="outline" size="sm" onClick={onLinkInstead} disabled={saving} className="shrink-0">
+              <Link2 className="mr-2 h-4 w-4" />
+              Vincular en su lugar
+            </Button>
+          </div>
+        )}
         {error && <ErrorAlert message={error} />}
         <ImportPlanView
           plan={preview.plan!}

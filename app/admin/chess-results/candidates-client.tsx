@@ -99,6 +99,11 @@ export function CandidatesClient({ candidates, tournaments }: CandidatesClientPr
         open={!!importing}
         onOpenChange={(open) => !open && setImporting(null)}
         initialUrl={importing ? String(importing.tnr) : undefined}
+        suggestion={importing?.suggested ?? null}
+        onLinkInstead={() => {
+          setLinking(importing)
+          setImporting(null)
+        }}
         chooseClub
         onImported={() => router.refresh()}
       />

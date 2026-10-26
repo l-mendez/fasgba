@@ -63,11 +63,11 @@ export function CandidateRow({ candidate: c, busy, onImport, onLink, onIgnore, o
       <div className="grid shrink-0 grid-cols-3 gap-2 md:flex md:items-center">
         {c.status === "pending" && (
           <>
-            <Button size="sm" variant={c.suggested ? "outline" : "default"} onClick={onImport} disabled={busy} className="w-full md:w-auto">
+            <Button size="sm" onClick={onImport} disabled={busy} className="w-full md:w-auto">
               <Download className="mr-1.5 h-4 w-4" />
               Importar
             </Button>
-            <Button size="sm" variant={c.suggested ? "default" : "outline"} onClick={onLink} disabled={busy} className="w-full md:w-auto">
+            <Button size="sm" variant="outline" onClick={onLink} disabled={busy} className="w-full md:w-auto">
               <Link2 className="mr-1.5 h-4 w-4" />
               Vincular
             </Button>
