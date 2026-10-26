@@ -12,6 +12,7 @@ import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
 import { AdminPageHeader } from "@/components/admin-page-header"
 import { TournamentsTable } from "@/components/tournaments-table"
 import { ErrorAlert } from "@/components/error-alert"
+import { ChessResultsImportButton } from "@/components/chess-results/chess-results-import-button"
 
 // Tournament type based on the API response format
 interface Tournament {
@@ -201,12 +202,15 @@ export default function AdminTorneosPage() {
         title="Torneos"
         subtitle="Gestiona los torneos y competiciones de FASGBA."
         action={
-          <Button asChild>
-            <Link href="/torneos/nuevo">
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Torneo
-            </Link>
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <ChessResultsImportButton chooseClub />
+            <Button asChild>
+              <Link href="/torneos/nuevo">
+                <Plus className="mr-2 h-4 w-4" />
+                Nuevo Torneo
+              </Link>
+            </Button>
+          </div>
         }
       />
       <Suspense fallback={<AdminContentSkeleton rows={6} />}>

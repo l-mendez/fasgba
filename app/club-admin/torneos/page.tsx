@@ -3,6 +3,7 @@ import Link from "next/link"
 import { Plus } from "lucide-react"
 
 import { ClubAdminTorneos } from "./torneos-client"
+import { ClubAdminChessResultsImport } from "./chess-results-import"
 import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
 import { AdminPageHeader } from "@/components/admin-page-header"
 import { Button } from "@/components/ui/button"
@@ -25,6 +26,7 @@ export default function ClubAdminTorneosPage() {
           </Button>
         }
       />
+      <ClubAdminChessResultsImport />
       <Suspense fallback={<AdminContentSkeleton rows={6} />}>
         <ClubAdminTorneosContent />
       </Suspense>
