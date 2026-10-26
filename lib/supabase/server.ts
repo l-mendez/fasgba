@@ -1,3 +1,4 @@
+import { SUPABASE_PUBLISHABLE_KEY } from '@/lib/supabase/keys'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
@@ -6,7 +7,7 @@ export async function createClient() {
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    SUPABASE_PUBLISHABLE_KEY,
     {
       cookies: {
         getAll() {

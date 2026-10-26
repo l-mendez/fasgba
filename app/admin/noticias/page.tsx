@@ -1,3 +1,4 @@
+import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
 import { Suspense } from "react"
 import Link from "next/link"
 import { Plus } from "lucide-react"
@@ -57,7 +58,7 @@ async function fetchNews(): Promise<News[]> {
 
     // Use the service role client to fetch author information
     const supabaseServiceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const supabaseServiceKey = SUPABASE_SECRET_KEY
     
     if (!supabaseServiceKey) {
       throw new Error('Service role key not configured')

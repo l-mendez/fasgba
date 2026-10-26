@@ -49,7 +49,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Club } from "@/lib/clubUtils"
+import type { Club } from "@/lib/clubUtils"
 import {
   Dialog,
   DialogContent,

@@ -1,3 +1,4 @@
+import { SUPABASE_PUBLISHABLE_KEY } from '@/lib/supabase/keys'
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuth } from '@/lib/middleware/auth'
@@ -6,7 +7,7 @@ import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
 // Create server-side Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseAnonKey = SUPABASE_PUBLISHABLE_KEY
 
 interface RouteParams {
   params: Promise<{

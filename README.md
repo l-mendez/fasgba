@@ -25,11 +25,16 @@ Required environment variables:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=   # sb_publishable_…
+SUPABASE_SECRET_KEY=                    # sb_secret_… (server only)
 NEXT_PUBLIC_SITE_URL=
 NO_REPLY_PASSWORD=
 ```
+
+Copy `.env.example` to `.env.local` and fill it in. Keys come from Supabase →
+Settings → API Keys. The legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` /
+`SUPABASE_SERVICE_ROLE_KEY` names are still read as a fallback
+(`lib/supabase/keys.ts`) until every environment is migrated.
 
 The Supabase project ref is `uxtfxazbikfqcnnmhufh`. Conductor setup links new
 workspaces automatically when the Supabase CLI is available.
