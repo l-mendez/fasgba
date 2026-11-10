@@ -16,8 +16,8 @@ export interface NewsWithClub extends News {
   club?: {
     id: number
     name: string
-    address?: string
-  }
+    address: string | null
+  } | null
 }
 
 export interface NewsDisplay extends NewsWithAuthor, NewsWithClub {}
@@ -43,6 +43,32 @@ export interface UpdateNewsInput {
   club_id?: number | null
 }
 
+// Same columns PostgREST receives as before (it strips whitespace from select).
+const NEWS_SELECT = 'id, title, date, image, extract, text, tags, club_id, created_by_auth_id, created_at, updated_at'
+const NEWS_WITH_CLUB_SELECT = `${NEWS_SELECT}, club:clubs(id, name, address)` as const
+
+type NewsSelect = typeof NEWS_SELECT | typeof NEWS_WITH_CLUB_SELECT
+
+// Maps a news query row to the DTO, keeping the column order of the select and
+// only adding `club` when the query joined it.
+function toNewsWithClub(row: News | (News & { club: NewsWithClub['club'] })): NewsWithClub {
+  const news: NewsWithClub = {
+    id: row.id,
+    title: row.title,
+    date: row.date,
+    image: row.image,
+    extract: row.extract,
+    text: row.text,
+    tags: row.tags || [],
+    club_id: row.club_id,
+    created_by_auth_id: row.created_by_auth_id,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  }
+  if ('club' in row) news.club = row.club
+  return news
+}
+
 export interface NewsQueryOptions {
   page?: number
   limit?: number
@@ -57,55 +83,16 @@ export interface NewsQueryOptions {
   offset?: number
 }
 
-/**
- * Gets all news with filtering and pagination options
- */
-export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data: NewsDisplay[], total: number }> {
-  const supabase = getAdminClient()
-  const {
-    page = 1,
-    limit = 10,
-    orderBy = 'date',
-    order = 'desc',
-    search,
-    clubScope = 'all',
-    clubId,
-    authorId,
-    tags,
-    include = ['author', 'club'],
-    offset: explicitOffset,
-  } = options
-
-  const offset = explicitOffset ?? (page - 1) * limit
-
-  // Build the select query - simplified without user joins
-  let selectFields = `
-    id,
-    title,
-    date,
-    image,
-    extract,
-    text,
-    tags,
-    club_id,
-    created_by_auth_id,
-    created_at,
-    updated_at
-  `
-
-  if (include.includes('club')) {
-    selectFields += `,
-      club:clubs (
-        id,
-        name,
-        address
-      )
-    `
-  }
-
-  let query = supabase
+// Generic over the select literal so each call site gets its inferred row type.
+function buildNewsListQuery<S extends NewsSelect>(
+  select: S,
+  filters: Required<Pick<NewsQueryOptions, 'clubScope' | 'orderBy' | 'order' | 'offset' | 'limit'>> &
+    Pick<NewsQueryOptions, 'search' | 'clubId' | 'authorId' | 'tags'>
+) {
+  const { search, clubScope, clubId, authorId, tags, orderBy, order, offset, limit } = filters
+  let query = getAdminClient()
     .from('news')
-    .select(selectFields, { count: 'exact' })
+    .select(select, { count: 'exact' })
 
   // Apply filters
   if (search) {
@@ -138,7 +125,34 @@ export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data
     .order('id', { ascending: order === 'asc' })
     .range(offset, offset + limit - 1)
 
-  const { data, error, count } = await query
+  return query
+}
+
+/**
+ * Gets all news with filtering and pagination options
+ */
+export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data: NewsDisplay[], total: number }> {
+  const supabase = getAdminClient()
+  const {
+    page = 1,
+    limit = 10,
+    orderBy = 'date',
+    order = 'desc',
+    search,
+    clubScope = 'all',
+    clubId,
+    authorId,
+    tags,
+    include = ['author', 'club'],
+    offset: explicitOffset,
+  } = options
+
+  const offset = explicitOffset ?? (page - 1) * limit
+
+  const filters = { search, clubScope, clubId, authorId, tags, orderBy, order, offset, limit }
+  const { data, error, count } = include.includes('club')
+    ? await buildNewsListQuery(NEWS_WITH_CLUB_SELECT, filters)
+    : await buildNewsListQuery(NEWS_SELECT, filters)
 
   if (error) {
     console.error('Error fetching news:', error)
@@ -146,11 +160,7 @@ export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data
   }
 
   // Process the data and fetch author information if needed
-  const newsData = (data || []) as unknown as Array<News & { club?: { id: number; name: string; address: string } }>
-  let processedData = newsData.map(item => ({
-    ...item,
-    tags: item.tags || []
-  }))
+  let processedData: NewsDisplay[] = (data || []).map(toNewsWithClub)
 
   // Fetch author information if included - BATCH fetch to avoid N+1 queries
   if (include.includes('author')) {
@@ -223,35 +233,9 @@ export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data
  */
 export async function getNewsById(id: number, include: Array<'author' | 'club'> = ['author', 'club']): Promise<NewsDisplay | null> {
   const supabase = getAdminClient()
-  let selectFields = `
-    id,
-    title,
-    date,
-    image,
-    extract,
-    text,
-    tags,
-    club_id,
-    created_by_auth_id,
-    created_at,
-    updated_at
-  `
-
-  if (include.includes('club')) {
-    selectFields += `,
-      club:clubs (
-        id,
-        name,
-        address
-      )
-    `
-  }
-
-  const { data, error } = await supabase
-    .from('news')
-    .select(selectFields)
-    .eq('id', id)
-    .single()
+  const { data, error } = include.includes('club')
+    ? await supabase.from('news').select(NEWS_WITH_CLUB_SELECT).eq('id', id).single()
+    : await supabase.from('news').select(NEWS_SELECT).eq('id', id).single()
 
   if (error) {
     if (error.code === 'PGRST116') {
@@ -261,11 +245,7 @@ export async function getNewsById(id: number, include: Array<'author' | 'club'> 
     throw new Error('Failed to fetch news')
   }
 
-  const newsData = data as unknown as News & { club?: { id: number; name: string; address: string } }
-  const processedData: Record<string, unknown> = {
-    ...newsData,
-    tags: newsData.tags || []
-  }
+  const newsData: NewsDisplay = toNewsWithClub(data)
 
   // Fetch author information if included
   if (include.includes('author')) {
@@ -287,11 +267,11 @@ export async function getNewsById(id: number, include: Array<'author' | 'club'> 
       }
     }
 
-    processedData.author_email = author_email
-    processedData.author_name = author_name
+    newsData.author_email = author_email
+    newsData.author_name = author_name
   }
 
-  return processedData as unknown as NewsDisplay
+  return newsData
 }
 
 /**

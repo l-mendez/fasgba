@@ -196,7 +196,7 @@ async function fetchClubs(): Promise<Club[]> {
 // Top 10 active players by standard rating, ranked as on /ranking
 async function fetchTopPlayers(): Promise<Player[]> {
   const latest = await safe(getCachedLatestRankingData, { players: [] }, "Error fetching ranking:")
-  const players = ((latest.players as unknown[]) || []).map(normalizePlayer)
+  const players = latest.players.map(normalizePlayer)
   return selectPlayersPage(sortPlayersByRatingType(players, 'standard'), { activeFilter: 'active', pageSize: 10 }).players
 }
 

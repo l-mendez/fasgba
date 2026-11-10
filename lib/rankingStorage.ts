@@ -271,7 +271,9 @@ export const getCachedLatestRankingData = unstable_cache(
       throw new Error('No ranking files found')
     }
 
-    return downloadJsonFile<RankingDataPayload>(adminSupabase, latestFile.name)
+    const data = await downloadJsonFile<RankingDataPayload>(adminSupabase, latestFile.name)
+    const players: unknown[] = Array.isArray(data.players) ? data.players : []
+    return { ...data, players }
   },
   ['public-ranking-latest'],
   {

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/db-types'
 import { normalizePlayer, findPreviousPlayer } from '@/lib/rankingUtils'
 import type { PreviousPlayer, RankingPlayer } from './types'
 
@@ -7,7 +7,7 @@ import type { PreviousPlayer, RankingPlayer } from './types'
 // ---------------------------------------------------------------------------
 
 // Helper function to find previous ranking
-export async function findPreviousRanking(adminSupabase: SupabaseClient, currentMonth: number, currentYear: number) {
+export async function findPreviousRanking(adminSupabase: DbClient, currentMonth: number, currentYear: number) {
   try {
     const { data: files, error: listError } = await adminSupabase.storage
       .from('ranking-data')
@@ -133,7 +133,7 @@ export function calculatePlayerChanges(newPlayers: RankingPlayer[], previousPlay
   })
 }
 
-export async function checkIfRecalculationNeeded(adminSupabase: SupabaseClient, currentMonth: number, currentYear: number): Promise<boolean> {
+export async function checkIfRecalculationNeeded(adminSupabase: DbClient, currentMonth: number, currentYear: number): Promise<boolean> {
   try {
     const { data: files, error: listError } = await adminSupabase.storage
       .from('ranking-data')

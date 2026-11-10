@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/db-types'
 import type { Player } from '@/lib/rankingUtils'
 
 interface RankingFileInfo {
@@ -23,7 +23,7 @@ interface SameMonthRankingInfo {
 }
 
 // List ranking files and map them to RankingFileInfo, sorted most-recent first.
-async function listRankingFiles(adminSupabase: SupabaseClient): Promise<RankingFileInfo[] | null> {
+async function listRankingFiles(adminSupabase: DbClient): Promise<RankingFileInfo[] | null> {
   const { data: files, error: listError } = await adminSupabase.storage
     .from('ranking-data')
     .list('', {
@@ -70,7 +70,7 @@ async function listRankingFiles(adminSupabase: SupabaseClient): Promise<RankingF
 }
 
 // Check if the ranking being deleted is the chronologically latest
-export async function checkIfLatestRanking(adminSupabase: SupabaseClient, filenameToDelete: string): Promise<boolean> {
+export async function checkIfLatestRanking(adminSupabase: DbClient, filenameToDelete: string): Promise<boolean> {
   try {
     const rankingFiles = await listRankingFiles(adminSupabase)
     if (!rankingFiles || rankingFiles.length === 0) {
@@ -87,7 +87,7 @@ export async function checkIfLatestRanking(adminSupabase: SupabaseClient, filena
 }
 
 // Find the new chronologically latest ranking after deletion
-export async function findNewLatestRanking(adminSupabase: SupabaseClient): Promise<string | null> {
+export async function findNewLatestRanking(adminSupabase: DbClient): Promise<string | null> {
   try {
     const rankingFiles = await listRankingFiles(adminSupabase)
     if (!rankingFiles || rankingFiles.length === 0) {
@@ -104,7 +104,7 @@ export async function findNewLatestRanking(adminSupabase: SupabaseClient): Promi
 }
 
 // Get information about the ranking being deleted
-export async function getRankingInfo(adminSupabase: SupabaseClient, filename: string) {
+export async function getRankingInfo(adminSupabase: DbClient, filename: string) {
   try {
     const rankingFiles = await listRankingFiles(adminSupabase)
     if (!rankingFiles || rankingFiles.length === 0) {
@@ -128,7 +128,7 @@ export async function getRankingInfo(adminSupabase: SupabaseClient, filename: st
 }
 
 // Handle renaming of same-month rankings to remove gaps in numbering
-export async function renameSameMonthRankings(adminSupabase: SupabaseClient, deletedMonth: number, deletedYear: number) {
+export async function renameSameMonthRankings(adminSupabase: DbClient, deletedMonth: number, deletedYear: number) {
   try {
     // List all ranking files
     const { data: files, error: listError } = await adminSupabase.storage
@@ -245,7 +245,7 @@ export async function renameSameMonthRankings(adminSupabase: SupabaseClient, del
 }
 
 // Find the next ranking chronologically and recalculate its changes
-export async function recalculateNextRankingChanges(adminSupabase: SupabaseClient, deletedRankingInfo: { month: number; year: number }) {
+export async function recalculateNextRankingChanges(adminSupabase: DbClient, deletedRankingInfo: { month: number; year: number }) {
   try {
 
     // List all ranking files

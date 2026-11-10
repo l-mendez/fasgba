@@ -1,5 +1,5 @@
 import { NextRequest, after } from 'next/server'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/db-types'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidateRankingCache } from '@/lib/cache/ranking'
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function to check if recalculation is needed (same as in upload route)
-async function checkIfRecalculationNeeded(adminSupabase: SupabaseClient, currentMonth: number, currentYear: number): Promise<boolean> {
+async function checkIfRecalculationNeeded(adminSupabase: DbClient, currentMonth: number, currentYear: number): Promise<boolean> {
   try {
     const { data: files, error: listError } = await adminSupabase.storage
       .from('ranking-data')
@@ -186,7 +186,7 @@ async function checkIfRecalculationNeeded(adminSupabase: SupabaseClient, current
 }
 
 // Helper function to recalculate all rankings that come after the newly uploaded one
-async function recalculateSubsequentRankings(adminSupabase: SupabaseClient, newRankingMonth: number, newRankingYear: number) {
+async function recalculateSubsequentRankings(adminSupabase: DbClient, newRankingMonth: number, newRankingYear: number) {
   try {
     // Get all ranking files sorted chronologically
     const { data: files, error: listError } = await adminSupabase.storage
@@ -299,7 +299,7 @@ async function recalculateSubsequentRankings(adminSupabase: SupabaseClient, newR
 }
 
 // Helper function to find previous ranking for recalculation
-async function findPreviousRankingForRecalculation(adminSupabase: SupabaseClient, currentMonth: number, currentYear: number, allRankings: RankingFileInfo[]) {
+async function findPreviousRankingForRecalculation(adminSupabase: DbClient, currentMonth: number, currentYear: number, allRankings: RankingFileInfo[]) {
   const currentDate = new Date(currentYear, currentMonth - 1)
   
   // Find the most recent ranking before the current one

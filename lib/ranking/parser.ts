@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/db-types'
 import * as XLSX from 'xlsx-js-style'
 import {
   type Player,
@@ -30,7 +30,7 @@ export async function parseWorkbook(
   workbook: XLSX.WorkBook,
   month: number,
   year: number,
-  adminClient: SupabaseClient
+  adminClient: DbClient
 ): Promise<ParsedRanking> {
   if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
     throw new Error('El archivo Excel no contiene hojas de trabajo válidas')
