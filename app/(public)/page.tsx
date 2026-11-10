@@ -1,10 +1,9 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
+import { getAdminClient } from '@/lib/supabase/admin'
 import Link from "next/link"
 import Image from "next/image"
 import { Calendar, ChevronRight, ImageIcon, MapPin, Tag } from "lucide-react"
 import { ReactNode } from "react"
 import { unstable_cache } from "next/cache"
-import { createClient } from '@supabase/supabase-js'
 
 import { Badge } from "@/components/ui/badge"
 import { getAllNews } from "@/lib/newsUtils"
@@ -26,11 +25,6 @@ import { TopRanking } from "@/components/home/top-ranking"
 // clubs}.ts purge this route on mutation. Time-based revalidation would rewrite
 // the ISR entry on a timer forever, which is what blew the hosting quota.
 export const revalidate = false
-
-// Create Supabase client for server-side operations (tournaments only)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Types for the data structures
 interface NewsItem {
@@ -139,7 +133,7 @@ async function fetchNews(): Promise<NewsItem[]> {
 // the cache; only the already-mapped, Date-free Tournament[] is cached.
 const getCachedTournaments = unstable_cache(
   async (): Promise<Tournament[]> => {
-    const allTournaments = await getAllTournamentsForDisplay(supabase)
+    const allTournaments = await getAllTournamentsForDisplay(getAdminClient())
     const upcoming = allTournaments.filter(t => t.is_upcoming)
 
     // Sort FASGBA tournaments (no created_by_club_id) first, then by start date ascending.

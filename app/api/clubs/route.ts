@@ -1,18 +1,13 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { createClub } from '@/lib/clubUtils'
 import { revalidateClubsCache } from '@/lib/cache/clubs'
 import { apiSuccess, handleError, unauthorizedError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
-// Create a Supabase client for server-side operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
 // GET /api/clubs - Get all clubs
 export async function GET(request: NextRequest) {
+  const supabase = getAdminClient()
   try {
     const { data: clubs, error } = await supabase
       .from('clubs')
@@ -31,6 +26,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const supabase = getAdminClient()
   try {
     // Get the authorization header
     const authHeader = request.headers.get('authorization')

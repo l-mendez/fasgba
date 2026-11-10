@@ -1,15 +1,9 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { apiSuccess, handleError, notFoundError, validationError, noContent, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
 import { z } from 'zod'
-
-// Create a Supabase client for server-side operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Validation schemas
 const roundSchema = z.object({
@@ -22,9 +16,9 @@ interface RouteParams {
   }>
 }
 
-
 // GET /api/tournaments/[id]/rounds - Get all rounds for a tournament
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { id: tournamentId } = await params
     const tournamentIdNum = parseInt(tournamentId, 10)
@@ -72,6 +66,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // POST /api/tournaments/[id]/rounds - Create a new round for a tournament
 export async function POST(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { id: tournamentId } = await params
     const tournamentIdNum = parseInt(tournamentId, 10)
@@ -157,6 +152,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
 // DELETE /api/tournaments/[id]/rounds - Delete all rounds for a tournament
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { id: tournamentId } = await params
     const tournamentIdNum = parseInt(tournamentId, 10)

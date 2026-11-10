@@ -1,14 +1,9 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { apiSuccess, handleError, notFoundError, validationError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { updateTeamSchema } from '@/lib/schemas/teamSchemas'
 import { isUserClubAdmin } from '@/lib/clubUtils'
 import { z } from 'zod'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
 interface RouteParams {
   params: Promise<{
@@ -18,6 +13,7 @@ interface RouteParams {
 }
 
 async function authenticateAndAuthorizeClub(request: NextRequest, clubId: number) {
+  const serverSupabase = getAdminClient()
   const authHeader = request.headers.get('authorization')
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     throw new Error('UNAUTHORIZED')
@@ -44,6 +40,7 @@ async function authenticateAndAuthorizeClub(request: NextRequest, clubId: number
 
 // GET /api/clubs/[clubId]/teams/[teamId]
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { clubId, teamId } = await params
     const clubIdNum = parseInt(clubId, 10)
@@ -71,6 +68,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // PATCH /api/clubs/[clubId]/teams/[teamId]
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { clubId, teamId } = await params
     const clubIdNum = parseInt(clubId, 10)
@@ -139,6 +137,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 // DELETE /api/clubs/[clubId]/teams/[teamId]
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { clubId, teamId } = await params
     const clubIdNum = parseInt(clubId, 10)

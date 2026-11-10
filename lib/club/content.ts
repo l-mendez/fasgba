@@ -1,10 +1,11 @@
-import { supabase } from './service-client'
+import { getAdminClient } from '@/lib/supabase/admin'
 import type { ClubNews, DateFilterOptions } from './types'
 
 /**
  * Gets news from a club
  */
 export async function getClubNews(clubId: number, limit?: number): Promise<ClubNews[]> {
+  const supabase = getAdminClient()
   let query = supabase
     .from('news')
     .select('*')
@@ -60,6 +61,7 @@ export async function getClubNews(clubId: number, limit?: number): Promise<ClubN
  * Gets news count for a club with optional date filtering
  */
 export async function getClubNewsCount(clubId: number, options: DateFilterOptions = {}): Promise<number> {
+  const supabase = getAdminClient()
   let query = supabase
     .from('news')
     .select('*', { count: 'exact', head: true })
@@ -88,6 +90,7 @@ export async function getClubNewsCount(clubId: number, options: DateFilterOption
  * Gets tournament count for a club with optional date filtering
  */
 export async function getClubTournamentCount(clubId: number, options: DateFilterOptions = {}): Promise<number> {
+  const supabase = getAdminClient()
   const query = supabase
     .from('tournaments')
     .select('id', { count: 'exact', head: true })
@@ -159,6 +162,7 @@ export async function getClubTournamentCount(clubId: number, options: DateFilter
  * Gets tournaments created by a club with optional date filtering
  */
 export async function getClubTournaments(clubId: number, options: DateFilterOptions & { limit?: number } = {}): Promise<any[]> {
+  const supabase = getAdminClient()
   // If date filters are provided, we need to join with tournamentdates and filter
   if (options.startDate || options.endDate) {
     // For date filtering, we need to find tournaments where their date range overlaps with the specified range

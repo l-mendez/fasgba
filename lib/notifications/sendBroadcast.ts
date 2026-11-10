@@ -1,5 +1,4 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
-import { createClient } from '@supabase/supabase-js'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { buildEmailContent } from './templates'
 import { shouldIncludeUser } from './filter'
 import { FROM, NO_REPLY_ADDRESS, SITE_URL, transporter } from './mailer'
@@ -10,12 +9,8 @@ import type {
   NotificationCategory,
 } from './types'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
-
 export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastResult> {
+  const supabaseAdmin = getAdminClient()
   let category: NotificationCategory | undefined
   let clubId: number | null = null
   let targetId: string | null = null
@@ -107,6 +102,7 @@ export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastRes
 }
 
 async function loadFollowerSet(clubId: number): Promise<Set<string>> {
+  const supabaseAdmin = getAdminClient()
   const { data, error } = await supabaseAdmin
     .from('user_follows_club')
     .select('auth_id')
@@ -130,6 +126,7 @@ async function logBroadcast(
   result: BroadcastResult,
   targetId: string | null = null,
 ): Promise<void> {
+  const supabaseAdmin = getAdminClient()
   try {
     await supabaseAdmin.from('notification_log').insert({
       type: input.type,

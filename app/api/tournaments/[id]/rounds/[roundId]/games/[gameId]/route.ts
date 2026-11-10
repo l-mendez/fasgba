@@ -1,15 +1,9 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { apiSuccess, handleError, notFoundError, validationError, noContent, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
 import { z } from 'zod'
-
-// Create a Supabase client for server-side operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Validation schemas
 const gameResultSchema = z.enum(['1-0', '0-1', '1/2-1/2', '*'])
@@ -34,6 +28,7 @@ interface RouteParams {
 
 // PATCH /api/tournaments/[id]/rounds/[roundId]/games/[gameId] - Update a game
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { id: tournamentId, roundId, gameId } = await params
     const tournamentIdNum = parseInt(tournamentId, 10)
@@ -168,6 +163,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 // DELETE /api/tournaments/[id]/rounds/[roundId]/games/[gameId] - Delete a game
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { id: tournamentId, roundId, gameId } = await params
     const tournamentIdNum = parseInt(tournamentId, 10)
