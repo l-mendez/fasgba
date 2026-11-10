@@ -113,6 +113,14 @@ and ask. Never change production data (`update`/`delete`) without asking.
 Live policy names drift from the legacy SQL. Look them up in `pg_policies`
 before dropping, or drop them by lookup inside a `DO` block.
 
+Migrations and merges must not leave production broken. When opening a PR with
+a migration, tell the user whether it must be applied before merging (code
+depends on new columns/functions) or right after (restrictive policy changes),
+and ask. Never change production data (`update`/`delete`) without asking.
+
+Live policy names drift from the legacy SQL. Look them up in `pg_policies`
+before dropping, or drop them by lookup inside a `DO` block.
+
 ## Auth And Roles
 
 Supabase Auth owns identity and sessions. Roles are DB rows:
