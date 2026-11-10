@@ -84,8 +84,8 @@ export function ClubsTable({ initialClubs }: ClubsTableProps) {
     }
 
     const sorted = [...clubesToSort].sort((a, b) => {
-      let aValue: any
-      let bValue: any
+      let aValue: string | number
+      let bValue: string | number
 
       switch (sortBy) {
         case 'name':

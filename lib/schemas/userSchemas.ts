@@ -87,7 +87,7 @@ export function validatePermissionParam(permission: string) {
   }
 }
 
-export function validateFileUpload(file: any) {
+export function validateFileUpload(file: unknown) {
   try {
     return fileUploadSchema.parse({ file }).file
   } catch (error) {
@@ -101,7 +101,7 @@ export function validateFileUpload(file: any) {
 }
 
 // Helper function to validate file from FormData
-export function validateFileFromFormData(formData: FormData): any {
+export function validateFileFromFormData(formData: FormData): File {
   const file = formData.get('file')
   
   if (!file) {

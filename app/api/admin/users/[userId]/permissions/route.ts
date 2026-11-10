@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { requireAdmin } from '@/lib/middleware/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { apiSuccess, handleError, validationError } from '@/lib/utils/apiResponse'
+import type { ClubAdminRow } from '@/lib/db-types'
 
 export async function PUT(
   request: NextRequest,
@@ -40,7 +41,7 @@ export async function PUT(
       .select('club_id')
       .eq('auth_id', userId)
 
-    const currentIds = (currentClubAdmins || []).map((ca: any) => ca.club_id)
+    const currentIds = (currentClubAdmins || []).map((ca: Pick<ClubAdminRow, 'club_id'>) => ca.club_id)
     const toAdd = clubAdminIds.filter((id: number) => !currentIds.includes(id))
     const toRemove = currentIds.filter((id: number) => !clubAdminIds.includes(id))
 

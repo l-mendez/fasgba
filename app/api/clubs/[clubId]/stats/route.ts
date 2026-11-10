@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import type { DbRow, NewsRow, TournamentRow } from "@/lib/db-types"
 
 interface ClubStats {
   noticias: number
@@ -10,11 +11,19 @@ interface ClubStats {
   crecimientoSeguidores: number
 }
 
+// Shapes of the "recent news" / "recent tournaments" selects below
+type RecentNewsRow = Pick<NewsRow, 'id' | 'title' | 'date' | 'extract' | 'created_at' | 'created_by_auth_id'>
+// `tournaments` has no created_at column; kept as selected by the query below.
+type RecentTournamentRow = Pick<TournamentRow, 'id' | 'title' | 'description'> & {
+  created_at: string | null
+  tournamentdates: Pick<DbRow<'tournamentdates'>, 'event_date'>[] | null
+}
+
 interface ActivityItem {
   type: 'news' | 'tournament' | 'follower'
   title: string
-  date: string
-  description?: string
+  date: string | null
+  description?: string | null
   author?: string
 }
 
@@ -125,9 +134,9 @@ export async function GET(
     // Resolve author display names for recent news (deduped, parallel)
     const authorIds = [...new Set(
       (recentNewsData.data || [])
-        .map((n: any) => n.created_by_auth_id)
-        .filter((id: any): id is string => typeof id === 'string' && id.length > 0)
-    )] as string[]
+        .map((n: RecentNewsRow) => n.created_by_auth_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    )]
 
     const authorNames = new Map<string, string>()
     await Promise.all(authorIds.map(async (authId) => {
@@ -146,7 +155,7 @@ export async function GET(
 
     // Add recent news
     if (recentNewsData.data) {
-      recentNewsData.data.forEach((news: any) => {
+      recentNewsData.data.forEach((news: RecentNewsRow) => {
         activities.push({
           type: 'news',
           title: news.title,
@@ -159,7 +168,7 @@ export async function GET(
 
     // Add recent tournaments
     if (recentTournamentsData.data) {
-      recentTournamentsData.data.forEach((tournament: any) => {
+      recentTournamentsData.data.forEach((tournament: RecentTournamentRow) => {
         const tournamentDate = tournament.tournamentdates?.[0]?.event_date || tournament.created_at
         activities.push({
           type: 'tournament',
@@ -171,7 +180,7 @@ export async function GET(
     }
 
     // Sort activities by date (most recent first)
-    activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    activities.sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
 
     // Keep only the 5 most recent activities
     const recentActivity = activities.slice(0, 5)

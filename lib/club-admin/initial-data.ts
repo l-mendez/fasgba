@@ -15,6 +15,7 @@ import {
   type ClubPlayersPage,
   type ClubPlayersScope,
 } from "@/lib/club-admin/types"
+import type { ClubRow } from "@/lib/db-types"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 import { getTournamentParticipantCount } from "@/lib/tournamentUtils"
@@ -27,7 +28,11 @@ function parseClubId(id: string | number): number {
   return clubId
 }
 
-function normalizeClub(club: any): ClubAdminClub | null {
+// Embedded `clubs(...)` value: an object at runtime, typed as an array by the select parser.
+type ClubJoin = Pick<ClubRow, "id" | "name"> &
+  Partial<Pick<ClubRow, "address" | "telephone" | "mail" | "schedule" | "image">>
+
+function normalizeClub(club: ClubJoin | ClubJoin[] | null | undefined): ClubAdminClub | null {
   const value = Array.isArray(club) ? club[0] : club
   if (!value) return null
 
@@ -92,7 +97,7 @@ export const getClubAdminContext = cache(async function getClubAdminContext() {
   if (error) throw error
 
   const clubs = (data || [])
-    .map((row: any) => normalizeClub(row.clubs))
+    .map((row) => normalizeClub(row.clubs))
     .filter((club): club is ClubAdminClub => Boolean(club))
 
   if (clubs.length === 0) notFound()
@@ -170,7 +175,7 @@ export async function getClubDashboardInitialData() {
 
   const authorIds = [...new Set(
     (recentNewsData.data || [])
-      .map((news: any) => news.created_by_auth_id)
+      .map((news) => news.created_by_auth_id)
       .filter((id: unknown): id is string => typeof id === "string" && id.length > 0)
   )]
   const authorNames = await getAuthorNames(supabase, authorIds)
@@ -187,8 +192,8 @@ export async function getClubDashboardInitialData() {
   }
 
   for (const tournament of recentTournamentsData.data || []) {
-    const dates = Array.isArray((tournament as any).tournamentdates)
-      ? (tournament as any).tournamentdates
+    const dates = Array.isArray(tournament.tournamentdates)
+      ? tournament.tournamentdates
       : []
     recentActivity.push({
       type: "tournament",
@@ -242,7 +247,7 @@ export async function queryClubPlayers(
 
   return {
     total: count ?? 0,
-    players: (data || []).map((player: any): ClubAdminPlayer => ({
+    players: (data || []).map((player): ClubAdminPlayer => ({
       id: player.id,
       full_name: player.full_name,
       fide_id: player.fide_id,
@@ -287,7 +292,7 @@ export async function getClubTournamentsInitialData() {
   return {
     selectedClubId: selectedClub.id,
     tournaments: await Promise.all(
-      tournaments.map(async (tournament: any) => ({
+      tournaments.map(async (tournament) => ({
         ...tournament,
         participants: await getTournamentParticipantCount(
           supabase,

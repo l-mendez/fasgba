@@ -61,7 +61,7 @@ export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastRes
         // Only notify users who have confirmed their email — avoids hard bounces
         // from typo/abandoned signups and helps stay under Zoho's anti-spam ceiling.
         if (!u.email_confirmed_at) continue
-        const notif = (u.user_metadata as any)?.notifications as NotificationPrefs | undefined
+        const notif: NotificationPrefs | undefined = u.user_metadata?.notifications
         const isFollower = followerSet.has(u.id)
         if (shouldIncludeUser(notif, category, isFollower)) {
           recipients.push(u.email)
@@ -110,7 +110,7 @@ async function loadFollowerSet(clubId: number): Promise<Set<string>> {
   // Throw on error so the outer catch logs status='error' to notification_log.
   // Swallowing here would hide under-delivery to club followers.
   if (error) throw new Error(`loadFollowerSet failed for club ${clubId}: ${error.message}`)
-  return new Set((data ?? []).map((r: any) => r.auth_id))
+  return new Set((data ?? []).map((r) => r.auth_id))
 }
 
 function resolveTargetId(input: BroadcastInput): string {

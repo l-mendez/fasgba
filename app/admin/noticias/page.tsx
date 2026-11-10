@@ -33,6 +33,11 @@ interface News {
   updated_at: string
 }
 
+// Shape of the news select below (club joined as `clubs`)
+type NewsQueryRow = Omit<News, 'club' | 'author_email' | 'author_name'> & {
+  clubs: { id: number; name: string } | null
+}
+
 // Server-side function to fetch news data
 async function fetchNews(): Promise<News[]> {
   try {
@@ -85,6 +90,7 @@ async function fetchNews(): Promise<News[]> {
         updated_at
       `)
       .order('date', { ascending: false })
+      .overrideTypes<NewsQueryRow[], { merge: false }>()
 
     if (newsError) {
       console.error('Error fetching news:', newsError)
@@ -122,7 +128,7 @@ async function fetchNews(): Promise<News[]> {
     }))
 
     // Transform the news data to match our News interface
-    const transformedNews: News[] = newsData.map((item: any) => {
+    const transformedNews: News[] = newsData.map((item) => {
       const author = item.created_by_auth_id ? authorMap.get(item.created_by_auth_id) : null
       
       return {

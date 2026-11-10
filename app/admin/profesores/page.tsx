@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { ProfesoresTable } from "@/components/profesores-table"
 import { requireAdminAction } from "@/lib/actions/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
+import type { ClubRow, ProfesorRow } from "@/lib/db-types"
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +26,7 @@ async function getProfesores() {
     return []
   }
 
-  return (data || []).map((item: any) => ({
+  return (data || []).map((item: ProfesorRow & { clubs: Pick<ClubRow, "name"> | null }) => ({
     id: item.id,
     titulo: item.titulo,
     foto: item.foto,

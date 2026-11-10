@@ -3,9 +3,10 @@
 import { requireAdminAction, mapErrorToResult, type ActionError } from '@/lib/actions/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { MAX_FILE_SIZE, isValidCategory, generateStorageFilename, isAllowedMimeType } from '@/lib/documentosUtils'
+import type { DocumentoRow } from '@/lib/db-types'
 
 type UploadResult =
-  | { ok: true; data: { documento: any; message: string } }
+  | { ok: true; data: { documento: DocumentoRow; message: string } }
   | ActionError
 
 export async function uploadDocumentoAction(formData: FormData): Promise<UploadResult> {

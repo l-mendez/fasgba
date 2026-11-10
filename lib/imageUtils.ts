@@ -139,7 +139,7 @@ export function extractImagePathsFromNews(image: string | null, text: string): s
   try {
     const contentBlocks = JSON.parse(text)
     if (Array.isArray(contentBlocks)) {
-      contentBlocks.forEach((block: any) => {
+      contentBlocks.forEach((block: { type?: string; content?: { src?: string } }) => {
         if (block.type === 'image' && block.content?.src) {
           imagePaths.push(block.content.src)
         }

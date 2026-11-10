@@ -14,7 +14,7 @@ export function extractTextFromContentBlocks(jsonText: string): string {
     // Extract text from all text blocks
     const textParts: string[] = []
     
-    contentBlocks.forEach((block: any) => {
+    contentBlocks.forEach((block: { type?: string; content?: string }) => {
       if (block.type === 'text' && block.content) {
         // Remove HTML tags and decode entities for plain text
         const plainText = block.content

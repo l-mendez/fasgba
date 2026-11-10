@@ -1,4 +1,5 @@
 import { getAdminClient } from '@/lib/supabase/admin'
+import type { ClubRow } from '@/lib/db-types'
 import { deleteArbitroImages } from './imageUtils.server'
 
 export interface Arbitro {
@@ -14,6 +15,9 @@ export interface Arbitro {
   created_at: string
   updated_at: string
 }
+
+// Row of `select('*, clubs(name)')`
+type ArbitroJoinRow = Arbitro & { clubs: Pick<ClubRow, 'name'> | null }
 
 export interface ArbitroWithClub extends Arbitro {
   club_name: string | null
@@ -43,7 +47,7 @@ export async function getAllArbitros(options: {
       throw new Error('Failed to fetch arbitros')
     }
 
-    return (data || []).map((item: any) => ({
+    return (data || []).map((item: ArbitroJoinRow) => ({
       id: item.id,
       name: item.name,
       title: item.title,
@@ -82,6 +86,7 @@ export async function getArbitroById(arbitroId: number): Promise<ArbitroWithClub
     throw new Error('Failed to fetch arbitro')
   }
 
+  const joined: ArbitroJoinRow = data
   return {
     id: data.id,
     name: data.name,
@@ -94,7 +99,7 @@ export async function getArbitroById(arbitroId: number): Promise<ArbitroWithClub
     phone: data.phone,
     created_at: data.created_at,
     updated_at: data.updated_at,
-    club_name: (data as any).clubs?.name || null,
+    club_name: joined.clubs?.name || null,
   }
 }
 
