@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { revalidateRankingCache } from '@/lib/cache/ranking'
 import { requireAdmin } from '@/lib/middleware/auth'
 import { rateLimit } from '@/lib/middleware/rateLimit'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
-import { findPreviousPlayer } from '@/lib/rankingUtils'
+import { findPreviousPlayer, type Player } from '@/lib/rankingUtils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -309,7 +310,7 @@ export async function POST(request: NextRequest) {
 /**
  * Recalculates player position differences for a specific ranking
  */
-async function recalculatePlayerDifferences(players: any[], previousRankingFilename: string | null, adminSupabase: any) {
+async function recalculatePlayerDifferences(players: Player[], previousRankingFilename: string | null, adminSupabase: SupabaseClient) {
   if (!previousRankingFilename) {
     // No previous ranking - all players are new
     return players.map(player => ({
@@ -342,11 +343,11 @@ async function recalculatePlayerDifferences(players: any[], previousRankingFilen
     }
     
     const previousRankingData = JSON.parse(await prevFileData.text())
-    const prevPlayers: any[] = previousRankingData.players || []
+    const prevPlayers: Player[] = previousRankingData.players || []
 
     // Calculate differences (match by ID, fall back to name only for legacy data)
     return players.map(currentPlayer => {
-      const previousPlayer = findPreviousPlayer<any>(currentPlayer, prevPlayers)
+      const previousPlayer = findPreviousPlayer(currentPlayer, prevPlayers)
       
       if (!previousPlayer) {
         // New player

@@ -1,15 +1,22 @@
 // Pure, client-safe ranking transforms (no server/supabase imports) used by the
 // client `PlayerList` island to shape, filter and paginate the player list.
 
-import type { Player, RatingType, PaginatedPlayersResponse } from '@/lib/rankingUtils'
+import type { Player, PlayerRatings, RatingType, PaginatedPlayersResponse } from '@/lib/rankingUtils'
 import { normalizeForSearch } from '@/lib/countries'
+
+/** A player as stored in ranking JSON: legacy files have no `ratings`. */
+type StoredPlayer = Omit<Player, 'ratings'> & { ratings?: PlayerRatings | null }
+
+const hasRatings = (player: StoredPlayer): player is Player => Boolean(player.ratings)
 
 /**
  * Normalizes a player from the old format (no `ratings`) to the new format.
+ * Takes a raw entry of a stored ranking JSON `players` array.
  */
-export function normalizePlayer(player: any): Player {
-  if (player.ratings) {
-    return player as Player
+export function normalizePlayer(raw: unknown): Player {
+  const player = raw as StoredPlayer
+  if (hasRatings(player)) {
+    return player
   }
   return {
     ...player,

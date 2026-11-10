@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { normalizePlayer, findPreviousPlayer } from '@/lib/rankingUtils'
-import type { RankingPlayer } from './types'
+import type { PreviousPlayer, RankingPlayer } from './types'
 
 // ---------------------------------------------------------------------------
 // Previous-ranking lookup + change calc + recalculation check
@@ -22,13 +22,13 @@ export async function findPreviousRanking(adminSupabase: SupabaseClient, current
     }
 
     const rankingFiles = files
-      .filter((file: any) =>
+      .filter((file) =>
         file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
         !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
-      .map((file: any) => {
+      .map((file) => {
         const match = file.name.match(/^ranking-(\d{2})-(\d{4}).*\.json$/)
         if (!match) return null
         return {
@@ -39,12 +39,12 @@ export async function findPreviousRanking(adminSupabase: SupabaseClient, current
           created_at: file.created_at
         }
       })
-      .filter(Boolean)
+      .filter((ranking) => ranking !== null)
 
     // Check for same month/year ranking first
     const sameMonthRankings = rankingFiles
-      .filter((ranking: any) => ranking.month === currentMonth && ranking.year === currentYear)
-      .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      .filter((ranking) => ranking.month === currentMonth && ranking.year === currentYear)
+      .sort((a, b) => new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime())
 
     if (sameMonthRankings.length > 0) {
       const sameMonthPrevious = sameMonthRankings[sameMonthRankings.length - 1]!
@@ -64,10 +64,10 @@ export async function findPreviousRanking(adminSupabase: SupabaseClient, current
 
     // Fall back to chronologically previous ranking
     const chronologicalRankings = rankingFiles
-      .sort((a: any, b: any) => b.date.getTime() - a.date.getTime())
+      .sort((a, b) => b.date.getTime() - a.date.getTime())
 
     const currentDate = new Date(currentYear, currentMonth - 1)
-    const previousRanking = chronologicalRankings.find((ranking: any) =>
+    const previousRanking = chronologicalRankings.find((ranking) =>
       ranking.date.getTime() < currentDate.getTime()
     )
 
@@ -95,7 +95,7 @@ export async function findPreviousRanking(adminSupabase: SupabaseClient, current
 }
 
 // Calculate changes for each player, including per-rating changes
-export function calculatePlayerChanges(newPlayers: RankingPlayer[], previousPlayers: any[]) {
+export function calculatePlayerChanges(newPlayers: RankingPlayer[], previousPlayers: PreviousPlayer[]) {
   return newPlayers.map(player => {
     const previousPlayer = findPreviousPlayer(player, previousPlayers)
 
@@ -142,13 +142,13 @@ export async function checkIfRecalculationNeeded(adminSupabase: SupabaseClient, 
     if (listError || !files) return false
 
     const rankingFiles = files
-      .filter((file: any) =>
+      .filter((file) =>
         file.name.endsWith('.json') &&
         !file.name.startsWith('temp/') &&
         !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
-      .map((file: any) => {
+      .map((file) => {
         const match = file.name.match(/^ranking-(\d{2})-(\d{4}).*\.json$/)
         if (!match) return null
         return {
@@ -156,10 +156,10 @@ export async function checkIfRecalculationNeeded(adminSupabase: SupabaseClient, 
           date: new Date(parseInt(match[2]), parseInt(match[1]) - 1)
         }
       })
-      .filter(Boolean)
+      .filter((ranking) => ranking !== null)
 
     const currentDate = new Date(currentYear, currentMonth - 1)
-    return rankingFiles.some((ranking: any) => ranking.date.getTime() > currentDate.getTime())
+    return rankingFiles.some((ranking) => ranking.date.getTime() > currentDate.getTime())
   } catch (error) {
     console.warn('Error checking recalculation need:', error)
     return false

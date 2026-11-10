@@ -246,7 +246,7 @@ export function parseRankingSheetsSplit(workbook: XLSX.WorkBook): RankingPlayer[
  * Parses the Analítico sheet for tournament detail data
  */
 export function parseAnaliticoSheet(sheet: XLSX.WorkSheet): TournamentDetail[] {
-  const rawData = XLSX.utils.sheet_to_json<Record<string, any>>(sheet)
+  const rawData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet)
   if (!rawData || rawData.length === 0) return []
 
   const details: TournamentDetail[] = []
@@ -257,15 +257,15 @@ export function parseAnaliticoSheet(sheet: XLSX.WorkSheet): TournamentDetail[] {
       const playerId = String(row.ID || row.Id || row.id || '')
       const playerName = String(row.Jugador || row.Nombre || row.Name || '')
       const club = String(row.Club || row.CLUB || '')
-      const eloBefore = parseFloat(row.Elo || row.ELO || row['Elo'] || 0)
-      const wins = parseFloat(row.W || row.w || 0)
-      const games = parseFloat(row.n || row.N || row.Partidos || 0)
-      const expectedScore = parseFloat(row.We || row.WE || row.we || 0)
-      const scoreDiff = parseFloat(row['W - We'] || row['W-We'] || 0)
-      const avgOpponentRating = parseFloat(row.Ra || row.RA || row.ra || 0)
-      const performanceRating = parseFloat(row.Rp || row.RP || row.rp || 0)
-      const kFactor = parseFloat(row.K || row.k || 0)
-      const eloChange = parseFloat(row['Elo +/-'] || row['Elo+/-'] || row['Elo +-'] || 0)
+      const eloBefore = parseFloat(String(row.Elo || row.ELO || row['Elo'] || 0))
+      const wins = parseFloat(String(row.W || row.w || 0))
+      const games = parseFloat(String(row.n || row.N || row.Partidos || 0))
+      const expectedScore = parseFloat(String(row.We || row.WE || row.we || 0))
+      const scoreDiff = parseFloat(String(row['W - We'] || row['W-We'] || 0))
+      const avgOpponentRating = parseFloat(String(row.Ra || row.RA || row.ra || 0))
+      const performanceRating = parseFloat(String(row.Rp || row.RP || row.rp || 0))
+      const kFactor = parseFloat(String(row.K || row.k || 0))
+      const eloChange = parseFloat(String(row['Elo +/-'] || row['Elo+/-'] || row['Elo +-'] || 0))
       const tipoRaw = row.Tipo || row.TIPO || row.tipo || 1
       const tipoNum = typeof tipoRaw === 'number' ? tipoRaw : parseInt(String(tipoRaw)) || 1
       const tournament = String(row.Torneo || row.TORNEO || row.Tournament || '')
