@@ -30,6 +30,14 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
+      - name: No time-based revalidate
+        # A numeric revalidate exhausted Vercel's ISR-write quota (AGENTS.md → Caching).
+        run: |
+          if grep -rnE "revalidate\s*[:=]\s*[0-9]" app lib components; then
+            echo "::error::Use revalidate = false plus lib/cache invalidators, never a number."
+            exit 1
+          fi
+
       - name: Type Check
         run: pnpm run type-check
 

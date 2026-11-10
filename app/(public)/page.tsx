@@ -18,7 +18,7 @@ import { getCachedLatestRankingData } from "@/lib/rankingStorage"
 import { normalizePlayer, selectPlayersPage, sortPlayersByRatingType } from "@/lib/rankingDisplay"
 import type { Player } from "@/lib/rankingUtils"
 import { safe } from "@/lib/utils/safe"
-import { SectionHeader } from "@/components/home/section-header"
+import { SectionHeader } from "@/components/section-header"
 import { TopRanking } from "@/components/home/top-ranking"
 
 // Cached indefinitely: each fetch is wrapped in unstable_cache with a tag
