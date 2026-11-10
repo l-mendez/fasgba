@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/db-types'
 import { revalidateRankingCache } from '@/lib/cache/ranking'
 import { requireAdmin } from '@/lib/middleware/auth'
 import { rateLimit } from '@/lib/middleware/rateLimit'
@@ -310,7 +310,7 @@ export async function POST(request: NextRequest) {
 /**
  * Recalculates player position differences for a specific ranking
  */
-async function recalculatePlayerDifferences(players: Player[], previousRankingFilename: string | null, adminSupabase: SupabaseClient) {
+async function recalculatePlayerDifferences(players: Player[], previousRankingFilename: string | null, adminSupabase: DbClient) {
   if (!previousRankingFilename) {
     // No previous ranking - all players are new
     return players.map(player => ({

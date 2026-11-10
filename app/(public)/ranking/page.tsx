@@ -66,7 +66,7 @@ export default async function RankingPage() {
     safe(getCachedPublicRankingOptions, [], "Error fetching ranking options:"),
   ])
 
-  const initialPlayers: Player[] = ((latest.players as unknown[]) || []).map(normalizePlayer)
+  const initialPlayers: Player[] = latest.players.map(normalizePlayer)
 
   return (
     <>

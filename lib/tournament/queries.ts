@@ -1,5 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { DbClient, TournamentRow } from '@/lib/db-types'
+import type { DbClient } from '@/lib/db-types'
 import type { Tournament, TournamentDisplay, TournamentWithDates } from './types'
 import { sortTournamentsByDate, transformTournamentToDisplay } from './display'
 
@@ -259,86 +258,6 @@ export async function getAllTournamentsForDisplay(supabase: DbClient): Promise<T
   } catch (error) {
     console.error('Error getting tournaments for display:', error);
     throw error;
-  }
-}
-
-/**
- * Debug function to check tournaments table status
- */
-export async function checkTournamentsTable(supabase: DbClient): Promise<{
-  tableExists: boolean;
-  rowCount: number;
-  sampleData: TournamentRow[];
-  error?: string;
-}> {
-  try {
-    // Check if table exists and get basic info
-    const { data, error, count } = await supabase
-      .from('tournaments')
-      .select('*', { count: 'exact' })
-      .limit(3);
-
-    if (error) {
-      return {
-        tableExists: false,
-        rowCount: 0,
-        sampleData: [],
-        error: error.message
-      };
-    }
-
-    return {
-      tableExists: true,
-      rowCount: count || 0,
-      sampleData: data || []
-    };
-  } catch (error) {
-    return {
-      tableExists: false,
-      rowCount: 0,
-      sampleData: [],
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
-  }
-}
-
-/**
- * Debug function to check what columns actually exist in the tournaments table
- */
-// Untyped client: get_table_structure is not in the generated schema, so its result is unknown.
-export async function checkTournamentsTableStructure(supabase: SupabaseClient): Promise<unknown> {
-  try {
-    // Query the information_schema to get table structure
-    const { data, error } = await supabase.rpc('get_table_structure', {
-      table_name: 'tournaments'
-    });
-
-    if (error) {
-      console.error('Error checking table structure:', error);
-      return { error: error.message };
-    }
-
-    // If the RPC doesn't exist, try alternative method
-    if (!data) {
-      // Alternative: query a single row to see the structure
-      const { data: sampleData, error: sampleError } = await supabase
-        .from('tournaments')
-        .select('*')
-        .limit(1)
-        .single();
-
-      if (sampleError && sampleError.code !== 'PGRST116') {
-        return { error: sampleError.message };
-      }
-
-      const columns = sampleData ? Object.keys(sampleData) : [];
-      return { columns, sampleData };
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error in checkTournamentsTableStructure:', error);
-    return { error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 
