@@ -32,7 +32,48 @@ pnpm run db:types         # Regenerate lib/database.types.ts from Supabase
 pnpm run migrate:ranking  # Migrate ranking data
 pnpm run send:admin-update  # Send admin update emails
 pnpm run test:email       # Test email configuration
+pnpm shot <path> [--mobile] [--dark] [--all]  # Full-page screenshots → .context/shots/
 ```
+
+## Local Environment
+
+- The dev server talks to the **production** Supabase project. There is no
+  staging DB: never submit forms, delete, or write rows while testing unless the
+  user asked. Preview writes with dry-run helpers (see
+  `lib/chess-results/dry-run.ts`).
+- Run the dev server with `pnpm dev --port $CONDUCTOR_PORT` (Conductor's run
+  script) in the background; log to `.context/dev.log`.
+- `.env.local` is per workspace. The source of truth is the root checkout's
+  `.env.local`; when the user changes keys, update both. `.worktreeinclude`
+  copies it into agent worktrees. Every variable is listed in `.env.example`.
+- Agent worktrees branch from the root repo's HEAD, not this workspace's branch.
+  Give subagents the base SHA and have them check it before starting.
+- The shell is zsh: quote globs and URLs (`--include='*.ts'`, `'...?limit=1'`).
+  Don't `sleep`; use `gh pr checks --watch` or background tasks.
+- Supabase CLI exits 137 on every call → broken Homebrew signature:
+  `HOMEBREW_NO_AUTO_UPDATE=1 brew upgrade supabase`, then re-run
+  `supabase link --project-ref uxtfxazbikfqcnnmhufh`.
+- Inspect the live DB read-only with `supabase db query --linked "<sql>"`.
+
+## PRs And Deploys
+
+- Merges are squash merges. "Automerge" means `gh pr merge --squash --auto`.
+  If the user asks for a review before merging, finish it before merging.
+- Vercel deploys from `master`. `vercel.json` pins the build/install commands
+  and overrides the dashboard. For a production 404 (`x-vercel-error:
+  NOT_FOUND`), check the latest deploy's build duration and logs
+  (`vercel ls --prod`, `vercel inspect --logs <url>`) before blaming quotas.
+- Vercel Production and Preview both need every server env var
+  (`SUPABASE_SECRET_KEY`, `CRON_SECRET`, `NO_REPLY_PASSWORD`).
+
+## Caching
+
+Public pages are statically cached with `revalidate = false` and invalidated on
+demand. **Never add time-based `revalidate`** (a number): it exhausted the
+Vercel ISR-write quota and took fasgba.com down. CI rejects it. Every mutation of
+cached content must call its invalidator in `lib/cache/` (`revalidateNewsCache`,
+`revalidateClubsCache`, `revalidateTorneosCache`, …); add new scopes in
+`lib/cache/scopes.ts`.
 
 ## Tech Stack
 
@@ -62,6 +103,14 @@ When schema changes, create a Supabase migration, run a dry run, apply it only
 when requested, regenerate `lib/database.types.ts`, and commit both the
 migration and generated types.
 
+Migrations and merges must not leave production broken. When opening a PR with
+a migration, tell the user whether it must be applied before merging (code
+depends on new columns/functions) or right after (restrictive policy changes),
+and ask. Never change production data (`update`/`delete`) without asking.
+
+Live policy names drift from the legacy SQL. Look them up in `pg_policies`
+before dropping, or drop them by lookup inside a `DO` block.
+
 ## Auth And Roles
 
 Supabase Auth owns identity and sessions. Roles are DB rows:
@@ -72,7 +121,9 @@ Supabase Auth owns identity and sessions. Roles are DB rows:
 - `user_follows_club`: normal user follow preferences.
 
 A user can be both a site admin and a club admin. Unauthenticated users can read
-public content. API routes should still check auth for clear UX/errors, and RLS
+public content, except documentos: site admins and club admins see them
+(`escuela` documents: site admins and `alumnos`), enforced by `can_view_documento` and a private
+storage bucket. API routes should still check auth for clear UX/errors, and RLS
 must remain the database backstop.
 
 Key files:
@@ -114,6 +165,8 @@ UI/API-specific names only at the feature boundary that needs them.
 - Server Components by default; use client components only for interactivity.
 - UI copy and emails are Spanish.
 - Use lucide-react icons in controls where available.
+- Read `docs/ui.md` before any UI work: palette, shared components, hover and
+  card rules, and how to screenshot.
 - Supabase keys: read them from `lib/supabase/keys.ts` (`SUPABASE_PUBLISHABLE_KEY`,
   `SUPABASE_SECRET_KEY`). Never expose the secret key to the client and never
   add it to `next.config` `env` (that inlines it into browser bundles).

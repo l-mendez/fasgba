@@ -36,3 +36,5 @@ public/*.xlsx
 
 # screenshots
 .prg-screenshots/
+# macOS
+.DS_Store

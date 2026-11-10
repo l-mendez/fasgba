@@ -65,20 +65,6 @@ export const ALLOWED_MIME_TYPES = [
 // Legacy single type for backwards compatibility
 export const ALLOWED_MIME_TYPE = 'application/pdf'
 
-// File type info for display
-export const FILE_TYPE_INFO: Record<string, { extension: string; label: string; color: string }> = {
-  'application/pdf': { extension: 'pdf', label: 'PDF', color: 'text-red-600 bg-red-100' },
-  'application/vnd.ms-excel': { extension: 'xls', label: 'Excel', color: 'text-green-600 bg-green-100' },
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { extension: 'xlsx', label: 'Excel', color: 'text-green-600 bg-green-100' },
-}
-
-/**
- * Get file type info from MIME type
- */
-export function getFileTypeInfo(mimeType: string): { extension: string; label: string; color: string } {
-  return FILE_TYPE_INFO[mimeType] || { extension: 'file', label: 'Archivo', color: 'text-gray-600 bg-gray-100' }
-}
-
 /**
  * Check if MIME type is allowed
  */

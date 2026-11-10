@@ -111,7 +111,7 @@ export function ImageUpload({
 
       <div className="space-y-2">
         <div
-          className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors relative"
+          className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:bg-muted transition-colors relative"
           onClick={handleClick}
         >
           <input
@@ -125,7 +125,7 @@ export function ImageUpload({
 
           {isUploading ? (
             <div className="py-8">
-              <Loader2 className="h-8 w-8 mx-auto animate-spin text-blue-500" />
+              <Loader2 className="h-8 w-8 mx-auto animate-spin text-terracotta" />
               <p className="mt-2 text-sm text-muted-foreground">Subiendo imagen...</p>
             </div>
           ) : preview ? (
@@ -153,7 +153,7 @@ export function ImageUpload({
             </div>
           ) : (
             <div className="py-8">
-              <ImageIcon className="h-12 w-12 mx-auto text-gray-400" />
+              <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground" />
               <p className="mt-2 text-sm font-medium">{placeholder}</p>
               <p className="text-xs text-muted-foreground mt-1">PNG, JPG o GIF (máx. 5MB)</p>
             </div>
@@ -162,9 +162,9 @@ export function ImageUpload({
 
         {error && (
           <div className="space-y-2">
-            <p className="text-sm text-red-600">{error}</p>
+            <p className="text-sm text-destructive">{error}</p>
             {error.includes('row-level security') && (
-              <div className="text-xs text-muted-foreground bg-yellow-50 p-2 rounded border">
+              <div className="text-xs text-muted-foreground bg-amber/15 p-2 rounded border">
                 <p><strong>Sugerencia:</strong> El error indica que faltan políticas de seguridad en Supabase Storage.</p>
                 <p>Ejecuta el archivo SQL <code>scripts/setup-storage-policies.sql</code> en tu panel de Supabase.</p>
               </div>

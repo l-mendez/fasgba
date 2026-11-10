@@ -14,7 +14,7 @@
     "db:push:dry-run": "supabase db push --dry-run --linked",
     "db:types": "supabase gen types typescript --linked --schema public > lib/database.types.ts",
     "migrate:ranking": "pnpm exec tsx scripts/migrate-ranking-to-supabase.ts",
-    "setup:storage": "pnpm exec tsx scripts/setup-storage-buckets.ts",
+    "shot": "node scripts/screenshot.mjs",
     "test:email": "node scripts/test-email.js",
     "send:admin-update": "pnpm exec tsx scripts/send-admin-update.ts"
   },
