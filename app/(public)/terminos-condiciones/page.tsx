@@ -23,8 +23,8 @@ export default function TerminosCondicionesPage() {
           <article className={LEGAL_PROSE}>
             <h2>1. Aceptación de los términos</h2>
             <p>
-              Bienvenido al sitio web de la Federación de Ajedrez del Sur del Gran Buenos Aires ("FASGBA", "nosotros" o "nuestro"). 
-              Al acceder y usar fasgba.com (el "Sitio"), usted acepta estar sujeto a estos Términos y Condiciones ("Términos").
+              Bienvenido al sitio web de la Federación de Ajedrez del Sur del Gran Buenos Aires (&quot;FASGBA&quot;, &quot;nosotros&quot; o &quot;nuestro&quot;). 
+              Al acceder y usar fasgba.com (el &quot;Sitio&quot;), usted acepta estar sujeto a estos Términos y Condiciones (&quot;Términos&quot;).
             </p>
             <p>
               Si no está de acuerdo con estos Términos, por favor no use el Sitio. Nos reservamos el derecho de modificar 
@@ -33,11 +33,11 @@ export default function TerminosCondicionesPage() {
 
             <h2>2. Definiciones</h2>
             <ul>
-              <li><strong>"Usuario":</strong> Cualquier persona que acceda o use el Sitio</li>
-              <li><strong>"Cuenta":</strong> Perfil de usuario registrado en el Sitio</li>
-              <li><strong>"Contenido":</strong> Toda información, texto, imágenes y datos en el Sitio</li>
-              <li><strong>"Servicios":</strong> Funcionalidades proporcionadas a través del Sitio</li>
-              <li><strong>"Club Afiliado":</strong> Club de ajedrez reconocido oficialmente por FASGBA</li>
+              <li><strong>&quot;Usuario&quot;:</strong> Cualquier persona que acceda o use el Sitio</li>
+              <li><strong>&quot;Cuenta&quot;:</strong> Perfil de usuario registrado en el Sitio</li>
+              <li><strong>&quot;Contenido&quot;:</strong> Toda información, texto, imágenes y datos en el Sitio</li>
+              <li><strong>&quot;Servicios&quot;:</strong> Funcionalidades proporcionadas a través del Sitio</li>
+              <li><strong>&quot;Club Afiliado&quot;:</strong> Club de ajedrez reconocido oficialmente por FASGBA</li>
             </ul>
 
             <h2>3. Uso del sitio</h2>
@@ -193,7 +193,7 @@ export default function TerminosCondicionesPage() {
               En la medida máxima permitida por la ley:
             </p>
             <ul>
-              <li>El Sitio se proporciona "tal cual" y "según disponibilidad"</li>
+              <li>El Sitio se proporciona &quot;tal cual&quot; y &quot;según disponibilidad&quot;</li>
               <li>No garantizamos que el Sitio esté libre de errores o interrupciones</li>
               <li>No somos responsables de daños directos, indirectos, incidentales o consecuentes</li>
               <li>No somos responsables por contenido de terceros o enlaces externos</li>

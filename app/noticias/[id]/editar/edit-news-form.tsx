@@ -157,7 +157,7 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
     }
   }
 
-  const handleFeaturedImageUpload = (filePath: string, _publicUrl: string) => {
+  const handleFeaturedImageUpload = (filePath: string) => {
     setNews({ ...news, image: filePath })
   }
 

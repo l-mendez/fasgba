@@ -188,7 +188,7 @@ export function buildTournamentApiPayload(formData: TournamentFormData) {
   }
 
   return Object.fromEntries(
-    Object.entries(tournamentData).filter(([_, value]) => value !== undefined)
+    Object.entries(tournamentData).filter((entry) => entry[1] !== undefined)
   )
 }
 

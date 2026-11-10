@@ -38,7 +38,7 @@ export function PlayerSelector({
           <Input placeholder="Nombre del jugador" value={value || ""} onChange={(e) => onChange(e.target.value)} />
         )}
 
-        {type === "anonymous" && <p className="text-sm text-muted-foreground">El jugador aparecerá como "Anónimo"</p>}
+        {type === "anonymous" && <p className="text-sm text-muted-foreground">El jugador aparecerá como &quot;Anónimo&quot;</p>}
       </div>
     </div>
   )

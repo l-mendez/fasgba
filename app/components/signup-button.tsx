@@ -17,11 +17,9 @@ export interface SignupButtonProps {
 
 function SignupButtonContent(props: SignupButtonProps) {
   return (
-    <AuthButton
-      {...props}
-      mode="signup"
-      children={props.children || "Registrarse"}
-    />
+    <AuthButton {...props} mode="signup">
+      {props.children || "Registrarse"}
+    </AuthButton>
   )
 }
 

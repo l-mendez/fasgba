@@ -326,9 +326,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Authenticate and authorize user
-    let user
     try {
-      user = await authenticateAndAuthorize(request, tournamentIdNum)
+      await authenticateAndAuthorize(request, tournamentIdNum)
     } catch (authError) {
       if (authError instanceof Error) {
         switch (authError.message) {
