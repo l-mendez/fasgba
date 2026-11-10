@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -38,20 +38,23 @@ export function RoundFormDialog({
   onSuccess
 }: RoundFormDialogProps) {
   const [loading, setLoading] = useState(false)
+  const roundCount = existingRounds.length
   const [roundFormData, setRoundFormData] = useState<RoundFormData>({
-    round_number: 1,
+    round_number: roundCount + 1,
     matches: []
   })
 
-  // Reset form when dialog opens or rounds change
-  useEffect(() => {
+  // Reset form when dialog opens or rounds change while open
+  const [prevReset, setPrevReset] = useState({ open, roundCount })
+  if (open !== prevReset.open || roundCount !== prevReset.roundCount) {
+    setPrevReset({ open, roundCount })
     if (open) {
       setRoundFormData({
-        round_number: existingRounds.length + 1,
+        round_number: roundCount + 1,
         matches: []
       })
     }
-  }, [open, existingRounds.length])
+  }
 
   const addMatch = () => {
     setRoundFormData(prev => ({
