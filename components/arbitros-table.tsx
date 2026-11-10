@@ -91,7 +91,7 @@ export function ArbitrosTable({ initialArbitros }: ArbitrosTableProps) {
     }
 
     return [...result].sort((a, b) => {
-      let aVal: any, bVal: any
+      let aVal: string, bVal: string
       switch (sortBy) {
         case 'name': aVal = a.name.toLowerCase(); bVal = b.name.toLowerCase(); break
         case 'title': aVal = a.title.toLowerCase(); bVal = b.title.toLowerCase(); break

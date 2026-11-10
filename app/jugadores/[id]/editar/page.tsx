@@ -117,7 +117,7 @@ export default function EditarJugadorPage() {
         } else if (isClubAdmin) {
           // Club admins can only see their clubs
           const adminClubsData = await apiCall('/api/users/me/admin-clubs')
-          const userClubs: Club[] = (adminClubsData || []).map((item: any) => item.clubs || item).filter(Boolean)
+          const userClubs: Club[] = (adminClubsData || []).map((item: Club & { clubs?: Club }) => item.clubs || item).filter(Boolean)
           setAdminClubs(userClubs)
           setClubs(userClubs)
 
@@ -183,9 +183,9 @@ export default function EditarJugadorPage() {
       toast.success('Jugador actualizado exitosamente')
       
       router.push(listPath)
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating player:', error)
-      const errorMessage = error.message || 'Error al actualizar jugador'
+      const errorMessage = (error instanceof Error && error.message) || 'Error al actualizar jugador'
       toast.error(errorMessage)
     } finally {
       setIsSubmitting(false)
@@ -203,9 +203,9 @@ export default function EditarJugadorPage() {
       toast.success('Jugador eliminado exitosamente')
       
       router.push(listPath)
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting player:', error)
-      const errorMessage = error.message || 'Error al eliminar jugador'
+      const errorMessage = (error instanceof Error && error.message) || 'Error al eliminar jugador'
       toast.error(errorMessage)
     } finally {
       setIsDeleting(false)

@@ -1,5 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { ClubRow } from '@/lib/db-types'
 import type { BroadcastInput, EmailContent } from './types'
+
+// Embedded many-to-one `clubs (name)`: an object (or null) at runtime.
+type ClubName = Pick<ClubRow, 'name'> | null
 
 export async function buildEmailContent(
   input: BroadcastInput,
@@ -14,9 +18,10 @@ export async function buildEmailContent(
       .select(`id, title, extract, date, club_id, clubs (name)`)
       .eq('id', input.newsId)
       .single()
+      .overrideTypes<{ clubs: ClubName }>()
     if (error || !newsData) return null
 
-    const clubData = newsData.clubs as any
+    const clubData: ClubName = newsData.clubs
     const newsSource = clubData?.name || 'FASGBA'
     const newsUrl = `${baseUrl}/noticias/${newsData.id}`
     const category = newsData.club_id ? 'news_club' : 'news_fasgba'
@@ -50,9 +55,10 @@ export async function buildEmailContent(
       .select(`id, title, description, place, created_by_club_id, clubs (name)`)
       .eq('id', input.tournamentId)
       .single()
+      .overrideTypes<{ clubs: ClubName }>()
     if (error || !t) return null
 
-    const clubData = t.clubs as any
+    const clubData: ClubName = t.clubs
     const source = clubData?.name || 'FASGBA'
     const tournamentUrl = `${baseUrl}/torneos/${t.id}`
 

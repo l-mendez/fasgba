@@ -10,6 +10,7 @@ import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
 import { AdminPageHeader } from "@/components/admin-page-header"
 import { ArbitrosTable } from "@/components/arbitros-table"
 import { ErrorAlert } from "@/components/error-alert"
+import type { ArbitroRow as ArbitroDbRow, ClubRow } from "@/lib/db-types"
 
 interface ArbitroRow {
   id: number
@@ -52,7 +53,7 @@ async function fetchArbitros(): Promise<ArbitroRow[]> {
       throw new Error('Error al obtener los árbitros')
     }
 
-    return (data || []).map((item: any) => ({
+    return (data || []).map((item: ArbitroDbRow & { clubs: Pick<ClubRow, "name"> | null }) => ({
       id: item.id,
       name: item.name,
       title: item.title,

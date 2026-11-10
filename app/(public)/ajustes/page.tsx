@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import type { ComponentProps } from "react"
 import { redirect } from "next/navigation"
 import { PageHero } from "@/components/page-hero"
 import { SettingsForm } from "@/components/settings-form"
@@ -26,7 +27,8 @@ export default async function AjustesPage({
     const qs = params.toString()
     redirect(`/login?redirect=${encodeURIComponent(qs ? `/ajustes?${qs}` : '/ajustes')}`)
   }
-  const initial = (user.user_metadata as any)?.notifications || null
+  const initial: ComponentProps<typeof SettingsForm>["initial"] | null =
+    user.user_metadata?.notifications || null
   return (
     <>
       <PageHero title="Ajustes" />

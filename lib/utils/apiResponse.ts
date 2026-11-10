@@ -6,21 +6,21 @@ export interface ApiError {
   details?: string
 }
 
-export interface ApiSuccess<T = any> {
+export interface ApiSuccess<T = unknown> {
   data?: T
   success?: boolean
-  [key: string]: any
+  [key: string]: unknown
 }
 
 /**
  * Creates a successful API response
  */
-export function apiSuccess<T = any>(
+export function apiSuccess<T = unknown>(
   data: T, 
   status: number = 200,
   headers?: Record<string, string>
 ): NextResponse {
-  let responseBody: any
+  let responseBody: unknown
   
   // Handle different response formats
   if (data === null || data === undefined) {
@@ -171,6 +171,6 @@ export function noContent(): NextResponse {
 /**
  * Created response (201)
  */
-export function created<T = any>(data: T): NextResponse {
+export function created<T = unknown>(data: T): NextResponse {
   return apiSuccess(data, 201)
 } 

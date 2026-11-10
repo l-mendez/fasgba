@@ -6,6 +6,7 @@ import { unstable_cache } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { PageHero } from "@/components/page-hero"
 import { getImageUrlNullable } from "@/lib/imageUtils"
+import type { ArbitroRow, ClubRow } from "@/lib/db-types"
 
 // Cached indefinitely, purged by revalidateArbitrosCache on mutation.
 export const revalidate = false
@@ -36,7 +37,7 @@ async function fetchArbitros(): Promise<ArbitroWithClub[]> {
       return []
     }
 
-    return (data || []).map((item: any) => ({
+    return (data || []).map((item: ArbitroRow & { clubs: Pick<ClubRow, "name"> | null }) => ({
       id: item.id,
       name: item.name,
       title: item.title,
