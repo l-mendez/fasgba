@@ -32,7 +32,7 @@ pnpm run db:types         # Regenerate lib/database.types.ts from Supabase
 pnpm run migrate:ranking  # Migrate ranking data
 pnpm run send:admin-update  # Send admin update emails
 pnpm run test:email       # Test email configuration
-pnpm shot <path> [--mobile] [--dark] [--all]  # Full-page screenshots → .context/shots/
+pnpm shot <path> [--mobile] [--dark] [--all] [--auth]  # Full-page screenshots → .context/shots/ (--auth: logged in as SHOT_EMAIL)
 ```
 
 ## Local Environment

@@ -1,13 +1,15 @@
 // Full-page headless screenshots of the running dev server, via Chrome DevTools
 // Protocol (headless --window-size can't go below 500px, so 390px needs emulation).
-// Usage: pnpm shot <path> [--mobile] [--dark] [--all]
+// Usage: pnpm shot <path> [--mobile] [--dark] [--all] [--auth]
 //   pnpm shot /clubes --mobile --dark -> .context/shots/clubes-390-dark.png
 //   pnpm shot /clubes --all           -> desktop + mobile, light + dark
-// Base URL: $SHOT_BASE_URL or http://localhost:${CONDUCTOR_PORT:-3000}. Logged out only.
+//   pnpm shot /admin --auth           -> logged in as SHOT_EMAIL (see scripts/shot-auth.mjs)
+// Base URL: $SHOT_BASE_URL or http://localhost:${CONDUCTOR_PORT:-3000}.
 import { spawn } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { authCookies } from './shot-auth.mjs'
 
 const args = process.argv.slice(2)
 const path = args.find((a) => !a.startsWith('--')) ?? '/'
@@ -18,6 +20,7 @@ const base = process.env.SHOT_BASE_URL ?? `http://localhost:${process.env.CONDUC
 const chromeBin = process.env.CHROME_BIN ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const outDir = resolve(import.meta.dirname, '../.context/shots')
 const slug = path.replace(/^\//, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/-$/, '') || 'home'
+const cookies = has('--auth') ? await authCookies(base) : []
 
 const profile = mkdtempSync(join(tmpdir(), 'shot-'))
 const chrome = spawn(chromeBin, [
@@ -54,6 +57,7 @@ const once = (method) => new Promise((resolve) => waiters.push({ method, resolve
 
 try {
   mkdirSync(outDir, { recursive: true })
+  if (cookies.length) await send('Storage.setCookies', { cookies })
   const { targetId } = await send('Target.createTarget', { url: 'about:blank' })
   const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true })
   const s = (method, params) => send(method, params, sessionId)
@@ -67,9 +71,12 @@ try {
       const loaded = once('Page.loadEventFired')
       await s('Page.navigate', { url: base + path })
       await loaded
+      const { entries, currentIndex } = await s('Page.getNavigationHistory')
+      const landed = new URL(entries[currentIndex].url)
+      if (landed.pathname !== new URL(base + path).pathname) console.warn(`redirected to ${landed.pathname}`)
       await new Promise((r) => setTimeout(r, 1500)) // let client data and images settle
       const { data } = await s('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true })
-      const file = join(outDir, `${slug}-${width}-${theme}.png`)
+      const file = join(outDir, `${slug}-${width}-${theme}${cookies.length ? '-auth' : ''}.png`)
       writeFileSync(file, Buffer.from(data, 'base64'))
       console.log(file)
     }
