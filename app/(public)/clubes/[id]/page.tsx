@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { notFound } from "next/navigation"
 import { ChevronLeft, ChevronRight, Mail, MapPin, Phone, Clock, Calendar, User, Heart, ImageIcon, Tag, Users } from "lucide-react"
 import { Metadata } from "next"
@@ -129,7 +130,15 @@ export default async function ClubDetailPage({ params }: ClubDetailPageProps) {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
             <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-white md:h-36 md:w-36">
               {imageUrl ? (
-                <img src={imageUrl} alt={`Imagen de ${club.name}`} className="h-full w-full object-contain p-2" />
+                <Image
+                  src={imageUrl}
+                  alt={`Imagen de ${club.name}`}
+                  width={144}
+                  height={144}
+                  unoptimized
+                  loading="eager"
+                  className="h-full w-full object-contain p-2"
+                />
               ) : (
                 <ImageIcon className="h-10 w-10 text-muted-foreground" />
               )}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Heart } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -30,10 +30,13 @@ export function ClubFollowButton({
   const [isLoading, setIsLoading] = useState(false)
   const { user } = useAuth()
 
-  // Update follow state when initialIsFollowing prop changes
-  useEffect(() => {
+  // Update follow state when initialIsFollowing prop changes (adjusted during
+  // render, so the stale value is never painted).
+  const [prevInitialIsFollowing, setPrevInitialIsFollowing] = useState(initialIsFollowing)
+  if (prevInitialIsFollowing !== initialIsFollowing) {
+    setPrevInitialIsFollowing(initialIsFollowing)
     setIsFollowing(initialIsFollowing)
-  }, [initialIsFollowing])
+  }
 
   // Don't render anything if user is not authenticated
   if (!isUserAuthenticated) {

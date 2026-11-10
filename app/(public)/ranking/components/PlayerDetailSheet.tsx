@@ -81,31 +81,35 @@ export function PlayerDetailSheet({
   open,
   onOpenChange,
 }: PlayerDetailSheetProps) {
-  const [details, setDetails] = useState<TournamentDetail[]>([]);
+  const playerId = player?.id;
+  const url =
+    open && playerId
+      ? `/api/ranking/analytics?ranking=${encodeURIComponent(rankingFilename)}&playerId=${encodeURIComponent(playerId)}`
+      : null;
+
+  // History tagged with the request it came from, so the previous player's
+  // history never shows under the newly selected player while the new request
+  // is in flight (or once the sheet is closed).
+  const [result, setResult] = useState<{ url: string; details: TournamentDetail[] } | null>(null);
+  const details = url !== null && result?.url === url ? result.details : [];
 
   useEffect(() => {
-    // Clear the previous player's history right away so it never shows under
-    // the newly selected player while the new request is in flight.
-    setDetails([]);
-    const playerId = player?.id;
-    if (!open || !playerId) return;
+    if (url === null) return;
 
     const controller = new AbortController();
-    fetch(
-      `/api/ranking/analytics?ranking=${encodeURIComponent(rankingFilename)}&playerId=${encodeURIComponent(playerId)}`,
-      { signal: controller.signal }
-    )
+    fetch(url, { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
       .then((data) => {
         // apiSuccess returns the payload unwrapped: { details }
-        setDetails(Array.isArray(data?.details) ? data.details : []);
+        setResult({ url, details: Array.isArray(data?.details) ? data.details : [] });
       })
       .catch(() => {
-        if (!controller.signal.aborted) setDetails([]);
+        if (!controller.signal.aborted) setResult({ url, details: [] });
       });
 
     return () => controller.abort();
-  }, [open, player, rankingFilename]);
+    // `player` keeps the previous refetch-on-new-player-object behavior.
+  }, [url, player]);
 
   if (!player) return null;
 

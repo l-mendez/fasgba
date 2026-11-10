@@ -3,6 +3,7 @@
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { AlertTriangle, ArrowLeft, Upload, X, ImageIcon, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -242,9 +243,13 @@ export function EditarClubClient({ club }: EditarClubClientProps) {
               {/* Current Image Display */}
               {(currentImage || imagePreview) && !pendingImageDeletion && (
                 <div className="relative inline-block">
-                  <img
+                  <Image
                     src={imagePreview || getCurrentImageUrl() || ''}
                     alt="Imagen del club"
+                    width={128}
+                    height={128}
+                    unoptimized
+                    loading="eager"
                     className="h-32 w-32 object-cover rounded-lg border"
                   />
                   {!isUploadingImage && (

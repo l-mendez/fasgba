@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useEffectEvent } from 'react'
 import { toast } from 'sonner'
 import { apiCall } from '@/lib/utils/apiClient'
 
@@ -72,7 +72,7 @@ export function useTeamRoster({ tournamentId, tournamentType, restrictToClubIds 
 
   // Player roster state
   const [teamPlayers, setTeamPlayers] = useState<Record<number, TeamPlayer[]>>({})
-  const [loadingPlayers, setLoadingPlayers] = useState(false)
+  const [loadingPlayers, setLoadingPlayers] = useState(tournamentType === 'team')
   const [expandedTeamId, setExpandedTeamId] = useState<number | null>(null)
   const [addPlayerTeamId, setAddPlayerTeamId] = useState<number | null>(null)
   const [playerSearch, setPlayerSearch] = useState('')
@@ -84,56 +84,47 @@ export function useTeamRoster({ tournamentId, tournamentType, restrictToClubIds 
   const [newPlayerRating, setNewPlayerRating] = useState('')
   const [addingPlayer, setAddingPlayer] = useState(false)
 
+  // load* set state only in promise callbacks, so the mount effect can start
+  // them; the fetch* wrappers used by handlers also show the spinner first.
+  const loadRegisteredTeams = useCallback(
+    () => apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
+      .then((data) => setRegisteredTeams(data.teams || []))
+      .catch((error) => {
+        console.error('Error fetching registered teams:', error)
+        toast.error('Error al cargar equipos registrados')
+      })
+      .finally(() => setFetchingTeams(false)),
+    [tournamentId]
+  )
+
   const fetchRegisteredTeams = async () => {
-    try {
-      setFetchingTeams(true)
-      const data = await apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
-      setRegisteredTeams(data.teams || [])
-    } catch (error) {
-      console.error('Error fetching registered teams:', error)
-      toast.error('Error al cargar equipos registrados')
-    } finally {
-      setFetchingTeams(false)
-    }
+    setFetchingTeams(true)
+    await loadRegisteredTeams()
   }
 
-  const fetchTournamentPlayers = useCallback(async () => {
-    try {
-      setLoadingPlayers(true)
-      const data = await apiCall(`/api/tournaments/${tournamentId}/players`)
-      const players: TeamPlayer[] = data.players || []
-      // Group players by team
-      const grouped: Record<number, TeamPlayer[]> = {}
-      for (const player of players) {
-        const teamId = player.team?.id
-        if (teamId) {
-          if (!grouped[teamId]) grouped[teamId] = []
-          grouped[teamId].push(player)
+  const loadTournamentPlayers = useCallback(
+    () => apiCall(`/api/tournaments/${tournamentId}/players`)
+      .then((data) => {
+        const players: TeamPlayer[] = data.players || []
+        // Group players by team
+        const grouped: Record<number, TeamPlayer[]> = {}
+        for (const player of players) {
+          const teamId = player.team?.id
+          if (teamId) {
+            if (!grouped[teamId]) grouped[teamId] = []
+            grouped[teamId].push(player)
+          }
         }
-      }
-      setTeamPlayers(grouped)
-    } catch (error) {
-      console.error('Error fetching tournament players:', error)
-    } finally {
-      setLoadingPlayers(false)
-    }
-  }, [tournamentId])
+        setTeamPlayers(grouped)
+      })
+      .catch((error) => console.error('Error fetching tournament players:', error))
+      .finally(() => setLoadingPlayers(false)),
+    [tournamentId]
+  )
 
-  const fetchAvailableClubs = async () => {
-    try {
-      const data = await apiCall('/api/clubs')
-      let clubs = data.clubs || []
-      if (restrictToClubIds) {
-        clubs = clubs.filter((c: Club) => restrictToClubIds.includes(c.id))
-      }
-      setAvailableClubs(clubs)
-      if (clubs.length === 1) {
-        setSelectedClubId(clubs[0].id)
-      }
-    } catch (error) {
-      console.error('Error fetching clubs:', error)
-      toast.error('Error al cargar clubes')
-    }
+  const fetchTournamentPlayers = async () => {
+    setLoadingPlayers(true)
+    await loadTournamentPlayers()
   }
 
   const fetchClubTeams = async (clubId: number) => {
@@ -150,33 +141,61 @@ export function useTeamRoster({ tournamentId, tournamentType, restrictToClubIds 
     }
   }
 
-  useEffect(() => {
-    if (tournamentType === 'team') {
-      fetchRegisteredTeams()
-      fetchAvailableClubs()
-      fetchTournamentPlayers()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tournamentId, tournamentType, fetchTournamentPlayers])
-
-  useEffect(() => {
-    if (selectedClubId) {
-      fetchClubTeams(selectedClubId)
-      setSelectedTeamId(null)
+  // Picking a club resets the team choice and loads that club's teams
+  const selectClub = (clubId: number | null) => {
+    if (clubId === selectedClubId) return
+    setSelectedClubId(clubId)
+    setSelectedTeamId(null)
+    if (clubId) {
       setIsCreateTeamMode(false)
       setNewTeamName('')
+      fetchClubTeams(clubId)
     } else {
       setClubTeams([])
-      setSelectedTeamId(null)
     }
-  }, [selectedClubId])
+  }
+
+  // Effect event: reads the latest restrictToClubIds/selection without making
+  // the mount effect refetch when the prop array's identity changes.
+  const onClubsLoaded = useEffectEvent((allClubs: Club[]) => {
+    const clubs = restrictToClubIds
+      ? allClubs.filter((c) => restrictToClubIds.includes(c.id))
+      : allClubs
+    setAvailableClubs(clubs)
+    if (clubs.length === 1) {
+      selectClub(clubs[0].id)
+    }
+  })
+
+  useEffect(() => {
+    if (tournamentType !== 'team') return
+
+    // Ignore a superseded response so a single club is auto-selected once
+    let ignore = false
+    loadRegisteredTeams()
+    apiCall('/api/clubs')
+      .then((data) => {
+        if (!ignore) onClubsLoaded(data.clubs || [])
+      })
+      .catch((error) => {
+        console.error('Error fetching clubs:', error)
+        toast.error('Error al cargar clubes')
+      })
+    loadTournamentPlayers()
+    return () => {
+      ignore = true
+    }
+  }, [tournamentType, loadRegisteredTeams, loadTournamentPlayers])
+
+  // Queries under 2 characters show no results
+  const updatePlayerSearch = (value: string) => {
+    setPlayerSearch(value)
+    if (value.trim().length < 2) setSearchResults([])
+  }
 
   // Debounced player search
   useEffect(() => {
-    if (!playerSearch.trim() || playerSearch.trim().length < 2) {
-      setSearchResults([])
-      return
-    }
+    if (playerSearch.trim().length < 2) return
 
     const timer = setTimeout(async () => {
       setSearchingPlayers(true)
@@ -404,7 +423,7 @@ export function useTeamRoster({ tournamentId, tournamentType, restrictToClubIds 
     loading,
     fetchingTeams,
     selectedClubId,
-    setSelectedClubId,
+    setSelectedClubId: selectClub,
     selectedTeamId,
     setSelectedTeamId,
     loadingClubTeams,
@@ -416,7 +435,7 @@ export function useTeamRoster({ tournamentId, tournamentType, restrictToClubIds 
     addPlayerTeamId,
     setAddPlayerTeamId,
     playerSearch,
-    setPlayerSearch,
+    setPlayerSearch: updatePlayerSearch,
     searchResults,
     setSearchResults,
     searchingPlayers,

@@ -1,4 +1,5 @@
 import { getAdminClient } from '@/lib/supabase/admin'
+import type { DbRow } from '@/lib/db-types'
 import type { ClubNews, DateFilterOptions } from './types'
 
 /**
@@ -123,7 +124,7 @@ export async function getClubTournamentCount(clubId: number, options: DateFilter
     // Filter tournaments based on date range overlap
     const filteredTournamentIds = tournamentsWithDates
       .filter(tournament => {
-        const dates = tournament.tournament_dates.map((d: any) => d.event_date).sort()
+        const dates = tournament.tournament_dates.map((d) => d.event_date).sort()
         if (dates.length === 0) return false
 
         const earliestDate = dates[0]
@@ -193,7 +194,7 @@ export async function getClubTournaments(clubId: number, options: DateFilterOpti
     // Filter tournaments based on date range overlap
     const filteredTournaments = tournamentsWithDates
       .filter(tournament => {
-        const dates = tournament.tournament_dates.map((d: any) => d.event_date).sort()
+        const dates = tournament.tournament_dates.map((d: Pick<DbRow<'tournamentdates'>, 'event_date'>) => d.event_date).sort()
         if (dates.length === 0) return false
 
         const earliestDate = dates[0]

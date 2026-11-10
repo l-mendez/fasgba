@@ -75,7 +75,7 @@ export default function NuevoJugadorPage() {
         } else if (isClubAdmin) {
           // Club admins can only see their clubs
           const adminClubsData = await apiCall('/api/users/me/admin-clubs')
-          const adminClubs = (adminClubsData || []).map((item: any) => item.clubs || item).filter(Boolean)
+          const adminClubs = (adminClubsData || []).map((item: Club & { clubs?: Club }) => item.clubs || item).filter(Boolean)
           setAdminClubs(adminClubs)
           setClubs(adminClubs)
         }
@@ -126,9 +126,9 @@ export default function NuevoJugadorPage() {
       toast.success('Jugador creado exitosamente')
       
       router.push(listPath)
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating player:', error)
-      const errorMessage = error.message || 'Error al crear jugador'
+      const errorMessage = (error instanceof Error && error.message) || 'Error al crear jugador'
       toast.error(errorMessage)
     } finally {
       setIsSubmitting(false)

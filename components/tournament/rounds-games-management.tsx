@@ -54,7 +54,6 @@ export default function RoundsGamesManagement({
   const [teams, setTeams] = useState<Team[]>([])
   const [isAddRoundDialogOpen, setIsAddRoundDialogOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [fetchingTeams, setFetchingTeams] = useState(false)
 
   // Pending destructive action, confirmed through an AlertDialog
   const [pendingDelete, setPendingDelete] = useState<{
@@ -75,19 +74,6 @@ export default function RoundsGamesManagement({
   })
 
   // Game management functions
-  // Team games pick from the players registered to each team. Individual
-  // games search all players in the dialog (PlayerSearchField).
-  const fetchPlayers = async () => {
-    if (tournamentType !== 'team') return
-    try {
-      const data = await apiCall(`/api/tournaments/${tournamentId}/players`)
-      setPlayers(data.players || [])
-    } catch (error) {
-      console.error('Error fetching players:', error)
-      toast.error('Error al cargar jugadores')
-    }
-  }
-
   const fetchMatches = async (roundId: number) => {
     try {
       const data = await apiCall(`/api/tournaments/${tournamentId}/rounds/${roundId}/matches`)
@@ -109,49 +95,70 @@ export default function RoundsGamesManagement({
     }
   }
 
-  // Round management functions
-  const fetchTeams = async () => {
-    if (tournamentType !== 'team') return
-
-    try {
-      setFetchingTeams(true)
-      const data = await apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
-      const transformedTeams = data.teams?.map((reg: any) => ({
-        id: reg.teams.id,
-        name: reg.teams.name
-      })) || []
-      setTeams(transformedTeams)
-    } catch (error) {
-      console.error('Error fetching registered teams:', error)
-      toast.error('Error al cargar equipos registrados')
-    } finally {
-      setFetchingTeams(false)
-    }
+  // Update games/rounds when the server props change
+  const [prevInitialGames, setPrevInitialGames] = useState(initialGames)
+  if (initialGames !== prevInitialGames) {
+    setPrevInitialGames(initialGames)
+    setGames(initialGames)
+  }
+  const [prevInitialRounds, setPrevInitialRounds] = useState(initialRounds)
+  if (initialRounds !== prevInitialRounds) {
+    setPrevInitialRounds(initialRounds)
+    setRounds(initialRounds)
   }
 
-  // Update games when initialGames prop changes
+  // Team games pick from the players registered to each team (individual
+  // games search all players in the dialog, PlayerSearchField), and from the
+  // selected round's matches. Responses for a stale round are dropped.
   useEffect(() => {
-    setGames(initialGames)
-  }, [initialGames])
+    if (tournamentType !== 'team') return
 
-  // Update rounds when initialRounds prop changes
-  useEffect(() => {
-    setRounds(initialRounds)
-  }, [initialRounds])
-
-  // Fetch data when component mounts or dependencies change
-  useEffect(() => {
-    fetchPlayers()
-    if (tournamentType === 'team' && selectedRound) {
-      fetchMatches(selectedRound)
+    let ignore = false
+    apiCall(`/api/tournaments/${tournamentId}/players`)
+      .then((data) => {
+        if (!ignore) setPlayers(data.players || [])
+      })
+      .catch((error) => {
+        console.error('Error fetching players:', error)
+        toast.error('Error al cargar jugadores')
+      })
+    if (selectedRound) {
+      apiCall(`/api/tournaments/${tournamentId}/rounds/${selectedRound}/matches`)
+        .then((data) => {
+          if (!ignore) setMatches(data.matches || [])
+        })
+        .catch((error) => console.error('Error fetching matches:', error))
+    }
+    return () => {
+      ignore = true
     }
   }, [tournamentId, tournamentType, selectedRound])
 
+  // Registered teams for the match pickers; fetchingTeams is true until the
+  // current tournament's teams have loaded (or failed).
+  const [teamsLoadedFor, setTeamsLoadedFor] = useState<string | null>(null)
+  const fetchingTeams = tournamentType === 'team' && teamsLoadedFor !== tournamentId
   useEffect(() => {
-    if (tournamentType === 'team') {
-      fetchTeams()
+    if (tournamentType !== 'team') return
+
+    let ignore = false
+    apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
+      .then((data) => {
+        if (ignore) return
+        const registrations: { teams: Team }[] = data.teams || []
+        setTeams(registrations.map((reg) => ({ id: reg.teams.id, name: reg.teams.name })))
+      })
+      .catch((error) => {
+        console.error('Error fetching registered teams:', error)
+        toast.error('Error al cargar equipos registrados')
+      })
+      .finally(() => {
+        if (!ignore) setTeamsLoadedFor(tournamentId)
+      })
+    return () => {
+      ignore = true
     }
-  }, [tournamentType])
+  }, [tournamentId, tournamentType])
 
   const fetchRounds = async () => {
     try {

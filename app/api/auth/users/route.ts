@@ -1,5 +1,6 @@
 import { getAdminClient } from '@/lib/supabase/admin'
 import { NextRequest } from 'next/server'
+import type { AdminRow, ClubAdminRow, ClubRow } from '@/lib/db-types'
 
 export async function GET(request: NextRequest) {
   const supabaseAdmin = getAdminClient()
@@ -58,12 +59,13 @@ export async function GET(request: NextRequest) {
         club_id,
         club:clubs(id, name)
       `)
+      .overrideTypes<(ClubAdminRow & { club: Pick<ClubRow, 'id' | 'name'> | null })[], { merge: false }>()
     
     // Create sets for quick lookup
-    const adminIds = new Set((admins || []).map((a: any) => a.auth_id))
+    const adminIds = new Set((admins || []).map((a: Pick<AdminRow, 'auth_id'>) => a.auth_id))
     const clubAdminData: Record<string, string[]> = {}
     
-    ;(clubAdmins || []).forEach((ca: any) => {
+    ;(clubAdmins || []).forEach((ca) => {
       if (!clubAdminData[ca.auth_id]) {
         clubAdminData[ca.auth_id] = []
       }
@@ -71,7 +73,7 @@ export async function GET(request: NextRequest) {
     })
     
     // Transform the users data to match our interface
-    const transformedUsers = users.map((authUser: any) => ({
+    const transformedUsers = users.map((authUser) => ({
       id: authUser.id,
       email: authUser.email || 'email@no-disponible.com',
       emailVerified: authUser.email_confirmed_at !== null,

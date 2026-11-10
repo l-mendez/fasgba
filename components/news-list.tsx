@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 
 import { Button } from "@/components/ui/button"
 import { NewsFilters } from "@/components/news-filters"
@@ -27,6 +27,30 @@ function federationFirst(news: NewsDisplay[]): NewsDisplay[] {
   ]
 }
 
+type View = { tag: string; club: string; page: number }
+
+const DEFAULT_VIEW: View = { tag: "all", club: "all", page: 1 }
+
+// Valid filters/page from a query string; unknown values fall back to defaults.
+function viewFromSearch(search: string, tags: string[], clubs: Club[]): View {
+  const params = new URLSearchParams(search)
+  const tag = params.get("tag")
+  const club = params.get("club")
+  const pageParam = Number(params.get("page"))
+  return {
+    tag: tag && (tag === "all" || tags.includes(tag)) ? tag : "all",
+    club:
+      club && (club === "all" || club === "fasgba" || clubs.some((c) => c.id.toString() === club))
+        ? club
+        : "all",
+    page: Number.isInteger(pageParam) && pageParam > 1 ? pageParam : 1,
+  }
+}
+
+const subscribeNoop = () => () => {}
+const getLocationSearch = () => window.location.search
+const getServerSearch = () => null
+
 interface NewsListProps {
   allNews: NewsDisplay[]
   tags: string[]
@@ -37,32 +61,20 @@ interface NewsListProps {
 // stay statically prerendered. Filter state is local (useState), so the default
 // unfiltered view renders into the static HTML — good for SEO and first paint.
 export function NewsList({ allNews, tags, clubs }: NewsListProps) {
-  const [selectedTag, setSelectedTag] = useState("all")
-  const [selectedClub, setSelectedClub] = useState("all")
-  const [currentPage, setCurrentPage] = useState(1)
-  // True once the state has been seeded from the URL; until then the URL is
-  // left untouched so a deep link isn't overwritten by the defaults.
-  const [urlSeeded, setUrlSeeded] = useState(false)
-  const listTopRef = useRef<HTMLDivElement>(null)
-
-  // Seed filters/page from the URL on mount so deep links (/noticias?tag=foo,
-  // tag badges on cards, Back from an article) land on the same view. Reading
+  // Seed filters/page from the URL so deep links (/noticias?tag=foo, tag badges
+  // on cards, Back from an article) land on the same view. Reading
   // window.location keeps the page statically prerenderable (no useSearchParams).
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const tag = params.get("tag")
-    const club = params.get("club")
-    const pageParam = Number(params.get("page"))
-    if (tag && (tag === "all" || tags.includes(tag))) setSelectedTag(tag)
-    if (
-      club &&
-      (club === "all" || club === "fasgba" || clubs.some((c) => c.id.toString() === club))
-    ) {
-      setSelectedClub(club)
-    }
-    if (Number.isInteger(pageParam) && pageParam > 1) setCurrentPage(pageParam)
-    setUrlSeeded(true)
-  }, [tags, clubs])
+  // null on the server and during hydration, so the static default view
+  // hydrates cleanly and the URL is left untouched until it has been read.
+  const urlSearch = useSyncExternalStore(subscribeNoop, getLocationSearch, getServerSearch)
+  const urlView = useMemo(
+    () => (urlSearch === null ? DEFAULT_VIEW : viewFromSearch(urlSearch, tags, clubs)),
+    [urlSearch, tags, clubs]
+  )
+  // Set once the user changes a filter or page; until then the URL drives the view.
+  const [userView, setUserView] = useState<View | null>(null)
+  const { tag: selectedTag, club: selectedClub, page: currentPage } = userView ?? urlView
+  const listTopRef = useRef<HTMLDivElement>(null)
 
   const hasActiveFilters = selectedTag !== "all" || selectedClub !== "all"
 
@@ -83,7 +95,7 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
 
   // Mirror the view into the URL (shareable, kept on Back) without a navigation.
   useEffect(() => {
-    if (!urlSeeded) return
+    if (urlSearch === null) return
     const params = new URLSearchParams()
     if (selectedTag !== "all") params.set("tag", selectedTag)
     if (selectedClub !== "all") params.set("club", selectedClub)
@@ -93,10 +105,10 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
     if (url !== `${window.location.pathname}${window.location.search}`) {
       window.history.replaceState(null, "", url)
     }
-  }, [urlSeeded, selectedTag, selectedClub, page])
+  }, [urlSearch, selectedTag, selectedClub, page])
 
   const handlePageChange = (nextPage: number) => {
-    setCurrentPage(nextPage)
+    setUserView({ tag: selectedTag, club: selectedClub, page: nextPage })
     // Bring the top of the list back into view (e.g. after using the bottom pagination).
     const listTop = listTopRef.current
     if (listTop && listTop.getBoundingClientRect().top < 80) {
@@ -105,17 +117,13 @@ export function NewsList({ allNews, tags, clubs }: NewsListProps) {
   }
 
   const handleTagChange = (tag: string) => {
-    setSelectedTag(tag)
-    setCurrentPage(1)
+    setUserView({ tag, club: selectedClub, page: 1 })
   }
   const handleClubChange = (club: string) => {
-    setSelectedClub(club)
-    setCurrentPage(1)
+    setUserView({ tag: selectedTag, club, page: 1 })
   }
   const handleClear = () => {
-    setSelectedTag("all")
-    setSelectedClub("all")
-    setCurrentPage(1)
+    setUserView(DEFAULT_VIEW)
   }
 
   return (

@@ -36,7 +36,7 @@ interface ChessGameBlock {
 interface ContentBlock {
   id: string
   type: 'text' | 'image' | 'chess_game'
-  content: any
+  content: unknown
 }
 
 interface NewsItem {

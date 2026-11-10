@@ -1,4 +1,5 @@
 import { getAdminClient } from '@/lib/supabase/admin'
+import type { ClubRow } from '@/lib/db-types'
 
 export interface Profesor {
   id: number
@@ -13,6 +14,9 @@ export interface Profesor {
   telefono: string | null
   tarifa_horaria: string | null
 }
+
+// Row of `select('*, clubs(name)')`
+type ProfesorJoinRow = Profesor & { clubs: Pick<ClubRow, 'name'> | null }
 
 export interface ProfesorWithClub extends Profesor {
   club_name: string | null
@@ -47,7 +51,7 @@ export async function getAllProfesores(options: {
       throw new Error('Failed to fetch profesores')
     }
 
-    return (data || []).map((item: any) => ({
+    return (data || []).map((item: ProfesorJoinRow) => ({
       id: item.id,
       titulo: item.titulo,
       foto: item.foto,
@@ -86,6 +90,7 @@ export async function getProfesorById(id: number): Promise<ProfesorWithClub | nu
     throw new Error('Failed to fetch profesor')
   }
 
+  const joined: ProfesorJoinRow = data
   return {
     id: data.id,
     titulo: data.titulo,
@@ -98,7 +103,7 @@ export async function getProfesorById(id: number): Promise<ProfesorWithClub | nu
     email: data.email,
     telefono: data.telefono,
     tarifa_horaria: data.tarifa_horaria,
-    club_name: (data as any).clubs?.name || null,
+    club_name: joined.clubs?.name || null,
   }
 }
 
