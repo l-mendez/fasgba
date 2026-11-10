@@ -144,7 +144,7 @@ export default function TournamentClient({
                     <p className="whitespace-pre-line text-muted-foreground">{tournament.inscription_details}</p>
                   )}
                   {showRegistration && (
-                    <Button asChild className="mt-auto bg-terracotta text-white hover:bg-terracotta/90">
+                    <Button asChild className="mt-auto">
                       <a href={tournament.registration_link!} target="_blank" rel="noopener noreferrer">
                         Inscribirse
                         <ExternalLink className="h-4 w-4" />

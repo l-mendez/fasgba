@@ -273,7 +273,6 @@ useEffect(() => {
             <Button
               onClick={handleSaveNotifications}
               disabled={isSaving}
-              className="bg-terracotta hover:bg-terracotta/90 text-white"
             >
               {isSaving ? (
                 <>
@@ -413,7 +412,7 @@ useEffect(() => {
                 <Button
                   onClick={handleChangePassword}
                   disabled={isChangingPassword}
-                  className="w-full bg-terracotta hover:bg-terracotta/90 text-white"
+                  className="w-full"
                 >
                   {isChangingPassword ? (
                     <>

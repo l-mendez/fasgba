@@ -10,7 +10,7 @@ export function NotFoundContent() {
     <div className="flex flex-col items-center gap-4 text-center">
       <p className="text-6xl font-bold tracking-tight text-terracotta/30 md:text-7xl">404</p>
       <h1 className="text-2xl font-bold tracking-tight text-terracotta md:text-3xl">Página no encontrada</h1>
-      <Button asChild className="bg-terracotta text-white hover:bg-terracotta/90">
+      <Button asChild>
         <Link href="/">
           <Home />
           Volver al inicio

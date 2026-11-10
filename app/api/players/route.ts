@@ -1,15 +1,9 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { apiSuccess, handleError, validationError, forbiddenError } from '@/lib/utils/apiResponse'
 import { requireAuth, getClubAdminClubIds } from '@/lib/middleware/auth'
 import { rateLimit } from '@/lib/middleware/rateLimit'
 import { z } from 'zod'
-
-// Create a Supabase client for server-side operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Validation schema for player data
 const playerSchema = z.object({
@@ -21,6 +15,7 @@ const playerSchema = z.object({
 
 // GET /api/players - Get players with pagination and search
 export async function GET(request: NextRequest) {
+  const serverSupabase = getAdminClient()
   try {
     const { searchParams } = new URL(request.url)
 
@@ -105,6 +100,7 @@ export async function GET(request: NextRequest) {
 
 // POST /api/players - Create a new player
 export async function POST(request: NextRequest) {
+  const serverSupabase = getAdminClient()
   try {
     const limited = rateLimit(request, 20, 60_000)
     if (limited) return limited

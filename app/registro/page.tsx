@@ -144,7 +144,6 @@ export default function Signup() {
           email={email}
           password={password}
           onSuccess={validateForm}
-          className="border-terracotta bg-terracotta text-white hover:border-terracotta hover:bg-terracotta/90"
         />
       </form>
     </AuthShell>

@@ -340,7 +340,7 @@ export async function recalculateNextRankingChanges(adminSupabase: any, deletedR
 
     // Recalculate changes for each player
     const updatedPlayers = nextRankingJson.players.map((player: any) => {
-      let changes: { position: number | null; points: number; isNew: boolean } = {
+      const changes: { position: number | null; points: number; isNew: boolean } = {
         position: null,
         points: 0,
         isNew: false

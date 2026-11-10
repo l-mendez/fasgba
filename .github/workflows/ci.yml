@@ -68,3 +68,36 @@ jobs:
 
       - name: Check for vulnerabilities
         run: pnpm audit --audit-level=critical
+
+  db-types:
+    name: DB Types Up To Date
+    runs-on: ubuntu-latest
+    # Regenerates lib/database.types.ts from the *remote* (production) schema and
+    # fails if it differs from the committed file. Remote is the source of truth
+    # because migrations are applied by hand: a PR adding an unapplied migration
+    # passes, and once it is applied this fails until `pnpm run db:types` output is
+    # committed. Skips when the secret is unavailable (forks, Dependabot).
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+    steps:
+      - name: Skip without SUPABASE_ACCESS_TOKEN
+        if: env.SUPABASE_ACCESS_TOKEN == ''
+        run: echo "::notice::SUPABASE_ACCESS_TOKEN is not available; skipping the DB types drift check."
+
+      - uses: actions/checkout@v7
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+
+      - uses: supabase/setup-cli@v3
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+        with:
+          version: 3.x
+
+      - name: Compare generated types
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+        run: |
+          supabase gen types typescript --project-id uxtfxazbikfqcnnmhufh --schema public > lib/database.types.ts
+          if ! git diff --exit-code -- lib/database.types.ts; then
+            echo "::error file=lib/database.types.ts::Out of date with the remote schema. Run pnpm run db:types and commit the result."
+            exit 1
+          fi

@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { requireAuth } from '@/lib/middleware/auth'
 import { apiSuccess, handleError } from '@/lib/utils/apiResponse'
 

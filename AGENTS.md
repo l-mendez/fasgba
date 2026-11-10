@@ -23,7 +23,7 @@ school documents, and admin/club-admin workflows.
 ```bash
 pnpm dev                  # Development server
 pnpm run build            # Production build
-pnpm run lint             # ESLint
+pnpm run lint             # ESLint (--max-warnings ratchet, see Conventions)
 pnpm run type-check       # TypeScript validation
 pnpm run db:status        # Supabase local/remote migration status
 pnpm run db:push:dry-run  # Preview pending remote migrations
@@ -102,6 +102,16 @@ not add or run migrations from `app/db`, `supabase-migrations`, or `scripts`.
 When schema changes, create a Supabase migration, run a dry run, apply it only
 when requested, regenerate `lib/database.types.ts`, and commit both the
 migration and generated types.
+CI regenerates the types from the remote schema and fails on drift; a PR with an
+unapplied migration passes until it is applied, then needs `pnpm run db:types`.
+
+Migrations and merges must not leave production broken. When opening a PR with
+a migration, tell the user whether it must be applied before merging (code
+depends on new columns/functions) or right after (restrictive policy changes),
+and ask. Never change production data (`update`/`delete`) without asking.
+
+Live policy names drift from the legacy SQL. Look them up in `pg_policies`
+before dropping, or drop them by lookup inside a `DO` block.
 
 Migrations and merges must not leave production broken. When opening a PR with
 a migration, tell the user whether it must be applied before merging (code
@@ -165,6 +175,8 @@ UI/API-specific names only at the feature boundary that needs them.
 - Server Components by default; use client components only for interactivity.
 - UI copy and emails are Spanish.
 - Use lucide-react icons in controls where available.
+- `pnpm run lint` fails above `--max-warnings` in `package.json`. Never raise it;
+  when you remove warnings, lower it to the new count.
 - Read `docs/ui.md` before any UI work: palette, shared components, hover and
   card rules, and how to screenshot.
 - Supabase keys: read them from `lib/supabase/keys.ts` (`SUPABASE_PUBLISHABLE_KEY`,

@@ -35,7 +35,7 @@ export function extractTextFromContentBlocks(jsonText: string): string {
     })
     
     return textParts.join(' ')
-  } catch (error) {
+  } catch {
     // If JSON parsing fails, return the original text
     return jsonText
   }

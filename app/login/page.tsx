@@ -57,7 +57,6 @@ export default function Login() {
         <LoginButton
           email={email}
           password={password}
-          className="border-terracotta bg-terracotta text-white hover:border-terracotta hover:bg-terracotta/90"
         />
       </form>
     </AuthShell>

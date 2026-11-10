@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 247",
     "type-check": "tsc --noEmit",
     "db:status": "supabase migration list --linked",
     "db:push": "supabase db push --linked",

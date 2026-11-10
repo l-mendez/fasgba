@@ -148,7 +148,7 @@ export function AuthButton({
       <Button
         onClick={handleClick}
         disabled={isLoading}
-        className={`w-full bg-terracotta text-white hover:bg-terracotta/90 ${className || ""}`}
+        className={`w-full ${className || ""}`}
       >
         {isLoading ? (
           <>

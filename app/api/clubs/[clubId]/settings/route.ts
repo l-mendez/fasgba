@@ -1,15 +1,10 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { NextRequest } from 'next/server'
 import { getClubById, updateClub, isUserClubAdmin } from '@/lib/clubUtils'
 import { revalidateClubsCache } from '@/lib/cache/clubs'
 import { validateClubId, validateUpdateClub } from '@/lib/schemas/clubSchemas'
 import { apiSuccess, handleError, notFoundError, unauthorizedError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 interface RouteParams {
   params: Promise<{
@@ -18,6 +13,7 @@ interface RouteParams {
 }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
+  const supabase = getAdminClient()
   try {
     // Get the authorization header
     const authHeader = request.headers.get('authorization')
