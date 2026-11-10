@@ -58,7 +58,7 @@ const STATUS_ICONS: Record<string, LucideIcon> = {
 }
 
 // API helper function
-async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
+async function apiCall(endpoint: string, options: RequestInit = {}): Promise<unknown> {
   const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
   
@@ -131,8 +131,8 @@ export function TournamentsTable({ initialTournaments }: TournamentsTableProps) 
     }
 
     const sorted = [...torneosToSort].sort((a, b) => {
-      let aValue: any
-      let bValue: any
+      let aValue: string | number
+      let bValue: string | number
 
       switch (sortBy) {
         case 'name':

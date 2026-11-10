@@ -1,3 +1,11 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database, Json } from '@/lib/database.types'
+import type { DbRow } from '@/lib/db-types'
+
+// Supabase client typed against the generated schema, so queries infer row types.
+// The app's untyped clients (createClient/createAdminClient) are assignable to it.
+export type DbClient = SupabaseClient<Database>
+
 // Tournament types based on new database schema (without direct date fields)
 export interface Tournament {
   id: number;
@@ -19,24 +27,16 @@ export interface Tournament {
   players_per_team?: number | null;
   max_teams?: number | null;
   registration_deadline?: string | null;
-  team_match_points?: any | null;
+  team_match_points?: Json | null;
   chess_results_tnr?: number | null;
 }
 
-// Tournament dates from the separate table
-export interface TournamentDate {
-  id: number;
-  tournament_id: number;
-  event_date: string; // ISO date string
-}
+// Tournament dates from the separate table (event_date is YYYY-MM-DD)
+export type TournamentDate = DbRow<'tournamentdates'>
 
 // Tournament with its associated dates
 export interface TournamentWithDates extends Tournament {
-  tournament_dates: Array<{
-    id: number;
-    tournament_id: number;
-    event_date: string;
-  }>;
+  tournament_dates: TournamentDate[];
 }
 
 // Frontend-friendly tournament type with formatted dates
