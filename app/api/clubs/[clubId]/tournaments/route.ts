@@ -62,7 +62,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const adminClient = createAdminClient()
     const tournamentsWithParticipants = await Promise.all(
-      tournaments.map(async (tournament: any) => ({
+      tournaments.map(async (tournament) => ({
         ...tournament,
         participants: await getTournamentParticipantCount(
           adminClient,
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     )
 
     return apiSuccess({ tournaments: tournamentsWithParticipants })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error in GET /api/clubs/[clubId]/tournaments:', error)
     return handleError(error)
   }
