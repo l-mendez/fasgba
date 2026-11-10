@@ -5,38 +5,8 @@ import { revalidateTorneosCache } from '@/lib/cache/torneos'
 import { validateTournamentId, validateUpdateTournament } from '@/lib/schemas/tournamentSchemas'
 import { apiSuccess, handleError, notFoundError, unauthorizedError, noContent, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
-import { isUserClubAdmin } from '@/lib/clubUtils'
 import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
 import { tnrConflictResponse } from '@/lib/tournament/chess-results'
-
-// Helper function to check if user can edit tournament
-async function canUserEditTournament(userId: string, tournamentId: number): Promise<boolean> {
-  const serverSupabase = getAdminClient()
-  try {
-    // Check if user is site admin
-    const { data: adminData, error: adminError } = await serverSupabase
-      .from('admins')
-      .select('auth_id')
-      .eq('auth_id', userId)
-      .single()
-
-    if (!adminError && adminData) {
-      return true // Site admins can edit any tournament
-    }
-
-    // Get tournament to check which club created it
-    const tournament = await getTournamentById(serverSupabase, tournamentId)
-    if (!tournament || !tournament.created_by_club_id) {
-      return false // Tournament doesn't exist or wasn't created by a club
-    }
-
-    // Check if user is admin of the club that created the tournament
-    return await isUserClubAdmin(tournament.created_by_club_id, userId)
-  } catch (error) {
-    console.error('Error checking tournament edit permissions:', error)
-    return false
-  }
-}
 
 interface RouteParams {
   params: Promise<{
@@ -351,7 +321,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       throw updateError
     }
     
-    const response: any = { success: true }
+    const response: { success: boolean; cascade_details?: typeof cascadeDetails; message?: string } = { success: true }
     if (cascadeDetails) {
       response.cascade_details = cascadeDetails
       response.message = 'Tournament updated successfully. Tournament type change required deletion of existing games and registrations.'

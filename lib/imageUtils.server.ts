@@ -48,8 +48,7 @@ export async function findExistingImage(newsId: number, fileHash: string): Promi
 export async function uploadImageWithDeduplication(
   newsId: number, 
   fileBuffer: ArrayBuffer,
-  fileName: string,
-  prefix: string = ''
+  fileName: string
 ): Promise<{ filePath: string; wasReused: boolean }> {
   const supabase = getAdminClient()
   try {

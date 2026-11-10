@@ -6,7 +6,7 @@ import { apiSuccess, handleError, unauthorizedError } from '@/lib/utils/apiRespo
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
 // GET /api/profesores - Get all profesores (public)
-export async function GET(request: NextRequest) {
+export async function GET() {
   const supabase = getAdminClient()
   try {
     const { data, error } = await supabase
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       throw new Error('Failed to fetch profesores')
     }
 
-    const profesores = (data || []).map((item: any) => ({
+    const profesores = (data || []).map((item) => ({
       id: item.id,
       titulo: item.titulo,
       foto: item.foto,
