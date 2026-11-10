@@ -1,11 +1,5 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
-import { createClient } from '@supabase/supabase-js'
+import { getAdminClient } from '@/lib/supabase/admin'
 import crypto from 'crypto'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 /**
  * Generate a hash for a file buffer to identify duplicates (server-side)
@@ -20,6 +14,7 @@ export async function generateFileHashFromBuffer(buffer: ArrayBuffer): Promise<s
  * Check if an image already exists in storage for a news item
  */
 export async function findExistingImage(newsId: number, fileHash: string): Promise<string | null> {
+  const supabase = getAdminClient()
   try {
     // List all files in the news folder
     const { data: files, error } = await supabase.storage
@@ -56,6 +51,7 @@ export async function uploadImageWithDeduplication(
   fileName: string,
   prefix: string = ''
 ): Promise<{ filePath: string; wasReused: boolean }> {
+  const supabase = getAdminClient()
   try {
     // Generate hash for deduplication
     const fileHash = await generateFileHashFromBuffer(fileBuffer)
@@ -100,6 +96,7 @@ export async function uploadImagesWithDeduplication(
   newsId: number,
   images: Array<{ buffer: ArrayBuffer; fileName: string; prefix?: string }>
 ): Promise<Array<{ filePath: string; wasReused: boolean; originalIndex: number }>> {
+  const supabase = getAdminClient()
   const results: Array<{ filePath: string; wasReused: boolean; originalIndex: number }> = []
   const uploadedHashes = new Map<string, string>() // hash -> filePath
 
@@ -174,6 +171,7 @@ export async function uploadImagesWithDeduplication(
  * Delete all images for a specific news item
  */
 export async function deleteNewsImages(newsId: number): Promise<void> {
+  const supabase = getAdminClient()
   try {
     // List all files in the news folder
     const { data: files, error: listError } = await supabase.storage
@@ -219,6 +217,7 @@ export async function uploadClubImage(
   fileBuffer: ArrayBuffer,
   fileName: string
 ): Promise<{ filePath: string; wasReused: boolean }> {
+  const supabase = getAdminClient()
   try {
     // Generate hash for deduplication
     const fileHash = await generateFileHashFromBuffer(fileBuffer)
@@ -259,6 +258,7 @@ export async function uploadClubImage(
  * Check if a club image already exists in storage
  */
 export async function findExistingClubImage(clubId: number, fileHash: string): Promise<string | null> {
+  const supabase = getAdminClient()
   try {
     // List all files in the club folder
     const { data: files, error } = await supabase.storage
@@ -290,6 +290,7 @@ export async function findExistingClubImage(clubId: number, fileHash: string): P
  * Delete all images for a specific club
  */
 export async function deleteClubImages(clubId: number): Promise<void> {
+  const supabase = getAdminClient()
   try {
     // List all files in the club folder
     const { data: files, error: listError } = await supabase.storage
@@ -335,6 +336,7 @@ export async function uploadArbitroImage(
   fileBuffer: ArrayBuffer,
   fileName: string
 ): Promise<{ filePath: string; wasReused: boolean }> {
+  const supabase = getAdminClient()
   try {
     const fileHash = await generateFileHashFromBuffer(fileBuffer)
     const existingPath = await findExistingArbitroImage(arbitroId, fileHash)
@@ -371,6 +373,7 @@ export async function uploadArbitroImage(
  * Check if an arbitro image already exists in storage
  */
 export async function findExistingArbitroImage(arbitroId: number, fileHash: string): Promise<string | null> {
+  const supabase = getAdminClient()
   try {
     const { data: files, error } = await supabase.storage
       .from('images')
@@ -400,6 +403,7 @@ export async function findExistingArbitroImage(arbitroId: number, fileHash: stri
  * Delete all images for a specific arbitro
  */
 export async function deleteArbitroImages(arbitroId: number): Promise<void> {
+  const supabase = getAdminClient()
   try {
     const { data: files, error: listError } = await supabase.storage
       .from('images')
@@ -437,6 +441,7 @@ export async function deleteArbitroImages(arbitroId: number): Promise<void> {
  * Delete a specific arbitro image
  */
 export async function deleteArbitroImage(filePath: string): Promise<void> {
+  const supabase = getAdminClient()
   try {
     const { error } = await supabase.storage
       .from('images')
@@ -460,6 +465,7 @@ export async function uploadProfesorImage(
   fileBuffer: ArrayBuffer,
   fileName: string
 ): Promise<{ filePath: string }> {
+  const supabase = getAdminClient()
   const fileHash = await generateFileHashFromBuffer(fileBuffer)
   const fileExt = fileName.split('.').pop()
   const timestamp = Date.now()
@@ -479,6 +485,7 @@ export async function uploadProfesorImage(
  * Delete a specific profesor image
  */
 export async function deleteProfesorImage(filePath: string): Promise<void> {
+  const supabase = getAdminClient()
   const { error } = await supabase.storage.from('images').remove([filePath])
   if (error) throw new Error('Failed to delete profesor image: ' + error.message)
 }
@@ -487,6 +494,7 @@ export async function deleteProfesorImage(filePath: string): Promise<void> {
  * Delete a specific club image
  */
 export async function deleteClubImage(filePath: string): Promise<void> {
+  const supabase = getAdminClient()
   try {
     const { error } = await supabase.storage
       .from('images')

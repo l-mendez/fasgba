@@ -1,10 +1,4 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+import { getAdminClient } from '@/lib/supabase/admin'
 
 export interface Profesor {
   id: number
@@ -31,6 +25,7 @@ export async function getAllProfesores(options: {
   search?: string
   modalidad?: string
 } = {}): Promise<ProfesorWithClub[]> {
+  const supabase = getAdminClient()
   try {
     let query = supabase
       .from('profesores')
@@ -76,6 +71,7 @@ export async function getAllProfesores(options: {
  * Gets a profesor by ID with club name
  */
 export async function getProfesorById(id: number): Promise<ProfesorWithClub | null> {
+  const supabase = getAdminClient()
   const { data, error } = await supabase
     .from('profesores')
     .select('*, clubs(name)')
@@ -110,6 +106,7 @@ export async function getProfesorById(id: number): Promise<ProfesorWithClub | nu
  * Creates a new profesor
  */
 export async function createProfesor(profesorData: Omit<Profesor, 'id'>): Promise<Profesor> {
+  const supabase = getAdminClient()
   const { data, error } = await supabase
     .from('profesores')
     .insert(profesorData)
@@ -128,6 +125,7 @@ export async function createProfesor(profesorData: Omit<Profesor, 'id'>): Promis
  * Updates a profesor
  */
 export async function updateProfesor(id: number, updates: Partial<Omit<Profesor, 'id'>>): Promise<boolean> {
+  const supabase = getAdminClient()
   const { error } = await supabase
     .from('profesores')
     .update(updates)
@@ -145,6 +143,7 @@ export async function updateProfesor(id: number, updates: Partial<Omit<Profesor,
  * Deletes a profesor and its images
  */
 export async function deleteProfesor(id: number): Promise<boolean> {
+  const supabase = getAdminClient()
   // Delete foto from storage if exists
   const profesor = await getProfesorById(id)
   if (profesor?.foto) {

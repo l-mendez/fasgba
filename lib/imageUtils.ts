@@ -1,16 +1,6 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-
-// Created on first use so importing this module in the browser (for the public
-// URL helpers) never builds a secret-key client.
-let serviceClient: ReturnType<typeof createClient> | null = null
-function getServiceClient() {
-  serviceClient ??= createClient(supabaseUrl, supabaseServiceKey)
-  return serviceClient
-}
+// getAdminClient() is lazy, so importing this module in the browser (for the
+// public URL helpers) never builds a secret-key client.
+import { getAdminClient } from '@/lib/supabase/admin'
 
 /**
  * Generate a hash for a file to identify duplicates (browser-compatible)
@@ -44,7 +34,7 @@ export async function generateFileHash(file: File): Promise<string> {
 export async function findExistingImage(newsId: number, fileHash: string): Promise<string | null> {
   try {
     // List all files in the news folder
-    const { data: files, error } = await getServiceClient().storage
+    const { data: files, error } = await getAdminClient().storage
       .from('images')
       .list(`news/${newsId}`, {
         limit: 100,
@@ -98,7 +88,7 @@ export async function uploadImageWithDeduplication(
     
     const filePath = `news/${newsId}/${fileName}`
     
-    const { error: uploadError } = await getServiceClient().storage
+    const { error: uploadError } = await getAdminClient().storage
       .from('images')
       .upload(filePath, file)
     
@@ -169,7 +159,7 @@ export function extractImagePathsFromNews(image: string | null, text: string): s
 export async function deleteNewsImages(newsId: number): Promise<void> {
   try {
     // List all files in the news folder
-    const { data: files, error: listError } = await getServiceClient().storage
+    const { data: files, error: listError } = await getAdminClient().storage
       .from('images')
       .list(`news/${newsId}`, {
         limit: 1000,
@@ -188,7 +178,7 @@ export async function deleteNewsImages(newsId: number): Promise<void> {
     // Delete all files in the folder
     const filePaths = files.map(file => `news/${newsId}/${file.name}`)
     
-    const { error: deleteError } = await getServiceClient().storage
+    const { error: deleteError } = await getAdminClient().storage
       .from('images')
       .remove(filePaths)
 

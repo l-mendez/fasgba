@@ -1,10 +1,11 @@
-import { supabase } from './service-client'
+import { getAdminClient } from '@/lib/supabase/admin'
 import type { ClubAdmin } from './types'
 
 /**
  * Gets all admins of a club
  */
 export async function getClubAdmins(clubId: number): Promise<ClubAdmin[]> {
+  const supabase = getAdminClient()
   const { data, error } = await supabase
     .from('club_admins')
     .select('auth_id')
@@ -36,6 +37,7 @@ export async function getClubAdmins(clubId: number): Promise<ClubAdmin[]> {
  * Gets admin count for a club
  */
 export async function getClubAdminCount(clubId: number): Promise<number> {
+  const supabase = getAdminClient()
   const { count, error } = await supabase
     .from('club_admins')
     .select('*', { count: 'exact', head: true })
@@ -53,6 +55,7 @@ export async function getClubAdminCount(clubId: number): Promise<number> {
  * Checks if a user is an admin of a club
  */
 export async function isUserClubAdmin(clubId: number, authId: string): Promise<boolean> {
+  const supabase = getAdminClient()
   const { data, error } = await supabase
     .from('club_admins')
     .select('auth_id')
@@ -71,6 +74,7 @@ export async function isUserClubAdmin(clubId: number, authId: string): Promise<b
  * Adds a user as admin to a club
  */
 export async function addClubAdmin(clubId: number, authId: string): Promise<boolean> {
+  const supabase = getAdminClient()
   const { error } = await supabase
     .from('club_admins')
     .insert({
@@ -90,6 +94,7 @@ export async function addClubAdmin(clubId: number, authId: string): Promise<bool
  * Removes a user as admin from a club
  */
 export async function removeClubAdmin(clubId: number, authId: string): Promise<boolean> {
+  const supabase = getAdminClient()
   const { error } = await supabase
     .from('club_admins')
     .delete()
@@ -108,6 +113,7 @@ export async function removeClubAdmin(clubId: number, authId: string): Promise<b
  * Gets follower count for a club
  */
 export async function getClubFollowersCount(clubId: number): Promise<number> {
+  const supabase = getAdminClient()
   const { count, error } = await supabase
     .from('user_follows_club')
     .select('*', { count: 'exact', head: true })
@@ -125,6 +131,7 @@ export async function getClubFollowersCount(clubId: number): Promise<number> {
  * Checks if a user is following a club using direct database query (SERVER-SIDE)
  */
 export async function isUserFollowingClubServer(clubId: number, authId: string): Promise<boolean> {
+  const supabase = getAdminClient()
   try {
     const { data, error } = await supabase
       .from('user_follows_club')

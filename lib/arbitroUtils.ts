@@ -1,11 +1,5 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
-import { createClient } from '@supabase/supabase-js'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { deleteArbitroImages } from './imageUtils.server'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export interface Arbitro {
   id: number
@@ -31,6 +25,7 @@ export interface ArbitroWithClub extends Arbitro {
 export async function getAllArbitros(options: {
   search?: string
 } = {}): Promise<ArbitroWithClub[]> {
+  const supabase = getAdminClient()
   try {
     let query = supabase
       .from('arbitros')
@@ -72,6 +67,7 @@ export async function getAllArbitros(options: {
  * Gets an arbitro by ID with club name
  */
 export async function getArbitroById(arbitroId: number): Promise<ArbitroWithClub | null> {
+  const supabase = getAdminClient()
   const { data, error } = await supabase
     .from('arbitros')
     .select('*, clubs(name)')
@@ -106,6 +102,7 @@ export async function getArbitroById(arbitroId: number): Promise<ArbitroWithClub
  * Creates a new arbitro
  */
 export async function createArbitro(arbitroData: Omit<Arbitro, 'id' | 'created_at' | 'updated_at'>): Promise<Arbitro> {
+  const supabase = getAdminClient()
   const { data, error } = await supabase
     .from('arbitros')
     .insert(arbitroData)
@@ -124,6 +121,7 @@ export async function createArbitro(arbitroData: Omit<Arbitro, 'id' | 'created_a
  * Updates an arbitro
  */
 export async function updateArbitro(arbitroId: number, updates: Partial<Omit<Arbitro, 'id' | 'created_at' | 'updated_at'>>): Promise<boolean> {
+  const supabase = getAdminClient()
   const { error } = await supabase
     .from('arbitros')
     .update(updates)
@@ -141,6 +139,7 @@ export async function updateArbitro(arbitroId: number, updates: Partial<Omit<Arb
  * Deletes an arbitro and its images
  */
 export async function deleteArbitro(arbitroId: number): Promise<boolean> {
+  const supabase = getAdminClient()
   const { error } = await supabase
     .from('arbitros')
     .delete()

@@ -1,14 +1,9 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { apiSuccess, handleError, notFoundError, validationError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { createTeamSchema } from '@/lib/schemas/teamSchemas'
 import { isUserClubAdmin } from '@/lib/clubUtils'
 import { z } from 'zod'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
 interface RouteParams {
   params: Promise<{
@@ -18,6 +13,7 @@ interface RouteParams {
 
 // GET /api/clubs/[clubId]/teams - Get all teams for a club
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { clubId } = await params
     const clubIdNum = parseInt(clubId, 10)
@@ -58,6 +54,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // POST /api/clubs/[clubId]/teams - Create a team for a club
 export async function POST(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { clubId } = await params
     const clubIdNum = parseInt(clubId, 10)
