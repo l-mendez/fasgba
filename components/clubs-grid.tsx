@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useSearchParams } from "next/navigation"
 import { Mail, MapPin, Phone, ImageIcon } from "lucide-react"
 
@@ -120,7 +121,15 @@ function ClubCard({
     <div className="group relative flex min-w-0 gap-4 rounded-lg border bg-card p-3 transition-colors hover:border-amber">
       <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white">
         {imageUrl ? (
-          <img src={imageUrl} alt={`Imagen de ${club.name}`} className="h-full w-full object-contain p-1" />
+          <Image
+            src={imageUrl}
+            alt={`Imagen de ${club.name}`}
+            width={80}
+            height={80}
+            unoptimized
+            loading="eager"
+            className="h-full w-full object-contain p-1"
+          />
         ) : (
           <ImageIcon className="h-8 w-8 text-muted-foreground" />
         )}

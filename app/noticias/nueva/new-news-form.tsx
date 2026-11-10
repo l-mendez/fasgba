@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useRef } from "react"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { AlertCircle } from "lucide-react"
@@ -242,10 +243,13 @@ export function NewNewsForm({ userClubs, isAdmin, defaultEntityId, clubsFirst, r
               onChange={handleImageChange}
             />
             {formData.imagePreview && (
-              <img
+              <Image
                 src={formData.imagePreview}
                 alt="Vista previa"
-                className="mt-2 max-h-[150px] rounded-md object-cover"
+                width={0}
+                height={0}
+                unoptimized
+                className="h-auto w-auto mt-2 max-h-[150px] rounded-md object-cover"
               />
             )}
           </div>

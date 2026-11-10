@@ -1,6 +1,7 @@
 "use client"
 
 import { Input } from "@/components/ui/input"
+import Image from "next/image"
 import { ImageUpload } from "@/components/ui/image-upload"
 import {
   NEWS_BLOCK_TYPES,
@@ -129,7 +130,15 @@ export function NewsContentBlocksEditorSimple({
                 />
                 {imageBlock.url && (
                   <div className="mt-2">
-                    <img src={imageBlock.url} alt={imageBlock.caption} className="max-h-48 object-contain" />
+                    <Image
+                      src={imageBlock.url}
+                      alt={imageBlock.caption}
+                      width={0}
+                      height={0}
+                      unoptimized
+                      loading="eager"
+                      className="h-auto w-auto max-h-48 object-contain"
+                    />
                   </div>
                 )}
               </div>

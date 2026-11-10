@@ -3,6 +3,7 @@
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { ArrowLeft, Upload, X, ImageIcon, Mail, Phone } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -192,9 +193,12 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
             <div className="space-y-4">
               {imagePreview ? (
                 <div className="relative inline-block">
-                  <img
+                  <Image
                     src={imagePreview}
                     alt="Vista previa"
+                    width={128}
+                    height={128}
+                    unoptimized
                     className="h-32 w-32 object-cover rounded-lg border"
                   />
                   <Button
