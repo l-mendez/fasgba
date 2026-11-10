@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useSyncExternalStore } from "react"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { Bell, Moon, LogOut, Loader2, Lock, Eye, EyeOff, UserCog } from "lucide-react"
@@ -17,6 +17,8 @@ import { PasswordRequirements } from "@/components/password-requirements"
 import { validatePassword } from "@/lib/utils/passwordValidation"
 
 const TITLE = "flex items-center gap-2 text-lg text-terracotta"
+
+const subscribeNoop = () => () => {}
 
 type NotificationPrefs = { type?: string; torneos?: string; noticias?: string; ranking?: boolean }
 
@@ -52,19 +54,26 @@ export function SettingsForm({ initial }: { initial?: NotificationPrefs }) {
   // Logout state
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  // Avoid hydration mismatch: resolvedTheme is only known on the client.
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  // Avoid hydration mismatch: resolvedTheme is only known on the client, so
+  // this is false on the server and during hydration, true afterwards.
+  const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false)
 
-// Sync state if SSR initial changes (e.g., unsubscribe handler updated metadata)
-useEffect(() => {
-  if (initial?.type && initial.type !== notificaciones) setNotificaciones(initial.type)
-  if (initial?.torneos && initial.torneos !== torneos) setTorneos(initial.torneos)
-  if (initial?.noticias && initial.noticias !== noticias) setNoticias(initial.noticias)
-  if (typeof initial?.ranking === 'boolean' && initial.ranking !== ranking) setRanking(!!initial.ranking)
-  setSaved(toPrefs(initial))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [initial?.type, initial?.torneos, initial?.noticias, initial?.ranking])
+  // Sync state if SSR initial changes (e.g., unsubscribe handler updated
+  // metadata). Adjusted during render; setting an unchanged value is a no-op.
+  const [prevInitial, setPrevInitial] = useState(initial)
+  if (
+    prevInitial?.type !== initial?.type ||
+    prevInitial?.torneos !== initial?.torneos ||
+    prevInitial?.noticias !== initial?.noticias ||
+    prevInitial?.ranking !== initial?.ranking
+  ) {
+    setPrevInitial(initial)
+    if (initial?.type) setNotificaciones(initial.type)
+    if (initial?.torneos) setTorneos(initial.torneos)
+    if (initial?.noticias) setNoticias(initial.noticias)
+    if (typeof initial?.ranking === 'boolean') setRanking(initial.ranking)
+    setSaved(toPrefs(initial))
+  }
 
   const handleLogout = async () => {
     setIsLoggingOut(true)

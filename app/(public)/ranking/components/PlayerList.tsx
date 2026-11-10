@@ -84,9 +84,12 @@ function PaginationControls({
 }: PaginationControlsProps) {
   const [pageInput, setPageInput] = useState(currentPage.toString());
 
-  useEffect(() => {
+  // Reset the input when the page changes (adjusted during render).
+  const [prevPage, setPrevPage] = useState(currentPage);
+  if (prevPage !== currentPage) {
+    setPrevPage(currentPage);
     setPageInput(currentPage.toString());
-  }, [currentPage]);
+  }
 
   const handlePageInputSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,8 +163,22 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
   const isLatest = !rankingParam || rankingParam === latestFilename;
 
   const [players, setPlayers] = useState<Player[] | null>(initialPlayers);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!isLatest);
   const [error, setError] = useState(false);
+
+  // When the selected ranking (or the server data) changes, reset during
+  // render: back to the server-rendered latest, or start loading a past one.
+  const [prevSource, setPrevSource] = useState({ rankingParam, isLatest, initialPlayers });
+  if (
+    prevSource.rankingParam !== rankingParam ||
+    prevSource.isLatest !== isLatest ||
+    prevSource.initialPlayers !== initialPlayers
+  ) {
+    setPrevSource({ rankingParam, isLatest, initialPlayers });
+    if (isLatest) setPlayers(initialPlayers);
+    setLoading(!isLatest);
+    setError(false);
+  }
 
   const [searchTerm, setSearchTerm] = useState(search);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -200,15 +217,8 @@ export function PlayerList({ initialPlayers, availableRankings }: PlayerListProp
   // latest ranking (the common case) is already provided via initialPlayers.
   // Search/filter/sort/pagination then happen in-memory below.
   useEffect(() => {
-    if (isLatest) {
-      setPlayers(initialPlayers);
-      setLoading(false);
-      setError(false);
-      return;
-    }
+    if (isLatest) return;
     let cancelled = false;
-    setLoading(true);
-    setError(false);
     fetch(`/api/ranking/specific?filename=${encodeURIComponent(rankingParam)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data: RankingData) => {

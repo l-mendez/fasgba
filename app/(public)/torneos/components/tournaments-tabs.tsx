@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useSyncExternalStore } from "react"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -10,6 +10,8 @@ import {
 } from "@/lib/tournamentUtils"
 import { TOURNAMENT_STATUS, type TournamentStatus } from "@/lib/utils/constants"
 import { TournamentCard } from "./tournament-card"
+
+const subscribeNoop = () => () => {}
 
 type TabConfig = {
   status: TournamentStatus
@@ -47,8 +49,10 @@ export function TournamentsTabs({ tournaments }: { tournaments: TournamentDispla
   // The server HTML buckets tournaments using the flags baked at render time.
   // Under ISR that snapshot can be up to `revalidate` stale, so once mounted we
   // recompute each tournament's status from its raw dates against the live clock.
-  const [now, setNow] = useState<number | null>(null)
-  useEffect(() => setNow(Date.now()), [])
+  // `hydrated` is false on the server and during hydration, true afterwards.
+  const hydrated = useSyncExternalStore(subscribeNoop, () => true, () => false)
+  const [mountedAt] = useState(() => Date.now())
+  const now = hydrated ? mountedAt : null
 
   const statusOf = (t: TournamentDisplay) =>
     now === null ? getTournamentStatus(t) : getTournamentStatusAt(t, now)

@@ -1,14 +1,24 @@
 "use client"
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Clock, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { parse } from '@mliebelt/pgn-parser'
+import { parseGame } from '@mliebelt/pgn-parser'
+import type { Chess as ChessClass } from 'chess.js'
+
+type ParsedMove = ReturnType<typeof parseGame>['moves'][number]
+// Not in the parser's types; still read as defensive fallbacks.
+type LooseParsedMove = ParsedMove & {
+  san?: string
+  move?: string
+  commentBefore?: string
+  comment?: string
+}
 
 // Dynamically import chess.js to avoid SSR issues
 // Using a simpler import approach
-let Chess: any;
+let Chess: typeof ChessClass | undefined;
 if (typeof window !== 'undefined') {
   import('chess.js').then((module) => {
     Chess = module.Chess;
@@ -52,12 +62,12 @@ interface EnhancedMove {
 }
 
 // Function to parse PGN using @mliebelt/pgn-parser
-function parsePGNWithLibrary(pgn: string): { moves: any[], cleanPgn: string } {
+function parsePGNWithLibrary(pgn: string): { moves: LooseParsedMove[], cleanPgn: string } {
   try {
     // Parse the PGN using the library with all features enabled
-    const parsed = parse(pgn, { 
+    const parsed = parseGame(pgn, {
       startRule: "game"
-    }) as any;
+    });
     
     // Extract clean PGN by rebuilding from parsed data
     let cleanPgn = '';
@@ -73,7 +83,7 @@ function parsePGNWithLibrary(pgn: string): { moves: any[], cleanPgn: string } {
     // Add moves
     if (parsed.moves && parsed.moves.length > 0) {
       let moveText = '';
-      parsed.moves.forEach((move: any, index: number) => {
+      parsed.moves.forEach((move: LooseParsedMove, index: number) => {
         // Add move number for white moves
         if (move.turn === 'w') {
           moveText += `${move.moveNumber}. `;
@@ -100,7 +110,7 @@ function parsePGNWithLibrary(pgn: string): { moves: any[], cleanPgn: string } {
     
     // Try a simpler parse without options
     try {
-      const simpleParsed = parse(pgn, { startRule: "game" }) as any;
+      const simpleParsed = parseGame(pgn, { startRule: "game" });
       return { moves: simpleParsed.moves || [], cleanPgn: pgn };
     } catch (fallbackError) {
       console.error("Fallback parsing also failed:", fallbackError);
@@ -269,11 +279,7 @@ export default function ChessBoard({
   const [moveIndex, setMoveIndex] = useState(0)
   const [moves, setMoves] = useState<EnhancedMove[]>([])
   const [isReady, setIsReady] = useState(false)
-  const [currentEvaluation, setCurrentEvaluation] = useState<number | undefined>(undefined)
-  const [currentWhiteClock, setCurrentWhiteClock] = useState<string | undefined>(undefined)
-  const [currentBlackClock, setCurrentBlackClock] = useState<string | undefined>(undefined)
   const [currentToMove, setCurrentToMove] = useState<'w' | 'b'>('w')
-  const gameRef = useRef<any>(null)
   
   // Notify parent when position changes
   useEffect(() => {
@@ -282,52 +288,30 @@ export default function ChessBoard({
     }
   }, [currentPosition, onPositionChange, isReady]);
   
-  // Update current move information
-  useEffect(() => {
-    if (moves.length > 0 && moveIndex > 0) {
-      const currentMove = moves[moveIndex - 1];
-      
-      if (currentMove?.annotation) {
-        // Only update evaluation if it exists in the annotation
-        if (currentMove.annotation.eval !== undefined) {
-          setCurrentEvaluation(currentMove.annotation.eval);
-        }
-        // If no eval in annotation, keep previous evaluation
-        
-        // Set clock time based on the color that just moved
-        if (currentMove.color === 'w') {
-          setCurrentWhiteClock(currentMove.annotation.clock);
-        } else {
-          setCurrentBlackClock(currentMove.annotation.clock);
-        }
-      }
-      // If no annotation at all, keep previous evaluation and don't update clocks
-    } else {
-      // Only reset evaluation at the very beginning (moveIndex = 0)
-      setCurrentEvaluation(undefined);
-      setCurrentWhiteClock(undefined);
-      setCurrentBlackClock(undefined);
-    }
-    
-    // Update whose turn it is
-    if (gameRef.current) {
-      const turn = gameRef.current.turn();
-      setCurrentToMove(turn);
-    }
-  }, [moveIndex, moves]);
+  // Evaluation and clocks at moveIndex: replay the annotations of the moves
+  // played so far. The evaluation persists until a later move provides one;
+  // a move with any annotation sets its side's clock.
+  let currentEvaluation: number | undefined
+  let currentWhiteClock: string | undefined
+  let currentBlackClock: string | undefined
+  for (const move of moves.slice(0, moveIndex)) {
+    if (!move.annotation) continue
+    if (move.annotation.eval !== undefined) currentEvaluation = move.annotation.eval
+    if (move.color === 'w') currentWhiteClock = move.annotation.clock
+    else currentBlackClock = move.annotation.clock
+  }
   
   useEffect(() => {
     // Wait for Chess to be loaded
     const initChess = async () => {
       if (!Chess) {
-        const module = await import('chess.js');
-        Chess = module.Chess;
+        const chessModule = await import('chess.js');
+        Chess = chessModule.Chess;
       }
       
       try {
         // Initialize the game with the FEN position
         const newGame = new Chess(fen);
-        gameRef.current = newGame;
         
         // If there's a PGN, load it and extract moves with annotations
         if (pgn) {
@@ -342,7 +326,7 @@ export default function ChessBoard({
             const history = newGame.history({ verbose: true });
             
             // Create enhanced moves with annotations
-            const enhancedMoves: EnhancedMove[] = history.map((move: any, index: number) => {
+            const enhancedMoves: EnhancedMove[] = history.map((move, index) => {
               const moveNumber = Math.floor(index / 2) + 1;
               const color = index % 2 === 0 ? 'w' : 'b';
               
@@ -438,7 +422,7 @@ export default function ChessBoard({
               const fallbackGame = new Chess(fen);
               fallbackGame.loadPgn(pgn);
               const history = fallbackGame.history({ verbose: true });
-              const basicMoves: EnhancedMove[] = history.map((move: any, index: number) => ({
+              const basicMoves: EnhancedMove[] = history.map((move, index) => ({
                 san: move.san,
                 moveNumber: Math.floor(index / 2) + 1,
                 color: index % 2 === 0 ? 'w' : 'b',
@@ -503,7 +487,6 @@ export default function ChessBoard({
       const newPosition = newGame.fen();
       setCurrentPosition(newPosition);
       setMoveIndex(move);
-      gameRef.current = newGame;
       setCurrentToMove(newGame.turn());
     } catch (e) {
       console.error("Error in handleMove:", e);

@@ -82,36 +82,39 @@ function ratingTicks(points: ChartPoint[]): number[] | undefined {
 }
 
 export function RatingEvolutionChart({ playerId, playerName }: Props) {
-  const [history, setHistory] = useState<ChartPoint[]>([]);
-  const [loading, setLoading] = useState(true);
+  const params = new URLSearchParams();
+  if (playerId) params.set("playerId", playerId);
+  if (playerName) params.set("name", playerName);
+  const query = params.toString();
+
+  // The last loaded history, tagged with the query it belongs to: until the
+  // current query's response arrives we are loading.
+  const [result, setResult] = useState<{ query: string; history: ChartPoint[] } | null>(null);
+  const loading = result?.query !== query;
+  const history = result?.history ?? [];
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
 
-    const params = new URLSearchParams();
-    if (playerId) params.set("playerId", playerId);
-    if (playerName) params.set("name", playerName);
-
-    fetch(`/api/ranking/player-history?${params.toString()}`)
+    fetch(`/api/ranking/player-history?${query}`)
       .then(res => res.json())
       .then(data => {
         if (cancelled) return;
         // apiSuccess returns the payload unwrapped: { playerId, history }
         const items: HistoryPoint[] = Array.isArray(data?.history) ? data.history : [];
-        setHistory(items
-          .map(item => ({ ...item, t: Date.UTC(item.year, item.month - 1, 1) }))
-          .sort((a, b) => a.t - b.t));
+        setResult({
+          query,
+          history: items
+            .map(item => ({ ...item, t: Date.UTC(item.year, item.month - 1, 1) }))
+            .sort((a, b) => a.t - b.t),
+        });
       })
       .catch(() => {
-        if (!cancelled) setHistory([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setResult({ query, history: [] });
       });
 
     return () => { cancelled = true; };
-  }, [playerId, playerName]);
+  }, [query]);
 
   if (loading) {
     return (
