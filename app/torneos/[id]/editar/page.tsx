@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 import { getTournamentGames, type GameDisplay } from "@/lib/gameUtils"
+import type { Json } from "@/lib/database.types"
 
 import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -18,7 +19,7 @@ export async function generateMetadata({ params }: PageProps) {
   const { id } = await params
 
   try {
-    const { tournament } = await getTournamentData(id)
+    const { tournament } = /^\d+$/.test(id) ? await getTournamentData(Number(id)) : { tournament: null }
     if (tournament) return { title: `Editar ${tournament.title}` }
   } catch (error) {
     console.error('Error generating metadata:', error)
@@ -28,7 +29,7 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 interface Tournament {
-  id: string
+  id: number
   title: string
   description?: string | null
   time?: string | null
@@ -42,13 +43,23 @@ interface Tournament {
   registration_link?: string | null
   all_dates?: string[]
   formatted_all_dates?: string[]
-  created_by_club_id?: number
+  created_by_club_id?: number | null
   tournament_type?: 'individual' | 'team' | null
   players_per_team?: number | null
   max_teams?: number | null
   registration_deadline?: string | null
   team_match_points?: Record<string, number> | null
   chess_results_tnr?: number | null
+}
+
+// team_match_points is a json column; keep its numeric entries.
+function toMatchPoints(value: Json | null): Record<string, number> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const points: Record<string, number> = {}
+  for (const [key, entry] of Object.entries(value)) {
+    if (typeof entry === 'number') points[key] = entry
+  }
+  return points
 }
 
 interface Round {
@@ -68,7 +79,7 @@ async function checkAuthentication(): Promise<boolean> {
 }
 
 // Server function to fetch tournament and check authorization
-async function getTournamentData(tournamentId: string): Promise<{
+async function getTournamentData(tournamentId: number): Promise<{
   tournament: Tournament | null
   isAuthorized: boolean
   error: string | null
@@ -195,13 +206,15 @@ async function getTournamentData(tournamentId: string): Promise<{
       prizes: tournamentData.prizes,
       registration_link: tournamentData.registration_link,
       created_by_club_id: tournamentData.created_by_club_id,
-      tournament_type: tournamentData.tournament_type,
+      tournament_type: tournamentData.tournament_type === 'team' || tournamentData.tournament_type === 'individual'
+        ? tournamentData.tournament_type
+        : null,
       players_per_team: tournamentData.players_per_team,
       max_teams: tournamentData.max_teams,
       registration_deadline: tournamentData.registration_deadline,
-      team_match_points: tournamentData.team_match_points,
+      team_match_points: toMatchPoints(tournamentData.team_match_points),
       chess_results_tnr: tournamentData.chess_results_tnr,
-      all_dates: (tournamentData.tournamentdates || []).map((date: { event_date: string }) => date.event_date)
+      all_dates: (tournamentData.tournamentdates || []).map((date) => date.event_date)
     }
 
     const rounds: Round[] = roundsData || []
@@ -270,7 +283,7 @@ export default async function EditarTorneoPage({ params, searchParams }: PagePro
   }
   
   // Get tournament data and authorization
-  const { tournament, isAuthorized, isSiteAdmin, isClubAdmin, rounds, userClubIds } = await getTournamentData(id)
+  const { tournament, isAuthorized, isSiteAdmin, isClubAdmin, rounds, userClubIds } = await getTournamentData(Number(id))
 
   if (!tournament) notFound()
 
@@ -280,7 +293,7 @@ export default async function EditarTorneoPage({ params, searchParams }: PagePro
     try {
       const gamesByRound = await getTournamentGames(
         parseInt(id, 10),
-        (tournament.tournament_type as 'individual' | 'team') || 'individual'
+        tournament.tournament_type || 'individual'
       )
       // Flatten the games into a single array for the rounds & games management UI
       initialGames = Object.values(gamesByRound).flat()
@@ -353,7 +366,7 @@ export default async function EditarTorneoPage({ params, searchParams }: PagePro
               <TabsContent value="teams" className="mt-4">
                 <TeamManagement
                   tournamentId={id}
-                  tournamentType={tournament.tournament_type as 'individual' | 'team' || 'individual'}
+                  tournamentType={tournament.tournament_type || 'individual'}
                   restrictToClubIds={!isSiteAdmin && isClubAdmin ? userClubIds : undefined}
                 />
               </TabsContent>
@@ -363,7 +376,7 @@ export default async function EditarTorneoPage({ params, searchParams }: PagePro
               <TabsContent value="rounds-games" className="mt-4">
                 <RoundsGamesManagement
                   tournamentId={id}
-                  tournamentType={tournament.tournament_type as 'individual' | 'team' || 'individual'}
+                  tournamentType={tournament.tournament_type || 'individual'}
                   games={initialGames}
                   rounds={rounds}
                 />

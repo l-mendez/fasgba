@@ -1,10 +1,5 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database, Json } from '@/lib/database.types'
+import type { Json } from '@/lib/database.types'
 import type { DbRow } from '@/lib/db-types'
-
-// Supabase client typed against the generated schema, so queries infer row types.
-// The app's untyped clients (createClient/createAdminClient) are assignable to it.
-export type DbClient = SupabaseClient<Database>
 
 // Tournament types based on new database schema (without direct date fields)
 export interface Tournament {

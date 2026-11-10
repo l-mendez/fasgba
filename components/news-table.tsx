@@ -24,12 +24,12 @@ import { formatArgentinaDateOnly, getArgentinaDateInputValue, getDateInputValue 
 import { FEDERATION_NAME } from "@/lib/newsDisplay"
 import { compareBy } from "@/lib/sortUtils"
 
-interface News {
+export interface News {
   id: number
   title: string
-  date: string
+  date: string | null
   image: string | null
-  extract: string
+  extract: string | null
   text: string
   tags: string[]
   club_id: number | null
@@ -40,8 +40,8 @@ interface News {
   created_by_auth_id: string | null
   author_email?: string
   author_name?: string
-  created_at: string
-  updated_at: string
+  created_at: string | null
+  updated_at: string | null
 }
 
 interface NewsTableProps {
@@ -103,7 +103,7 @@ export function NewsTable({ initialNews }: NewsTableProps) {
       case 'club':
         return (newsItem.club?.name || FEDERATION_NAME).toLowerCase()
       case 'date':
-        return getDateInputValue(newsItem.date)
+        return newsItem.date ? getDateInputValue(newsItem.date) : ''
       case 'author':
         return (newsItem.author_name || newsItem.author_email || 'Desconocido').toLowerCase()
       default:
@@ -156,13 +156,13 @@ export function NewsTable({ initialNews }: NewsTableProps) {
     
     // Apply date filter
     if (selectedDateFilter) {
-      if (getDateInputValue(newsItem.date) < selectedDateFilter) return false
+      if (!newsItem.date || getDateInputValue(newsItem.date) < selectedDateFilter) return false
     }
     
     // Apply text search (only if there's a search term)
     if (search) {
       return newsItem.title.toLowerCase().includes(search) ||
-             newsItem.extract.toLowerCase().includes(search) ||
+             newsItem.extract?.toLowerCase().includes(search) ||
              newsItem.club?.name?.toLowerCase().includes(search) ||
              newsItem.author_name?.toLowerCase().includes(search)
     }

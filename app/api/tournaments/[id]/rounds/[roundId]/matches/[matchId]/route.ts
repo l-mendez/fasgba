@@ -4,7 +4,6 @@ import { apiSuccess, handleError, notFoundError, validationError, unauthorizedEr
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { z } from 'zod'
 import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
-import type { DbClient } from '@/lib/tournament/types'
 
 interface RouteParams {
   params: Promise<{
@@ -25,7 +24,7 @@ const updateMatchSchema = z.object({
 
 // PATCH /api/tournaments/[id]/rounds/[roundId]/matches/[matchId] - Update a match
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
-  const serverSupabase: DbClient = getAdminClient()
+  const serverSupabase = getAdminClient()
   try {
     const { id: tournamentId, roundId, matchId } = await params
     const tournamentIdNum = parseInt(tournamentId, 10)
@@ -156,7 +155,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 // DELETE /api/tournaments/[id]/rounds/[roundId]/matches/[matchId] - Delete a match
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  const serverSupabase: DbClient = getAdminClient()
+  const serverSupabase = getAdminClient()
   try {
     const { id: tournamentId, roundId, matchId } = await params
     const tournamentIdNum = parseInt(tournamentId, 10)

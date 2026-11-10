@@ -27,8 +27,8 @@ export async function getClubNews(clubId: number, limit?: number): Promise<ClubN
   // Fetch author information for each news item
   const newsWithAuthors = await Promise.all(
     (data || []).map(async (item) => {
-      let author_email = undefined
-      let author_name = undefined
+      let author_email: string | undefined
+      let author_name: string | undefined
 
       if (item.created_by_auth_id) {
         try {

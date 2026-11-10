@@ -4,6 +4,7 @@ import { apiSuccess, handleError, notFoundError, validationError, unauthorizedEr
 import { updateTeamSchema } from '@/lib/schemas/teamSchemas'
 import { isUserClubAdmin } from '@/lib/clubUtils'
 import { z } from 'zod'
+import type { TeamUpdate } from '@/lib/db-types'
 
 interface RouteParams {
   params: Promise<{
@@ -105,7 +106,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return forbiddenError('Solo los administradores del sitio pueden cambiar el club de un equipo')
     }
 
-    const updateData: Record<string, unknown> = {}
+    const updateData: TeamUpdate = {}
     if (validated.name) updateData.name = validated.name
     if (validated.club_id) updateData.club_id = validated.club_id
 

@@ -2,9 +2,6 @@ import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { ErrorAlert } from "@/components/error-alert"
-import type { ClubAdminRow, ClubRow } from "@/lib/db-types"
-
-type ClubAdminWithClubName = Pick<ClubAdminRow, 'auth_id'> & { clubs: Pick<ClubRow, 'name'> | null }
 import { UserEditForm } from "@/components/user-edit-form"
 
 // Mark this page as dynamic since it requires server-side authentication
@@ -95,7 +92,6 @@ async function fetchUserData(userId: string): Promise<{
         auth_id,
         clubs!inner(name)
       `)
-      .overrideTypes<ClubAdminWithClubName[], { merge: false }>()
 
     const adminIds = new Set(admins?.map(admin => admin.auth_id) || [])
     
@@ -143,7 +139,6 @@ async function fetchUserData(userId: string): Promise<{
         club:clubs(id, name)
       `)
       .eq('auth_id', userId)
-      .overrideTypes<(ClubAdminRow & { club: Pick<ClubRow, 'id' | 'name'> | null })[], { merge: false }>()
     
     if (clubAdminsError) throw clubAdminsError
     

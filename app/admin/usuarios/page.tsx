@@ -7,9 +7,7 @@ import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
 import { AdminPageHeader } from "@/components/admin-page-header"
 import { UsersTable } from "@/components/users-table"
 import { ErrorAlert } from "@/components/error-alert"
-import type { ClubAdminRow, ClubRow } from "@/lib/db-types"
 
-type ClubAdminWithClubName = Pick<ClubAdminRow, 'auth_id'> & { clubs: Pick<ClubRow, 'name'> | null }
 
 // Mark this page as dynamic since it requires server-side authentication
 export const dynamic = 'force-dynamic'
@@ -103,7 +101,6 @@ async function fetchAllUsers(): Promise<UserWithPermissions[]> {
         auth_id,
         clubs!inner(name)
       `)
-      .overrideTypes<ClubAdminWithClubName[], { merge: false }>()
 
     const adminIds = new Set(admins?.map(admin => admin.auth_id) || [])
     

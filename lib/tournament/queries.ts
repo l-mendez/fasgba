@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { TournamentRow } from '@/lib/db-types'
-import type { DbClient, Tournament, TournamentDisplay, TournamentWithDates } from './types'
+import type { DbClient, TournamentRow } from '@/lib/db-types'
+import type { Tournament, TournamentDisplay, TournamentWithDates } from './types'
 import { sortTournamentsByDate, transformTournamentToDisplay } from './display'
 
 // Database query functions

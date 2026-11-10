@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server"
-import type { DbClient } from "@/lib/tournament/types"
 import type { DbRow, PlayerRow } from "@/lib/db-types"
 
 // Game interface for display
@@ -60,7 +59,7 @@ function toGameDisplay(game: GameFields, round: number | undefined, team?: TeamI
 
 // Fetch games for a tournament
 export async function getTournamentGames(tournamentId: number, tournamentType: string = 'individual'): Promise<Record<number, GameDisplay[]>> {
-  const supabase: DbClient = await createClient()
+  const supabase = await createClient()
   
   try {
     if (tournamentType === 'team') {
@@ -224,7 +223,7 @@ export async function getTournamentGames(tournamentId: number, tournamentType: s
 
 // Fetch a specific game by ID
 export async function getGameById(gameId: number, tournamentType: string = 'individual'): Promise<GameDisplay | null> {
-  const supabase: DbClient = await createClient()
+  const supabase = await createClient()
   
   try {
     if (tournamentType === 'team') {
@@ -299,7 +298,7 @@ export async function getGameById(gameId: number, tournamentType: string = 'indi
 
 // Get total rounds for a tournament from the database
 export async function getTournamentRounds(tournamentId: number): Promise<number> {
-  const supabase: DbClient = await createClient()
+  const supabase = await createClient()
   
   try {
     const { data: rounds, error } = await supabase

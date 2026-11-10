@@ -10,33 +10,8 @@ export const dynamic = 'force-dynamic'
 import { Button } from "@/components/ui/button"
 import { AdminContentSkeleton } from "@/components/admin-loading-skeletons"
 import { AdminPageHeader } from "@/components/admin-page-header"
-import { NewsTable } from "@/components/news-table"
+import { NewsTable, type News } from "@/components/news-table"
 import { ErrorAlert } from "@/components/error-alert"
-
-interface News {
-  id: number
-  title: string
-  date: string
-  image: string | null
-  extract: string
-  text: string
-  tags: string[]
-  club_id: number | null
-  club: {
-    id: number
-    name: string
-  } | null
-  created_by_auth_id: string | null
-  author_email?: string
-  author_name?: string
-  created_at: string
-  updated_at: string
-}
-
-// Shape of the news select below (club joined as `clubs`)
-type NewsQueryRow = Omit<News, 'club' | 'author_email' | 'author_name'> & {
-  clubs: { id: number; name: string } | null
-}
 
 // Server-side function to fetch news data
 async function fetchNews(): Promise<News[]> {
@@ -90,7 +65,6 @@ async function fetchNews(): Promise<News[]> {
         updated_at
       `)
       .order('date', { ascending: false })
-      .overrideTypes<NewsQueryRow[], { merge: false }>()
 
     if (newsError) {
       console.error('Error fetching news:', newsError)

@@ -2,21 +2,10 @@ import { getAdminClient } from '@/lib/supabase/admin'
 import { createClient as createServerClient } from './supabase/server'
 import { deleteNewsImages } from './imageUtils.server'
 import { getArgentinaDateInputValue } from './dateUtils'
+import type { NewsRow } from './db-types'
 
 // Types for News operations
-export interface News {
-  id: number
-  title: string
-  date: string
-  image: string | null
-  extract: string | null
-  text: string
-  tags: string[] | null
-  club_id: number | null
-  created_by_auth_id: string | null
-  created_at: string
-  updated_at: string
-}
+export type News = NewsRow
 
 export interface NewsWithAuthor extends News {
   author_name?: string

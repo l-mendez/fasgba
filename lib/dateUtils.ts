@@ -67,12 +67,13 @@ export function formatArgentinaDate(
 /**
  * Formats a stored publication date (a DATE column, serialized as YYYY-MM-DD) as
  * a calendar date. News dates are chosen by editors as whole days, so UTC offsets
- * must not move them to another day.
+ * must not move them to another day. A missing (null) date formats as ''.
  */
 export function formatArgentinaDateOnly(
-  dateString: string,
+  dateString: string | null,
   options: Intl.DateTimeFormatOptions = DATE_ONLY_OPTIONS
 ) {
+  if (dateString === null) return ''
   return formatInArgentina(parseCalendarDate(dateString) ?? new Date(dateString), options)
 }
 
