@@ -171,6 +171,8 @@ UI/API-specific names only at the feature boundary that needs them.
   the build type-checks. Inline suppressions are rejected (`eslint-disable`,
   `@ts-ignore`, `@ts-expect-error`, `@ts-nocheck`). Fix the code: real types
   instead of `any`/casts, idiomatic hooks instead of disabling hook rules.
+- Supabase clients are schema-typed: take `DbClient` from `lib/db-types.ts`, never a
+  bare `SupabaseClient`, and let queries infer row types (no `as unknown as`).
 - Read `docs/ui.md` before any UI work: palette, shared components, hover and
   card rules, and how to screenshot.
 - Supabase keys: read them from `lib/supabase/keys.ts` (`SUPABASE_PUBLISHABLE_KEY`,
