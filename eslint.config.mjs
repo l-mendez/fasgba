@@ -10,21 +10,20 @@ const eslintConfig = [
   ...nextCoreWebVitals,
   ...nextTypescript,
   {
+    // No inline suppressions: fix the code instead of disabling rules.
+    linterOptions: { noInlineConfig: true, reportUnusedDisableDirectives: 'error' },
+  },
+  {
     rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-require-imports': 'warn',
-      '@typescript-eslint/no-unused-vars': 'warn',
-      '@typescript-eslint/ban-ts-comment': 'warn',
-      'react/no-unescaped-entities': 'warn',
-      'react/no-children-prop': 'warn',
-      '@next/next/no-img-element': 'warn',
-      '@next/next/no-assign-module-variable': 'warn',
-      'react-hooks/exhaustive-deps': 'warn',
-      'react-hooks/error-boundaries': 'warn',
-      'prefer-const': 'warn',
-      'react-hooks/static-components': 'warn',
-      'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/purity': 'warn',
+      // Zero tolerance: every warning-level rule fails lint.
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/ban-ts-comment': [
+        'error',
+        { 'ts-expect-error': true, 'ts-ignore': true, 'ts-nocheck': true, 'ts-check': false },
+      ],
+      'react-hooks/exhaustive-deps': 'error',
+      'prefer-const': 'error',
       'no-restricted-syntax': [
         'error',
         { selector: `Literal[value=${OFF_PALETTE}]`, message: offPaletteMessage },
