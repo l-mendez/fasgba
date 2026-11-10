@@ -28,6 +28,14 @@ const eslintConfig = [
         'error',
         { selector: `Literal[value=${OFF_PALETTE}]`, message: offPaletteMessage },
         { selector: `TemplateElement[value.raw=${OFF_PALETTE}]`, message: offPaletteMessage },
+        {
+          selector: "TSTypeReference[typeName.name='SupabaseClient']:not([typeArguments])",
+          message: 'Use DbClient from @/lib/db-types (schema-typed) instead of a bare SupabaseClient.',
+        },
+        {
+          selector: "TSAsExpression > TSAsExpression.expression[typeAnnotation.type='TSUnknownKeyword']",
+          message: 'No `as unknown as` casts: type the source or narrow with a type guard.',
+        },
       ],
     },
   },
