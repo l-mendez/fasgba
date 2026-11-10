@@ -13,14 +13,14 @@ export const normalizePlayerName = (name: string): string => {
 }
 
 // Helper to find a column value by fuzzy name
-export const getFirstValueByKeys = (obj: Record<string, any>, keys: string[]): any => {
+export const getFirstValueByKeys = (obj: Record<string, unknown>, keys: string[]): unknown => {
   for (const key of keys) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key]
   }
   return undefined
 }
 
-export const findPointsRaw = (obj: Record<string, any>): any => {
+export const findPointsRaw = (obj: Record<string, unknown>): unknown => {
   const direct = getFirstValueByKeys(obj, [
     'Puntos', 'PUNTOS', 'Ranking Nuevo', 'Ranking No', 'Ranking Nro',
     'Points', 'ELO', 'Elo', 'elo', 'Rating', 'RATING', 'Puntaje', 'PUNTAJE',
@@ -30,7 +30,7 @@ export const findPointsRaw = (obj: Record<string, any>): any => {
   return pointsKey ? obj[pointsKey] : undefined
 }
 
-export const findTipoRaw = (obj: Record<string, any>): any => {
+export const findTipoRaw = (obj: Record<string, unknown>): unknown => {
   const direct = getFirstValueByKeys(obj, [
     'Tipo', 'TIPO', 'tipo', 'Tipo de Rating', 'Type', 'TYPE', 'type',
     'Modalidad', 'MODALIDAD', 'modalidad', 'Mod', 'MOD',
@@ -40,7 +40,7 @@ export const findTipoRaw = (obj: Record<string, any>): any => {
   return tipoKey ? obj[tipoKey] : undefined
 }
 
-export const findActiveRaw = (obj: Record<string, any>): any => {
+export const findActiveRaw = (obj: Record<string, unknown>): unknown => {
   const direct = getFirstValueByKeys(obj, [
     'Activo', 'ACTIVO', 'active', 'Active', 'ACTIVE', 'Act', 'ACT'
   ])
@@ -49,7 +49,7 @@ export const findActiveRaw = (obj: Record<string, any>): any => {
   return activeKey ? obj[activeKey] : undefined
 }
 
-export const parseActive = (value: any): boolean => {
+export const parseActive = (value: unknown): boolean => {
   if (value === undefined || value === null) return false
   if (typeof value === 'boolean') return value
   if (typeof value === 'number') return value === 1 || value > 0

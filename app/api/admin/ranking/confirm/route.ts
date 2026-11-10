@@ -1,10 +1,11 @@
 import { NextRequest, after } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidateRankingCache } from '@/lib/cache/ranking'
 import { requireAuth } from '@/lib/middleware/auth'
 import { apiSuccess, handleError, forbiddenError } from '@/lib/utils/apiResponse'
-import { findPreviousPlayer } from '@/lib/rankingUtils'
+import { findPreviousPlayer, type Player } from '@/lib/rankingUtils'
 import { sendBroadcast } from '@/lib/notifications/sendBroadcast'
 
 interface RankingFileInfo {
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function to check if recalculation is needed (same as in upload route)
-async function checkIfRecalculationNeeded(adminSupabase: any, currentMonth: number, currentYear: number): Promise<boolean> {
+async function checkIfRecalculationNeeded(adminSupabase: SupabaseClient, currentMonth: number, currentYear: number): Promise<boolean> {
   try {
     const { data: files, error: listError } = await adminSupabase.storage
       .from('ranking-data')
@@ -185,7 +186,7 @@ async function checkIfRecalculationNeeded(adminSupabase: any, currentMonth: numb
 }
 
 // Helper function to recalculate all rankings that come after the newly uploaded one
-async function recalculateSubsequentRankings(adminSupabase: any, newRankingMonth: number, newRankingYear: number) {
+async function recalculateSubsequentRankings(adminSupabase: SupabaseClient, newRankingMonth: number, newRankingYear: number) {
   try {
     // Get all ranking files sorted chronologically
     const { data: files, error: listError } = await adminSupabase.storage
@@ -262,7 +263,7 @@ async function recalculateSubsequentRankings(adminSupabase: any, newRankingMonth
         rankingData.previousRanking = previousRanking.filename
       } else {
         // No previous ranking - mark all as new
-        updatedPlayers = rankingData.players.map((player: any) => ({
+        updatedPlayers = rankingData.players.map((player: Player) => ({
           ...player,
           changes: {
             position: null,
@@ -298,7 +299,7 @@ async function recalculateSubsequentRankings(adminSupabase: any, newRankingMonth
 }
 
 // Helper function to find previous ranking for recalculation
-async function findPreviousRankingForRecalculation(adminSupabase: any, currentMonth: number, currentYear: number, allRankings: any[]) {
+async function findPreviousRankingForRecalculation(adminSupabase: SupabaseClient, currentMonth: number, currentYear: number, allRankings: RankingFileInfo[]) {
   const currentDate = new Date(currentYear, currentMonth - 1)
   
   // Find the most recent ranking before the current one
@@ -334,7 +335,7 @@ async function findPreviousRankingForRecalculation(adminSupabase: any, currentMo
 }
 
 // Helper function to calculate changes (same logic as in upload route)
-function calculatePlayerChangesForRecalculation(newPlayers: any[], previousPlayers: any[]) {
+function calculatePlayerChangesForRecalculation(newPlayers: Player[], previousPlayers: Player[]) {
   return newPlayers.map(player => {
     const previousPlayer = findPreviousPlayer(player, previousPlayers)
 
