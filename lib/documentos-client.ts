@@ -15,7 +15,7 @@ export async function openDocumento(documento: { id: number }, action: Documento
   if (tab) tab.opener = null
 
   try {
-    const { url } = await apiCall(`/api/documentos/download/${documento.id}${action === "download" ? "?download=1" : ""}`)
+    const { url } = await apiCall<{ url: string }>(`/api/documentos/download/${documento.id}${action === "download" ? "?download=1" : ""}`)
     if (!url) throw new Error("No se pudo obtener el documento")
 
     if (tab) {

@@ -75,7 +75,7 @@ export function RankingRowActions({ ranking }: RankingRowActionsProps) {
     setIsDeleting(true)
 
     try {
-      const result = await apiCall("/api/admin/ranking/delete", {
+      const result = await apiCall<{ wasLatestRanking: boolean; newLatestRanking: string | null }>("/api/admin/ranking/delete", {
         method: "DELETE",
         body: JSON.stringify({ filename: ranking.id }),
       })
@@ -106,7 +106,7 @@ export function RankingRowActions({ ranking }: RankingRowActionsProps) {
     setIsUpdatingDate(true)
 
     try {
-      const result = await apiCall("/api/admin/ranking/update-date", {
+      const result = await apiCall<{ affectedRankings: number }>("/api/admin/ranking/update-date", {
         method: "POST",
         body: JSON.stringify({
           currentFilename: ranking.id,

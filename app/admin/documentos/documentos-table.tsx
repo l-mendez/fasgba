@@ -179,7 +179,7 @@ export function DocumentosTable({
     setIsDeleting(true)
 
     try {
-      const result = await apiCall(`/api/admin/documentos/${documento.id}`, {
+      const result = await apiCall<{ success: boolean; message: string }>(`/api/admin/documentos/${documento.id}`, {
         method: "DELETE",
       })
 

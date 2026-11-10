@@ -31,7 +31,7 @@ export function ChessResultsLinkField({ value, error, onChange, tournamentId }: 
 
   const sync = async (assignments: Assignments) => {
     try {
-      const result: ChessResultsSyncResponse = await apiCall(`/api/tournaments/${tournamentId}/chess-results`, {
+      const result = await apiCall<ChessResultsSyncResponse>(`/api/tournaments/${tournamentId}/chess-results`, {
         method: "POST",
         body: JSON.stringify({ url: tnr, assignments }),
       })

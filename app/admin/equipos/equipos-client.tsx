@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { apiCall } from '@/lib/utils/apiClient'
+import type { TeamRow } from '@/lib/db-types'
 
 interface Team {
   id: number
@@ -131,7 +132,7 @@ export function AdminEquiposClient({
       await Promise.all(
         clubList.map(async (club) => {
           try {
-            const data = await apiCall(`/api/clubs/${club.id}/teams`)
+            const data = await apiCall<{ teams: TeamRow[] }>(`/api/clubs/${club.id}/teams`)
             results[club.id] = data.teams || []
           } catch {
             results[club.id] = []

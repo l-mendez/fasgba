@@ -24,6 +24,12 @@ export interface ClubAdminActivityItem {
   author?: string
 }
 
+/** GET /api/clubs/[clubId]/stats response. */
+export interface ClubStatsResponse {
+  stats: ClubAdminStats
+  recentActivity: ClubAdminActivityItem[]
+}
+
 export interface ClubAdminPlayer {
   id: number
   full_name: string

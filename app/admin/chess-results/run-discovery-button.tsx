@@ -25,7 +25,7 @@ export function RunDiscoveryButton() {
   const run = async () => {
     setRunning(true)
     try {
-      const result: RunResult = await apiCall("/api/admin/chess-results/run", { method: "POST" })
+      const result = await apiCall<RunResult>("/api/admin/chess-results/run", { method: "POST" })
       const description = `${count(result.discovered?.new ?? 0, "torneo nuevo", "torneos nuevos")}, ${count(result.synced?.length ?? 0, "sincronizado", "sincronizados")}.`
       const errors = result.errors ?? []
       if (errors.length) {

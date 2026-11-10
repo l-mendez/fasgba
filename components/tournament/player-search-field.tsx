@@ -34,7 +34,7 @@ export function PlayerSearchField({ id, value, selectedLabel, onSelect }: Player
     let cancelled = false
     const timer = setTimeout(async () => {
       try {
-        const data = await apiCall(`/api/players?search=${encodeURIComponent(term)}&limit=10`)
+        const data = await apiCall<{ players: Player[] }>(`/api/players?search=${encodeURIComponent(term)}&limit=10`)
         if (!cancelled) setFetched({ term, players: data.players || [] })
       } catch (error) {
         console.error('Error searching players:', error)

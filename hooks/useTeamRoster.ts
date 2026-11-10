@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useEffectEvent } from 'react'
 import { toast } from 'sonner'
 import { apiCall } from '@/lib/utils/apiClient'
+import type { TeamRow } from '@/lib/db-types'
 
 export interface Club {
   id: number
@@ -87,7 +88,7 @@ export function useTeamRoster({ tournamentId, tournamentType, restrictToClubIds 
   // load* set state only in promise callbacks, so the mount effect can start
   // them; the fetch* wrappers used by handlers also show the spinner first.
   const loadRegisteredTeams = useCallback(
-    () => apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
+    () => apiCall<{ teams: RegisteredTeam[] }>(`/api/tournaments/${tournamentId}/registered-teams`)
       .then((data) => setRegisteredTeams(data.teams || []))
       .catch((error) => {
         console.error('Error fetching registered teams:', error)
@@ -103,7 +104,7 @@ export function useTeamRoster({ tournamentId, tournamentType, restrictToClubIds 
   }
 
   const loadTournamentPlayers = useCallback(
-    () => apiCall(`/api/tournaments/${tournamentId}/players`)
+    () => apiCall<{ players: TeamPlayer[] }>(`/api/tournaments/${tournamentId}/players`)
       .then((data) => {
         const players: TeamPlayer[] = data.players || []
         // Group players by team
@@ -130,7 +131,7 @@ export function useTeamRoster({ tournamentId, tournamentType, restrictToClubIds 
   const fetchClubTeams = async (clubId: number) => {
     try {
       setLoadingClubTeams(true)
-      const data = await apiCall(`/api/clubs/${clubId}/teams`)
+      const data = await apiCall<{ teams: TeamRow[] }>(`/api/clubs/${clubId}/teams`)
       setClubTeams(data.teams || [])
     } catch (error) {
       console.error('Error fetching club teams:', error)
@@ -173,7 +174,7 @@ export function useTeamRoster({ tournamentId, tournamentType, restrictToClubIds 
     // Ignore a superseded response so a single club is auto-selected once
     let ignore = false
     loadRegisteredTeams()
-    apiCall('/api/clubs')
+    apiCall<{ clubs: Club[] }>('/api/clubs')
       .then((data) => {
         if (!ignore) onClubsLoaded(data.clubs || [])
       })
@@ -200,7 +201,7 @@ export function useTeamRoster({ tournamentId, tournamentType, restrictToClubIds 
     const timer = setTimeout(async () => {
       setSearchingPlayers(true)
       try {
-        const data = await apiCall(`/api/players?search=${encodeURIComponent(playerSearch.trim())}&limit=10`)
+        const data = await apiCall<{ players: SearchPlayer[] }>(`/api/players?search=${encodeURIComponent(playerSearch.trim())}&limit=10`)
         // Filter out players already on this team in this tournament
         const currentTeamPlayers = addPlayerTeamId ? (teamPlayers[addPlayerTeamId] || []) : []
         const currentPlayerIds = currentTeamPlayers.map(p => p.id)
@@ -224,7 +225,7 @@ export function useTeamRoster({ tournamentId, tournamentType, restrictToClubIds 
 
     setLoading(true)
     try {
-      const team = await apiCall(`/api/clubs/${selectedClubId}/teams`, {
+      const team = await apiCall<TeamRow>(`/api/clubs/${selectedClubId}/teams`, {
         method: 'POST',
         body: JSON.stringify({ name: newTeamName.trim() }),
       })

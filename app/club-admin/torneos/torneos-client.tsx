@@ -42,16 +42,16 @@ import { clubAdminEditorHref } from "@/lib/club-admin/links"
 interface Tournament {
   id: number
   title: string
-  description?: string
-  place?: string
-  rounds?: number
-  created_by_club_id: number
+  description: string | null
+  place: string | null
+  rounds: number | null
+  created_by_club_id: number | null
   tournament_dates: {
     id: number
-    tournament_id: number
+    tournament_id: number | null
     event_date: string
   }[]
-  tournament_type: string
+  tournament_type: string | null
   participants: number
 }
 
@@ -148,7 +148,7 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments }: ClubAdmi
 
     // Drop the response if the user switched clubs while it was in flight
     let ignore = false
-    apiCall(`/api/clubs/${clubId}/tournaments`)
+    apiCall<{ tournaments: Tournament[] }>(`/api/clubs/${clubId}/tournaments`)
       .then((data) => {
         if (ignore) return
         setTorneos(data.tournaments || [])

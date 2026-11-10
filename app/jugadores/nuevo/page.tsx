@@ -70,11 +70,11 @@ export default function NuevoJugadorPage() {
         
         if (isAdmin) {
           // Site admins can see all clubs
-          const clubsData = await apiCall('/api/clubs')
+          const clubsData = await apiCall<{ clubs: Club[] }>('/api/clubs')
           setClubs(clubsData.clubs || [])
         } else if (isClubAdmin) {
           // Club admins can only see their clubs
-          const adminClubsData = await apiCall('/api/users/me/admin-clubs')
+          const adminClubsData = await apiCall<Club[]>('/api/users/me/admin-clubs')
           const adminClubs = (adminClubsData || []).map((item: Club & { clubs?: Club }) => item.clubs || item).filter(Boolean)
           setAdminClubs(adminClubs)
           setClubs(adminClubs)

@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner"
 import { uploadArbitroImageAction } from "@/lib/actions/arbitros"
 import { apiCall } from "@/lib/utils/apiClient"
+import type { ArbitroRow } from "@/lib/db-types"
 
 interface FormData {
   name: string
@@ -130,7 +131,7 @@ export function NuevoArbitroClient({ initialClubs }: NuevoArbitroClientProps) {
         photo: null,
       }
 
-      const result = await apiCall('/api/arbitros', {
+      const result = await apiCall<ArbitroRow>('/api/arbitros', {
         method: 'POST',
         body: JSON.stringify(arbitroData)
       })

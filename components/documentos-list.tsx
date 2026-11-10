@@ -51,7 +51,7 @@ export function DocumentosList() {
   useEffect(() => {
     if (!userId) return
     let cancelled = false
-    apiCall("/api/documentos/protected")
+    apiCall<{ documentos: DocumentoSummary[] }>("/api/documentos/protected")
       .then((json): ListState => ({ status: "ready", docs: json?.documentos || [] }))
       .catch((err): ListState => ({ status: err instanceof ApiCallError && err.status === 403 ? "forbidden" : "error" }))
       .then((next) => {

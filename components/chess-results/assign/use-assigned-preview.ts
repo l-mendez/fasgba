@@ -36,8 +36,8 @@ export function useAssignedPreview(tnr: number, tournamentId: number | null, ini
     if (initial) return
     let cancelled = false
     const query = `url=${tnr}${tournamentId ? `&tournamentId=${tournamentId}` : ""}`
-    apiCall(`/api/chess-results/preview?${query}`)
-      .then((preview: ChessResultsPreview) => !cancelled && setState({ preview, loading: false, error: null }))
+    apiCall<ChessResultsPreview>(`/api/chess-results/preview?${query}`)
+      .then((preview) => !cancelled && setState({ preview, loading: false, error: null }))
       .catch((err) => !cancelled && setState({ preview: null, loading: false, error: err instanceof Error ? err.message : "No se pudo leer chess-results" }))
     return () => { cancelled = true }
   }, [tnr, tournamentId, initial])
@@ -46,8 +46,8 @@ export function useAssignedPreview(tnr: number, tournamentId: number | null, ini
     if (!touched.current) return
     const id = ++request.current
     const timer = setTimeout(() => {
-      apiCall("/api/chess-results/preview", { method: "POST", body: JSON.stringify({ url: tnr, tournamentId, assignments }) })
-        .then((preview: ChessResultsPreview) => id === request.current && setState({ preview, loading: false, error: null }))
+      apiCall<ChessResultsPreview>("/api/chess-results/preview", { method: "POST", body: JSON.stringify({ url: tnr, tournamentId, assignments }) })
+        .then((preview) => id === request.current && setState({ preview, loading: false, error: null }))
         .catch((err) => id === request.current && setState((s) => ({ ...s, error: err instanceof Error ? err.message : "No se pudo recalcular" })))
         .finally(() => id === request.current && setUpdating(false))
     }, RECALC_DELAY_MS)
@@ -81,7 +81,7 @@ let optionsCache: Promise<ChessResultsOptions> | null = null
 export function useChessResultsOptions(refresh = false) {
   const [options, setOptions] = useState<ChessResultsOptions | null>(null)
   useEffect(() => {
-    if (refresh || !optionsCache) optionsCache = apiCall("/api/chess-results/options")
+    if (refresh || !optionsCache) optionsCache = apiCall<ChessResultsOptions>("/api/chess-results/options")
     let cancelled = false
     optionsCache.then((o) => !cancelled && setOptions(o)).catch(() => { optionsCache = null })
     return () => { cancelled = true }

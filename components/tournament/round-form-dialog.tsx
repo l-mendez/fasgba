@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiCall } from '@/lib/utils/apiClient'
+import type { DbRow } from '@/lib/db-types'
 import { Round, Team } from './types'
 
 interface RoundFormData {
@@ -115,7 +116,7 @@ export function RoundFormDialog({
 
     setLoading(true)
     try {
-      const roundResponse = await apiCall(`/api/tournaments/${tournamentId}/rounds`, {
+      const roundResponse = await apiCall<DbRow<'rounds'>>(`/api/tournaments/${tournamentId}/rounds`, {
         method: 'POST',
         body: JSON.stringify({
           round_number: roundFormData.round_number

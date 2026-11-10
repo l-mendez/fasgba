@@ -41,6 +41,15 @@ interface Club {
   name: string
 }
 
+// GET /api/players (paginated list)
+interface PlayersPage {
+  players: Player[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
 interface PlayersManagementClientProps {
   initialPlayers: Player[]
   initialClubs: Club[]
@@ -81,8 +90,8 @@ export function PlayersManagementClient({
       if (search) params.set('search', search)
       if (clubId) params.set('club_id', clubId)
 
-      const data = await apiCall(`/api/players?${params}`)
-      const fetched: Player[] = data.players || []
+      const data = await apiCall<PlayersPage>(`/api/players?${params}`)
+      const fetched = data.players || []
 
       setPlayers(prev => append ? [...prev, ...fetched] : fetched)
       setTotalResults(data.total || 0)

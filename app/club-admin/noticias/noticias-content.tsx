@@ -125,7 +125,7 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
   useEffect(() => {
     if (clubId === undefined || isCached) return
 
-    apiCall(`/api/clubs/${clubId}/news`)
+    apiCall<ClubNews[]>(`/api/clubs/${clubId}/news`)
       .then((newsData) => {
         const list: ClubNews[] = Array.isArray(newsData) ? newsData : []
         setNewsByClub((current) => ({ ...current, [clubId]: list }))

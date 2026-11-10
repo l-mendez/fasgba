@@ -93,7 +93,7 @@ export function ClubAdminEquipos({
     if (!selectedClub) return
     try {
       setLoading(true)
-      const data = await apiCall(`/api/clubs/${selectedClub.id}/teams`)
+      const data = await apiCall<{ teams: ClubAdminTeam[] }>(`/api/clubs/${selectedClub.id}/teams`)
       setTeams(data.teams || [])
       setCurrentClubId(selectedClub.id)
     } catch {
@@ -117,7 +117,7 @@ export function ClubAdminEquipos({
 
     // Drop the response if the user switched clubs while it was in flight
     let ignore = false
-    apiCall(`/api/clubs/${clubId}/teams`)
+    apiCall<{ teams: ClubAdminTeam[] }>(`/api/clubs/${clubId}/teams`)
       .then((data) => {
         if (ignore) return
         setTeams(data.teams || [])

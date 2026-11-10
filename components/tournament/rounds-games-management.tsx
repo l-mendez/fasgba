@@ -8,6 +8,7 @@ import { Plus } from 'lucide-react'
 import { GameDisplay } from '@/lib/gameUtils-client'
 import { toast } from 'sonner'
 import { apiCall } from '@/lib/utils/apiClient'
+import type { DbRow } from '@/lib/db-types'
 import { RoundFormDialog } from './round-form-dialog'
 import { GameFormDialog } from './game-form-dialog'
 import { MatchFormDialog } from './match-form-dialog'
@@ -76,7 +77,7 @@ export default function RoundsGamesManagement({
   // Game management functions
   const fetchMatches = async (roundId: number) => {
     try {
-      const data = await apiCall(`/api/tournaments/${tournamentId}/rounds/${roundId}/matches`)
+      const data = await apiCall<{ matches: Match[] }>(`/api/tournaments/${tournamentId}/rounds/${roundId}/matches`)
       setMatches(data.matches || [])
     } catch (error) {
       console.error('Error fetching matches:', error)
@@ -85,9 +86,9 @@ export default function RoundsGamesManagement({
 
   const fetchGames = async () => {
     try {
-      const response = await apiCall(`/api/tournaments/${tournamentId}/games?type=${tournamentType}`)
+      const response = await apiCall<{ gamesByRound: Record<number, GameDisplay[]>; tournamentId: number }>(`/api/tournaments/${tournamentId}/games?type=${tournamentType}`)
       if (response.gamesByRound) {
-        const allGames: GameDisplay[] = Object.values(response.gamesByRound).flat() as GameDisplay[]
+        const allGames: GameDisplay[] = Object.values(response.gamesByRound).flat()
         setGames(allGames)
       }
     } catch (error) {
@@ -114,7 +115,7 @@ export default function RoundsGamesManagement({
     if (tournamentType !== 'team') return
 
     let ignore = false
-    apiCall(`/api/tournaments/${tournamentId}/players`)
+    apiCall<{ players: Player[] }>(`/api/tournaments/${tournamentId}/players`)
       .then((data) => {
         if (!ignore) setPlayers(data.players || [])
       })
@@ -123,7 +124,7 @@ export default function RoundsGamesManagement({
         toast.error('Error al cargar jugadores')
       })
     if (selectedRound) {
-      apiCall(`/api/tournaments/${tournamentId}/rounds/${selectedRound}/matches`)
+      apiCall<{ matches: Match[] }>(`/api/tournaments/${tournamentId}/rounds/${selectedRound}/matches`)
         .then((data) => {
           if (!ignore) setMatches(data.matches || [])
         })
@@ -142,10 +143,10 @@ export default function RoundsGamesManagement({
     if (tournamentType !== 'team') return
 
     let ignore = false
-    apiCall(`/api/tournaments/${tournamentId}/registered-teams`)
+    apiCall<{ teams: { teams: Team }[] }>(`/api/tournaments/${tournamentId}/registered-teams`)
       .then((data) => {
         if (ignore) return
-        const registrations: { teams: Team }[] = data.teams || []
+        const registrations = data.teams || []
         setTeams(registrations.map((reg) => ({ id: reg.teams.id, name: reg.teams.name })))
       })
       .catch((error) => {
@@ -162,7 +163,7 @@ export default function RoundsGamesManagement({
 
   const fetchRounds = async () => {
     try {
-      const data = await apiCall(`/api/tournaments/${tournamentId}/rounds`)
+      const data = await apiCall<{ rounds: DbRow<'rounds'>[] }>(`/api/tournaments/${tournamentId}/rounds`)
       const roundsData = data.rounds || []
       setRounds(roundsData)
     } catch (error) {

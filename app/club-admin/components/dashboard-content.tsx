@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 import { useClubContext } from "../context/club-context"
 import { DashboardOverview } from "./dashboard-overview"
 import { apiCall } from "@/lib/utils/apiClient"
-import type { ClubAdminActivityItem, ClubAdminStats } from "@/lib/club-admin/types"
+import type { ClubAdminActivityItem, ClubAdminStats, ClubStatsResponse } from "@/lib/club-admin/types"
 
 interface DashboardContentProps {
   initialClubId: number
@@ -58,7 +58,7 @@ export function DashboardContent({
   useEffect(() => {
     if (clubId === undefined || isCached) return
 
-    apiCall(`/api/clubs/${clubId}/stats`)
+    apiCall<ClubStatsResponse>(`/api/clubs/${clubId}/stats`)
       .then((data) => {
         setStatsByClub((current) => ({ ...current, [clubId]: data.stats }))
         setActivityByClub((current) => ({ ...current, [clubId]: data.recentActivity }))

@@ -47,6 +47,14 @@ interface RawUserResult {
   club_name?: string | null
 }
 
+interface UsersPage {
+  users: RawUserResult[]
+  total: number
+}
+
+// /api/admin/users/search returns UsersPage; the `data` wrapper is a legacy fallback.
+type UsersSearchResponse = Partial<UsersPage> & { data?: Partial<UsersPage> }
+
 const PER_PAGE = 8
 
 function getStringValue(value: unknown): string {
@@ -81,7 +89,7 @@ export function AdminAlumnosClient({
 
   const fetchAlumnos = useCallback(async () => {
     try {
-      const json = await apiCall("/api/admin/alumnos")
+      const json = await apiCall<{ alumnos: Alumno[] }>("/api/admin/alumnos")
       setAlumnos(json.alumnos || [])
     } catch (error) {
       console.error("Error fetching alumnos:", error)
@@ -94,8 +102,8 @@ export function AdminAlumnosClient({
       const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) })
       if (search.trim().length >= 3) params.set("q", search.trim())
       if (alumnoIds.length > 0) params.set("exclude", alumnoIds.join(","))
-      const json = await apiCall(`/api/admin/users/search?${params}`)
-      const rawUsers = (json.data?.users || json.users || []) as RawUserResult[]
+      const json = await apiCall<UsersSearchResponse>(`/api/admin/users/search?${params}`)
+      const rawUsers = json.data?.users || json.users || []
       setUsers(
         rawUsers.map((u) => ({
           id: u.id,
