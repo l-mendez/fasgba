@@ -211,7 +211,7 @@ function ResetPasswordContent() {
         <Button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-terracotta text-white hover:bg-terracotta/90"
+          className="w-full"
         >
           {isLoading ? (
             <>

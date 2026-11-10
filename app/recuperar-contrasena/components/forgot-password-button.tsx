@@ -74,7 +74,7 @@ export function ForgotPasswordButton({
       <Button
         onClick={handleClick}
         disabled={isLoading}
-        className={cn("w-full bg-terracotta text-white hover:bg-terracotta/90", className)}
+        className={cn("w-full", className)}
       >
         {isLoading ? (
           <>

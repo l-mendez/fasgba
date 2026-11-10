@@ -29,7 +29,7 @@ function SignupButtonFallback() {
   return (
     <Button
       disabled
-      className="w-full bg-terracotta hover:bg-terracotta/90 text-white"
+      className="w-full"
     >
       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
       Cargando...
