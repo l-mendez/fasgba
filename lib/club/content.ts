@@ -88,7 +88,7 @@ export async function getClubNewsCount(clubId: number, options: DateFilterOption
  * Gets tournament count for a club with optional date filtering
  */
 export async function getClubTournamentCount(clubId: number, options: DateFilterOptions = {}): Promise<number> {
-  let query = supabase
+  const query = supabase
     .from('tournaments')
     .select('id', { count: 'exact', head: true })
     .eq('created_by_club_id', clubId)
@@ -98,7 +98,7 @@ export async function getClubTournamentCount(clubId: number, options: DateFilter
     // For date filtering, we need to find tournaments where their date range overlaps with the specified range
     // This means: tournament's earliest date <= endDate AND tournament's latest date >= startDate
 
-    let tournamentIdsQuery = supabase
+    const tournamentIdsQuery = supabase
       .from('tournaments')
       .select(`
         id,
@@ -162,7 +162,7 @@ export async function getClubTournaments(clubId: number, options: DateFilterOpti
   // If date filters are provided, we need to join with tournamentdates and filter
   if (options.startDate || options.endDate) {
     // For date filtering, we need to find tournaments where their date range overlaps with the specified range
-    let tournamentIdsQuery = supabase
+    const tournamentIdsQuery = supabase
       .from('tournaments')
       .select(`
         *,

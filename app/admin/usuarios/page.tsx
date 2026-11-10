@@ -89,12 +89,12 @@ async function fetchAllUsers(): Promise<UserWithPermissions[]> {
     const alumnoIds = new Set(alumnos?.map(alumno => alumno.auth_id) || [])
 
     // Get all admins
-    const { data: admins, error: adminsError } = await supabase
+    const { data: admins } = await supabase
       .from('admins')
       .select('auth_id')
 
     // Get all club admins with club names
-    const { data: clubAdmins, error: clubAdminsError } = await supabase
+    const { data: clubAdmins } = await supabase
       .from('club_admins')
       .select(`
         auth_id,
