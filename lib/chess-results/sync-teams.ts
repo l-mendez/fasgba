@@ -2,7 +2,7 @@
 // and board games. Teams and players are already resolved (see assign.ts);
 // teams that couldn't be resolved are reported in `unmatchedTeams`.
 
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/db-types'
 import type { TeamDecision } from './assign'
 import { nameKey } from './match'
 import { applyGameUpdates, ensureRounds, fail, planGames } from './db'
@@ -19,7 +19,7 @@ export interface TeamSyncCounts {
 }
 
 export async function syncTeams(
-  db: SupabaseClient,
+  db: DbClient,
   tournamentId: number,
   cr: CrTournament,
   decisions: Map<string, TeamDecision>,
@@ -67,7 +67,7 @@ export async function syncTeams(
       if (!matchId) {
         const { data, error: insertError } = await db.from('matches').insert({ round_id: roundId, team_a_id: home, team_b_id: away }).select('id').single()
         fail('crear encuentro', insertError)
-        matchId = data!.id as number
+        matchId = data!.id
         matchesCreated++
       }
       const { data: games, error: gamesError } = await db.from('match_games').select('id, board_number, result, pgn').eq('match_id', matchId)

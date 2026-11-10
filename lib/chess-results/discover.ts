@@ -2,7 +2,7 @@
 // chess-results and queues them in chess_results_candidates for admin review.
 // Never creates tournaments and never touches an admin's 'ignored' decision.
 
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/db-types'
 import type { ChessResultsCandidateInsert, ChessResultsCandidateRow } from '@/lib/db-types'
 import { fail } from './db'
 import { fetchChessResultsTitle, searchChessResults } from './fetch'
@@ -45,11 +45,11 @@ async function searchFasgba(): Promise<Metadata[]> {
   return [...byTnr.values()]
 }
 
-export async function discoverCandidates(db: SupabaseClient, sites: SiteTournament[], dryRun: boolean): Promise<DiscoverySummary> {
+export async function discoverCandidates(db: DbClient, sites: SiteTournament[], dryRun: boolean): Promise<DiscoverySummary> {
   const found = await searchFasgba()
   const { data, error } = await db.from('chess_results_candidates').select('*')
   fail('leer candidatos', error)
-  const existing = new Map((data as ChessResultsCandidateRow[] ?? []).map((c) => [c.tnr, c]))
+  const existing = new Map((data ?? []).map((c) => [c.tnr, c]))
   const linked = new Map(sites.filter((s) => s.tnr != null).map((s) => [s.tnr!, s.id]))
 
   // Next state of every row we know about (found now or already queued).

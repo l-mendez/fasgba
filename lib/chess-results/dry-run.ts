@@ -2,7 +2,7 @@
 // (insert/upsert/update/delete) are swallowed and answered with fake rows
 // (negative ids), so the sync code runs unchanged and reports what it would do.
 
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient, TableName } from '@/lib/db-types'
 
 const WRITES = new Set(['insert', 'upsert', 'update', 'delete'])
 
@@ -26,13 +26,13 @@ function fakeWrite(method: string, values: unknown, nextId: () => number) {
   return chain
 }
 
-export function readOnlyClient(db: SupabaseClient): SupabaseClient {
+export function readOnlyClient(db: DbClient): DbClient {
   let id = 0
   const nextId = () => --id
   return new Proxy(db, {
     get(target, prop, receiver) {
       if (prop !== 'from') return Reflect.get(target, prop, receiver)
-      return (table: string) => new Proxy(target.from(table), {
+      return (table: TableName) => new Proxy(target.from(table), {
         get(builder, method) {
           if (typeof method === 'string' && WRITES.has(method)) return (values: unknown) => fakeWrite(method, values, nextId)
           const value = Reflect.get(builder, method)

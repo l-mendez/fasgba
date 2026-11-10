@@ -3,7 +3,7 @@
 // 2. import missing data into tournaments already linked to chess-results.
 // Server-only: uses the service-role client.
 
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/db-types'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidateTorneosCache } from '@/lib/cache/torneos'
 import { fail } from './db'
@@ -57,12 +57,12 @@ export interface ChessResultsRunSummary {
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
-async function loadSiteTournaments(db: SupabaseClient): Promise<SiteTournament[]> {
+async function loadSiteTournaments(db: DbClient): Promise<SiteTournament[]> {
   const { data, error } = await db.from('tournaments')
     .select('id, title, chess_results_tnr, chess_results_synced_at, tournamentdates(event_date)')
   fail('leer torneos', error)
   return (data ?? []).map((t) => {
-    const dates = (t.tournamentdates as Array<{ event_date: string }>).map((d) => d.event_date).sort()
+    const dates = t.tournamentdates.map((d) => d.event_date).sort()
     return {
       id: t.id, title: t.title, tnr: t.chess_results_tnr, syncedAt: t.chess_results_synced_at,
       start: dates[0] ?? null, end: dates.at(-1) ?? null,

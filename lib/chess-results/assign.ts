@@ -3,7 +3,7 @@
 // the sync (applyAssignments) share these decisions, so what an admin reviews
 // is exactly what gets written.
 
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/db-types'
 import { fail } from './db'
 import { bestNameMatch, extendsGiven, nameKey, splitName } from './match'
 import type { CrTournament } from './types'
@@ -48,7 +48,7 @@ export interface SiteData {
   enrolled: Set<number>
 }
 
-export async function loadSiteData(db: SupabaseClient, tournamentId: number | null): Promise<SiteData> {
+export async function loadSiteData(db: DbClient, tournamentId: number | null): Promise<SiteData> {
   const [players, teams, clubs, enrolled] = await Promise.all([
     db.from('players').select('id, full_name, fide_id, club_id').range(0, 9999),
     db.from('teams').select('id, name, club_id').range(0, 9999),
@@ -148,7 +148,7 @@ export function decidePlayers(site: SiteData, inputs: PlayerInput[], teams: Map<
 }
 
 /** Creates the new clubs, teams and players the decisions call for; returns nameKey → id maps. */
-export async function applyAssignments(db: SupabaseClient, site: SiteData, teams: Map<string, TeamDecision>, players: Map<string, PlayerDecision>, guestClubs: string[] = []) {
+export async function applyAssignments(db: DbClient, site: SiteData, teams: Map<string, TeamDecision>, players: Map<string, PlayerDecision>, guestClubs: string[] = []) {
   const clubIds = new Map(site.clubs.map((c) => [nameKey(c.name), c.id]))
   const refs = [...teams.values(), ...players.values()].flatMap((d) => (d.kind === 'new' && d.club && 'newName' in d.club ? [d.club.newName.trim()] : []))
   const newClubs = [...new Map(refs.filter((n) => n && !clubIds.has(nameKey(n))).map((n) => [nameKey(n), n])).values()]
@@ -173,7 +173,7 @@ export async function applyAssignments(db: SupabaseClient, site: SiteData, teams
     if (id == null) {
       const { data, error } = await db.from('teams').insert({ name: d.name, club_id: club }).select('id').single()
       fail('crear equipo', error)
-      id = data!.id as number
+      id = data!.id
       knownTeams.set(teamKey(club, d.name), id)
       teamsCreated++
     }

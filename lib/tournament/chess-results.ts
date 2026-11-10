@@ -2,7 +2,7 @@
 // import, sync, link). Pass a service-role client after checking permissions.
 
 import { NextResponse, type NextRequest } from 'next/server'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/db-types'
 import { fetchChessResultsTournament } from '@/lib/chess-results/fetch'
 import { syncTournamentFromChessResults, type SyncReport } from '@/lib/chess-results/sync'
 import type { Assignments } from '@/lib/chess-results/assign'
@@ -61,7 +61,7 @@ export function chessResultsCounts(cr: CrTournament): ChessResultsCounts {
   }
 }
 
-export async function findTournamentByTnr(db: SupabaseClient, tnr: number): Promise<LinkedTournament | null> {
+export async function findTournamentByTnr(db: DbClient, tnr: number): Promise<LinkedTournament | null> {
   const { data, error } = await db.from('tournaments').select('id, title').eq('chess_results_tnr', tnr).maybeSingle()
   if (error) throw new Error(`Error al buscar el torneo vinculado: ${error.message}`)
   return data
@@ -72,20 +72,20 @@ export function alreadyLinkedError(linked: LinkedTournament): ChessResultsError 
 }
 
 /** Throws 409 when the tnr already belongs to a tournament other than `tournamentId`. */
-export async function assertTnrAvailable(db: SupabaseClient, tnr: number, tournamentId?: number) {
+export async function assertTnrAvailable(db: DbClient, tnr: number, tournamentId?: number) {
   const linked = await findTournamentByTnr(db, tnr)
   if (linked && linked.id !== tournamentId) throw alreadyLinkedError(linked)
 }
 
 /** 409 response when a tournament create/update would reuse a tnr linked elsewhere, else null. */
-export async function tnrConflictResponse(db: SupabaseClient, tnr: number | null | undefined, tournamentId?: number) {
+export async function tnrConflictResponse(db: DbClient, tnr: number | null | undefined, tournamentId?: number) {
   if (!tnr) return null
   const linked = await findTournamentByTnr(db, tnr)
   return linked && linked.id !== tournamentId ? chessResultsErrorResponse(alreadyLinkedError(linked)) : null
 }
 
 /** Marks a discovered candidate as imported, if the weekly job found it. Best effort. */
-export async function markCandidateImported(db: SupabaseClient, tnr: number, tournamentId: number) {
+export async function markCandidateImported(db: DbClient, tnr: number, tournamentId: number) {
   const { error } = await db.from('chess_results_candidates')
     .update({ status: 'imported', tournament_id: tournamentId, updated_at: new Date().toISOString() })
     .eq('tnr', tnr)
@@ -93,7 +93,7 @@ export async function markCandidateImported(db: SupabaseClient, tnr: number, tou
 }
 
 /** Links a tournament to `tnr` (when given) and imports whatever is missing from chess-results. */
-export async function syncTournamentWithChessResults(db: SupabaseClient, tournamentId: number, tnr?: number | null, assignments: Assignments = {}): Promise<SyncReport> {
+export async function syncTournamentWithChessResults(db: DbClient, tournamentId: number, tnr?: number | null, assignments: Assignments = {}): Promise<SyncReport> {
   const { data: tournament, error } = await db.from('tournaments')
     .select('id, tournament_type, chess_results_tnr').eq('id', tournamentId).maybeSingle()
   if (error) throw new Error(`Error al leer el torneo: ${error.message}`)
