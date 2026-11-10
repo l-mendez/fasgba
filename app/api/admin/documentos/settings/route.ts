@@ -7,7 +7,7 @@ import {
   validationError,
 } from '@/lib/utils/apiResponse'
 import { z } from 'zod'
-import { DOCUMENT_CATEGORIES, type DocumentCategory } from '@/lib/documentosUtils'
+import { DOCUMENT_CATEGORIES } from '@/lib/documentosUtils'
 
 export const dynamic = 'force-dynamic'
 

@@ -21,7 +21,7 @@ export async function generateFileHash(file: File): Promise<string> {
     const hashSum = crypto.createHash('md5')
     hashSum.update(new Uint8Array(arrayBuffer))
     return hashSum.digest('hex')
-  } catch (error) {
+  } catch {
     // Fallback: use a simple hash based on file size and name
     const simpleHash = `${file.size}-${file.name}-${file.lastModified}`
     return Buffer.from(simpleHash).toString('base64').replace(/[^a-zA-Z0-9]/g, '').substring(0, 16)

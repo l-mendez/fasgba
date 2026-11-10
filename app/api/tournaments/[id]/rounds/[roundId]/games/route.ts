@@ -1,6 +1,6 @@
 import { getAdminClient } from '@/lib/supabase/admin'
 import { NextRequest } from 'next/server'
-import { apiSuccess, handleError, notFoundError, validationError, noContent, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
+import { apiSuccess, handleError, notFoundError, validationError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
 import { z } from 'zod'
@@ -25,14 +25,6 @@ const matchGameSchema = z.object({
   black_player_id: z.number().int().positive('Invalid black player ID'),
   board_number: z.number().int().min(1, 'Board number must be at least 1'),
   result: gameResultSchema.default('*'),
-  pgn: z.string().max(10000, 'PGN too long').optional(),
-  fen: z.string().max(200, 'FEN too long').optional(),
-  game_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').optional(),
-  game_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Invalid time format').optional(),
-})
-
-const updateGameSchema = z.object({
-  result: gameResultSchema.optional(),
   pgn: z.string().max(10000, 'PGN too long').optional(),
   fen: z.string().max(200, 'FEN too long').optional(),
   game_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').optional(),

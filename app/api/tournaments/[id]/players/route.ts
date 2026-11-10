@@ -14,8 +14,6 @@ const playerSchema = z.object({
   club_id: z.number().int().positive('Invalid club ID').optional(),
 })
 
-const updatePlayerSchema = playerSchema.partial()
-
 interface RouteParams {
   params: Promise<{
     id: string
