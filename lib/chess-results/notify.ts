@@ -2,7 +2,7 @@
 // for review. Reuses the broadcast shell, sender and notification_log.
 // Server-only: needs the service-role client (admins table + auth users).
 
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/db-types'
 import { formatArgentinaDateOnly } from '@/lib/dateUtils'
 import { FROM, NO_REPLY_ADDRESS, SITE_URL, transporter } from '@/lib/notifications/mailer'
 import { escapeHtml, plainText, shellHtml } from '@/lib/notifications/templates'
@@ -59,7 +59,7 @@ export function buildNewCandidatesEmail(candidates: NewCandidate[], siteUrl = SI
 }
 
 /** Confirmed emails of every site admin (`admins` table). */
-export async function loadAdminEmails(db: SupabaseClient): Promise<string[]> {
+export async function loadAdminEmails(db: DbClient): Promise<string[]> {
   const { data, error } = await db.from('admins').select('auth_id')
   fail('leer administradores', error)
   const users = await Promise.all((data ?? []).map((a) => db.auth.admin.getUserById(a.auth_id)))
@@ -67,7 +67,7 @@ export async function loadAdminEmails(db: SupabaseClient): Promise<string[]> {
 }
 
 /** Sends one email to all site admins. Never throws: failures come back as `{ error }`. */
-export async function notifyNewCandidates(db: SupabaseClient, candidates: NewCandidate[]): Promise<NotifyResult> {
+export async function notifyNewCandidates(db: DbClient, candidates: NewCandidate[]): Promise<NotifyResult> {
   let recipients: string[] = []
   const log = async (status: 'sent' | 'no_recipients' | 'error', errorMessage: string | null = null) => {
     try {

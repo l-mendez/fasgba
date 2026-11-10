@@ -29,8 +29,6 @@ async function loadData(): Promise<{ candidates: CandidateItem[]; tournaments: T
     candidates: (candidates.data ?? []).map((c) => ({
       ...c,
       status: c.status as CandidateStatus,
-      suggested: (c.suggested as unknown as CandidateItem["suggested"]) ?? null,
-      tournament: (c.tournament as unknown as CandidateItem["tournament"]) ?? null,
     })),
     tournaments: (tournaments.data ?? []).map((t) => ({
       id: t.id,

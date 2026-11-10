@@ -1,6 +1,6 @@
 // Shared DB steps for the chess-results sync (individual and team).
 
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/db-types'
 import type { CrGame } from './types'
 
 export function fail(action: string, error: { message: string } | null): void {
@@ -8,7 +8,7 @@ export function fail(action: string, error: { message: string } | null): void {
 }
 
 /** Ensures a rounds row per round number; returns round_number → rounds.id. */
-export async function ensureRounds(db: SupabaseClient, tournamentId: number, numbers: number[]) {
+export async function ensureRounds(db: DbClient, tournamentId: number, numbers: number[]) {
   const { data, error } = await db.from('rounds').select('id, round_number').eq('tournament_id', tournamentId)
   fail('leer rondas', error)
   const ids = new Map<number, number>((data ?? []).map((r) => [r.round_number, r.id]))
@@ -32,13 +32,13 @@ export function gameFill(game: CrGame, current: { result: string | null; pgn?: s
 }
 
 /** Splits CR games into rows to insert and existing rows to fill. */
-export function planGames<T extends { id: number; result: string | null; pgn: string | null }>(
+export function planGames<T extends { id: number; result: string | null; pgn: string | null }, R extends object>(
   games: CrGame[],
   existing: Map<string, T>,
   key: (game: CrGame) => string | null,
-  row: (game: CrGame) => Record<string, unknown> | null,
+  row: (game: CrGame) => R | null,
 ) {
-  const inserts: Record<string, unknown>[] = []
+  const inserts: Array<R & { pgn: string | null }> = []
   const updates: Array<{ id: number; fill: GameFill }> = []
   for (const game of games) {
     const k = key(game)
@@ -56,6 +56,6 @@ export function planGames<T extends { id: number; result: string | null; pgn: st
   return { inserts, updates, resultsUpdated: updates.filter((u) => u.fill.result).length, pgnsAdded }
 }
 
-export async function applyGameUpdates(db: SupabaseClient, table: 'individual_games' | 'match_games', updates: Array<{ id: number; fill: GameFill }>) {
+export async function applyGameUpdates(db: DbClient, table: 'individual_games' | 'match_games', updates: Array<{ id: number; fill: GameFill }>) {
   for (const u of updates) fail('actualizar partidas', (await db.from(table).update(u.fill).eq('id', u.id)).error)
 }

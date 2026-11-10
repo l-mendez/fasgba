@@ -2,7 +2,7 @@
 // every field, player, team, round and game, each marked new / fill / exists.
 // Uses the same decisions as the sync (assign.ts), so the preview is what gets imported.
 
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/db-types'
 import { formatArgentinaDateOnly } from '@/lib/dateUtils'
 import { fail, gameFill } from './db'
 import { decideAll, loadSiteData, type Assignments, type PlayerDecision, type TeamDecision } from './assign'
@@ -83,7 +83,7 @@ const toPlanGame = (g: CrGame, status: PlanStatus): PlanGame => ({
   board: g.board, white: g.white.name, black: g.black.name, result: g.result, forfeit: g.forfeit, hasPgn: !!g.pgn, status,
 })
 
-async function siteTournament(db: SupabaseClient, tournamentId: number | null) {
+async function siteTournament(db: DbClient, tournamentId: number | null) {
   if (!tournamentId) return null
   const [t, dates, rounds] = await Promise.all([
     db.from('tournaments').select('title, tournament_type, pace, place, rounds, players_per_team').eq('id', tournamentId).single(),
@@ -128,7 +128,7 @@ function planFields(cr: CrTournament, site: Awaited<ReturnType<typeof siteTourna
     })
 }
 
-export async function buildImportPlan(db: SupabaseClient, cr: CrTournament, tournamentId: number | null = null, assignments: Assignments = {}): Promise<ImportPlan> {
+export async function buildImportPlan(db: DbClient, cr: CrTournament, tournamentId: number | null = null, assignments: Assignments = {}): Promise<ImportPlan> {
   const [site, siteData] = await Promise.all([siteTournament(db, tournamentId), loadSiteData(db, tournamentId)])
   const decisions = decideAll(siteData, cr, assignments)
   const playerId = (name: string) => { const d = decisions.players.get(nameKey(name)); return d?.kind === 'existing' ? d.playerId : null }
@@ -148,7 +148,7 @@ export async function buildImportPlan(db: SupabaseClient, cr: CrTournament, tour
       const existing = roundId && a && b
         ? site!.matches.find((x) => x.round_id === roundId && [x.team_a_id, x.team_b_id].sort().join() === [a, b].sort().join())
         : undefined
-      const boards = (existing?.match_games ?? []) as Array<{ board_number: number; result: string | null; pgn: string | null }>
+      const boards = existing?.match_games ?? []
       return {
         home: m.home.name, away: m.away.name,
         status: unmatched ? 'skip' as const : existing ? 'exists' as const : 'new' as const,

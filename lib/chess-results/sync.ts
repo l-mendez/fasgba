@@ -3,7 +3,7 @@
 // data an admin already entered. Pass a service-role client (or one whose
 // RLS allows the writes) after checking permissions.
 
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DbClient } from '@/lib/db-types'
 import type { TournamentInsert, TournamentUpdate } from '@/lib/db-types'
 import { applyAssignments, decideAll, loadSiteData, type Assignments } from './assign'
 import { nameKey } from './match'
@@ -46,7 +46,7 @@ export function tournamentFromChessResults(cr: CrTournament): TournamentInsert {
   }
 }
 
-async function syncIndividual(db: SupabaseClient, tournamentId: number, cr: CrTournament, ids: Map<string, number>) {
+async function syncIndividual(db: DbClient, tournamentId: number, cr: CrTournament, ids: Map<string, number>) {
   const idOf = (name: string) => ids.get(nameKey(name)) ?? null
 
   const { data: regs, error } = await db.from('tournament_registrations').select('player_id').eq('tournament_id', tournamentId)
@@ -81,7 +81,7 @@ async function syncIndividual(db: SupabaseClient, tournamentId: number, cr: CrTo
 }
 
 /** Links a tournament to chess-results and imports whatever is missing. */
-export async function syncTournamentFromChessResults(db: SupabaseClient, tournamentId: number, cr: CrTournament, assignments: Assignments = {}): Promise<SyncReport> {
+export async function syncTournamentFromChessResults(db: DbClient, tournamentId: number, cr: CrTournament, assignments: Assignments = {}): Promise<SyncReport> {
   const { data: t, error } = await db.from('tournaments').select('id, tournament_type, pace, place, rounds, players_per_team').eq('id', tournamentId).single()
   fail('leer el torneo', error)
   if (!t) throw new Error(`No existe el torneo ${tournamentId}`)
@@ -122,7 +122,7 @@ export type ChessResultsImportEdits = Partial<Omit<TournamentInsert, 'id' | 'tou
 
 /** Creates a site tournament from chess-results (with optional admin edits) and imports its data. */
 export async function createTournamentFromChessResults(
-  db: SupabaseClient,
+  db: DbClient,
   cr: CrTournament,
   createdByClubId: number | null = null,
   edits: ChessResultsImportEdits = {},
