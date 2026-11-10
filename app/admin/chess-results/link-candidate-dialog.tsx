@@ -42,7 +42,7 @@ function LinkCandidateContent({ candidate, tournaments, onOpenChange, onLinked }
     if (selected == null) return
     setSaving(true)
     try {
-      const result: ChessResultsSyncResponse = await apiCall(`/api/admin/chess-results/candidates/${candidate.tnr}/link`, {
+      const result = await apiCall<ChessResultsSyncResponse>(`/api/admin/chess-results/candidates/${candidate.tnr}/link`, {
         method: "POST",
         body: JSON.stringify({ tournamentId: selected, assignments }),
       })

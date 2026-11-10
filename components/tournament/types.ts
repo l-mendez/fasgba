@@ -11,8 +11,8 @@ export interface Team {
 export interface Player {
   id: number
   full_name: string
-  fide_id?: string
-  rating?: number
+  fide_id?: string | null
+  rating?: number | null
   team?: {
     id: number
     name: string
@@ -20,7 +20,7 @@ export interface Player {
   club?: {
     id: number
     name: string
-  }
+  } | null
 }
 
 export interface Match {

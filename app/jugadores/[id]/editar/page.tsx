@@ -97,7 +97,7 @@ export default function EditarJugadorPage() {
         setIsLoading(true)
         
         // Fetch player data
-        const playerData = await apiCall(`/api/players/${playerId}`)
+        const playerData = await apiCall<Player>(`/api/players/${playerId}`)
         setPlayer(playerData)
         
         // Set form data
@@ -111,12 +111,12 @@ export default function EditarJugadorPage() {
         // Fetch clubs based on user permissions
         if (isAdmin) {
           // Site admins can see all clubs
-          const clubsData = await apiCall('/api/clubs')
+          const clubsData = await apiCall<{ clubs: Club[] }>('/api/clubs')
           setClubs(clubsData.clubs || [])
           setCanEdit(true) // Site admins can edit any player
         } else if (isClubAdmin) {
           // Club admins can only see their clubs
-          const adminClubsData = await apiCall('/api/users/me/admin-clubs')
+          const adminClubsData = await apiCall<Club[]>('/api/users/me/admin-clubs')
           const userClubs: Club[] = (adminClubsData || []).map((item: Club & { clubs?: Club }) => item.clubs || item).filter(Boolean)
           setAdminClubs(userClubs)
           setClubs(userClubs)

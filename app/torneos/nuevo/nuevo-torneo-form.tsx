@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { TournamentFormFields, TOURNAMENT_FORM_ACTIONS_CLASS } from "@/components/tournament/tournament-form-fields"
 import { apiCall } from "@/lib/utils/apiClient"
+import type { TournamentRow } from "@/lib/db-types"
 import { useTournamentForm } from "@/hooks/useTournamentForm"
 import {
   createEmptyTournamentFormData,
@@ -81,7 +82,7 @@ export function NuevoTorneoForm({ isSiteAdmin, clubs, defaultClubId, returnPath,
         ...(selectedClubId && { created_by_club: selectedClubId }),
       }
 
-      const result = await apiCall('/api/tournaments', {
+      const result = await apiCall<TournamentRow>('/api/tournaments', {
         method: 'POST',
         body: JSON.stringify(cleanData)
       })

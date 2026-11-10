@@ -1,5 +1,5 @@
 import { getAdminClient } from '@/lib/supabase/admin'
-import type { DbRow } from '@/lib/db-types'
+import type { DbRow, TournamentRow } from '@/lib/db-types'
 import type { ClubNews, DateFilterOptions } from './types'
 
 /**
@@ -159,10 +159,15 @@ export async function getClubTournamentCount(clubId: number, options: DateFilter
   return count || 0
 }
 
+/** A club's tournament with its dates, as returned by getClubTournaments. */
+export type ClubTournament = TournamentRow & {
+  tournament_dates: Pick<DbRow<'tournamentdates'>, 'id' | 'tournament_id' | 'event_date'>[]
+}
+
 /**
  * Gets tournaments created by a club with optional date filtering
  */
-export async function getClubTournaments(clubId: number, options: DateFilterOptions & { limit?: number } = {}): Promise<any[]> {
+export async function getClubTournaments(clubId: number, options: DateFilterOptions & { limit?: number } = {}): Promise<ClubTournament[]> {
   const supabase = getAdminClient()
   // If date filters are provided, we need to join with tournamentdates and filter
   if (options.startDate || options.endDate) {

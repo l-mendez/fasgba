@@ -62,7 +62,7 @@ export function PastRankingsInfiniteTable({ initialData }: PastRankingsInfiniteT
         page: pageToLoad.toString(),
         pageSize: initialData.pageSize.toString(),
       })
-      const result = await apiCall(`/api/admin/ranking/list?${params.toString()}`) as PaginatedPastRankings
+      const result = await apiCall<PaginatedPastRankings>(`/api/admin/ranking/list?${params.toString()}`)
 
       setRankings((current) => mergeRankings(current, result.rankings))
       setHasMore(result.hasMore)

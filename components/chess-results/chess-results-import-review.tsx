@@ -73,7 +73,7 @@ export function ChessResultsImportReview({ preview, chooseClub, club, onOpenChan
     setError(null)
     try {
       const clubId = club?.id ?? (clubValue === FASGBA ? null : Number(clubValue))
-      const result: ChessResultsSyncResponse = await apiCall("/api/chess-results/import", {
+      const result = await apiCall<ChessResultsSyncResponse>("/api/chess-results/import", {
         method: "POST",
         body: JSON.stringify({ url: preview.tnr, clubId, tournament: buildTournamentApiPayload(form.formData), assignments: assigned.assignments }),
       })
@@ -89,8 +89,8 @@ export function ChessResultsImportReview({ preview, chooseClub, club, onOpenChan
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo importar el torneo")
       // Already imported, or created but incomplete: offer to open it.
-      apiCall(`/api/chess-results/preview?url=${preview.tnr}`)
-        .then((p: ChessResultsPreview) => setExistingId(p.linkedTournament?.id ?? null))
+      apiCall<ChessResultsPreview>(`/api/chess-results/preview?url=${preview.tnr}`)
+        .then((p) => setExistingId(p.linkedTournament?.id ?? null))
         .catch(() => {})
     } finally {
       setSaving(false)

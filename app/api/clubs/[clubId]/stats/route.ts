@@ -2,29 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { DbRow, NewsRow, TournamentRow } from "@/lib/db-types"
-
-interface ClubStats {
-  noticias: number
-  torneos: number
-  torneosActivos: number
-  seguidores: number
-  crecimientoSeguidores: number
-}
+import type { ClubAdminActivityItem, ClubAdminStats, ClubStatsResponse } from "@/lib/club-admin/types"
 
 // Shapes of the "recent news" / "recent tournaments" selects below
 type RecentNewsRow = Pick<NewsRow, 'id' | 'title' | 'date' | 'extract' | 'created_at' | 'created_by_auth_id'>
-// `tournaments` has no created_at column; kept as selected by the query below.
 type RecentTournamentRow = Pick<TournamentRow, 'id' | 'title' | 'description'> & {
-  created_at: string | null
   tournamentdates: Pick<DbRow<'tournamentdates'>, 'event_date'>[] | null
-}
-
-interface ActivityItem {
-  type: 'news' | 'tournament' | 'follower'
-  title: string
-  date: string | null
-  description?: string | null
-  author?: string
 }
 
 export async function GET(
@@ -103,24 +86,24 @@ export async function GET(
         .order('created_at', { ascending: false })
         .limit(3),
       
-      // Get recent tournaments (last 3)
+      // Get recent tournaments (last 3). `tournaments` has no created_at; the
+      // id is serial, so the highest ids are the most recently created.
       adminClient
         .from('tournaments')
         .select(`
           id,
           title,
           description,
-          created_at,
           tournamentdates (
             event_date
           )
         `)
         .eq('created_by_club_id', clubId)
-        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .limit(3)
     ])
 
-    const stats: ClubStats = {
+    const stats: ClubAdminStats = {
       noticias: newsData.count || 0,
       torneos: tournamentsData.count || 0,
       torneosActivos: 0, // We would need tournament status to calculate this
@@ -129,7 +112,7 @@ export async function GET(
     }
 
     // Create unified activity feed
-    const activities: ActivityItem[] = []
+    const activities: ClubAdminActivityItem[] = []
 
     // Resolve author display names for recent news (deduped, parallel)
     const authorIds = [...new Set(
@@ -159,8 +142,8 @@ export async function GET(
         activities.push({
           type: 'news',
           title: news.title,
-          date: news.date || news.created_at,
-          description: news.extract,
+          date: news.date || news.created_at || new Date().toISOString(),
+          description: news.extract || undefined,
           author: news.created_by_auth_id ? authorNames.get(news.created_by_auth_id) : undefined,
         })
       })
@@ -169,26 +152,23 @@ export async function GET(
     // Add recent tournaments
     if (recentTournamentsData.data) {
       recentTournamentsData.data.forEach((tournament: RecentTournamentRow) => {
-        const tournamentDate = tournament.tournamentdates?.[0]?.event_date || tournament.created_at
         activities.push({
           type: 'tournament',
           title: tournament.title,
-          date: tournamentDate,
-          description: tournament.description
+          date: tournament.tournamentdates?.[0]?.event_date || new Date().toISOString(),
+          description: tournament.description || undefined
         })
       })
     }
 
     // Sort activities by date (most recent first)
-    activities.sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
+    activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
     // Keep only the 5 most recent activities
     const recentActivity = activities.slice(0, 5)
 
-    return NextResponse.json({
-      stats,
-      recentActivity
-    })
+    const body: ClubStatsResponse = { stats, recentActivity }
+    return NextResponse.json(body)
 
   } catch (error) {
     console.error('Error fetching club stats:', error)

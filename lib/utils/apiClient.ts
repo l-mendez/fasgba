@@ -7,8 +7,9 @@ export class ApiCallError extends Error {
   }
 }
 
-// API helper function for client-side authenticated requests
-export async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
+// API helper function for client-side authenticated requests.
+// `T` is the JSON body the endpoint returns; the body is not validated at runtime.
+export async function apiCall<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
   
@@ -51,7 +52,8 @@ export async function apiCall(endpoint: string, options: RequestInit = {}): Prom
   }
   
   if (response.status === 204) {
-    return null
+    // 204 endpoints (DELETEs) have no body; their callers ignore the result.
+    return null as T
   }
   
   return response.json()

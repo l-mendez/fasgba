@@ -50,7 +50,7 @@ function ImportDialogContent(props: ChessResultsImportDialogProps) {
   const [error, setError] = useState<string | null>(null)
 
   const fetchPreview = useCallback((value: string) =>
-    apiCall(`/api/chess-results/preview?url=${encodeURIComponent(value.trim())}`)
+    apiCall<ChessResultsPreview>(`/api/chess-results/preview?url=${encodeURIComponent(value.trim())}`)
       .then(setPreview, (err) => setError(err instanceof Error ? err.message : "No se pudo leer chess-results"))
       .finally(() => setLoading(false)), [])
 

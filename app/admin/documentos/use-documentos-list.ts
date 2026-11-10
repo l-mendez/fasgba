@@ -43,7 +43,7 @@ export function useDocumentosList({
 
   const fetchDocumentsPage = useCallback(
     async (page: number): Promise<DocumentosResponse> => {
-      return apiCall(`/api/documentos?limit=${DOCUMENTS_PAGE_SIZE}&page=${page}&sort=${sortOption}`)
+      return apiCall<DocumentosResponse>(`/api/documentos?limit=${DOCUMENTS_PAGE_SIZE}&page=${page}&sort=${sortOption}`)
     },
     [sortOption]
   )

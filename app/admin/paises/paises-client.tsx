@@ -6,7 +6,7 @@ import { ArrowDownWideNarrow, Ban, Globe, History, Loader2, Search } from 'lucid
 import { toast } from 'sonner'
 
 import { CountryRow } from '@/app/admin/paises/country-row'
-import { PaisesLogs } from '@/app/admin/paises/paises-logs'
+import { PaisesLogs, type CountryLogsPage } from '@/app/admin/paises/paises-logs'
 import { AdminConfirmDialog } from '@/components/admin-confirm-dialog'
 import { InfoPill } from '@/components/info-pill'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,7 @@ import type {
   CountriesOverview,
   CountryAccessLogItem,
   CountryAccessOverviewItem,
+  CountryToggleResult,
 } from '@/lib/admin/countryAccess'
 import { CONTINENTS, CONTINENT_KEYS, normalizeForSearch, type Continent } from '@/lib/countries'
 import { apiCall } from '@/lib/utils/apiClient'
@@ -65,8 +66,8 @@ export function AdminPaisesClient({ initialOverview, initialLogs }: PaisesClient
   const refresh = async () => {
     try {
       const [nextOverview, nextLogs] = await Promise.all([
-        apiCall('/api/admin/countries'),
-        apiCall('/api/admin/countries/logs'),
+        apiCall<CountriesOverview>('/api/admin/countries'),
+        apiCall<CountryLogsPage>('/api/admin/countries/logs'),
       ])
       setOverview(nextOverview)
       setLogs(nextLogs.logs)
@@ -103,7 +104,7 @@ export function AdminPaisesClient({ initialOverview, initialLogs }: PaisesClient
   const applyBulk = async ({ continent: target, enabled }: PendingBulk) => {
     setBulkSaving(true)
     try {
-      const result = await apiCall('/api/admin/countries/bulk', {
+      const result = await apiCall<CountryToggleResult>('/api/admin/countries/bulk', {
         method: 'POST',
         body: JSON.stringify({ continent: target, enabled }),
       })

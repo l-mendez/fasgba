@@ -13,6 +13,12 @@ import { apiCall } from '@/lib/utils/apiClient'
 
 const PAGE_SIZE = 20
 
+/** GET /api/admin/countries/logs response. */
+export interface CountryLogsPage {
+  logs: CountryAccessLogItem[]
+  hasMore: boolean
+}
+
 interface PaisesLogsProps {
   logs: CountryAccessLogItem[]
   countries: CountryAccessOverviewItem[]
@@ -30,7 +36,7 @@ export function PaisesLogs({ logs, countries, onLogsChange }: PaisesLogsProps) {
       const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) })
       if (nextCountry !== 'all') params.set('country', nextCountry)
 
-      const data = await apiCall(`/api/admin/countries/logs?${params.toString()}`)
+      const data = await apiCall<CountryLogsPage>(`/api/admin/countries/logs?${params.toString()}`)
       onLogsChange(offset === 0 ? data.logs : [...logs, ...data.logs])
       setHasMore(data.hasMore)
     } catch (error) {

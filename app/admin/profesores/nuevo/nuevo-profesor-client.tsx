@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner"
 import { uploadProfesorImageAction } from "@/lib/actions/profesores"
 import { apiCall } from "@/lib/utils/apiClient"
+import type { ProfesorRow } from "@/lib/db-types"
 
 interface Club {
   id: number
@@ -134,7 +135,7 @@ export function NuevoProfesorClient({ initialClubs }: NuevoProfesorClientProps) 
         tarifa_horaria: formData.tarifa_horaria.trim() || null,
       }
 
-      const result = await apiCall('/api/profesores', {
+      const result = await apiCall<ProfesorRow>('/api/profesores', {
         method: 'POST',
         body: JSON.stringify(profesorData)
       })
