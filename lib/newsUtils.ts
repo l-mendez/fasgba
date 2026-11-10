@@ -1,13 +1,7 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
-import { createClient } from '@supabase/supabase-js'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { createClient as createServerClient } from './supabase/server'
 import { deleteNewsImages } from './imageUtils.server'
 import { getArgentinaDateInputValue } from './dateUtils'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Types for News operations
 export interface News {
@@ -78,6 +72,7 @@ export interface NewsQueryOptions {
  * Gets all news with filtering and pagination options
  */
 export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data: NewsDisplay[], total: number }> {
+  const supabase = getAdminClient()
   const {
     page = 1,
     limit = 10,
@@ -238,6 +233,7 @@ export async function getAllNews(options: NewsQueryOptions = {}): Promise<{ data
  * Gets a single news item by ID
  */
 export async function getNewsById(id: number, include: Array<'author' | 'club'> = ['author', 'club']): Promise<NewsDisplay | null> {
+  const supabase = getAdminClient()
   let selectFields = `
     id,
     title,
@@ -313,6 +309,7 @@ export async function getNewsById(id: number, include: Array<'author' | 'club'> 
  * Creates a new news item (initially without images, to be updated after creation)
  */
 export async function createNews(input: CreateNewsInput): Promise<News> {
+  const supabase = getAdminClient()
   // Create news item first without images to get the ID
   const { data, error } = await supabase
     .from('news')
@@ -343,6 +340,7 @@ export async function createNews(input: CreateNewsInput): Promise<News> {
  * Updates a news item (regular update for other operations)
  */
 export async function updateNews(id: number, input: UpdateNewsInput): Promise<boolean> {
+  const supabase = getAdminClient()
   const updateData: UpdateNewsInput & { updated_at: string } = {
     ...input,
     updated_at: new Date().toISOString()
@@ -365,6 +363,7 @@ export async function updateNews(id: number, input: UpdateNewsInput): Promise<bo
  * Deletes a news item and its associated images from storage
  */
 export async function deleteNews(id: number): Promise<boolean> {
+  const supabase = getAdminClient()
   try {
     // Check if news exists
     const { data: news, error: fetchError } = await supabase
@@ -407,6 +406,7 @@ export async function deleteNews(id: number): Promise<boolean> {
  * Checks if a user can edit/delete a specific news item
  */
 export async function canUserEditNews(newsId: number, authId: string): Promise<boolean> {
+  const supabase = getAdminClient()
   const { data: news, error } = await supabase
     .from('news')
     .select('created_by_auth_id, club_id')
@@ -454,6 +454,7 @@ export async function canUserEditNews(newsId: number, authId: string): Promise<b
  * Gets news count for statistics
  */
 export async function getNewsCount(filters: Partial<NewsQueryOptions> = {}): Promise<number> {
+  const supabase = getAdminClient()
   let query = supabase
     .from('news')
     .select('*', { count: 'exact', head: true })
@@ -514,6 +515,7 @@ export async function getRelatedNews(newsId: number, limit: number = 4): Promise
  * Gets unique tags from all news
  */
 export async function getAllNewsTags(): Promise<string[]> {
+  const supabase = getAdminClient()
   try {
     const { data, error } = await supabase
       .from('news')

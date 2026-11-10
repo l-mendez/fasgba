@@ -1,14 +1,8 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { User } from '@supabase/supabase-js'
 import type { DocumentoViewerRoles } from '@/lib/documentosUtils'
-
-// Create a server-side Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
 
 export interface AuthenticatedUser extends User {
   permissions?: {
@@ -42,6 +36,7 @@ function extractToken(request: NextRequest): string | null {
  * Gets user permissions by checking the admins table
  */
 async function getUserPermissions(userId: string): Promise<AuthenticatedUser['permissions']> {
+  const serverSupabase = getAdminClient()
   // Check if user is admin
   const { data: admin } = await serverSupabase
     .from('admins')
@@ -64,6 +59,7 @@ async function getUserPermissions(userId: string): Promise<AuthenticatedUser['pe
  * Gets the current authenticated user from the request
  */
 export async function getAuthenticatedUser(request: NextRequest): Promise<AuthenticatedUser | null> {
+  const serverSupabase = getAdminClient()
   try {
     const token = extractToken(request)
     
@@ -154,6 +150,7 @@ export async function requireAdmin(request: NextRequest): Promise<AuthenticatedU
  * Checks if a user has the alumno role
  */
 export async function isAlumno(userId: string): Promise<boolean> {
+  const serverSupabase = getAdminClient()
   const { data } = await serverSupabase
     .from('alumnos')
     .select('auth_id')
@@ -166,6 +163,7 @@ export async function isAlumno(userId: string): Promise<boolean> {
  * Checks if a user is an admin of any club
  */
 export async function isAnyClubAdmin(userId: string): Promise<boolean> {
+  const serverSupabase = getAdminClient()
   const { data } = await serverSupabase
     .from('club_admins')
     .select('club_id')
@@ -187,6 +185,7 @@ export async function getDocumentoRoles(user: AuthenticatedUser): Promise<Docume
  * Returns the club IDs where the user is a club admin
  */
 export async function getClubAdminClubIds(userId: string): Promise<number[]> {
+  const serverSupabase = getAdminClient()
   const { data } = await serverSupabase
     .from('club_admins')
     .select('club_id')

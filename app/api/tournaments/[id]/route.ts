@@ -1,6 +1,5 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { getTournamentById, updateTournament, deleteTournament } from '@/lib/tournamentUtils'
 import { revalidateTorneosCache } from '@/lib/cache/torneos'
 import { validateTournamentId, validateUpdateTournament } from '@/lib/schemas/tournamentSchemas'
@@ -10,13 +9,9 @@ import { isUserClubAdmin } from '@/lib/clubUtils'
 import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
 import { tnrConflictResponse } from '@/lib/tournament/chess-results'
 
-// Create a Supabase client for server-side operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
-
 // Helper function to check if user can edit tournament
 async function canUserEditTournament(userId: string, tournamentId: number): Promise<boolean> {
+  const serverSupabase = getAdminClient()
   try {
     // Check if user is site admin
     const { data: adminData, error: adminError } = await serverSupabase
@@ -50,6 +45,7 @@ interface RouteParams {
 }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { id: idParam } = await params
     const tournamentId = validateTournamentId(idParam)
@@ -100,6 +96,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { id: idParam } = await params
     const tournamentId = validateTournamentId(idParam)
@@ -145,6 +142,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { id: idParam } = await params
     const tournamentId = validateTournamentId(idParam)
