@@ -1,13 +1,10 @@
-// @ts-nocheck
-/* eslint-disable */
 import { getAdminClient } from '@/lib/supabase/admin'
 import { NextRequest } from 'next/server'
-import { apiSuccess, handleError, notFoundError, validationError, unauthorizedError, forbiddenError, noContent } from '@/lib/utils/apiResponse'
+import { apiSuccess, handleError, notFoundError, validationError, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { z } from 'zod'
 import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
-
-// @ts-nocheck
+import type { DbClient } from '@/lib/tournament/types'
 
 interface RouteParams {
   params: Promise<{
@@ -27,7 +24,7 @@ const createMatchSchema = z.object({
 
 // GET /api/tournaments/[id]/rounds/[roundId]/matches - Get all matches for a round
 export async function GET(request: NextRequest, { params }: RouteParams) {
-  const serverSupabase = getAdminClient()
+  const serverSupabase: DbClient = getAdminClient()
   try {
     const { id: tournamentId, roundId } = await params
     const tournamentIdNum = parseInt(tournamentId, 10)
@@ -100,7 +97,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // POST /api/tournaments/[id]/rounds/[roundId]/matches - Create a new match
 export async function POST(request: NextRequest, { params }: RouteParams) {
-  const serverSupabase = getAdminClient()
+  const serverSupabase: DbClient = getAdminClient()
   try {
     const { id: tournamentId, roundId } = await params
     const tournamentIdNum = parseInt(tournamentId, 10)

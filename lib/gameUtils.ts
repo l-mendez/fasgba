@@ -1,7 +1,6 @@
-// @ts-nocheck
-/* eslint-disable */
-
 import { createClient } from "@/lib/supabase/server"
+import type { DbClient } from "@/lib/tournament/types"
+import type { DbRow, PlayerRow } from "@/lib/db-types"
 
 // Game interface for display
 export interface GameDisplay {
@@ -26,63 +25,42 @@ export interface GameDisplay {
   matchId?: number
 }
 
-// Raw database interfaces
-interface Player {
-  id: number
-  full_name: string
-  rating?: number
+type GamePlayer = Pick<PlayerRow, 'id' | 'full_name' | 'rating'> | null
+
+// Columns shared by individual_games and match_games, as selected below.
+type GameFields = Pick<DbRow<'individual_games'>, 'id' | 'board_number' | 'result' | 'pgn' | 'fen' | 'game_date' | 'game_time'> & {
+  white_player: GamePlayer
+  black_player: GamePlayer
 }
 
-interface Club {
-  id: number
-  name: string
-}
+type TeamInfo = Pick<GameDisplay, 'whiteTeam' | 'blackTeam' | 'matchId'>
 
-interface Round {
-  id: number
-  round_number: number
-}
-
-interface IndividualGameRaw {
-  id: number
-  board_number?: number
-  result: string
-  pgn?: string
-  fen?: string
-  game_date?: string
-  game_time?: string
-  white_player: Player
-  black_player: Player
-  round: Round
-}
-
-interface Team {
-  id: number
-  name: string
-  club: Club
-}
-
-interface MatchGameRaw {
-  id: number
-  board_number: number
-  result: string
-  pgn?: string
-  fen?: string
-  game_date?: string
-  game_time?: string
-  white_player: Player
-  black_player: Player
-  match: {
-    id: number
-    team_a: Team
-    team_b: Team
-    round: Round
+// DB nulls become undefined (GameDisplay's optional fields); team fields only for team games.
+function toGameDisplay(game: GameFields, round: number | undefined, team?: TeamInfo): GameDisplay {
+  return {
+    id: game.id,
+    round: round || 1,
+    white: game.white_player?.full_name || 'Jugador desconocido',
+    black: game.black_player?.full_name || 'Jugador desconocido',
+    result: game.result as GameDisplay['result'],
+    whiteRating: game.white_player?.rating ?? undefined,
+    blackRating: game.black_player?.rating ?? undefined,
+    board: game.board_number ?? undefined,
+    fen: game.fen ?? undefined,
+    pgn: game.pgn ?? undefined,
+    date: game.game_date ?? undefined,
+    time: game.game_time ?? undefined,
+    whiteTeam: team?.whiteTeam,
+    blackTeam: team?.blackTeam,
+    whitePlayerId: game.white_player?.id,
+    blackPlayerId: game.black_player?.id,
+    matchId: team?.matchId
   }
 }
 
 // Fetch games for a tournament
 export async function getTournamentGames(tournamentId: number, tournamentType: string = 'individual'): Promise<Record<number, GameDisplay[]>> {
-  const supabase = await createClient()
+  const supabase: DbClient = await createClient()
   
   try {
     if (tournamentType === 'team') {
@@ -147,35 +125,15 @@ export async function getTournamentGames(tournamentId: number, tournamentType: s
         return {}
       }
 
-      const matchGamesArray: any[] = (matchGames || []) as any[]
-
-      let games: GameDisplay[] = matchGamesArray.map((game: any) => {
+      let games: GameDisplay[] = (matchGames || []).map((game) => {
         // In team tournaments, teams alternate colors:
         // Odd boards (1,3,5): Club A plays white, Club B plays black
         // Even boards (2,4,6): Club A plays black, Club B plays white
         const isOddBoard = (game.board_number || 1) % 2 === 1
         const whiteTeam = isOddBoard ? game.match?.team_a?.name : game.match?.team_b?.name
         const blackTeam = isOddBoard ? game.match?.team_b?.name : game.match?.team_a?.name
-        
-        return {
-          id: game.id,
-          round: game.match?.round?.round_number || 1,
-          white: game.white_player?.full_name || 'Jugador desconocido',
-          black: game.black_player?.full_name || 'Jugador desconocido',
-          result: game.result as '1-0' | '0-1' | '1/2-1/2' | '*',
-          whiteRating: game.white_player?.rating,
-          blackRating: game.black_player?.rating,
-          board: game.board_number,
-          fen: game.fen,
-          pgn: game.pgn,
-          date: game.game_date,
-          time: game.game_time,
-          whiteTeam,
-          blackTeam,
-          whitePlayerId: game.white_player?.id,
-          blackPlayerId: game.black_player?.id,
-          matchId: game.match?.id
-        }
+
+        return toGameDisplay(game, game.match?.round?.round_number, { whiteTeam, blackTeam, matchId: game.match?.id })
       })
 
       // Sort games by round then board number
@@ -237,24 +195,7 @@ export async function getTournamentGames(tournamentId: number, tournamentType: s
         return {}
       }
 
-      const individualGamesArray: any[] = (individualGames || []) as any[]
-
-      let games: GameDisplay[] = individualGamesArray.map((game: any) => ({
-        id: game.id,
-        round: game.round?.round_number || 1,
-        white: game.white_player?.full_name || 'Jugador desconocido',
-        black: game.black_player?.full_name || 'Jugador desconocido',
-        result: game.result as '1-0' | '0-1' | '1/2-1/2' | '*',
-        whiteRating: game.white_player?.rating,
-        blackRating: game.black_player?.rating,
-        board: game.board_number,
-        fen: game.fen,
-        pgn: game.pgn,
-        date: game.game_date,
-        time: game.game_time,
-        whitePlayerId: game.white_player?.id,
-        blackPlayerId: game.black_player?.id
-      }))
+      let games: GameDisplay[] = (individualGames || []).map((game) => toGameDisplay(game, game.round?.round_number))
 
       // Sort games by round then board number
       games = games.sort((a, b) => {
@@ -283,7 +224,7 @@ export async function getTournamentGames(tournamentId: number, tournamentType: s
 
 // Fetch a specific game by ID
 export async function getGameById(gameId: number, tournamentType: string = 'individual'): Promise<GameDisplay | null> {
-  const supabase = await createClient()
+  const supabase: DbClient = await createClient()
   
   try {
     if (tournamentType === 'team') {
@@ -322,25 +263,7 @@ export async function getGameById(gameId: number, tournamentType: string = 'indi
       const whiteTeam = isOddBoard ? matchGame.match?.team_a?.name : matchGame.match?.team_b?.name
       const blackTeam = isOddBoard ? matchGame.match?.team_b?.name : matchGame.match?.team_a?.name
 
-      return {
-        id: matchGame.id,
-        round: matchGame.match?.round?.round_number || 1,
-        white: matchGame.white_player?.full_name || 'Jugador desconocido',
-        black: matchGame.black_player?.full_name || 'Jugador desconocido',
-        result: matchGame.result as '1-0' | '0-1' | '1/2-1/2' | '*',
-        whiteRating: matchGame.white_player?.rating,
-        blackRating: matchGame.black_player?.rating,
-        board: matchGame.board_number,
-        fen: matchGame.fen,
-        pgn: matchGame.pgn,
-        date: matchGame.game_date,
-        time: matchGame.game_time,
-        whiteTeam,
-        blackTeam,
-        whitePlayerId: matchGame.white_player?.id,
-        blackPlayerId: matchGame.black_player?.id,
-        matchId: matchGame.match?.id
-      }
+      return toGameDisplay(matchGame, matchGame.match?.round?.round_number, { whiteTeam, blackTeam, matchId: matchGame.match?.id })
 
     } else {
       // Fetch from individual_games
@@ -366,22 +289,7 @@ export async function getGameById(gameId: number, tournamentType: string = 'indi
         return null
       }
 
-      return {
-        id: individualGame.id,
-        round: individualGame.round?.round_number || 1,
-        white: individualGame.white_player?.full_name || 'Jugador desconocido',
-        black: individualGame.black_player?.full_name || 'Jugador desconocido',
-        result: individualGame.result as '1-0' | '0-1' | '1/2-1/2' | '*',
-        whiteRating: individualGame.white_player?.rating,
-        blackRating: individualGame.black_player?.rating,
-        board: individualGame.board_number,
-        fen: individualGame.fen,
-        pgn: individualGame.pgn,
-        date: individualGame.game_date,
-        time: individualGame.game_time,
-        whitePlayerId: individualGame.white_player?.id,
-        blackPlayerId: individualGame.black_player?.id
-      }
+      return toGameDisplay(individualGame, individualGame.round?.round_number)
     }
   } catch (error) {
     console.error('Error fetching game by ID:', error)
@@ -391,7 +299,7 @@ export async function getGameById(gameId: number, tournamentType: string = 'indi
 
 // Get total rounds for a tournament from the database
 export async function getTournamentRounds(tournamentId: number): Promise<number> {
-  const supabase = await createClient()
+  const supabase: DbClient = await createClient()
   
   try {
     const { data: rounds, error } = await supabase
