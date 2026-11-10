@@ -1,12 +1,8 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
 export async function GET(request: NextRequest) {
+  const supabaseAdmin = getAdminClient()
   try {
     const { searchParams } = new URL(request.url)
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))

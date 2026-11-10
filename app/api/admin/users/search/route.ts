@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
     // Add club-admin context for search/display. User identity stays in
     // Supabase Auth; there is no canonical public users table.
-    let clubMap: Record<string, string> = {}
+    const clubMap: Record<string, string> = {}
     try {
       const { data: clubAdmins } = await supabase
         .from('club_admins')

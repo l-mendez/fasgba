@@ -1,6 +1,5 @@
-import { SUPABASE_SECRET_KEY } from '@/lib/supabase/keys'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { NextRequest } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { getTournamentById, updateTournament, deleteTournament } from '@/lib/tournamentUtils'
 import { revalidateTorneosCache } from '@/lib/cache/torneos'
 import { validateTournamentId, validateUpdateTournament } from '@/lib/schemas/tournamentSchemas'
@@ -10,13 +9,9 @@ import { isUserClubAdmin } from '@/lib/clubUtils'
 import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
 import { tnrConflictResponse } from '@/lib/tournament/chess-results'
 
-// Create a Supabase client for server-side operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = SUPABASE_SECRET_KEY
-const serverSupabase = createClient(supabaseUrl, supabaseServiceKey)
-
 // Helper function to check if user can edit tournament
 async function canUserEditTournament(userId: string, tournamentId: number): Promise<boolean> {
+  const serverSupabase = getAdminClient()
   try {
     // Check if user is site admin
     const { data: adminData, error: adminError } = await serverSupabase
@@ -50,6 +45,7 @@ interface RouteParams {
 }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { id: idParam } = await params
     const tournamentId = validateTournamentId(idParam)
@@ -100,6 +96,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { id: idParam } = await params
     const tournamentId = validateTournamentId(idParam)
@@ -145,6 +142,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const serverSupabase = getAdminClient()
   try {
     const { id: idParam } = await params
     const tournamentId = validateTournamentId(idParam)
@@ -192,7 +190,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       if (existingTournament.tournament_type === 'team') {
         // Changing from team to individual
         // 1. Delete all match games
-        const { data: matchGames, error: matchGamesError } = await serverSupabase
+        const { data: matchGames } = await serverSupabase
           .from('match_games')
           .select(`
             id,
@@ -218,7 +216,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         // 2. Delete all matches
-        const { data: matches, error: matchesError } = await serverSupabase
+        const { data: matches } = await serverSupabase
           .from('matches')
           .select(`
             id,
@@ -242,7 +240,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         // 3. Delete team registrations (but keep players - they can be re-registered individually)
-        const { data: teamRegistrations, error: teamRegError } = await serverSupabase
+        const { data: teamRegistrations } = await serverSupabase
           .from('tournament_teams')
           .select('team_id')
           .eq('tournament_id', tournamentId)
@@ -262,7 +260,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         // 4. Delete team player registrations (but keep the players in the players table)
-        const { data: teamPlayers, error: teamPlayersError } = await serverSupabase
+        const { data: teamPlayers } = await serverSupabase
           .from('tournament_team_players')
           .select('player_id')
           .eq('tournament_id', tournamentId)
@@ -293,7 +291,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       } else if (existingTournament.tournament_type === 'individual') {
         // Changing from individual to team
         // 1. Delete all individual games
-        const { data: individualGames, error: individualGamesError } = await serverSupabase
+        const { data: individualGames } = await serverSupabase
           .from('individual_games')
           .select(`
             id,
@@ -317,7 +315,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         // 2. Delete individual tournament registrations (but keep players - they can be re-registered to teams)
-        const { data: individualRegistrations, error: individualRegError } = await serverSupabase
+        const { data: individualRegistrations } = await serverSupabase
           .from('tournament_registrations')
           .select('player_id')
           .eq('tournament_id', tournamentId)

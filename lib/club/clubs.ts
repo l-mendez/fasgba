@@ -1,5 +1,5 @@
 import { deleteClubImages } from '@/lib/imageUtils.server'
-import { supabase } from './service-client'
+import { getAdminClient } from '@/lib/supabase/admin'
 import { getClubAdminCount, getClubFollowersCount } from './membership'
 import { getClubNewsCount } from './content'
 import type { Club, ClubWithFollowState, ClubWithStats } from './types'
@@ -12,6 +12,7 @@ export async function getAllClubs(options: {
   hasContact?: boolean
   includeStats?: boolean
 } = {}): Promise<Club[] | ClubWithStats[]> {
+  const supabase = getAdminClient()
   try {
     let query = supabase.from('clubs').select('*').eq('affiliated', true)
 
@@ -73,6 +74,7 @@ export async function searchClubsByName(searchTerm: string): Promise<Club[]> {
  * Gets a club by ID
  */
 export async function getClubById(clubId: number, includeStats = false): Promise<Club | ClubWithStats | null> {
+  const supabase = getAdminClient()
   const { data: club, error } = await supabase
     .from('clubs')
     .select('*')
@@ -109,6 +111,7 @@ export async function getClubById(clubId: number, includeStats = false): Promise
  * Creates a new club
  */
 export async function createClub(clubData: Omit<Club, 'id'>): Promise<Club> {
+  const supabase = getAdminClient()
   const { data, error } = await supabase
     .from('clubs')
     .insert(clubData)
@@ -127,6 +130,7 @@ export async function createClub(clubData: Omit<Club, 'id'>): Promise<Club> {
  * Updates a club
  */
 export async function updateClub(clubId: number, updates: Partial<Omit<Club, 'id'>>): Promise<boolean> {
+  const supabase = getAdminClient()
   const { error } = await supabase
     .from('clubs')
     .update(updates)
@@ -144,6 +148,7 @@ export async function updateClub(clubId: number, updates: Partial<Omit<Club, 'id
  * Deletes a club
  */
 export async function deleteClub(clubId: number): Promise<boolean> {
+  const supabase = getAdminClient()
   const { error } = await supabase
     .from('clubs')
     .delete()
@@ -163,6 +168,7 @@ export async function deleteClub(clubId: number): Promise<boolean> {
  * Gets clubs administered by a specific user (by auth UUID)
  */
 export async function getUserAdminClubs(authId: string): Promise<Club[]> {
+  const supabase = getAdminClient()
   try {
     // Get club IDs where the user is an admin
     const { data: adminRelations, error: adminError } = await supabase
@@ -202,6 +208,7 @@ export async function getUserAdminClubs(authId: string): Promise<Club[]> {
  * Gets clubs followed by a specific user (by auth UUID)
  */
 export async function getUserFollowedClubs(authId: string): Promise<Club[]> {
+  const supabase = getAdminClient()
   try {
     // Get club IDs that the user follows
     const { data: followRelations, error: followError } = await supabase
@@ -245,6 +252,7 @@ export async function getClubsWithFollowStatus(
   authId: string | null,
   searchTerm?: string
 ): Promise<ClubWithFollowState[]> {
+  const supabase = getAdminClient()
   try {
     const clubsData = searchTerm ?
       await searchClubsByName(searchTerm) :

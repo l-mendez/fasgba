@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
-import { getTournamentGames, getTournamentRounds } from "@/lib/gameUtils"
+import { getTournamentGames } from "@/lib/gameUtils"
 
 import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -165,7 +165,7 @@ async function getTournamentData(tournamentId: string): Promise<{
     ])
 
     const { data: tournamentData, error: tournamentError } = tournamentResult
-    const { data: roundsData, error: roundsError } = roundsResult
+    const { data: roundsData } = roundsResult
 
     if (tournamentError || !tournamentData) {
       console.error('Error fetching tournament:', tournamentError)

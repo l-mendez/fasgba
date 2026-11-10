@@ -169,7 +169,6 @@ export function useTeamRoster({ tournamentId, tournamentType, restrictToClubIds 
       setClubTeams([])
       setSelectedTeamId(null)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClubId])
 
   // Debounced player search
