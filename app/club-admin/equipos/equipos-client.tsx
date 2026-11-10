@@ -103,11 +103,36 @@ export function ClubAdminEquipos({
     }
   }
 
+  // Show the spinner in the same render the club changes; switching back to
+  // the club whose teams are on screen needs no load.
+  const clubId = selectedClub?.id
+  const [prevClubId, setPrevClubId] = useState(clubId)
+  if (clubId !== prevClubId) {
+    setPrevClubId(clubId)
+    setLoading(clubId !== undefined && clubId !== currentClubId)
+  }
+
   useEffect(() => {
-    if (selectedClub && selectedClub.id !== currentClubId) {
-      fetchTeams()
+    if (clubId === undefined || clubId === currentClubId) return
+
+    // Drop the response if the user switched clubs while it was in flight
+    let ignore = false
+    apiCall(`/api/clubs/${clubId}/teams`)
+      .then((data) => {
+        if (ignore) return
+        setTeams(data.teams || [])
+        setCurrentClubId(clubId)
+      })
+      .catch(() => {
+        if (!ignore) toast.error('Error al cargar equipos')
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false)
+      })
+    return () => {
+      ignore = true
     }
-  }, [selectedClub?.id])
+  }, [clubId, currentClubId])
 
   const handleCreate = async () => {
     if (!selectedClub || !teamName.trim()) {

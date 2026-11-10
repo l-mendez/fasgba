@@ -132,26 +132,40 @@ export function ClubAdminTorneos({ initialClubId, initialTournaments }: ClubAdmi
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
   const [currentClubId, setCurrentClubId] = useState(initialClubId)
 
-  useEffect(() => {
-    async function loadTournaments() {
-      if (!selectedClub || selectedClub.id === currentClubId) return
+  // Show the loading state in the same render the club changes; switching
+  // back to the club whose tournaments are on screen needs no load.
+  const clubId = selectedClub?.id
+  const [prevClubId, setPrevClubId] = useState(clubId)
+  if (clubId !== prevClubId) {
+    setPrevClubId(clubId)
+    const needsLoad = clubId !== undefined && clubId !== currentClubId
+    setIsLoading(needsLoad)
+    if (needsLoad) setError(null)
+  }
 
-      try {
-        setIsLoading(true)
-        setError(null)
-        const data = await apiCall(`/api/clubs/${selectedClub.id}/tournaments`)
+  useEffect(() => {
+    if (clubId === undefined || clubId === currentClubId) return
+
+    // Drop the response if the user switched clubs while it was in flight
+    let ignore = false
+    apiCall(`/api/clubs/${clubId}/tournaments`)
+      .then((data) => {
+        if (ignore) return
         setTorneos(data.tournaments || [])
-        setCurrentClubId(selectedClub.id)
-      } catch (err) {
+        setCurrentClubId(clubId)
+      })
+      .catch((err) => {
+        if (ignore) return
         console.error("Error loading tournaments:", err)
         setError(err instanceof Error ? err.message : "Error al cargar los torneos")
-      } finally {
-        setIsLoading(false)
-      }
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false)
+      })
+    return () => {
+      ignore = true
     }
-
-    loadTournaments()
-  }, [selectedClub?.id])
+  }, [clubId, currentClubId])
 
   // Cycle: asc -> desc -> original order
   const handleSort = (field: SortField) => {

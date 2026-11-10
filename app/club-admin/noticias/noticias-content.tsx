@@ -93,47 +93,51 @@ const getSortValue = (news: ClubNews, field: SortField): string => {
 
 export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentProps) {
   const { selectedClub } = useClubContext()
-  const [noticias, setNoticias] = useState<ClubNews[]>(initialNews)
   const [newsByClub, setNewsByClub] = useState<Record<number, ClubNews[]>>({
     [initialClubId]: initialNews,
   })
   const [searchTerm, setSearchTerm] = useState("")
   const [noticiaToDelete, setNoticiaToDelete] = useState<number | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // Tagged with its club so a late failure for a club already left never
+  // shows up on the current one.
+  const [clubError, setClubError] = useState<{ clubId: number | undefined; message: string } | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [sortBy, setSortBy] = useState<SortField | null>(null)
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
-  const loadNews = async () => {
-    if (!selectedClub) return
+  const clubId = selectedClub?.id
+  const isCached = clubId !== undefined && clubId in newsByClub
 
-    if (newsByClub[selectedClub.id]) {
-      setNoticias(newsByClub[selectedClub.id])
-      return
-    }
-
-    try {
-      setIsLoading(true)
-      setError(null)
-      const newsData = await apiCall(`/api/clubs/${selectedClub.id}/news`)
-      const list: ClubNews[] = Array.isArray(newsData) ? newsData : []
-      setNoticias(list)
-      setNewsByClub((current) => ({ ...current, [selectedClub.id]: list }))
-    } catch (err) {
-      console.error("Error loading news:", err)
-      setError(err instanceof Error ? err.message : "Error al cargar las noticias")
-      setNoticias([])
-    } finally {
-      setIsLoading(false)
-    }
+  // Switching clubs clears the error, so going back to a club whose load
+  // failed shows the loading state again while it retries.
+  const [prevClubId, setPrevClubId] = useState(clubId)
+  if (clubId !== prevClubId) {
+    setPrevClubId(clubId)
+    setClubError(null)
   }
 
+  const error = clubError && clubError.clubId === clubId ? clubError.message : null
+  const setError = (message: string | null) => setClubError(message === null ? null : { clubId, message })
+  const isLoading = clubId !== undefined && !isCached && !error
+  const noticias = (clubId !== undefined && newsByClub[clubId]) || []
+
+  // Load news the first time a club is selected
   useEffect(() => {
-    if (selectedClub) {
-      loadNews()
-    }
-  }, [selectedClub?.id])
+    if (clubId === undefined || isCached) return
+
+    apiCall(`/api/clubs/${clubId}/news`)
+      .then((newsData) => {
+        const list: ClubNews[] = Array.isArray(newsData) ? newsData : []
+        setNewsByClub((current) => ({ ...current, [clubId]: list }))
+      })
+      .catch((err) => {
+        console.error("Error loading news:", err)
+        setClubError({
+          clubId,
+          message: err instanceof Error ? err.message : "Error al cargar las noticias",
+        })
+      })
+  }, [clubId, isCached])
 
   // Cycle: asc -> desc -> original order
   const handleSort = (field: SortField) => {
@@ -163,7 +167,6 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
 
   const handleDeleteNoticia = async () => {
     if (!noticiaToDelete) return
-    const clubId = selectedClub?.id
 
     try {
       setIsDeleting(true)
@@ -174,9 +177,7 @@ export function NoticiasContent({ initialNews, initialClubId }: NoticiasContentP
       }
 
       const remaining = noticias.filter((noticia) => noticia.id !== noticiaToDelete)
-      setNoticias(remaining)
-      // Keep the per-club cache in sync so switching clubs doesn't resurrect it.
-      if (clubId) setNewsByClub((current) => ({ ...current, [clubId]: remaining }))
+      if (clubId !== undefined) setNewsByClub((current) => ({ ...current, [clubId]: remaining }))
     } catch (err) {
       console.error("Error al eliminar noticia:", err)
       setError(err instanceof Error ? err.message : "Ocurrió un error al eliminar la noticia")

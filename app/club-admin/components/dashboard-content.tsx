@@ -35,44 +35,42 @@ export function DashboardContent({
   const [activityByClub, setActivityByClub] = useState<Record<number, ClubAdminActivityItem[]>>({
     [initialClubId]: initialRecentActivity,
   })
-  const [stats, setStats] = useState<ClubAdminStats>(initialStats)
-  const [recentActivity, setRecentActivity] = useState<ClubAdminActivityItem[]>(initialRecentActivity)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // Tagged with its club so a late failure for a club already left never
+  // shows up on the current one.
+  const [fetchError, setFetchError] = useState<{ clubId: number; message: string } | null>(null)
+  const clubId = selectedClub?.id
+  const isCached = clubId !== undefined && clubId in statsByClub
 
-  // Fetch club statistics
-  const fetchClubStats = async (clubId: number) => {
-    if (statsByClub[clubId]) {
-      setStats(statsByClub[clubId])
-      setRecentActivity(activityByClub[clubId] || [])
-      return
-    }
-
-    try {
-      setIsLoading(true)
-      setError(null)
-      
-      const data = await apiCall(`/api/clubs/${clubId}/stats`)
-      setStats(data.stats)
-      setRecentActivity(data.recentActivity)
-      setStatsByClub((current) => ({ ...current, [clubId]: data.stats }))
-      setActivityByClub((current) => ({ ...current, [clubId]: data.recentActivity }))
-    } catch (err) {
-      console.error('Error fetching club stats:', err)
-      setError(err instanceof Error ? err.message : 'Error al cargar estadísticas')
-      setStats(emptyStats)
-      setRecentActivity([])
-    } finally {
-      setIsLoading(false)
-    }
+  // Switching clubs clears the error, so going back to a club whose load
+  // failed shows the loading state again while it retries.
+  const [prevClubId, setPrevClubId] = useState(clubId)
+  if (clubId !== prevClubId) {
+    setPrevClubId(clubId)
+    setFetchError(null)
   }
 
-  // Load stats when selected club changes
+  const error = fetchError && fetchError.clubId === clubId ? fetchError.message : null
+  const isLoading = clubId !== undefined && !isCached && !error
+  const stats = (clubId !== undefined && statsByClub[clubId]) || emptyStats
+  const recentActivity = (clubId !== undefined && activityByClub[clubId]) || []
+
+  // Load stats the first time a club is selected
   useEffect(() => {
-    if (selectedClub) {
-      fetchClubStats(selectedClub.id)
-    }
-  }, [selectedClub?.id])
+    if (clubId === undefined || isCached) return
+
+    apiCall(`/api/clubs/${clubId}/stats`)
+      .then((data) => {
+        setStatsByClub((current) => ({ ...current, [clubId]: data.stats }))
+        setActivityByClub((current) => ({ ...current, [clubId]: data.recentActivity }))
+      })
+      .catch((err) => {
+        console.error('Error fetching club stats:', err)
+        setFetchError({
+          clubId,
+          message: err instanceof Error ? err.message : 'Error al cargar estadísticas',
+        })
+      })
+  }, [clubId, isCached])
 
   if (!selectedClub) {
     return (
