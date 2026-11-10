@@ -20,7 +20,7 @@ import {
 } from "@/lib/tournament-form-utils"
 
 interface EditarTorneoFormProps {
-  tournament: TournamentFormSource & { id: string }
+  tournament: TournamentFormSource & { id: number }
   tournamentId: string
   returnPath: string
 }

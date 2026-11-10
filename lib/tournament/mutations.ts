@@ -1,5 +1,5 @@
-import type { TournamentInsert, TournamentUpdate } from '@/lib/db-types'
-import type { DbClient, Tournament } from './types'
+import type { DbClient, TournamentInsert, TournamentUpdate } from '@/lib/db-types'
+import type { Tournament } from './types'
 
 /**
  * Creates a new tournament with its associated dates

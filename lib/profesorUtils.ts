@@ -1,5 +1,4 @@
 import { getAdminClient } from '@/lib/supabase/admin'
-import type { ClubRow } from '@/lib/db-types'
 
 export interface Profesor {
   id: number
@@ -15,8 +14,14 @@ export interface Profesor {
   tarifa_horaria: string | null
 }
 
-// Row of `select('*, clubs(name)')`
-type ProfesorJoinRow = Profesor & { clubs: Pick<ClubRow, 'name'> | null }
+const MODALIDADES = ['presencial', 'virtual', 'ambos'] as const
+
+// The column is text; profesores_modalidad_check limits it to MODALIDADES.
+function toModalidad(value: string): Profesor['modalidad'] {
+  const modalidad = MODALIDADES.find((m) => m === value)
+  if (!modalidad) throw new Error(`Invalid profesor modalidad: ${value}`)
+  return modalidad
+}
 
 export interface ProfesorWithClub extends Profesor {
   club_name: string | null
@@ -51,13 +56,13 @@ export async function getAllProfesores(options: {
       throw new Error('Failed to fetch profesores')
     }
 
-    return (data || []).map((item: ProfesorJoinRow) => ({
+    return (data || []).map((item) => ({
       id: item.id,
       titulo: item.titulo,
       foto: item.foto,
       club_id: item.club_id,
       anio_nacimiento: item.anio_nacimiento,
-      modalidad: item.modalidad,
+      modalidad: toModalidad(item.modalidad),
       zona: item.zona,
       biografia: item.biografia,
       email: item.email,
@@ -90,20 +95,19 @@ export async function getProfesorById(id: number): Promise<ProfesorWithClub | nu
     throw new Error('Failed to fetch profesor')
   }
 
-  const joined: ProfesorJoinRow = data
   return {
     id: data.id,
     titulo: data.titulo,
     foto: data.foto,
     club_id: data.club_id,
     anio_nacimiento: data.anio_nacimiento,
-    modalidad: data.modalidad,
+    modalidad: toModalidad(data.modalidad),
     zona: data.zona,
     biografia: data.biografia,
     email: data.email,
     telefono: data.telefono,
     tarifa_horaria: data.tarifa_horaria,
-    club_name: joined.clubs?.name || null,
+    club_name: data.clubs?.name || null,
   }
 }
 
@@ -123,7 +127,7 @@ export async function createProfesor(profesorData: Omit<Profesor, 'id'>): Promis
     throw new Error('Failed to create profesor')
   }
 
-  return data
+  return { ...data, modalidad: toModalidad(data.modalidad) }
 }
 
 /**

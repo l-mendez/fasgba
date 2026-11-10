@@ -20,25 +20,10 @@ import { ErrorAlert } from "@/components/error-alert"
 import { clubAdminEditorHref } from "@/lib/club-admin/links"
 import { deleteNewsAction } from "@/lib/actions/news"
 import { formatArgentinaDateOnly, getDateInputValue } from "@/lib/dateUtils"
+import type { ClubNews } from "@/lib/club/types"
 import { compareBy } from "@/lib/sortUtils"
 import { apiCall } from "@/lib/utils/apiClient"
 import { useClubContext } from "../context/club-context"
-
-// Define el tipo para noticias según la API
-interface ClubNews {
-  id: number
-  title: string
-  date: string
-  image: string | null
-  extract: string | null
-  text: string
-  tags: string[]
-  created_by_auth_id: string | null
-  created_at: string
-  updated_at: string
-  author_name?: string
-  author_email?: string
-}
 
 interface NoticiasContentProps {
   initialNews: ClubNews[]
@@ -46,7 +31,7 @@ interface NoticiasContentProps {
 }
 
 // Helper functions for data processing
-const formatDate = (dateString: string) => {
+const formatDate = (dateString: string | null) => {
   try {
     return formatArgentinaDateOnly(dateString, {
       year: 'numeric',
@@ -83,7 +68,7 @@ const getSortValue = (news: ClubNews, field: SortField): string => {
     case "title":
       return news.title.toLowerCase()
     case "date":
-      return getDateInputValue(news.date)
+      return news.date ? getDateInputValue(news.date) : ''
     case "author":
       return getAuthorName(news).toLowerCase()
     case "category":

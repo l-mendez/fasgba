@@ -41,14 +41,14 @@ export interface ClubAdmin {
 export interface ClubNews {
   id: number
   title: string
-  date: string
+  date: string | null
   image: string | null
   extract: string | null
   text: string
   tags: string[]
   created_by_auth_id: string | null
-  created_at: string
-  updated_at: string
+  created_at: string | null
+  updated_at: string | null
   author_name?: string
   author_email?: string
 }

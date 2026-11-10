@@ -30,7 +30,7 @@ export const revalidate = false
 interface NewsItem {
   id: number
   title: string
-  date: string
+  date: string | null
   image: string | null
   extract: string
   tags: string[]
@@ -81,6 +81,9 @@ interface NoticiaProps {
 // returns a plain, JSON-serializable shape (no Date objects cross the boundary).
 // Errors are caught OUTSIDE the cache so transient failures degrade gracefully
 // without being cached.
+// Undated news sorts after dated news.
+const dateSortKey = (date: string | null) => (date ? getDateInputValue(date) : '')
+
 const getCachedNews = unstable_cache(
   async (): Promise<NewsItem[]> => {
     const { data } = await getAllNews({
@@ -110,7 +113,7 @@ const getCachedNews = unstable_cache(
       if (a.club_id !== null && b.club_id === null) return 1
 
       // If both are FASGBA news or both are club news, sort by date (newest first)
-      return getDateInputValue(b.date).localeCompare(getDateInputValue(a.date))
+      return dateSortKey(b.date).localeCompare(dateSortKey(a.date))
     })
 
     // Return only the first 5 for homepage display

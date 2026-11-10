@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: 'Editar noticia' }
 interface News {
   id: number
   title: string
-  date: string
+  date: string | null
   image: string | null
   extract: string
   text: string
@@ -23,8 +23,8 @@ interface News {
     name: string
   } | null
   created_by_auth_id: string | null
-  created_at: string
-  updated_at: string
+  created_at: string | null
+  updated_at: string | null
 }
 
 // Server function to get user from session
@@ -46,6 +46,9 @@ async function getCurrentUser() {
 
 // Server function to fetch news data
 async function getNewsData(newsId: string): Promise<News | null> {
+  // Only plain digit ids can match a row.
+  if (!/^\d+$/.test(newsId)) return null
+
   try {
     const supabase = await createClient()
     
@@ -58,7 +61,7 @@ async function getNewsData(newsId: string): Promise<News | null> {
           name
         )
       `)
-      .eq('id', newsId)
+      .eq('id', Number(newsId))
       .single()
 
     if (error) {

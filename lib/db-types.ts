@@ -1,4 +1,8 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database, Tables, TablesInsert, TablesUpdate } from './database.types'
+
+// Supabase client typed against the generated schema, so queries infer row types.
+export type DbClient = SupabaseClient<Database>
 
 export type PublicSchema = Database['public']
 export type TableName = keyof PublicSchema['Tables']

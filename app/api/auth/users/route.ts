@@ -1,6 +1,6 @@
 import { getAdminClient } from '@/lib/supabase/admin'
 import { NextRequest } from 'next/server'
-import type { AdminRow, ClubAdminRow, ClubRow } from '@/lib/db-types'
+import type { AdminRow } from '@/lib/db-types'
 
 export async function GET(request: NextRequest) {
   const supabaseAdmin = getAdminClient()
@@ -59,7 +59,6 @@ export async function GET(request: NextRequest) {
         club_id,
         club:clubs(id, name)
       `)
-      .overrideTypes<(ClubAdminRow & { club: Pick<ClubRow, 'id' | 'name'> | null })[], { merge: false }>()
     
     // Create sets for quick lookup
     const adminIds = new Set((admins || []).map((a: Pick<AdminRow, 'auth_id'>) => a.auth_id))

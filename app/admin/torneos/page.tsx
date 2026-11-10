@@ -3,7 +3,6 @@ import Link from "next/link"
 import { Plus } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { getTournamentParticipantCount } from "@/lib/tournamentUtils"
-import type { DbClient } from "@/lib/tournament/types"
 
 // Mark this page as dynamic since it requires server-side authentication  
 export const dynamic = 'force-dynamic'
@@ -48,7 +47,7 @@ interface Tournament {
 // Server-side function to fetch tournaments data
 async function fetchTournaments(): Promise<Tournament[]> {
   try {
-    const supabase: DbClient = await createClient()
+    const supabase = await createClient()
     
     // Check if the current user is an admin
     const { data: { user }, error: authError } = await supabase.auth.getUser()

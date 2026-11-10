@@ -13,7 +13,7 @@ import { ErrorAlert } from "@/components/error-alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { updateNewsAction } from "@/lib/actions/news"
-import { getDateInputValue } from "@/lib/dateUtils"
+import { getArgentinaDateInputValue, getDateInputValue } from "@/lib/dateUtils"
 import { processImageUploadsInChunks } from "@/lib/news-content-utils"
 import {
   NEWS_CATEGORIES,
@@ -29,7 +29,7 @@ import { useEditableNewsBlocks } from "@/components/news/use-news-content-blocks
 interface News {
   id: number
   title: string
-  date: string
+  date: string | null
   image: string | null
   extract: string
   text: string
@@ -40,8 +40,8 @@ interface News {
     name: string
   } | null
   created_by_auth_id: string | null
-  created_at: string
-  updated_at: string
+  created_at: string | null
+  updated_at: string | null
 }
 
 interface EditNewsFormProps {
@@ -53,7 +53,7 @@ export function EditNewsForm({ news: initialNews, redirectPath }: EditNewsFormPr
   const router = useRouter()
   const [news, setNews] = useState(() => ({
     ...initialNews,
-    date: getDateInputValue(initialNews.date),
+    date: initialNews.date ? getDateInputValue(initialNews.date) : getArgentinaDateInputValue(),
   }))
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)

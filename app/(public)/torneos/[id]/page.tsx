@@ -9,20 +9,9 @@ import { getTournamentGames, getTournamentRounds } from "@/lib/gameUtils"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import TournamentClient from "@/components/tournament/tournament-client"
 import { Metadata } from "next"
-import type { ClubRow, PlayerRow, TeamRow } from "@/lib/db-types"
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic'
-
-type RegisteredTeamEntry = {
-  team_id: number
-  teams: (Pick<TeamRow, 'id' | 'name' | 'club_id'> & { clubs: Pick<ClubRow, 'id' | 'name'> | null }) | null
-}
-
-type TeamPlayerEntry = {
-  team_id: number
-  players: Pick<PlayerRow, 'id' | 'full_name' | 'fide_id' | 'rating'> | null
-}
 
 interface PageProps {
   params: Promise<{
@@ -112,14 +101,12 @@ async function loadTournament(tournamentId: number) {
           .from('tournament_teams')
           .select('team_id, teams(id, name, club_id, clubs(id, name))')
           .eq('tournament_id', tournamentId)
-          .overrideTypes<RegisteredTeamEntry[], { merge: false }>()
       : Promise.resolve({ data: [] }),
     tournament.tournament_type === 'team'
       ? supabase
           .from('tournament_team_players')
           .select('team_id, players(id, full_name, fide_id, rating)')
           .eq('tournament_id', tournamentId)
-          .overrideTypes<TeamPlayerEntry[], { merge: false }>()
       : Promise.resolve({ data: [] })
   ])
 
@@ -127,6 +114,8 @@ async function loadTournament(tournamentId: number) {
   const playersByTeam: Record<number, { id: number; full_name: string; fide_id?: string; rating?: number }[]> = {}
   for (const entry of teamPlayersResult.data || []) {
     const teamId = entry.team_id
+    // Players not assigned to a team can't be listed under one.
+    if (teamId === null) continue
     if (!playersByTeam[teamId]) playersByTeam[teamId] = []
     if (entry.players) {
       const { fide_id, rating, ...player } = entry.players

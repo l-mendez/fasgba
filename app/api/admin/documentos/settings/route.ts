@@ -60,8 +60,9 @@ export async function GET(request: NextRequest) {
     if (data) {
       for (const doc of data) {
         const currentMax = categoryImportance[doc.category] || 0
-        if (doc.importance_level > currentMax) {
-          categoryImportance[doc.category] = doc.importance_level
+        const level = doc.importance_level ?? 0
+        if (level > currentMax) {
+          categoryImportance[doc.category] = level
         }
       }
     }
