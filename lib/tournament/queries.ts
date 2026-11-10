@@ -1,4 +1,6 @@
-import type { Tournament, TournamentDisplay, TournamentWithDates } from './types'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { TournamentRow } from '@/lib/db-types'
+import type { DbClient, Tournament, TournamentDisplay, TournamentWithDates } from './types'
 import { sortTournamentsByDate, transformTournamentToDisplay } from './display'
 
 // Database query functions
@@ -8,7 +10,7 @@ import { sortTournamentsByDate, transformTournamentToDisplay } from './display'
 /**
  * Fetches all tournaments with their dates from the database
  */
-export async function getAllTournamentsWithDates(supabase: any): Promise<TournamentWithDates[]> {
+export async function getAllTournamentsWithDates(supabase: DbClient): Promise<TournamentWithDates[]> {
   try {
     // Query tournaments with their associated dates
     const { data, error } = await supabase
@@ -47,7 +49,7 @@ export async function getAllTournamentsWithDates(supabase: any): Promise<Tournam
 /**
  * Fetches all tournaments from the database (legacy function for compatibility)
  */
-export async function getAllTournaments(supabase: any): Promise<Tournament[]> {
+export async function getAllTournaments(supabase: DbClient): Promise<Omit<Tournament, 'registration_link'>[]> {
   try {
     const { data: tournaments, error } = await supabase
       .from('tournaments')
@@ -69,7 +71,7 @@ export async function getAllTournaments(supabase: any): Promise<Tournament[]> {
 /**
  * Fetches a single tournament by ID
  */
-export async function getTournamentById(supabase: any, id: number): Promise<Tournament | null> {
+export async function getTournamentById(supabase: DbClient, id: number): Promise<Tournament | null> {
   try {
     const { data, error } = await supabase
       .from('tournaments')
@@ -97,7 +99,7 @@ export async function getTournamentById(supabase: any, id: number): Promise<Tour
  * Fetches tournaments with pagination
  */
 export async function getTournamentsWithPagination(
-  supabase: any,
+  supabase: DbClient,
   page: number = 1,
   pageSize: number = 10,
   orderBy: 'start_date' | 'title' = 'start_date',
@@ -180,7 +182,7 @@ export async function getTournamentsWithPagination(
 /**
  * Fetches upcoming tournaments
  */
-export async function getUpcomingTournaments(supabase: any, limit?: number): Promise<Tournament[]> {
+export async function getUpcomingTournaments(supabase: DbClient, limit?: number): Promise<Tournament[]> {
   try {
     // Since tournaments no longer have direct date fields, we need to use the tournamentdates table
     // This is a more complex query, so for now we'll use the comprehensive function and filter
@@ -216,7 +218,7 @@ export async function getUpcomingTournaments(supabase: any, limit?: number): Pro
 /**
  * Fetches ongoing tournaments
  */
-export async function getOngoingTournaments(supabase: any): Promise<Tournament[]> {
+export async function getOngoingTournaments(supabase: DbClient): Promise<Tournament[]> {
   try {
     // Since tournaments no longer have direct date fields, we need to use the tournamentdates table
     const tournamentsWithDates = await getAllTournamentsWithDates(supabase);
@@ -250,7 +252,7 @@ export async function getOngoingTournaments(supabase: any): Promise<Tournament[]
 /**
  * Comprehensive function to get all tournaments with display formatting
  */
-export async function getAllTournamentsForDisplay(supabase: any): Promise<TournamentDisplay[]> {
+export async function getAllTournamentsForDisplay(supabase: DbClient): Promise<TournamentDisplay[]> {
   try {
     const tournamentsWithDates = await getAllTournamentsWithDates(supabase);
     return tournamentsWithDates.map(transformTournamentToDisplay);
@@ -263,10 +265,10 @@ export async function getAllTournamentsForDisplay(supabase: any): Promise<Tourna
 /**
  * Debug function to check tournaments table status
  */
-export async function checkTournamentsTable(supabase: any): Promise<{
+export async function checkTournamentsTable(supabase: DbClient): Promise<{
   tableExists: boolean;
   rowCount: number;
-  sampleData: any[];
+  sampleData: TournamentRow[];
   error?: string;
 }> {
   try {
@@ -303,7 +305,8 @@ export async function checkTournamentsTable(supabase: any): Promise<{
 /**
  * Debug function to check what columns actually exist in the tournaments table
  */
-export async function checkTournamentsTableStructure(supabase: any): Promise<any> {
+// Untyped client: get_table_structure is not in the generated schema, so its result is unknown.
+export async function checkTournamentsTableStructure(supabase: SupabaseClient): Promise<unknown> {
   try {
     // Query the information_schema to get table structure
     const { data, error } = await supabase.rpc('get_table_structure', {
@@ -345,7 +348,7 @@ export async function checkTournamentsTableStructure(supabase: any): Promise<any
  * counts rows in tournament_registrations.
  */
 export async function getTournamentParticipantCount(
-  supabase: any,
+  supabase: DbClient,
   tournamentId: number,
   type: string | null | undefined
 ): Promise<number> {
@@ -359,7 +362,7 @@ export async function getTournamentParticipantCount(
       if (!registeredTeams || registeredTeams.length === 0) return 0
 
       const clubIds = [...new Set(
-        registeredTeams.map((t: any) => t.teams?.club_id).filter(Boolean)
+        registeredTeams.map((t) => t.teams?.club_id).filter(Boolean)
       )]
       if (clubIds.length === 0) return 0
 

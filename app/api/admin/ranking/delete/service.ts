@@ -1,9 +1,12 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Player } from '@/lib/rankingUtils'
+
 interface RankingFileInfo {
   filename: string
   month: number
   year: number
   date: Date
-  created_at?: string
+  created_at?: string | null
 }
 
 interface RankingFileInfoWithBase extends RankingFileInfo {
@@ -16,11 +19,11 @@ interface SameMonthRankingInfo {
   month: number
   year: number
   suffix: string
-  created_at?: string
+  created_at?: string | null
 }
 
 // List ranking files and map them to RankingFileInfo, sorted most-recent first.
-async function listRankingFiles(adminSupabase: any): Promise<RankingFileInfo[] | null> {
+async function listRankingFiles(adminSupabase: SupabaseClient): Promise<RankingFileInfo[] | null> {
   const { data: files, error: listError } = await adminSupabase.storage
     .from('ranking-data')
     .list('', {
@@ -39,7 +42,7 @@ async function listRankingFiles(adminSupabase: any): Promise<RankingFileInfo[] |
       !file.name.includes('-analytics') &&
       file.name.match(/^ranking-\d{2}-\d{4}/)
     )
-    .map((file: { name: string; created_at?: string }) => {
+    .map((file: { name: string; created_at: string | null }) => {
       const match = file.name.match(/^ranking-(\d{2})-(\d{4}).*\.json$/)
       if (!match) return null
 
@@ -67,7 +70,7 @@ async function listRankingFiles(adminSupabase: any): Promise<RankingFileInfo[] |
 }
 
 // Check if the ranking being deleted is the chronologically latest
-export async function checkIfLatestRanking(adminSupabase: any, filenameToDelete: string): Promise<boolean> {
+export async function checkIfLatestRanking(adminSupabase: SupabaseClient, filenameToDelete: string): Promise<boolean> {
   try {
     const rankingFiles = await listRankingFiles(adminSupabase)
     if (!rankingFiles || rankingFiles.length === 0) {
@@ -84,7 +87,7 @@ export async function checkIfLatestRanking(adminSupabase: any, filenameToDelete:
 }
 
 // Find the new chronologically latest ranking after deletion
-export async function findNewLatestRanking(adminSupabase: any): Promise<string | null> {
+export async function findNewLatestRanking(adminSupabase: SupabaseClient): Promise<string | null> {
   try {
     const rankingFiles = await listRankingFiles(adminSupabase)
     if (!rankingFiles || rankingFiles.length === 0) {
@@ -101,7 +104,7 @@ export async function findNewLatestRanking(adminSupabase: any): Promise<string |
 }
 
 // Get information about the ranking being deleted
-export async function getRankingInfo(adminSupabase: any, filename: string) {
+export async function getRankingInfo(adminSupabase: SupabaseClient, filename: string) {
   try {
     const rankingFiles = await listRankingFiles(adminSupabase)
     if (!rankingFiles || rankingFiles.length === 0) {
@@ -125,7 +128,7 @@ export async function getRankingInfo(adminSupabase: any, filename: string) {
 }
 
 // Handle renaming of same-month rankings to remove gaps in numbering
-export async function renameSameMonthRankings(adminSupabase: any, deletedMonth: number, deletedYear: number) {
+export async function renameSameMonthRankings(adminSupabase: SupabaseClient, deletedMonth: number, deletedYear: number) {
   try {
     // List all ranking files
     const { data: files, error: listError } = await adminSupabase.storage
@@ -147,7 +150,7 @@ export async function renameSameMonthRankings(adminSupabase: any, deletedMonth: 
         !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
-      .map((file: { name: string; created_at?: string }) => {
+      .map((file: { name: string; created_at: string | null }) => {
         const match = file.name.match(/^ranking-(\d{2})-(\d{4})(.*)\.json$/)
         if (!match) return null
 
@@ -242,7 +245,7 @@ export async function renameSameMonthRankings(adminSupabase: any, deletedMonth: 
 }
 
 // Find the next ranking chronologically and recalculate its changes
-export async function recalculateNextRankingChanges(adminSupabase: any, deletedRankingInfo: { month: number; year: number }) {
+export async function recalculateNextRankingChanges(adminSupabase: SupabaseClient, deletedRankingInfo: { month: number; year: number }) {
   try {
 
     // List all ranking files
@@ -265,7 +268,7 @@ export async function recalculateNextRankingChanges(adminSupabase: any, deletedR
         !file.name.includes('-analytics') &&
         file.name.match(/^ranking-\d{2}-\d{4}/)
       )
-      .map((file: { name: string; created_at?: string }) => {
+      .map((file: { name: string; created_at: string | null }) => {
         const match = file.name.match(/^ranking-(\d{2})-(\d{4}).*\.json$/)
         if (!match) return null
 
@@ -339,7 +342,7 @@ export async function recalculateNextRankingChanges(adminSupabase: any, deletedR
     }
 
     // Recalculate changes for each player
-    const updatedPlayers = nextRankingJson.players.map((player: any) => {
+    const updatedPlayers = nextRankingJson.players.map((player: Player) => {
       const changes: { position: number | null; points: number; isNew: boolean } = {
         position: null,
         points: 0,
@@ -347,7 +350,7 @@ export async function recalculateNextRankingChanges(adminSupabase: any, deletedR
       }
 
       if (previousRankingJson) {
-        const previousPlayer = previousRankingJson.players.find((p: any) =>
+        const previousPlayer = previousRankingJson.players.find((p: Player) =>
           normalizeName(p.name) === normalizeName(player.name)
         )
 

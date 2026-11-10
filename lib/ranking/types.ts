@@ -1,4 +1,5 @@
 import type {
+  Player,
   PlayerRatings,
   TournamentDetail,
   AnalyticsData,
@@ -15,7 +16,8 @@ export interface ExcelPlayer {
   Posicion?: number;
   Puntos?: number;
   Partidos?: number;
-  [key: string]: any;
+  // Other columns: raw cell values, narrowed where read.
+  [key: string]: unknown;
 }
 
 export interface RankingPlayer {
@@ -49,7 +51,7 @@ export interface ParsedRanking {
   rankingData: RankingPlayer[]
   analyticsDetails: TournamentDetail[]
   isMultiSheet: boolean
-  previousRanking: { filename: string; players: any[] } | null
+  previousRanking: { filename: string; players: Player[] } | null
   requiresRecalculation: boolean
 }
 

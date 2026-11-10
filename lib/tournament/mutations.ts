@@ -1,9 +1,10 @@
-import type { Tournament } from './types'
+import type { TournamentInsert, TournamentUpdate } from '@/lib/db-types'
+import type { DbClient, Tournament } from './types'
 
 /**
  * Creates a new tournament with its associated dates
  */
-export async function createTournament(supabase: any, tournamentData: {
+export async function createTournament(supabase: DbClient, tournamentData: {
   title: string;
   description?: string;
   time?: string;
@@ -22,19 +23,18 @@ export async function createTournament(supabase: any, tournamentData: {
   players_per_team?: number;
   max_teams?: number;
   registration_deadline?: string;
-  team_match_points?: any;
+  team_match_points?: Record<string, number>;
   chess_results_tnr?: number | null;
 }): Promise<Tournament> {
   try {
     // Extract dates from tournament data
-    const { dates, ...tournamentFields } = tournamentData;
+    const { dates, created_by_club, ...tournamentFields } = tournamentData;
 
     // If created_by_club is provided, rename it to created_by_club_id for the database
-    const dbTournamentFields = { ...tournamentFields };
-    if (tournamentData.created_by_club) {
-      (dbTournamentFields as any).created_by_club_id = tournamentData.created_by_club;
-      delete (dbTournamentFields as any).created_by_club;
-    }
+    const dbTournamentFields: TournamentInsert = {
+      ...tournamentFields,
+      ...(created_by_club ? { created_by_club_id: created_by_club } : {}),
+    };
 
     // Create the tournament record
     const { data: tournament, error: tournamentError } = await supabase
@@ -76,7 +76,7 @@ export async function createTournament(supabase: any, tournamentData: {
 /**
  * Updates an existing tournament and its dates
  */
-export async function updateTournament(supabase: any, tournamentId: number, tournamentData: {
+export async function updateTournament(supabase: DbClient, tournamentId: number, tournamentData: {
   title?: string;
   description?: string;
   time?: string;
@@ -95,19 +95,18 @@ export async function updateTournament(supabase: any, tournamentId: number, tour
   players_per_team?: number;
   max_teams?: number;
   registration_deadline?: string;
-  team_match_points?: any;
+  team_match_points?: Record<string, number>;
   chess_results_tnr?: number | null;
 }): Promise<boolean> {
   try {
     // Extract dates from tournament data
-    const { dates, ...tournamentFields } = tournamentData;
+    const { dates, created_by_club, ...tournamentFields } = tournamentData;
 
     // If created_by_club is provided, rename it to created_by_club_id for the database
-    const dbTournamentFields = { ...tournamentFields };
-    if (tournamentData.created_by_club) {
-      (dbTournamentFields as any).created_by_club_id = tournamentData.created_by_club;
-      delete (dbTournamentFields as any).created_by_club;
-    }
+    const dbTournamentFields: TournamentUpdate = {
+      ...tournamentFields,
+      ...(created_by_club ? { created_by_club_id: created_by_club } : {}),
+    };
 
     // Update the tournament record
     const { error: tournamentError } = await supabase
@@ -161,7 +160,7 @@ export async function updateTournament(supabase: any, tournamentId: number, tour
 /**
  * Deletes a tournament and its associated dates
  */
-export async function deleteTournament(supabase: any, tournamentId: number): Promise<boolean> {
+export async function deleteTournament(supabase: DbClient, tournamentId: number): Promise<boolean> {
   try {
     // First delete tournament dates
     const { error: datesError } = await supabase

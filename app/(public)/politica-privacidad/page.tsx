@@ -23,8 +23,8 @@ export default function PoliticaPrivacidadPage() {
           <article className={LEGAL_PROSE}>
             <h2>1. Introducción</h2>
             <p>
-              La Federación de Ajedrez del Sur del Gran Buenos Aires (en adelante, "FASGBA", "nosotros" o "nuestro") 
-              se compromete a proteger la privacidad de los usuarios de nuestro sitio web fasgba.com (el "Sitio"). 
+              La Federación de Ajedrez del Sur del Gran Buenos Aires (en adelante, &quot;FASGBA&quot;, &quot;nosotros&quot; o &quot;nuestro&quot;) 
+              se compromete a proteger la privacidad de los usuarios de nuestro sitio web fasgba.com (el &quot;Sitio&quot;). 
               Esta Política de Privacidad describe cómo recopilamos, usamos, almacenamos y protegemos su información personal.
             </p>
             <p>
@@ -173,7 +173,7 @@ export default function PoliticaPrivacidadPage() {
             <h2>12. Cambios a esta política</h2>
             <p>
               Podemos actualizar esta Política de Privacidad ocasionalmente. Le notificaremos sobre cambios significativos 
-              mediante un aviso destacado en el Sitio o por correo electrónico. La fecha de "Última actualización" al inicio 
+              mediante un aviso destacado en el Sitio o por correo electrónico. La fecha de &quot;Última actualización&quot; al inicio 
               de esta política indica cuándo fue revisada por última vez.
             </p>
 

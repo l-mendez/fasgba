@@ -3,6 +3,7 @@ import Link from "next/link"
 import { Plus } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { getTournamentParticipantCount } from "@/lib/tournamentUtils"
+import type { DbClient } from "@/lib/tournament/types"
 
 // Mark this page as dynamic since it requires server-side authentication  
 export const dynamic = 'force-dynamic'
@@ -47,7 +48,7 @@ interface Tournament {
 // Server-side function to fetch tournaments data
 async function fetchTournaments(): Promise<Tournament[]> {
   try {
-    const supabase = await createClient()
+    const supabase: DbClient = await createClient()
     
     // Check if the current user is an admin
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -105,10 +106,10 @@ async function fetchTournaments(): Promise<Tournament[]> {
     // row (N+1).
     const participantsByTournament = new Map<number, number>()
 
-    const teamTournaments = tournamentsData.filter((t: any) => t.tournament_type === 'team')
+    const teamTournaments = tournamentsData.filter((t) => t.tournament_type === 'team')
     const individualIds = tournamentsData
-      .filter((t: any) => t.tournament_type !== 'team')
-      .map((t: any) => t.id)
+      .filter((t) => t.tournament_type !== 'team')
+      .map((t) => t.id)
 
     if (individualIds.length > 0) {
       const { data: registrations } = await supabase
@@ -117,20 +118,21 @@ async function fetchTournaments(): Promise<Tournament[]> {
         .in('tournament_id', individualIds)
 
       for (const { tournament_id } of registrations || []) {
+        if (tournament_id === null) continue // null ids cannot match the .in() filter; narrows the type
         participantsByTournament.set(tournament_id, (participantsByTournament.get(tournament_id) || 0) + 1)
       }
     }
 
-    await Promise.all(teamTournaments.map(async (t: any) => {
+    await Promise.all(teamTournaments.map(async (t) => {
       const count = await getTournamentParticipantCount(supabase, t.id, t.tournament_type)
       participantsByTournament.set(t.id, count)
     }))
 
     // Transform the tournaments data to match our Tournament interface
     const now = new Date()
-    const transformedTournaments: Tournament[] = tournamentsData.map((tournament: any) => {
+    const transformedTournaments: Tournament[] = tournamentsData.map((tournament) => {
         // Get dates from tournamentdates array
-        const eventDates = tournament.tournamentdates?.map((date: any) => new Date(date.event_date)) || []
+        const eventDates = tournament.tournamentdates?.map((date) => new Date(date.event_date)) || []
         eventDates.sort((a: Date, b: Date) => a.getTime() - b.getTime()) // Sort dates
         
         const startDate: Date | null = eventDates.length > 0 ? eventDates[0] : null

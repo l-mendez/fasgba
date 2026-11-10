@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
-import { getTournamentGames } from "@/lib/gameUtils"
+import { getTournamentGames, type GameDisplay } from "@/lib/gameUtils"
 
 import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -201,7 +201,7 @@ async function getTournamentData(tournamentId: string): Promise<{
       registration_deadline: tournamentData.registration_deadline,
       team_match_points: tournamentData.team_match_points,
       chess_results_tnr: tournamentData.chess_results_tnr,
-      all_dates: (tournamentData.tournamentdates || []).map((date: any) => date.event_date)
+      all_dates: (tournamentData.tournamentdates || []).map((date: { event_date: string }) => date.event_date)
     }
 
     const rounds: Round[] = roundsData || []
@@ -275,7 +275,7 @@ export default async function EditarTorneoPage({ params, searchParams }: PagePro
   if (!tournament) notFound()
 
   // Prefetch existing games if we have a tournament and user is authorized
-  let initialGames: any[] = []
+  let initialGames: GameDisplay[] = []
   if (isAuthorized) {
     try {
       const gamesByRound = await getTournamentGames(

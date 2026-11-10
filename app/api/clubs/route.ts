@@ -6,7 +6,7 @@ import { apiSuccess, handleError, unauthorizedError } from '@/lib/utils/apiRespo
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 
 // GET /api/clubs - Get all clubs
-export async function GET(request: NextRequest) {
+export async function GET() {
   const supabase = getAdminClient()
   try {
     const { data: clubs, error } = await supabase
