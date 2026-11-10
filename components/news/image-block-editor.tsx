@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
+import Image from "next/image"
 import { Trash2, MoveUp, MoveDown, ImageIcon, ChevronDown, ChevronUp } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -113,10 +114,14 @@ export function ImageBlockEditor({
                         : "mx-auto"
                   }`}
                 >
-                  <img
+                  <Image
                     src={preview}
                     alt="Vista previa"
-                    className="max-h-[300px] max-w-full object-contain rounded-md"
+                    width={0}
+                    height={0}
+                    unoptimized
+                    loading="eager"
+                    className="h-auto w-auto max-h-[300px] max-w-full object-contain rounded-md"
                   />
                 </div>
                 <div className="mt-2 text-sm text-muted-foreground">Haz clic para cambiar la imagen</div>

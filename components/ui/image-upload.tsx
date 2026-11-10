@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useRef } from "react"
+import Image from "next/image"
 import { X, Loader2, ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -129,10 +130,14 @@ export function ImageUpload({
             </div>
           ) : preview ? (
             <div className="relative">
-              <img
+              <Image
                 src={preview}
                 alt="Vista previa"
-                className="max-h-64 max-w-full object-contain rounded-md mx-auto"
+                width={0}
+                height={0}
+                unoptimized
+                loading="eager"
+                className="h-auto w-auto max-h-64 max-w-full object-contain rounded-md mx-auto"
               />
               <Button
                 type="button"

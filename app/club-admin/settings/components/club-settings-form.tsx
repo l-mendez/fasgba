@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -199,9 +200,13 @@ export function ClubSettingsForm({ club }: ClubSettingsFormProps) {
           <div className="space-y-4">
             {currentImage || imagePreview ? (
               <div className="relative inline-block">
-                <img
+                <Image
                   src={imagePreview || getCurrentImageUrl() || ''}
                   alt="Imagen del club"
+                  width={128}
+                  height={128}
+                  unoptimized
+                  loading="eager"
                   className="h-32 w-32 object-contain bg-white rounded-lg border"
                 />
                 {isUploadingImage ? (

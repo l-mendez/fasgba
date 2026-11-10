@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Building2, Cake, ChevronLeft, DollarSign, GraduationCap, Mail, MapPin, Phone } from "lucide-react"
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
@@ -72,9 +73,13 @@ export default async function ProfesorDetailPage({ params }: PageProps) {
 
       <div className="mt-4 grid gap-6 md:grid-cols-[280px_1fr] md:gap-8">
         {imageUrl ? (
-          <img
+          <Image
             src={imageUrl}
             alt={`Foto de ${profesor.titulo}`}
+            width={280}
+            height={280}
+            unoptimized
+            loading="eager"
             className="aspect-[4/3] w-full rounded-lg border object-cover md:aspect-square"
           />
         ) : (

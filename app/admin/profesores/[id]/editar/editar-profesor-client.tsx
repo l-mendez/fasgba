@@ -3,6 +3,7 @@
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { ArrowLeft, Upload, ImageIcon, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -223,9 +224,13 @@ export function EditarProfesorClient({ profesor, initialClubs }: EditarProfesorC
             <div className="space-y-4">
               {(currentImage || imagePreview) && (
                 <div className="relative inline-block">
-                  <img
+                  <Image
                     src={imagePreview || getCurrentImageUrl() || ''}
                     alt="Foto del profesor"
+                    width={128}
+                    height={128}
+                    unoptimized
+                    loading="eager"
                     className="h-32 w-32 object-cover rounded-lg border"
                   />
                   {isUploadingImage && (

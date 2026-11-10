@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Building2, ChevronRight, GraduationCap, Mail, MapPin, Phone } from "lucide-react"
 import { Metadata } from "next"
 
@@ -47,7 +48,15 @@ async function ProfesoresList() {
             className="group relative flex flex-col overflow-hidden rounded-lg border bg-card transition-colors hover:border-amber"
           >
             {imageUrl ? (
-              <img src={imageUrl} alt={`Foto de ${profesor.titulo}`} className="aspect-[4/3] w-full object-cover object-top" />
+              <Image
+                src={imageUrl}
+                alt={`Foto de ${profesor.titulo}`}
+                width={400}
+                height={300}
+                unoptimized
+                loading="eager"
+                className="aspect-[4/3] w-full object-cover object-top"
+              />
             ) : (
               <div className="flex aspect-[4/3] w-full items-center justify-center bg-muted">
                 <GraduationCap className="h-12 w-12 text-muted-foreground" />
