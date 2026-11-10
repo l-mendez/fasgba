@@ -59,6 +59,10 @@ Less text is better; every page must work at 390px and desktop, light and dark.
 
 Run `pnpm shot <path> --all` (`scripts/screenshot.mjs`) for desktop + mobile and
 light + dark, and look at the images before reporting UI as done. Don't hand-roll
-`chrome --headless --window-size=390,…`: headless Chrome clamps width to 500px. Pages behind
-login can't be captured headlessly; use Claude in Chrome with the user's
-profile, one tab per agent, never in parallel with other agents.
+`chrome --headless --window-size=390,…`: headless Chrome clamps width to 500px.
+
+For pages behind login (`/admin`, `/club-admin`, …) add `--auth`: it signs in
+with `SHOT_EMAIL` / `SHOT_PASSWORD` from `.env.local` (a dedicated dev account)
+and sets the Supabase session cookies before navigating. Files get an `-auth`
+suffix, and the script prints `redirected to …` if the account lacks access.
+It is read-only: never click or submit forms against the production database.
