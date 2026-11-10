@@ -50,7 +50,7 @@ export function AuthButtons() {
         <Button asChild variant="outline" size="sm" className="border-terracotta/40 text-terracotta hover:text-terracotta">
           <Link href="/login">Iniciar sesión</Link>
         </Button>
-        <Button asChild size="sm" className="bg-terracotta text-white hover:bg-terracotta/90">
+        <Button asChild size="sm">
           <Link href="/registro">Registrarse</Link>
         </Button>
       </div>

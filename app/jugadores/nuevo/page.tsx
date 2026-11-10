@@ -221,7 +221,6 @@ export default function NuevoJugadorPage() {
               </Button>
               <Button 
                 type="submit" 
-                className="bg-terracotta text-white hover:bg-terracotta/90"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
