@@ -20,8 +20,9 @@ yarn-error.log*
 .env*
 !.env.example
 
-# vercel
-.vercel
+# vercel (project.json only holds IDs; committed so every checkout is linked)
+.vercel/*
+!.vercel/project.json
 
 # supabase cli local metadata
 /supabase/.branches
