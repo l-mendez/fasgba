@@ -4,9 +4,9 @@
 //   pnpm shot /clubes --mobile --dark -> .context/shots/clubes-390-dark.png
 //   pnpm shot /clubes --all           -> desktop + mobile, light + dark
 //   pnpm shot /admin --auth           -> logged in as SHOT_EMAIL (see scripts/shot-auth.mjs)
-// Base URL: $SHOT_BASE_URL or http://localhost:${CONDUCTOR_PORT:-3000}.
+// Base URL: $SHOT_BASE_URL or http://localhost:${PORT:-3000}. Chrome: $CHROME_BIN or the first installed.
 import { spawn } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { authCookies } from './shot-auth.mjs'
@@ -16,8 +16,15 @@ const path = args.find((a) => !a.startsWith('--')) ?? '/'
 const has = (flag) => args.includes(flag)
 const widths = has('--all') ? [1400, 390] : [has('--mobile') ? 390 : 1400]
 const themes = has('--all') ? ['light', 'dark'] : [has('--dark') ? 'dark' : 'light']
-const base = process.env.SHOT_BASE_URL ?? `http://localhost:${process.env.CONDUCTOR_PORT ?? 3000}`
-const chromeBin = process.env.CHROME_BIN ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+const base = process.env.SHOT_BASE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`
+const chromeBin =
+  process.env.CHROME_BIN ??
+  [
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
+  ].find((bin) => existsSync(bin)) ??
+  'google-chrome'
 const outDir = resolve(import.meta.dirname, '../.context/shots')
 const slug = path.replace(/^\//, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/-$/, '') || 'home'
 const cookies = has('--auth') ? await authCookies(base) : []
