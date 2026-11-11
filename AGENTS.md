@@ -41,18 +41,14 @@ pnpm shot <path> [--mobile] [--dark] [--all] [--auth]  # Full-page screenshots â
   staging DB: never submit forms, delete, or write rows while testing unless the
   user asked. Preview writes with dry-run helpers (see
   `lib/chess-results/dry-run.ts`).
-- Run the dev server with `pnpm dev --port $CONDUCTOR_PORT` (Conductor's run
-  script) in the background; log to `.context/dev.log`.
+- Run the dev server in the background with `pnpm dev --port <port>` (in
+  Conductor, `$CONDUCTOR_PORT`); log to `.context/dev.log`.
 - `.env.local` is per workspace. The source of truth is the root checkout's
   `.env.local`; when the user changes keys, update both. `.worktreeinclude`
   copies it into agent worktrees. Every variable is listed in `.env.example`.
 - Agent worktrees branch from the root repo's HEAD, not this workspace's branch.
   Give subagents the base SHA and have them check it before starting.
-- The shell is zsh: quote globs and URLs (`--include='*.ts'`, `'...?limit=1'`).
-  Don't `sleep`; use `gh pr checks --watch` or background tasks.
-- Supabase CLI exits 137 on every call â†’ broken Homebrew signature:
-  `HOMEBREW_NO_AUTO_UPDATE=1 brew upgrade supabase`, then re-run
-  `supabase link --project-ref uxtfxazbikfqcnnmhufh`.
+- Don't `sleep`; use `gh pr checks --watch` or background tasks.
 - Inspect the live DB read-only with `supabase db query --linked "<sql>"`.
 
 ## PRs And Deploys
@@ -62,7 +58,7 @@ pnpm shot <path> [--mobile] [--dark] [--all] [--auth]  # Full-page screenshots â
 - Vercel deploys from `master`. `vercel.json` pins the build/install commands
   and overrides the dashboard. For a production 404 (`x-vercel-error:
   NOT_FOUND`), check the latest deploy's build duration and logs
-  (`vercel ls --prod`, `vercel inspect --logs <url>`) before blaming quotas.
+  (`vercel ls --environment production`, `vercel inspect --logs <url>`) before blaming quotas.
 - Vercel Production and Preview both need every server env var
   (`SUPABASE_SECRET_KEY`, `CRON_SECRET`, `NO_REPLY_PASSWORD`).
 
