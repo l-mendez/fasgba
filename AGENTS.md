@@ -41,28 +41,28 @@ pnpm shot <path> [--mobile] [--dark] [--all] [--auth]  # Full-page screenshots �
   staging DB: never submit forms, delete, or write rows while testing unless the
   user asked. Preview writes with dry-run helpers (see
   `lib/chess-results/dry-run.ts`).
-- Run the dev server with `pnpm dev --port $CONDUCTOR_PORT` (Conductor's run
-  script) in the background; log to `.context/dev.log`.
+- New checkout: `pnpm install`, then `supabase link --project-ref uxtfxazbikfqcnnmhufh`
+  (after `supabase login`).
+- Run the dev server in the background with `pnpm dev --port <port>`; log to
+  `.context/dev.log`. `pnpm shot` uses port 3000, or `PORT=<port> pnpm shot …`.
 - `.env.local` is per workspace. The source of truth is the root checkout's
   `.env.local`; when the user changes keys, update both. `.worktreeinclude`
   copies it into agent worktrees. Every variable is listed in `.env.example`.
 - Agent worktrees branch from the root repo's HEAD, not this workspace's branch.
   Give subagents the base SHA and have them check it before starting.
-- The shell is zsh: quote globs and URLs (`--include='*.ts'`, `'...?limit=1'`).
-  Don't `sleep`; use `gh pr checks --watch` or background tasks.
-- Supabase CLI exits 137 on every call → broken Homebrew signature:
-  `HOMEBREW_NO_AUTO_UPDATE=1 brew upgrade supabase`, then re-run
-  `supabase link --project-ref uxtfxazbikfqcnnmhufh`.
-- Inspect the live DB read-only with `supabase db query --linked "<sql>"`.
+- Don't `sleep`; use `gh pr checks --watch` or background tasks.
+- Inspect the live DB read-only with `supabase db query --remote --read-only "<sql>"`.
 
 ## PRs And Deploys
 
+- Keep commit messages concise. Update a PR branch by merging `master` into it,
+  never by rebasing.
 - Merges are squash merges. "Automerge" means `gh pr merge --squash --auto`.
   If the user asks for a review before merging, finish it before merging.
 - Vercel deploys from `master`. `vercel.json` pins the build/install commands
   and overrides the dashboard. For a production 404 (`x-vercel-error:
   NOT_FOUND`), check the latest deploy's build duration and logs
-  (`vercel ls --prod`, `vercel inspect --logs <url>`) before blaming quotas.
+  (`vercel ls --environment production`, `vercel inspect --logs <url>`) before blaming quotas.
 - Vercel Production and Preview both need every server env var
   (`SUPABASE_SECRET_KEY`, `CRON_SECRET`, `NO_REPLY_PASSWORD`).
 
@@ -160,8 +160,9 @@ UI/API-specific names only at the feature boundary that needs them.
 
 ## Conventions
 
-- Prioritize UX: minimize steps, support search by multiple useful fields, and
-  keep admin workflows responsive.
+- Prioritize UX: minimize steps, offer more than one way to do a task, support
+  search by multiple useful fields, and keep admin workflows responsive.
+- Every page must be responsive.
 - Reuse existing utilities and schemas before adding new abstractions.
 - Keep files short and changes scoped.
 - Server Components by default; use client components only for interactivity.

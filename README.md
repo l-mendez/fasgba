@@ -36,8 +36,8 @@ Settings → API Keys. The legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` /
 `SUPABASE_SERVICE_ROLE_KEY` names are still read as a fallback
 (`lib/supabase/keys.ts`) until every environment is migrated.
 
-The Supabase project ref is `uxtfxazbikfqcnnmhufh`. Conductor setup links new
-workspaces automatically when the Supabase CLI is available.
+The Supabase project ref is `uxtfxazbikfqcnnmhufh`. Link a new checkout with
+`supabase login`, then `supabase link --project-ref uxtfxazbikfqcnnmhufh`.
 
 ## Common Commands
 
