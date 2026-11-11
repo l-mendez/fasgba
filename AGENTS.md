@@ -49,7 +49,7 @@ pnpm shot <path> [--mobile] [--dark] [--all] [--auth]  # Full-page screenshots â
 - Agent worktrees branch from the root repo's HEAD, not this workspace's branch.
   Give subagents the base SHA and have them check it before starting.
 - Don't `sleep`; use `gh pr checks --watch` or background tasks.
-- Inspect the live DB read-only with `supabase db query --linked "<sql>"`.
+- Inspect the live DB read-only with `supabase db query --remote --read-only "<sql>"`.
 
 ## PRs And Deploys
 
