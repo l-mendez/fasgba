@@ -23,7 +23,7 @@ export type PartidoData = {
 // Everything is fetched once per render pass and shared by every partido.
 const loadAll = cache(async () => {
   const [clubs, profesores, tournaments, ranking] = await Promise.all([
-    safe(() => getAllClubs() as Promise<Club[]>, [] as Club[], 'Error fetching clubs:'),
+    safe((): Promise<Club[]> => getAllClubs(), [] as Club[], 'Error fetching clubs:'),
     safe(() => getAllProfesores(), [] as ProfesorWithClub[], 'Error fetching profesores:'),
     safe(() => getAllTournamentsForDisplay(getAdminClient()), [] as TournamentDisplay[], 'Error fetching tournaments:'),
     safe(getCachedLatestRankingData, { players: [] }, 'Error fetching ranking:'),
@@ -36,7 +36,7 @@ const ZONA_SUR = /zona sur/i
 export async function loadPartidoData(partido: Partido): Promise<PartidoData> {
   const all = await loadAll()
 
-  const clubs = all.clubs.filter((club) => mentionsPartido(partido, `${club.name} ${club.address ?? ''}`))
+  const clubs = all.clubs.filter((club) => mentionsPartido(partido, club.address))
   const clubIds = new Set(clubs.map((club) => club.id))
 
   // Local teachers first, then those who teach across the whole zona sur.
@@ -44,7 +44,7 @@ export async function loadPartidoData(partido: Partido): Promise<PartidoData> {
   const zonaSur = all.profesores.filter((p) => !local.includes(p) && ZONA_SUR.test(p.zona ?? ''))
   const profesores = [...local, ...zonaSur]
 
-  const inPartido = all.tournaments.filter((t) => mentionsPartido(partido, `${t.place ?? ''} ${t.location ?? ''}`))
+  const inPartido = all.tournaments.filter((t) => mentionsPartido(partido, t.place) || mentionsPartido(partido, t.location))
   const current = inPartido.filter((t) => t.is_upcoming || t.is_ongoing).sort((a, b) => a.start_date.getTime() - b.start_date.getTime())
   const recent = inPartido.filter((t) => t.is_past).sort((a, b) => b.start_date.getTime() - a.start_date.getTime())
   const shown = current.length > 0 ? current.slice(0, 6) : recent.slice(0, 3)

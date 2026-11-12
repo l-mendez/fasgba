@@ -1,4 +1,5 @@
 import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePartidoPages } from './partidos'
 
 import { ADMIN_RANKING_CACHE_TAG, RANKING_CACHE_TAG } from '@/lib/rankingStorage'
 
@@ -8,7 +9,5 @@ export function revalidateRankingCache() {
   revalidatePath('/')
   revalidatePath('/ranking')
   revalidatePath('/admin/ranking')
-  // Partido landing pages list clubs, profesores, torneos and top players.
-  revalidatePath('/ajedrez')
-  revalidatePath('/ajedrez/[partido]', 'page')
+  revalidatePartidoPages()
 }

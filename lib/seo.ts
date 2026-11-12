@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 
+import { PARTIDOS } from '@/lib/partidos'
+
 // Shared SEO constants and schema.org builders. Canonical URLs always point at
 // production, so previews and local builds never advertise themselves.
 export const SITE_URL = 'https://fasgba.com'
@@ -15,18 +17,8 @@ export const SOCIAL_PROFILES = [
   'https://www.instagram.com/fasgba_ok',
 ]
 
-// Partidos with affiliated clubs (from club addresses).
-export const MUNICIPALITIES = [
-  'Avellaneda',
-  'Lanús',
-  'Lomas de Zamora',
-  'Quilmes',
-  'Almirante Brown',
-  'Esteban Echeverría',
-  'Ezeiza',
-  'Cañuelas',
-  'San Vicente',
-]
+// Partidos with affiliated clubs (see lib/partidos.ts).
+export const MUNICIPALITIES = PARTIDOS.map(({ name }) => name)
 
 export const ORGANIZATION_ID = `${SITE_URL}/#organization`
 export const WEBSITE_ID = `${SITE_URL}/#website`
@@ -51,6 +43,15 @@ export const organizationJsonLd: JsonLdObject = {
   areaServed: MUNICIPALITIES.map((name) => ({ '@type': 'City', name: `${name}, Buenos Aires, Argentina` })),
   address: { '@type': 'PostalAddress', addressRegion: 'Buenos Aires', addressCountry: 'AR' },
   sameAs: SOCIAL_PROFILES,
+}
+
+// Inline reference for publisher/organizer fields on pages without the full node.
+export const organizationRef: JsonLdObject = {
+  '@type': 'SportsOrganization',
+  '@id': ORGANIZATION_ID,
+  name: FEDERATION_FULL_NAME,
+  url: SITE_URL,
+  logo: LOGO_URL,
 }
 
 export const websiteJsonLd: JsonLdObject = {

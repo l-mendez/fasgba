@@ -14,7 +14,7 @@ import { absoluteUrl, breadcrumbJsonLd, pageMetadata, type JsonLdObject } from "
 import { loadPartidoData, type PartidoData } from "@/lib/partido-data"
 
 // Prerendered per partido and purged by the clubs, profesores, torneos and
-// ranking invalidators (revalidatePath('/ajedrez/[partido]', 'page')).
+// ranking invalidators (revalidatePartidoPages in lib/cache/partidos.ts).
 export const revalidate = false
 export const dynamicParams = false
 

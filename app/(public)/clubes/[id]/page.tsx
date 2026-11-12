@@ -18,7 +18,7 @@ import { JsonLd } from "@/components/json-ld"
 import type { ClubWithStats } from "@/lib/clubUtils"
 import { clubLocality } from "@/lib/clubLocality"
 import { getImageUrlNullable } from "@/lib/imageUtils"
-import { absoluteUrl, breadcrumbJsonLd, ORGANIZATION_ID, pageMetadata, type JsonLdObject } from "@/lib/seo"
+import { absoluteUrl, breadcrumbJsonLd, organizationRef, pageMetadata, type JsonLdObject } from "@/lib/seo"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
@@ -64,7 +64,7 @@ function clubJsonLd(club: ClubWithStats, imageUrl: string | null): JsonLdObject 
           addressCountry: 'AR',
         }
       : undefined,
-    memberOf: { '@id': ORGANIZATION_ID },
+    memberOf: organizationRef,
   }
 }
 

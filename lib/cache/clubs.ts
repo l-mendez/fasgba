@@ -1,4 +1,5 @@
 import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePartidoPages } from './partidos'
 
 // Invalidate every cached public page that shows club data after a club
 // mutation (create, edit, delete, settings change, or image upload/removal).
@@ -18,7 +19,5 @@ export function revalidateClubsCache() {
   revalidatePath('/arbitraje')
   revalidatePath('/profesores')
   revalidatePath('/sitemap.xml')
-  // Partido landing pages list clubs, profesores, torneos and top players.
-  revalidatePath('/ajedrez')
-  revalidatePath('/ajedrez/[partido]', 'page')
+  revalidatePartidoPages()
 }

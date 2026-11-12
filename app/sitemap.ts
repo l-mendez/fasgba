@@ -34,6 +34,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     supabase.from('tournaments').select('id').order('id', { ascending: false }),
     supabase.from('profesores').select('id, updated_at'),
   ])
+  // Fail the regeneration instead of caching a sitemap with missing sections;
+  // Next keeps serving the previous one.
+  const failed = [news, clubs, tournaments, profesores].find((result) => result.error)
+  if (failed?.error) throw new Error(`sitemap query failed: ${failed.error.message}`)
 
   const pages: MetadataRoute.Sitemap = STATIC_PAGES.map(({ path, priority, changeFrequency }) => ({
     url: absoluteUrl(path),

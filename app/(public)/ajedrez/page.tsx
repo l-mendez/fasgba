@@ -8,7 +8,7 @@ import { loadPartidoData } from "@/lib/partido-data"
 import { PARTIDOS } from "@/lib/partidos"
 import { breadcrumbJsonLd, pageMetadata } from "@/lib/seo"
 
-// Purged with the partido pages (revalidatePath('/ajedrez')).
+// Purged with the partido pages (revalidatePartidoPages).
 export const revalidate = false
 
 export const metadata: Metadata = pageMetadata({

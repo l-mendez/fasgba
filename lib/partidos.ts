@@ -51,9 +51,31 @@ export const PARTIDOS: Partido[] = [
 
 export const getPartido = (slug: string) => PARTIDOS.find((p) => p.slug === slug) ?? null
 
-/** True when free text (an address, a venue) names one of the partido's localities. */
+const wordPattern = (locality: string) => new RegExp(`(^|[^a-z])${normalizeForSearch(locality)}([^a-z]|$)`)
+
+// The locality part of an address or venue: what follows the first comma or
+// dash ("Av. Mitre 470, Avellaneda" → "avellaneda"), else the whole first line.
+// Skips street names that equal a locality ("Av. Almirante Brown 123").
+function localityText(text: string): string {
+  const firstLine = normalizeForSearch(text.split('\n')[0])
+  const parts = firstLine.split(/,|\s-\s*|-\s+/)
+  return parts.length > 1 ? parts.slice(1).join(' ') : firstLine
+}
+
+/** The known locality named in an address or venue, if any (longest match wins). */
+export function findLocality(text: string | null | undefined): { partido: Partido; locality: string } | null {
+  if (!text) return null
+  const haystack = localityText(text)
+  let best: { partido: Partido; locality: string } | null = null
+  for (const partido of PARTIDOS) {
+    for (const locality of partido.localities) {
+      if (wordPattern(locality).test(haystack) && locality.length > (best?.locality.length ?? 0)) best = { partido, locality }
+    }
+  }
+  return best
+}
+
+/** True when an address or venue is in the partido. */
 export function mentionsPartido(partido: Partido, text: string | null | undefined): boolean {
-  if (!text) return false
-  const haystack = normalizeForSearch(text)
-  return partido.localities.some((locality) => haystack.includes(normalizeForSearch(locality)))
+  return findLocality(text)?.partido === partido
 }

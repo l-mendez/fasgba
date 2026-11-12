@@ -12,6 +12,7 @@ import { formatArgentinaDateOnly } from "@/lib/dateUtils"
 import { Calendar, CheckCircle2, ChevronLeft, Clock, Hash, ListOrdered, PlayCircle } from "lucide-react"
 import Link from "next/link"
 import { Metadata } from "next"
+import { pageMetadata } from "@/lib/seo"
 import ChessGameDisplay from "./components/chess-game-display"
 
 // Force dynamic rendering for SSR
@@ -72,11 +73,11 @@ export async function generateMetadata({ params }: {
       return { title: 'Partida no encontrada' }
     }
 
-    return {
+    return pageMetadata({
       title: `${game.white} vs ${game.black} · ${tournament.title}`,
       description: `Partida de ajedrez de la ronda ${game.round} entre ${game.white} y ${game.black} en el torneo ${tournament.title}: movimientos y PGN.`,
-      alternates: { canonical: `/torneos/${tournamentId}/partidas/${gameId}` },
-    }
+      path: `/torneos/${tournamentId}/partidas/${gameId}`,
+    })
   } catch {
     return { title: 'Partida' }
   }

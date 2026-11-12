@@ -14,7 +14,7 @@ import { extractShortTextFromContentBlocks } from "@/lib/textUtils"
 import { NewsContent } from "./news-content"
 import { JsonLd } from "@/components/json-ld"
 import type { NewsDisplay } from "@/lib/newsUtils"
-import { absoluteUrl, breadcrumbJsonLd, LOGO_URL, ORGANIZATION_ID, pageMetadata, type JsonLdObject } from "@/lib/seo"
+import { absoluteUrl, breadcrumbJsonLd, LOGO_URL, organizationRef, pageMetadata, type JsonLdObject } from "@/lib/seo"
 
 // No time-based revalidation. The build marks this route dynamic (rendered per
 // request, absent from prerender-manifest's dynamicRoutes), so there is no ISR
@@ -81,7 +81,7 @@ function newsJsonLd(newsItem: NewsDisplay, imageUrl: string | null): JsonLdObjec
     author: newsItem.author_name
       ? { '@type': 'Person', name: newsItem.author_name }
       : { '@type': 'Organization', name: newsAuthor(newsItem) },
-    publisher: { '@id': ORGANIZATION_ID },
+    publisher: organizationRef,
   }
 }
 

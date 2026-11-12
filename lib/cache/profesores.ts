@@ -1,4 +1,5 @@
 import { revalidatePath } from 'next/cache'
+import { revalidatePartidoPages } from './partidos'
 
 // Invalidate the cached public profesores pages after a profesor mutation
 // (create, edit, delete, photo upload). /profesores is prerendered with
@@ -9,7 +10,5 @@ export function revalidateProfesoresCache(profesorId?: number) {
   revalidatePath('/profesores')
   if (profesorId) revalidatePath(`/profesores/${profesorId}`)
   revalidatePath('/sitemap.xml')
-  // Partido landing pages list clubs, profesores, torneos and top players.
-  revalidatePath('/ajedrez')
-  revalidatePath('/ajedrez/[partido]', 'page')
+  revalidatePartidoPages()
 }

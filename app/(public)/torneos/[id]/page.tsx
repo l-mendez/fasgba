@@ -17,7 +17,7 @@ import {
   breadcrumbJsonLd,
   FEDERATION_FULL_NAME,
   LOGO_URL,
-  ORGANIZATION_ID,
+  organizationRef,
   pageMetadata,
   type JsonLdObject,
 } from "@/lib/seo"
@@ -135,7 +135,7 @@ function tournamentJsonLd(tournament: TournamentDisplay): JsonLdObject {
         addressCountry: 'AR',
       },
     },
-    organizer: { '@id': ORGANIZATION_ID },
+    organizer: organizationRef,
   }
 }
 
