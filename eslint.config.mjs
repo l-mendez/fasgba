@@ -6,6 +6,17 @@ const OFF_PALETTE =
   '/(bg|text|border|ring|from|to|via|fill|stroke|outline|divide|ring-offset)-(red|green|blue|yellow|purple|pink|indigo|emerald|sky|orange|teal|cyan|violet|lime|rose|fuchsia|gray|slate|zinc|neutral|stone)-[0-9]/'
 const offPaletteMessage = 'Off-palette color: use theme tokens or terracotta/amber (docs/ui.md).'
 
+// Meta descriptions over 155 characters get cut in search results (and by
+// metaDescription in lib/seo.ts). Applies to string literals in page metadata.
+const LONG_DESCRIPTION = '/^.{156,}$/'
+const longDescriptionMessage = 'Meta description over 155 characters: shorten it (lib/seo.ts metaDescription).'
+const METADATA_SCOPE =
+  ":matches(CallExpression[callee.name='pageMetadata'], VariableDeclarator[id.name='metadata'], FunctionDeclaration[id.name='generateMetadata'])"
+const longDescriptionRules = [
+  `${METADATA_SCOPE} Property[key.name='description'] > Literal[value=${LONG_DESCRIPTION}]`,
+  `VariableDeclarator[id.name='SITE_DESCRIPTION'] > Literal[value=${LONG_DESCRIPTION}]`,
+].map((selector) => ({ selector, message: longDescriptionMessage }))
+
 const eslintConfig = [
   ...nextCoreWebVitals,
   ...nextTypescript,
@@ -36,6 +47,7 @@ const eslintConfig = [
           selector: "TSAsExpression > TSAsExpression.expression[typeAnnotation.type='TSUnknownKeyword']",
           message: 'No `as unknown as` casts: type the source or narrow with a type guard.',
         },
+        ...longDescriptionRules,
       ],
     },
   },
