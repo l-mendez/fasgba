@@ -19,7 +19,7 @@ export type { Player }
 export const metadata: Metadata = pageMetadata({
   title: 'Ranking de ajedrez zona sur: mejores jugadores',
   description:
-    'Los mejores jugadores de ajedrez de la zona sur del Gran Buenos Aires: ranking oficial FASGBA con ELO estándar, rápido y blitz y búsqueda por jugador o club.',
+    'Mejores jugadores de ajedrez de la zona sur: ranking oficial FASGBA con ELO estándar, rápido y blitz, y búsqueda por jugador o club.',
   path: '/ranking',
 })
 

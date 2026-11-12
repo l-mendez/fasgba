@@ -14,7 +14,7 @@ export const revalidate = false
 export const metadata: Metadata = pageMetadata({
   title: "Ajedrez en zona sur: dónde jugar, clases y torneos",
   description:
-    "Dónde jugar y aprender ajedrez en la zona sur del Gran Buenos Aires: clubes, clases, torneos y mejores jugadores en Avellaneda, Lanús, Lomas de Zamora, Quilmes, Almirante Brown y Esteban Echeverría.",
+    "Dónde jugar y aprender ajedrez en zona sur: clubes, clases, torneos y mejores jugadores en Avellaneda, Lanús, Lomas de Zamora, Quilmes y más.",
   path: "/ajedrez",
 })
 
