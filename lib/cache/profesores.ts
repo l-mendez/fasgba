@@ -8,4 +8,8 @@ import { revalidatePath } from 'next/cache'
 export function revalidateProfesoresCache(profesorId?: number) {
   revalidatePath('/profesores')
   if (profesorId) revalidatePath(`/profesores/${profesorId}`)
+  revalidatePath('/sitemap.xml')
+  // Partido landing pages list clubs, profesores, torneos and top players.
+  revalidatePath('/ajedrez')
+  revalidatePath('/ajedrez/[partido]', 'page')
 }

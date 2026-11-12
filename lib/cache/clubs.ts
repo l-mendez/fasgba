@@ -17,4 +17,8 @@ export function revalidateClubsCache() {
   revalidatePath('/clubes')
   revalidatePath('/arbitraje')
   revalidatePath('/profesores')
+  revalidatePath('/sitemap.xml')
+  // Partido landing pages list clubs, profesores, torneos and top players.
+  revalidatePath('/ajedrez')
+  revalidatePath('/ajedrez/[partido]', 'page')
 }

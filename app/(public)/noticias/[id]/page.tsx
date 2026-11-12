@@ -12,6 +12,9 @@ import { formatArgentinaDateOnly } from "@/lib/dateUtils"
 import { buildNoticiasUrl, FEDERATION_NAME } from "@/lib/newsDisplay"
 import { extractShortTextFromContentBlocks } from "@/lib/textUtils"
 import { NewsContent } from "./news-content"
+import { JsonLd } from "@/components/json-ld"
+import type { NewsDisplay } from "@/lib/newsUtils"
+import { absoluteUrl, breadcrumbJsonLd, LOGO_URL, ORGANIZATION_ID, pageMetadata, type JsonLdObject } from "@/lib/seo"
 
 // No time-based revalidation. The build marks this route dynamic (rendered per
 // request, absent from prerender-manifest's dynamicRoutes), so there is no ISR
@@ -39,12 +42,46 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     description = 'Lee la noticia completa en FASGBA'
   }
 
-  const author = newsItem.author_name || (newsItem.club?.name ? `${newsItem.club.name}` : 'FASGBA')
-
-  return {
+  const metadata = pageMetadata({
     title: newsItem.title,
     description,
-    authors: [{ name: author }],
+    path: `/noticias/${newsItem.id}`,
+    image: getImageUrlNullable(newsItem.image),
+    type: 'article',
+  })
+  return {
+    ...metadata,
+    authors: [{ name: newsAuthor(newsItem) }],
+    openGraph: {
+      ...metadata.openGraph,
+      type: 'article',
+      publishedTime: newsItem.date ?? undefined,
+      modifiedTime: newsItem.updated_at ?? undefined,
+      tags: newsItem.tags ?? undefined,
+    },
+  }
+}
+
+const newsAuthor = (newsItem: NewsDisplay) => newsItem.author_name || newsItem.club?.name || FEDERATION_NAME
+
+function newsJsonLd(newsItem: NewsDisplay, imageUrl: string | null): JsonLdObject {
+  const url = absoluteUrl(`/noticias/${newsItem.id}`)
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    headline: newsItem.title.slice(0, 110),
+    description: newsItem.extract || undefined,
+    image: imageUrl ? [imageUrl] : [LOGO_URL],
+    datePublished: newsItem.date ?? undefined,
+    dateModified: newsItem.updated_at ?? newsItem.date ?? undefined,
+    inLanguage: 'es-AR',
+    mainEntityOfPage: url,
+    url,
+    keywords: newsItem.tags?.join(', ') || undefined,
+    author: newsItem.author_name
+      ? { '@type': 'Person', name: newsItem.author_name }
+      : { '@type': 'Organization', name: newsAuthor(newsItem) },
+    publisher: { '@id': ORGANIZATION_ID },
   }
 }
 
@@ -75,6 +112,16 @@ export default async function NoticiaPage({ params }: { params: Promise<{ id: st
 
   return (
     <>
+      <JsonLd
+        data={[
+          newsJsonLd(newsItem, imageUrl),
+          breadcrumbJsonLd([
+            { name: 'Inicio', path: '/' },
+            { name: 'Noticias', path: '/noticias' },
+            { name: newsItem.title, path: `/noticias/${newsItem.id}` },
+          ]),
+        ]}
+      />
       <article className="container max-w-3xl px-4 pt-8 pb-12 md:px-6 md:pt-12 md:pb-16">
         <BackLink />
 

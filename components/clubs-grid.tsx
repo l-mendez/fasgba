@@ -87,14 +87,37 @@ export function ClubsGrid({ clubs }: { clubs: Club[] }) {
   }
 
   return (
+    <ClubCards
+      clubs={filteredClubs}
+      followReady={followReady}
+      followedIds={followedIds}
+      onFollowChange={handleFollowChange}
+    />
+  )
+}
+
+// Plain card grid without search or follow state. Also the server-rendered
+// Suspense fallback of ClubsGrid, so crawlers that don't run JS see every club.
+export function ClubCards({
+  clubs,
+  followReady = false,
+  followedIds = null,
+  onFollowChange,
+}: {
+  clubs: Club[]
+  followReady?: boolean
+  followedIds?: Set<number> | null
+  onFollowChange?: (clubId: number, isFollowing: boolean) => void
+}) {
+  return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {filteredClubs.map((club) => (
+      {clubs.map((club) => (
         <ClubCard
           key={club.id}
           club={club}
           isUserAuthenticated={followReady}
           isFollowing={followedIds?.has(club.id) ?? false}
-          onFollowChange={handleFollowChange}
+          onFollowChange={onFollowChange}
         />
       ))}
     </div>
@@ -110,7 +133,7 @@ function ClubCard({
   club: Club
   isUserAuthenticated: boolean
   isFollowing: boolean
-  onFollowChange: (clubId: number, isFollowing: boolean) => void
+  onFollowChange?: (clubId: number, isFollowing: boolean) => void
 }) {
   const imageUrl = getImageUrlNullable(club.image)
   const href = `/clubes/${club.id}`

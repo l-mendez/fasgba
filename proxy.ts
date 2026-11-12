@@ -1,6 +1,7 @@
 import { SUPABASE_PUBLISHABLE_KEY } from '@/lib/supabase/keys'
 import { type NextFetchEvent, type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
+import { isVerifiedCrawler } from '@/lib/verified-crawlers'
 
 // Countries are managed from /admin/paises (public.country_access). This list
 // is only used until the first successful fetch, or if Supabase is unreachable.
@@ -72,6 +73,11 @@ function recordTraffic(country: string, blocked: boolean, event?: NextFetchEvent
   event?.waitUntil?.(pending)
 }
 
+// Vercel sets both headers to the connecting client's IP.
+function clientIp(request: NextRequest): string | null {
+  return request.headers.get('x-real-ip') ?? request.headers.get('x-forwarded-for')?.split(',')[0] ?? null
+}
+
 function createBlockedResponse(): NextResponse {
   const html = `<!DOCTYPE html>
 <html lang="es">
@@ -108,7 +114,7 @@ export async function proxy(request: NextRequest, event?: NextFetchEvent) {
   if (country) {
     const allowedCountries = await getAllowedCountries()
 
-    if (!allowedCountries.has(country)) {
+    if (!allowedCountries.has(country) && !(await isVerifiedCrawler(request.headers.get('user-agent'), clientIp(request)))) {
       recordTraffic(country, true, event)
       return createBlockedResponse()
     }

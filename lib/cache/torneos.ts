@@ -10,4 +10,8 @@ export function revalidateTorneosCache() {
   revalidateTag('torneos', 'max')
   revalidatePath('/')
   revalidatePath('/torneos')
+  revalidatePath('/sitemap.xml')
+  // Partido landing pages list clubs, profesores, torneos and top players.
+  revalidatePath('/ajedrez')
+  revalidatePath('/ajedrez/[partido]', 'page')
 }

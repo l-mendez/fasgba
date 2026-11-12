@@ -1,9 +1,12 @@
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = {
-  title: 'Arbitraje',
-  description: 'Listado de árbitros oficiales de ajedrez en FASGBA',
-}
+import { pageMetadata } from '@/lib/seo'
+
+export const metadata: Metadata = pageMetadata({
+  title: 'Árbitros de ajedrez',
+  description: 'Árbitros oficiales de ajedrez de FASGBA, la Federación de Ajedrez del Sur del Gran Buenos Aires.',
+  path: '/arbitraje',
+})
 
 export default function ArbitrajeLayout({
   children,

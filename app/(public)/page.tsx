@@ -19,6 +19,16 @@ import type { Player } from "@/lib/rankingUtils"
 import { safe } from "@/lib/utils/safe"
 import { SectionHeader } from "@/components/section-header"
 import { TopRanking } from "@/components/home/top-ranking"
+import { JsonLd } from "@/components/json-ld"
+import { FEDERATION_FULL_NAME, organizationJsonLd, pageMetadata, SITE_DESCRIPTION, SITE_NAME, websiteJsonLd } from "@/lib/seo"
+import type { Metadata } from "next"
+
+const HOME_TITLE = `${SITE_NAME} - ${FEDERATION_FULL_NAME}`
+
+export const metadata: Metadata = {
+  ...pageMetadata({ title: HOME_TITLE, description: SITE_DESCRIPTION, path: "/" }),
+  title: { absolute: HOME_TITLE },
+}
 
 // Cached indefinitely: each fetch is wrapped in unstable_cache with a tag
 // matching the rest of the app's invalidations, and lib/cache/{news,torneos,
@@ -374,6 +384,7 @@ export default async function Home() {
 
   return (
     <>
+      <JsonLd data={[organizationJsonLd, websiteJsonLd]} />
       <h1 className="sr-only">Federación de Ajedrez del Sur del Gran Buenos Aires</h1>
 
       {/* News section */}

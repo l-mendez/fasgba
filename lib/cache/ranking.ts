@@ -8,4 +8,7 @@ export function revalidateRankingCache() {
   revalidatePath('/')
   revalidatePath('/ranking')
   revalidatePath('/admin/ranking')
+  // Partido landing pages list clubs, profesores, torneos and top players.
+  revalidatePath('/ajedrez')
+  revalidatePath('/ajedrez/[partido]', 'page')
 }
