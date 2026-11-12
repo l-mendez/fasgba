@@ -15,6 +15,7 @@ export const LOGO_URL = `${SITE_URL}/favicon.png`
 export const SOCIAL_PROFILES = [
   'https://facebook.com/FASGBA',
   'https://www.instagram.com/fasgba_ok',
+  'https://www.wikidata.org/wiki/Q142133029',
 ]
 
 // Partidos with affiliated clubs (see lib/partidos.ts).
