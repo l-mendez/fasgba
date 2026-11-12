@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return pageMetadata({
     title: `${profesor.titulo} · Profesor de ajedrez`,
-    description: profesor.biografia?.slice(0, 200) || `${profesor.titulo}, profesor de ajedrez${profesor.zona ? ` en ${profesor.zona}` : ''}. Clases, modalidad y contacto.`,
+    description: profesor.biografia || `${profesor.titulo}, profesor de ajedrez${profesor.zona ? ` en ${profesor.zona}` : ''}. Clases, modalidad y contacto.`,
     path: `/profesores/${profesor.id}`,
     image: getImageUrlNullable(profesor.foto),
   })

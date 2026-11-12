@@ -8,7 +8,7 @@ export const SITE_URL = 'https://fasgba.com'
 export const SITE_NAME = 'FASGBA'
 export const FEDERATION_FULL_NAME = 'Federación de Ajedrez del Sur del Gran Buenos Aires'
 export const SITE_DESCRIPTION =
-  'FASGBA, la Federación de Ajedrez del Sur del Gran Buenos Aires: torneos, ranking oficial de jugadores, clubes afiliados, profesores y árbitros de ajedrez de la zona sur del conurbano bonaerense.'
+  'Federación de Ajedrez del Sur del Gran Buenos Aires: torneos, ranking oficial, clubes, clases y árbitros de ajedrez en la zona sur del conurbano.'
 export const DEFAULT_OG_IMAGE = '/opengraph-image'
 export const LOGO_URL = `${SITE_URL}/favicon.png`
 
@@ -78,6 +78,18 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]): JsonL
   }
 }
 
+// Search engines show ~155-160 characters; longer descriptions are cut at a
+// word boundary so snippets never end mid-word.
+const MAX_DESCRIPTION = 155
+
+export function metaDescription(text: string): string {
+  const clean = text.replace(/\s+/g, ' ').trim()
+  if (clean.length <= MAX_DESCRIPTION) return clean
+  const cut = clean.slice(0, MAX_DESCRIPTION)
+  const atWord = cut.slice(0, cut.lastIndexOf(' ')).replace(/[\s,;:.\-–—]+$/, '')
+  return `${atWord || cut.slice(0, MAX_DESCRIPTION - 1)}…`
+}
+
 // Metadata for an indexable page: canonical URL plus matching Open Graph tags.
 // Without `image`, the default app/opengraph-image card is used.
 export function pageMetadata({
@@ -93,6 +105,7 @@ export function pageMetadata({
   image?: string | null
   type?: 'website' | 'article'
 }): Metadata {
+  description = metaDescription(description)
   return {
     title,
     description,

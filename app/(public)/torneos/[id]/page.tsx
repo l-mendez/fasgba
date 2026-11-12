@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     if (tournament) {
       return pageMetadata({
         title: tournament.title,
-        description: tournament.description?.slice(0, 200) || `Torneo de ajedrez ${tournament.title}: fechas, inscripción, rondas y resultados.`,
+        description: tournament.description || `Torneo de ajedrez ${tournament.title}: fechas, inscripción, rondas y resultados.`,
         path: `/torneos/${tournament.id}`,
         image: getImageUrlNullable(tournament.image),
       })

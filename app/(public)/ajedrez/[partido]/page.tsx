@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!partido) return {}
   return pageMetadata({
     title: `Ajedrez en ${partido.name}: clubes, clases y torneos`,
-    description: `Dónde jugar al ajedrez en ${partido.name} (${partido.localities.slice(1, 4).join(", ")}): clubes de ajedrez, clases y profesores, torneos y los mejores jugadores del ranking FASGBA.`,
+    description: `Dónde jugar al ajedrez en ${partido.name} (${partido.localities.slice(1, 3).join(", ")}): clubes, clases y profesores, torneos y mejores jugadores del ranking FASGBA.`,
     path: `/ajedrez/${partido.slug}`,
   })
 }

@@ -24,7 +24,7 @@ const getCachedClubs = unstable_cache(
 export const metadata: Metadata = pageMetadata({
   title: 'Clubes de ajedrez en zona sur: dónde jugar',
   description:
-    'Dónde jugar al ajedrez en la zona sur: clubes afiliados a FASGBA en Avellaneda, Lanús, Lomas de Zamora, Quilmes, Almirante Brown, Esteban Echeverría y más, con dirección, horarios y contacto.',
+    'Dónde jugar al ajedrez en zona sur: clubes afiliados a FASGBA en Avellaneda, Lanús, Lomas de Zamora, Quilmes y más, con dirección, horarios y contacto.',
   path: '/clubes',
 })
 
