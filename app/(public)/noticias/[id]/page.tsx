@@ -14,7 +14,7 @@ import { extractShortTextFromContentBlocks } from "@/lib/textUtils"
 import { NewsContent } from "./news-content"
 import { JsonLd } from "@/components/json-ld"
 import type { NewsDisplay } from "@/lib/newsUtils"
-import { absoluteUrl, breadcrumbJsonLd, LOGO_URL, organizationRef, pageMetadata, type JsonLdObject } from "@/lib/seo"
+import { absoluteUrl, breadcrumbJsonLd, LOGO_URL, organizationRef, pageMetadata, withContext, type JsonLdObject } from "@/lib/seo"
 
 // No time-based revalidation. The build marks this route dynamic (rendered per
 // request, absent from prerender-manifest's dynamicRoutes), so there is no ISR
@@ -33,14 +33,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     return { title: 'Noticia no encontrada' }
   }
 
-  // Create a description from extract or extracted plain text
-  let description = newsItem.extract || ''
-  if (!description && newsItem.text) {
-    description = extractShortTextFromContentBlocks(newsItem.text, 160)
-  }
-  if (!description) {
-    description = 'Lee la noticia completa en FASGBA'
-  }
+  // Extract or plain text, extended with context when it is too short.
+  const description = withContext(
+    newsItem.extract || (newsItem.text ? extractShortTextFromContentBlocks(newsItem.text, 160) : ''),
+    `${newsItem.title}: noticia de ajedrez de FASGBA, la federación de la zona sur.`
+  )
 
   const metadata = pageMetadata({
     title: newsItem.title,

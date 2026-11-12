@@ -90,6 +90,17 @@ export function metaDescription(text: string): string {
   return `${atWord || cut.slice(0, MAX_DESCRIPTION - 1)}…`
 }
 
+// Descriptions under ~70 characters ("Sistema Suizo") make search engines
+// invent their own snippet; extend them with page context.
+const MIN_DESCRIPTION = 70
+
+export function withContext(text: string | null | undefined, context: string): string {
+  const clean = text?.replace(/\s+/g, ' ').trim() ?? ''
+  if (clean.length >= MIN_DESCRIPTION) return clean
+  if (!clean) return context
+  return `${clean}${/[.!?…]$/.test(clean) ? '' : '.'} ${context}`
+}
+
 // Metadata for an indexable page: canonical URL plus matching Open Graph tags.
 // Without `image`, the default app/opengraph-image card is used.
 export function pageMetadata({
