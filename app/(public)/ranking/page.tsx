@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { Metadata } from "next"
 
 import { PlayerList } from "./components/PlayerList"
@@ -6,52 +7,21 @@ import {
   getCachedLatestRankingData,
   getCachedPublicRankingOptions,
 } from "@/lib/rankingStorage"
-import { normalizePlayer } from "@/lib/rankingDisplay"
+import { normalizePlayer, selectPlayersPage, sortPlayersByRatingType } from "@/lib/rankingDisplay"
+import { TopRanking } from "@/components/home/top-ranking"
 import { safe } from "@/lib/utils/safe"
 import type { Player } from "@/lib/rankingUtils"
+import { pageMetadata } from '@/lib/seo'
 
 // Re-export Player type for any consumers
 export type { Player }
 
-export const metadata: Metadata = {
-  title: 'Ranking',
-  description: 'Consulta la clasificación oficial de jugadores de la Federación de Ajedrez del Sur del Gran Buenos Aires. Rankings actualizados con estadísticas completas.',
-  keywords: ['FASGBA', 'ranking', 'ajedrez', 'clasificación', 'jugadores', 'federación', 'Buenos Aires'],
-  openGraph: {
-    title: 'Ranking FASGBA - Clasificación Oficial de Jugadores',
-    description: 'Consulta la clasificación oficial de jugadores de la Federación de Ajedrez del Sur del Gran Buenos Aires. Rankings actualizados con estadísticas completas.',
-    url: 'https://fasgba.com/ranking',
-    siteName: 'FASGBA',
-    images: [
-      {
-        url: 'https://fasgba.com/images/fasgba-logo.png',
-        width: 1200,
-        height: 630,
-        alt: 'Ranking FASGBA',
-      }
-    ],
-    locale: 'es_AR',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Ranking FASGBA - Clasificación Oficial de Jugadores',
-    description: 'Consulta la clasificación oficial de jugadores de la Federación de Ajedrez del Sur del Gran Buenos Aires.',
-    images: ['https://fasgba.com/images/fasgba-logo.png'],
-    creator: '@FASGBA',
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-}
+export const metadata: Metadata = pageMetadata({
+  title: 'Ranking de ajedrez zona sur: mejores jugadores',
+  description:
+    'Los mejores jugadores de ajedrez de la zona sur del Gran Buenos Aires: ranking oficial FASGBA con ELO estándar, rápido y blitz y búsqueda por jugador o club.',
+  path: '/ranking',
+})
 
 // The ranking data is identical for everyone, so the page reads the cached
 // ranking helpers directly and ships the latest ranking + the available-ranking
@@ -67,15 +37,26 @@ export default async function RankingPage() {
   ])
 
   const initialPlayers: Player[] = latest.players.map(normalizePlayer)
+  const topPlayers = selectPlayersPage(sortPlayersByRatingType(initialPlayers, 'standard'), { activeFilter: 'active', pageSize: 10 }).players
 
   return (
     <>
       <PageHero title="Ranking" />
       <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
-        <PlayerList
-          initialPlayers={initialPlayers}
-          availableRankings={availableRankings}
-        />
+        {/* PlayerList reads search params, so it renders on the client only; the
+            fallback puts the top 10 in the HTML for crawlers that don't run JS. */}
+        <Suspense
+          fallback={
+            <div className="container px-4 md:px-6">
+              <TopRanking players={topPlayers} />
+            </div>
+          }
+        >
+          <PlayerList
+            initialPlayers={initialPlayers}
+            availableRankings={availableRankings}
+          />
+        </Suspense>
       </section>
     </>
   );

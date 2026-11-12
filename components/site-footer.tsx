@@ -4,6 +4,8 @@ import { Mail, Phone } from "lucide-react"
 import { Facebook, Instagram } from "@/components/icons/social-icons"
 import { SiteLogo } from "@/components/site-logo"
 import { Button } from "@/components/ui/button"
+import { PARTIDOS } from "@/lib/partidos"
+import { FEDERATION_FULL_NAME, MUNICIPALITIES } from "@/lib/seo"
 
 const FILES = "https://uxtfxazbikfqcnnmhufh.supabase.co/storage/v1/object/public/footer-files"
 
@@ -32,9 +34,12 @@ const headingClass = "mb-3 text-sm font-semibold text-terracotta"
 export function SiteFooter() {
   return (
     <footer className="w-full border-t border-amber/20 bg-muted/40">
-      <div className="container grid grid-cols-2 gap-8 py-8 text-sm lg:grid-cols-4">
+      <div className="container grid grid-cols-2 gap-8 py-8 text-sm lg:grid-cols-5">
         <div className="col-span-2 flex flex-col gap-3 lg:col-span-1">
           <SiteLogo />
+          <p className="text-muted-foreground">
+            {FEDERATION_FULL_NAME}, desde 1975. Clubes de {MUNICIPALITIES.slice(0, -1).join(", ")} y {MUNICIPALITIES.at(-1)}.
+          </p>
           <div className="-ml-2 flex gap-1">
             {socials.map(({ href, label, Icon }) => (
               <Button key={label} asChild variant="ghost" size="icon" className="text-terracotta">
@@ -51,6 +56,18 @@ export function SiteFooter() {
             {siteLinks.map(({ href, label }) => (
               <li key={href}>
                 <Link href={href} className={linkClass}>{label}</Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <nav aria-label="Ajedrez en zona sur">
+          <h3 className={headingClass}>
+            <Link href="/ajedrez" className="hover:underline">Zona sur</Link>
+          </h3>
+          <ul className="space-y-2">
+            {PARTIDOS.map(({ slug, name }) => (
+              <li key={slug}>
+                <Link href={`/ajedrez/${slug}`} className={linkClass}>{name}</Link>
               </li>
             ))}
           </ul>

@@ -11,6 +11,7 @@ import {
 } from "@/lib/tournamentUtils"
 import { TournamentsTabs } from "./components/tournaments-tabs"
 import { PageHero } from "@/components/page-hero"
+import { pageMetadata } from '@/lib/seo'
 
 // Cached indefinitely, purged by revalidateTorneosCache on mutation. Public
 // listing read via the non-cookie admin client so the page can be statically
@@ -18,45 +19,12 @@ import { PageHero } from "@/components/page-hero"
 export const revalidate = false
 
 // Generate metadata for better link previews
-export const metadata: Metadata = {
-  title: 'Torneos',
-  description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires. Consulta próximos torneos, torneos en curso y resultados.',
-  keywords: ['FASGBA', 'torneos', 'ajedrez', 'competencias', 'calendario', 'federación', 'Buenos Aires', 'inscripción'],
-  openGraph: {
-    title: 'Torneos FASGBA - Calendario de Competencias',
-    description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires. Consulta próximos torneos, torneos en curso y resultados.',
-    url: 'https://fasgba.com/torneos',
-    siteName: 'FASGBA',
-    images: [
-      {
-        url: 'https://fasgba.com/images/fasgba-logo.png',
-        width: 1200,
-        height: 630,
-        alt: 'Torneos FASGBA',
-      }
-    ],
-    locale: 'es_AR',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Torneos FASGBA - Calendario de Competencias',
-    description: 'Calendario completo de torneos organizados por la Federación de Ajedrez del Sur del Gran Buenos Aires.',
-    images: ['https://fasgba.com/images/fasgba-logo.png'],
-    creator: '@FASGBA',
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-}
+export const metadata: Metadata = pageMetadata({
+  title: 'Torneos de ajedrez en zona sur',
+  description:
+    'Torneos de ajedrez en la zona sur del Gran Buenos Aires: calendario FASGBA de torneos individuales y por equipos, inscripción, resultados y partidas.',
+  path: '/torneos',
+})
 
 // Cache the raw (JSON-serializable) tournament rows. Display transformation
 // produces Date objects, so it must run AFTER the cache, not inside it.

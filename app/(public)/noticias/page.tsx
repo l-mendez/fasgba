@@ -8,6 +8,7 @@ import { getAllClubs } from "@/lib/clubUtils"
 import { safe } from "@/lib/utils/safe"
 import type { NewsDisplay } from "@/lib/newsUtils"
 import type { Club } from "@/lib/clubUtils"
+import { pageMetadata } from '@/lib/seo'
 
 // Cached indefinitely, purged by revalidateNewsCache on mutation. The whole
 // catalog is identical for everyone, so it's fetched once and cached;
@@ -20,45 +21,12 @@ export const revalidate = false
 const MAX_NEWS = 5000
 
 // Generate metadata for better link previews
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'Noticias',
-  description: 'Últimas novedades del ajedrez en la región sur de Buenos Aires. Noticias de la Federación de Ajedrez del Sur del Gran Buenos Aires y sus clubes afiliados.',
-  keywords: ['FASGBA', 'noticias', 'ajedrez', 'novedades', 'federación', 'Buenos Aires', 'torneos'],
-  openGraph: {
-    title: 'Noticias - FASGBA',
-    description: 'Últimas novedades del ajedrez en la región sur de Buenos Aires. Noticias de la Federación de Ajedrez del Sur del Gran Buenos Aires y sus clubes afiliados.',
-    url: 'https://fasgba.com/noticias',
-    siteName: 'FASGBA',
-    images: [
-      {
-        url: 'https://fasgba.com/images/fasgba-logo.png',
-        width: 1200,
-        height: 630,
-        alt: 'Noticias FASGBA',
-      }
-    ],
-    locale: 'es_AR',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Noticias - FASGBA',
-    description: 'Últimas novedades del ajedrez en la región sur de Buenos Aires.',
-    images: ['https://fasgba.com/images/fasgba-logo.png'],
-    creator: '@FASGBA',
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-}
+  description:
+    'Noticias del ajedrez en la zona sur del Gran Buenos Aires: torneos, resultados y novedades de FASGBA y sus clubes afiliados.',
+  path: '/noticias',
+})
 
 // Ship the full news catalog as card metadata. The heavy article body (`text`)
 // is dropped here so the client payload stays small.

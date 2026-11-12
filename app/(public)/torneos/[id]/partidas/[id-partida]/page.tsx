@@ -12,6 +12,7 @@ import { formatArgentinaDateOnly } from "@/lib/dateUtils"
 import { Calendar, CheckCircle2, ChevronLeft, Clock, Hash, ListOrdered, PlayCircle } from "lucide-react"
 import Link from "next/link"
 import { Metadata } from "next"
+import { pageMetadata } from "@/lib/seo"
 import ChessGameDisplay from "./components/chess-game-display"
 
 // Force dynamic rendering for SSR
@@ -59,7 +60,7 @@ export async function generateMetadata({ params }: {
     const tournament = tournamentsWithDates.find(t => t.id === tournamentId)
     
     if (!tournament) {
-      return { title: 'Partida no encontrada | FASGBA' }
+      return { title: 'Partida no encontrada' }
     }
 
     const type = transformTournamentToDisplay(tournament).tournament_type || 'individual'
@@ -69,15 +70,16 @@ export async function generateMetadata({ params }: {
     ])
 
     if (!game || !belongs) {
-      return { title: 'Partida no encontrada | FASGBA' }
+      return { title: 'Partida no encontrada' }
     }
 
-    return {
-      title: `${game.white} vs ${game.black} · ${tournament.title} | FASGBA`,
-      description: `Partida de la ronda ${game.round} entre ${game.white} y ${game.black} en el torneo ${tournament.title}`,
-    }
+    return pageMetadata({
+      title: `${game.white} vs ${game.black} · ${tournament.title}`,
+      description: `Partida de ajedrez de la ronda ${game.round} entre ${game.white} y ${game.black} en el torneo ${tournament.title}: movimientos y PGN.`,
+      path: `/torneos/${tournamentId}/partidas/${gameId}`,
+    })
   } catch {
-    return { title: 'Partida | FASGBA' }
+    return { title: 'Partida' }
   }
 }
 

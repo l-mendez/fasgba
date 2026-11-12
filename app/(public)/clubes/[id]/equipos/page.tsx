@@ -4,6 +4,7 @@ import { ChevronLeft, Users } from "lucide-react"
 import type { Metadata } from "next"
 
 import { createClient } from "@/lib/supabase/server"
+import { pageMetadata } from "@/lib/seo"
 import { getClubCached, parseClubId } from "../club-data"
 
 interface PageProps {
@@ -25,7 +26,12 @@ async function loadClubTeams(rawId: string) {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const data = await loadClubTeams((await params).id)
-  return { title: data ? `Equipos · ${data.club.name} | FASGBA` : "Club no encontrado | FASGBA" }
+  if (!data) return { title: "Club no encontrado" }
+  return pageMetadata({
+    title: `Equipos · ${data.club.name}`,
+    description: `Equipos de ajedrez de ${data.club.name} en los torneos por equipos de FASGBA.`,
+    path: `/clubes/${data.club.id}/equipos`,
+  })
 }
 
 export default async function ClubEquiposPage({ params }: PageProps) {

@@ -7,6 +7,7 @@ import { notFound } from "next/navigation"
 import { InfoPill } from "@/components/info-pill"
 import { getModalidades } from "@/lib/profesorModalidad"
 import { getProfesorById } from "@/lib/profesorUtils"
+import { pageMetadata } from "@/lib/seo"
 import { getImageUrlNullable } from "@/lib/imageUtils"
 
 // No time-based revalidation. The build marks this route dynamic (rendered per
@@ -36,10 +37,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return { title: 'Profesor no encontrado' }
   }
 
-  return {
-    title: profesor.titulo,
-    description: profesor.biografia || `Perfil del profesor ${profesor.titulo} en FASGBA.`,
-  }
+  return pageMetadata({
+    title: `${profesor.titulo} · Profesor de ajedrez`,
+    description: profesor.biografia?.slice(0, 200) || `${profesor.titulo}, profesor de ajedrez${profesor.zona ? ` en ${profesor.zona}` : ''}. Clases, modalidad y contacto.`,
+    path: `/profesores/${profesor.id}`,
+    image: getImageUrlNullable(profesor.foto),
+  })
 }
 
 export default async function ProfesorDetailPage({ params }: PageProps) {

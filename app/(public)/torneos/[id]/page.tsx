@@ -9,6 +9,18 @@ import { getTournamentGames, getTournamentRounds } from "@/lib/gameUtils"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import TournamentClient from "@/components/tournament/tournament-client"
 import { Metadata } from "next"
+import { JsonLd } from "@/components/json-ld"
+import { getImageUrlNullable } from "@/lib/imageUtils"
+import type { TournamentDisplay } from "@/lib/tournament/types"
+import {
+  absoluteUrl,
+  breadcrumbJsonLd,
+  FEDERATION_FULL_NAME,
+  LOGO_URL,
+  organizationRef,
+  pageMetadata,
+  type JsonLdObject,
+} from "@/lib/seo"
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic'
@@ -25,7 +37,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   
   if (isNaN(tournamentId)) {
     return {
-      title: 'Torneo no encontrado | FASGBA',
+      title: 'Torneo no encontrado',
       description: 'El torneo solicitado no existe.',
     }
   }
@@ -36,17 +48,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const tournament = tournamentsWithDates.find(t => t.id === tournamentId)
     
     if (tournament) {
-      return {
-        title: `${tournament.title} | FASGBA`,
-        description: tournament.description || `Información del torneo ${tournament.title}`,
-      }
+      return pageMetadata({
+        title: tournament.title,
+        description: tournament.description?.slice(0, 200) || `Torneo de ajedrez ${tournament.title}: fechas, inscripción, rondas y resultados.`,
+        path: `/torneos/${tournament.id}`,
+        image: getImageUrlNullable(tournament.image),
+      })
     }
   } catch (error) {
     console.error('Error generating metadata:', error)
   }
   
   return {
-    title: 'Torneo | FASGBA',
+    title: 'Torneo',
     description: 'Información del torneo de ajedrez',
   }
 }
@@ -69,7 +83,18 @@ export default async function TournamentPage({ params }: PageProps) {
   const { tournament, gamesByRound, totalRounds, registeredTeams } = data
 
   return (
-    <Suspense fallback={<LoadingSpinner />}>
+    <>
+      <JsonLd
+        data={[
+          tournamentJsonLd(tournament),
+          breadcrumbJsonLd([
+            { name: 'Inicio', path: '/' },
+            { name: 'Torneos', path: '/torneos' },
+            { name: tournament.title, path: `/torneos/${tournament.id}` },
+          ]),
+        ]}
+      />
+      <Suspense fallback={<LoadingSpinner />}>
       <TournamentClient
         tournament={tournament}
         initialGamesByRound={gamesByRound}
@@ -77,8 +102,41 @@ export default async function TournamentPage({ params }: PageProps) {
         tournamentId={tournamentId}
         registeredTeams={registeredTeams}
       />
-    </Suspense>
+      </Suspense>
+    </>
   )
+}
+
+// Tournament dates are local calendar days; emit them as plain YYYY-MM-DD.
+const isoDay = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+function tournamentJsonLd(tournament: TournamentDisplay): JsonLdObject {
+  const image = getImageUrlNullable(tournament.image)
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    name: tournament.title,
+    description: tournament.description || undefined,
+    sport: 'Ajedrez',
+    url: absoluteUrl(`/torneos/${tournament.id}`),
+    startDate: isoDay(tournament.start_date),
+    endDate: isoDay(tournament.end_date ?? tournament.start_date),
+    eventStatus: 'https://schema.org/EventScheduled',
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    image: image ? [image] : [LOGO_URL],
+    location: {
+      '@type': 'Place',
+      name: tournament.place || tournament.location || FEDERATION_FULL_NAME,
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: tournament.location || tournament.place || undefined,
+        addressRegion: 'Buenos Aires',
+        addressCountry: 'AR',
+      },
+    },
+    organizer: organizationRef,
+  }
 }
 
 async function loadTournament(tournamentId: number) {

@@ -14,6 +14,11 @@ import { createClient } from "@/lib/supabase/client"
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import { PhoneLinks } from "./phone-links"
 import { getClubCached, parseClubId } from "./club-data"
+import { JsonLd } from "@/components/json-ld"
+import type { ClubWithStats } from "@/lib/clubUtils"
+import { clubLocality } from "@/lib/clubLocality"
+import { getImageUrlNullable } from "@/lib/imageUtils"
+import { absoluteUrl, breadcrumbJsonLd, organizationRef, pageMetadata, type JsonLdObject } from "@/lib/seo"
 
 // Force dynamic rendering for SSR
 export const dynamic = 'force-dynamic'
@@ -28,62 +33,38 @@ interface ClubDetailPageProps {
 export async function generateMetadata({ params }: ClubDetailPageProps): Promise<Metadata> {
   const clubId = parseClubId((await params).id)
   const clubData = clubId ? await getClubCached(clubId) : null
-  if (!clubId || !clubData) return { title: 'Club no encontrado | FASGBA' }
+  if (!clubId || !clubData) return { title: 'Club no encontrado' }
 
-  // Create description from club info
-  const description = `${clubData.name} - Club afiliado a FASGBA. ${clubData.address ? `Ubicado en ${clubData.address}. ` : ''}Información de contacto, horarios y actividades disponibles.`
+  const locality = clubLocality(clubData.address)
+  return pageMetadata({
+    title: locality && !clubData.name.includes(locality) ? `${clubData.name} (${locality})` : clubData.name,
+    description: `${clubData.name}, club de ajedrez afiliado a FASGBA${locality ? ` en ${locality}` : ''}. Dirección, horarios, contacto, equipos y noticias del club.`,
+    path: `/clubes/${clubId}`,
+    image: getImageUrlNullable(clubData.image),
+  })
+}
 
-  // Build the full URL for the club
-  const url = `https://fasgba.com/clubes/${clubId}`
-  
-  // Get the club image URL
-  const imageUrl = clubData.image ? 
-    (clubData.image.startsWith('http') ? clubData.image : `https://fasgba.com${clubData.image}`) 
-    : `https://fasgba.com/images/fasgba-logo.png`
-
+function clubJsonLd(club: ClubWithStats, imageUrl: string | null): JsonLdObject {
+  const street = club.address?.split('\n')[0].trim()
   return {
-    title: `${clubData.name} | FASGBA`,
-    description,
-    keywords: ['FASGBA', 'club', 'ajedrez', clubData.name, clubData.address ? clubData.address.split(',')[0] : '', 'federación'].filter(Boolean),
-    openGraph: {
-      title: `${clubData.name} | FASGBA`,
-      description,
-      url,
-      siteName: 'FASGBA',
-      images: [
-        {
-          url: imageUrl,
-          width: 1200,
-          height: 630,
-          alt: `${clubData.name} - Club FASGBA`,
+    '@context': 'https://schema.org',
+    '@type': 'SportsClub',
+    name: club.name,
+    sport: 'Ajedrez',
+    url: absoluteUrl(`/clubes/${club.id}`),
+    image: imageUrl ?? undefined,
+    telephone: club.telephone ?? undefined,
+    email: club.mail ?? undefined,
+    address: street
+      ? {
+          '@type': 'PostalAddress',
+          streetAddress: street,
+          addressLocality: clubLocality(club.address) ?? undefined,
+          addressRegion: 'Buenos Aires',
+          addressCountry: 'AR',
         }
-      ],
-      locale: 'es_AR',
-      type: 'website',
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: `${clubData.name} | FASGBA`,
-      description,
-      images: [imageUrl],
-      creator: '@FASGBA',
-    },
-    robots: {
-      index: true,
-      follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        'max-video-preview': -1,
-        'max-image-preview': 'large',
-        'max-snippet': -1,
-      },
-    },
-    other: {
-      'business:contact_data:locality': clubData.address ? clubData.address.split(',')[0] : '',
-      'business:contact_data:phone_number': clubData.telephone || '',
-      'business:contact_data:email': clubData.mail || '',
-    },
+      : undefined,
+    memberOf: organizationRef,
   }
 }
 
@@ -117,6 +98,16 @@ export default async function ClubDetailPage({ params }: ClubDetailPageProps) {
 
   return (
     <>
+      <JsonLd
+        data={[
+          clubJsonLd(club, imageUrl),
+          breadcrumbJsonLd([
+            { name: 'Inicio', path: '/' },
+            { name: 'Clubes', path: '/clubes' },
+            { name: club.name, path: `/clubes/${club.id}` },
+          ]),
+        ]}
+      />
       <section className="w-full pt-8 md:pt-12">
         <div className="container space-y-4 px-4 md:px-6">
           <Link

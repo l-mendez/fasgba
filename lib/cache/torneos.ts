@@ -1,4 +1,5 @@
 import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePartidoPages } from './partidos'
 
 // Invalidate the cached public tournaments listing after a tournament mutation
 // (create, edit, delete, type change). Mirrors the 'torneos' tag used by
@@ -10,4 +11,6 @@ export function revalidateTorneosCache() {
   revalidateTag('torneos', 'max')
   revalidatePath('/')
   revalidatePath('/torneos')
+  revalidatePath('/sitemap.xml')
+  revalidatePartidoPages()
 }

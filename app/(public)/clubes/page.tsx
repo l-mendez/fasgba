@@ -4,9 +4,10 @@ import { unstable_cache } from "next/cache"
 
 import { getAllClubs, type Club } from "@/lib/clubUtils"
 import { ClubSearch } from "@/components/club-search"
-import { ClubsGrid } from "@/components/clubs-grid"
+import { ClubCards, ClubsGrid } from "@/components/clubs-grid"
 import { PageHero } from "@/components/page-hero"
 import { safe } from "@/lib/utils/safe"
+import { pageMetadata } from '@/lib/seo'
 
 // The directory is identical for everyone, so cache it indefinitely and refresh
 // only via revalidateClubsCache. Per-user follow state and search are resolved
@@ -20,45 +21,12 @@ const getCachedClubs = unstable_cache(
 )
 
 // Generate metadata for better link previews
-export const metadata: Metadata = {
-  title: 'Clubes',
-  description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur del Gran Buenos Aires. Encuentra información de contacto, horarios y actividades.',
-  keywords: ['FASGBA', 'clubes', 'ajedrez', 'afiliados', 'federación', 'Buenos Aires', 'directorio'],
-  openGraph: {
-    title: 'Clubes Afiliados - FASGBA',
-    description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur del Gran Buenos Aires. Encuentra información de contacto, horarios y actividades.',
-    url: 'https://fasgba.com/clubes',
-    siteName: 'FASGBA',
-    images: [
-      {
-        url: 'https://fasgba.com/images/fasgba-logo.png',
-        width: 1200,
-        height: 630,
-        alt: 'Clubes FASGBA',
-      }
-    ],
-    locale: 'es_AR',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Clubes Afiliados - FASGBA',
-    description: 'Directorio completo de clubes afiliados a la Federación de Ajedrez del Sur del Gran Buenos Aires.',
-    images: ['https://fasgba.com/images/fasgba-logo.png'],
-    creator: '@FASGBA',
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-}
+export const metadata: Metadata = pageMetadata({
+  title: 'Clubes de ajedrez en zona sur: dónde jugar',
+  description:
+    'Dónde jugar al ajedrez en la zona sur: clubes afiliados a FASGBA en Avellaneda, Lanús, Lomas de Zamora, Quilmes, Almirante Brown, Esteban Echeverría y más, con dirección, horarios y contacto.',
+  path: '/clubes',
+})
 
 export default async function ClubesPage() {
   const clubs = await safe(getCachedClubs, [] as Club[], "Error fetching clubs:")
@@ -74,7 +42,7 @@ export default async function ClubesPage() {
             </Suspense>
           </div>
 
-          <Suspense fallback={<div className="min-h-[400px]" />}>
+          <Suspense fallback={<ClubCards clubs={clubs} />}>
             <ClubsGrid clubs={clubs} />
           </Suspense>
         </div>
