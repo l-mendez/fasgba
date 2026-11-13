@@ -11,7 +11,8 @@ import {
 } from "@/lib/tournamentUtils"
 import { TournamentsTabs } from "./components/tournaments-tabs"
 import { PageHero } from "@/components/page-hero"
-import { pageMetadata } from '@/lib/seo'
+import { JsonLd } from "@/components/json-ld"
+import { collectionPageJsonLd, pageMetadata } from '@/lib/seo'
 
 // Cached indefinitely, purged by revalidateTorneosCache on mutation. Public
 // listing read via the non-cookie admin client so the page can be statically
@@ -51,8 +52,12 @@ async function getTorneos(): Promise<{ tournaments: TournamentDisplay[]; error: 
 export default async function TorneosPage() {
   const { tournaments, error } = await getTorneos()
 
+  // Newest first, so crawlers see the current calendar before the archive.
+  const items = [...tournaments].reverse().map((t) => ({ name: t.title, path: `/torneos/${t.id}` }))
+
   return (
     <>
+      <JsonLd data={collectionPageJsonLd({ name: "Torneos de ajedrez en zona sur", path: "/torneos", items })} />
       <PageHero title="Torneos" />
 
         <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">

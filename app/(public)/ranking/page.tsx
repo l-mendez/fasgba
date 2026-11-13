@@ -11,7 +11,8 @@ import { normalizePlayer, selectPlayersPage, sortPlayersByRatingType } from "@/l
 import { TopRanking } from "@/components/home/top-ranking"
 import { safe } from "@/lib/utils/safe"
 import type { Player } from "@/lib/rankingUtils"
-import { pageMetadata } from '@/lib/seo'
+import { JsonLd } from "@/components/json-ld"
+import { breadcrumbJsonLd, pageMetadata } from '@/lib/seo'
 
 // Re-export Player type for any consumers
 export type { Player }
@@ -41,6 +42,12 @@ export default async function RankingPage() {
 
   return (
     <>
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Inicio", path: "/" },
+          { name: "Ranking", path: "/ranking" },
+        ])}
+      />
       <PageHero title="Ranking" />
       <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
         {/* PlayerList reads search params, so it renders on the client only; the

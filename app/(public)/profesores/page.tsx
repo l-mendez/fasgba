@@ -4,7 +4,8 @@ import { getAllProfesores, type ProfesorWithClub } from "@/lib/profesorUtils"
 import { PageHero } from "@/components/page-hero"
 import { ProfesorCard } from "@/components/profesor-card"
 import { safe } from "@/lib/utils/safe"
-import { pageMetadata } from '@/lib/seo'
+import { JsonLd } from "@/components/json-ld"
+import { collectionPageJsonLd, pageMetadata } from '@/lib/seo'
 
 // Cached indefinitely, purged by revalidateProfesoresCache on mutation.
 export const revalidate = false
@@ -16,9 +17,7 @@ export const metadata: Metadata = pageMetadata({
   path: '/profesores',
 })
 
-async function ProfesoresList() {
-  const profesores = await safe(getAllProfesores, [] as ProfesorWithClub[], "Error fetching profesores:")
-
+function ProfesoresList({ profesores }: { profesores: ProfesorWithClub[] }) {
   if (profesores.length === 0) {
     return (
       <p className="py-12 text-center text-muted-foreground">No hay profesores disponibles.</p>
@@ -34,13 +33,22 @@ async function ProfesoresList() {
   )
 }
 
-export default function ProfesoresPage() {
+export default async function ProfesoresPage() {
+  const profesores = await safe(getAllProfesores, [] as ProfesorWithClub[], "Error fetching profesores:")
+
   return (
     <>
+      <JsonLd
+        data={collectionPageJsonLd({
+          name: "Clases y profesores de ajedrez",
+          path: "/profesores",
+          items: profesores.map((profesor) => ({ name: profesor.titulo, path: `/profesores/${profesor.id}` })),
+        })}
+      />
       <PageHero title="Profesores" />
       <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
         <div className="container px-4 md:px-6">
-          <ProfesoresList />
+          <ProfesoresList profesores={profesores} />
         </div>
       </section>
     </>

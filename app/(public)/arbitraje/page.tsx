@@ -4,7 +4,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { unstable_cache } from "next/cache"
 
 import { createAdminClient } from "@/lib/supabase/admin"
+import { JsonLd } from "@/components/json-ld"
 import { PageHero } from "@/components/page-hero"
+import { breadcrumbJsonLd } from "@/lib/seo"
 import { getImageUrlNullable } from "@/lib/imageUtils"
 import type { ArbitroRow, ClubRow } from "@/lib/db-types"
 
@@ -65,6 +67,12 @@ export default async function ArbitrajePage() {
 
   return (
     <>
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Inicio", path: "/" },
+          { name: "Arbitraje", path: "/arbitraje" },
+        ])}
+      />
       <PageHero title="Arbitraje" />
       <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
         <div className="container px-4 md:px-6">
