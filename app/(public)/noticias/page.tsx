@@ -8,7 +8,8 @@ import { getAllClubs } from "@/lib/clubUtils"
 import { safe } from "@/lib/utils/safe"
 import type { NewsDisplay } from "@/lib/newsUtils"
 import type { Club } from "@/lib/clubUtils"
-import { pageMetadata } from '@/lib/seo'
+import { JsonLd } from "@/components/json-ld"
+import { collectionPageJsonLd, pageMetadata } from '@/lib/seo'
 
 // Cached indefinitely, purged by revalidateNewsCache on mutation. The whole
 // catalog is identical for everyone, so it's fetched once and cached;
@@ -19,6 +20,9 @@ export const revalidate = false
 // Upper bound on rows shipped to the client. The dataset is small, so a single
 // generous cap fetches the entire catalog in one request.
 const MAX_NEWS = 5000
+
+// The structured-data list covers the latest articles; older ones are in the sitemap.
+const JSON_LD_NEWS = 30
 
 // Generate metadata for better link previews
 export const metadata: Metadata = pageMetadata({
@@ -60,6 +64,13 @@ export default async function NoticiasPage() {
 
   return (
     <>
+      <JsonLd
+        data={collectionPageJsonLd({
+          name: "Noticias de ajedrez en zona sur",
+          path: "/noticias",
+          items: allNews.slice(0, JSON_LD_NEWS).map((news) => ({ name: news.title, path: `/noticias/${news.id}` })),
+        })}
+      />
       <PageHero title="Noticias" />
 
       <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">

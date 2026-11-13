@@ -7,7 +7,8 @@ import { ClubSearch } from "@/components/club-search"
 import { ClubCards, ClubsGrid } from "@/components/clubs-grid"
 import { PageHero } from "@/components/page-hero"
 import { safe } from "@/lib/utils/safe"
-import { pageMetadata } from '@/lib/seo'
+import { JsonLd } from "@/components/json-ld"
+import { collectionPageJsonLd, pageMetadata } from '@/lib/seo'
 
 // The directory is identical for everyone, so cache it indefinitely and refresh
 // only via revalidateClubsCache. Per-user follow state and search are resolved
@@ -33,6 +34,13 @@ export default async function ClubesPage() {
 
   return (
     <>
+      <JsonLd
+        data={collectionPageJsonLd({
+          name: "Clubes de ajedrez en zona sur",
+          path: "/clubes",
+          items: clubs.map((club) => ({ name: club.name, path: `/clubes/${club.id}` })),
+        })}
+      />
       <PageHero title="Clubes" />
       <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
         <div className="container px-4 md:px-6">

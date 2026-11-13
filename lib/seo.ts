@@ -79,6 +79,49 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]): JsonL
   }
 }
 
+// Hub/listing page: a CollectionPage whose main entity lists the linked detail
+// pages, plus its breadcrumb trail (Inicio > page).
+export function collectionPageJsonLd({
+  name,
+  path,
+  description,
+  items,
+  about,
+}: {
+  name: string
+  path: string
+  description?: string
+  items: { name: string; path: string }[]
+  about?: JsonLdObject
+}): JsonLdObject[] {
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name,
+      url: absoluteUrl(path),
+      ...(description && { description }),
+      inLanguage: 'es-AR',
+      isPartOf: { '@id': WEBSITE_ID },
+      ...(about && { about }),
+      mainEntity: {
+        '@type': 'ItemList',
+        numberOfItems: items.length,
+        itemListElement: items.map((item, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          url: absoluteUrl(item.path),
+          name: item.name,
+        })),
+      },
+    },
+    breadcrumbJsonLd([
+      { name: 'Inicio', path: '/' },
+      { name, path },
+    ]),
+  ]
+}
+
 // Search engines show ~155-160 characters; longer descriptions are cut at a
 // word boundary so snippets never end mid-word.
 const MAX_DESCRIPTION = 155
