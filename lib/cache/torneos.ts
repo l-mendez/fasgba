@@ -11,6 +11,5 @@ export function revalidateTorneosCache() {
   revalidateTag('torneos', 'max')
   revalidatePath('/')
   revalidatePath('/torneos')
-  revalidatePath('/sitemap.xml')
   revalidatePartidoPages()
 }

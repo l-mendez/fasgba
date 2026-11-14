@@ -18,6 +18,5 @@ export function revalidateClubsCache() {
   revalidatePath('/clubes')
   revalidatePath('/arbitraje')
   revalidatePath('/profesores')
-  revalidatePath('/sitemap.xml')
   revalidatePartidoPages()
 }
