@@ -12,5 +12,4 @@ export function revalidateNewsCache(newsId?: number) {
   revalidatePath('/')
   revalidatePath('/noticias')
   if (newsId) revalidatePath(`/noticias/${newsId}`)
-  revalidatePath('/sitemap.xml')
 }
