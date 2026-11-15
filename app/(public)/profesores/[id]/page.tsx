@@ -6,8 +6,9 @@ import { notFound } from "next/navigation"
 
 import { InfoPill } from "@/components/info-pill"
 import { getModalidades } from "@/lib/profesorModalidad"
-import { getProfesorById } from "@/lib/profesorUtils"
-import { pageMetadata, withContext } from "@/lib/seo"
+import { getProfesorById, type ProfesorWithClub } from "@/lib/profesorUtils"
+import { absoluteUrl, breadcrumbJsonLd, pageMetadata, withContext, type JsonLdObject } from "@/lib/seo"
+import { JsonLd } from "@/components/json-ld"
 import { getImageUrlNullable } from "@/lib/imageUtils"
 
 // No time-based revalidation. The build marks this route dynamic (rendered per
@@ -45,6 +46,36 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   })
 }
 
+// ProfilePage + Person: only the fields the page itself shows.
+function profesorJsonLd(profesor: ProfesorWithClub, imageUrl: string | null): JsonLdObject {
+  const url = absoluteUrl(`/profesores/${profesor.id}`)
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    url,
+    inLanguage: 'es-AR',
+    mainEntity: {
+      '@type': 'Person',
+      name: profesor.titulo,
+      url,
+      jobTitle: 'Profesor de ajedrez',
+      knowsAbout: 'Ajedrez',
+      image: imageUrl ?? undefined,
+      description: profesor.biografia ?? undefined,
+      email: profesor.email ?? undefined,
+      telephone: profesor.telefono ?? undefined,
+      workLocation: profesor.zona ? { '@type': 'Place', name: profesor.zona } : undefined,
+      affiliation: profesor.club_name
+        ? {
+            '@type': 'SportsClub',
+            name: profesor.club_name,
+            url: profesor.club_id ? absoluteUrl(`/clubes/${profesor.club_id}`) : undefined,
+          }
+        : undefined,
+    },
+  }
+}
+
 export default async function ProfesorDetailPage({ params }: PageProps) {
   const { id } = await params
   const profesorId = parseInt(id, 10)
@@ -66,6 +97,16 @@ export default async function ProfesorDetailPage({ params }: PageProps) {
 
   return (
     <section className="container px-4 pt-8 pb-12 md:px-6 md:pt-12 md:pb-16">
+      <JsonLd
+        data={[
+          profesorJsonLd(profesor, imageUrl),
+          breadcrumbJsonLd([
+            { name: 'Inicio', path: '/' },
+            { name: 'Profesores', path: '/profesores' },
+            { name: profesor.titulo, path: `/profesores/${profesor.id}` },
+          ]),
+        ]}
+      />
       <Link
         href="/profesores"
         className="inline-flex items-center gap-1 text-sm font-semibold text-terracotta underline-offset-4 hover:underline"
