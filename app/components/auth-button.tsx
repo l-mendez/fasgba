@@ -5,16 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-
-// Pages that should never be the post-login destination.
-const AUTH_PATHS = ['/login', '/registro', '/recuperar-contrasena', '/confirmar-email', '/auth']
-
-// Only same-origin relative paths ("/x", not "//host" or "https://..."), never an auth page.
-function isSafeRedirect(path: string) {
-  if (!path.startsWith('/') || path.startsWith('//') || path.startsWith('/\\')) return false
-  const pathname = path.split(/[?#]/)[0]
-  return !AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
-}
+import { getPostLoginDestination } from "@/lib/auth/redirect"
 
 export interface AuthButtonProps {
   email: string
@@ -45,21 +36,7 @@ export function AuthButton({
   const searchParams = useSearchParams()
   const supabase = createClient()
 
-  // Priority: explicit redirectTo prop > ?redirect= param > same-origin referrer > home
-  const getRedirectDestination = () => {
-    if (redirectTo) return redirectTo
-
-    const redirectParam = searchParams?.get('redirect') || searchParams?.get('redirectTo')
-    if (redirectParam && isSafeRedirect(redirectParam)) return redirectParam
-
-    if (typeof window !== 'undefined' && document.referrer) {
-      const referrer = new URL(document.referrer)
-      const path = referrer.pathname + referrer.search
-      if (referrer.origin === window.location.origin && isSafeRedirect(path)) return path
-    }
-
-    return '/'
-  }
+  const getRedirectDestination = () => redirectTo || getPostLoginDestination(searchParams)
 
   const handleClick = async () => {
     if (!email || !password) {

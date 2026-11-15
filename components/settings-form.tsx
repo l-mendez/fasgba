@@ -30,7 +30,12 @@ const toPrefs = (p?: NotificationPrefs) => ({
   ranking: typeof p?.ranking === 'boolean' ? p.ranking : true,
 })
 
-export function SettingsForm({ initial }: { initial?: NotificationPrefs }) {
+export function SettingsForm({ initial, hasPassword = true }: {
+  initial?: NotificationPrefs
+  // False for OAuth-only users: they create a password instead of changing it.
+  hasPassword?: boolean
+}) {
+  const passwordAction = hasPassword ? "Cambiar contraseña" : "Crear contraseña"
   const [saved, setSaved] = useState(() => toPrefs(initial))
   const [notificaciones, setNotificaciones] = useState<string>(saved.type)
   const [torneos, setTorneos] = useState<string>(saved.torneos)
@@ -158,7 +163,7 @@ export function SettingsForm({ initial }: { initial?: NotificationPrefs }) {
   const handleChangePassword = async () => {
     setPasswordChangeError(null)
 
-    if (!currentPassword || !newPassword || !confirmNewPassword) {
+    if ((hasPassword && !currentPassword) || !newPassword || !confirmNewPassword) {
       setPasswordChangeError("Todos los campos son requeridos")
       return
     }
@@ -184,7 +189,7 @@ export function SettingsForm({ initial }: { initial?: NotificationPrefs }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token || ''}`,
         },
-        body: JSON.stringify({ currentPassword, newPassword })
+        body: JSON.stringify(hasPassword ? { currentPassword, newPassword } : { newPassword })
       })
 
       if (!res.ok) {
@@ -195,10 +200,13 @@ export function SettingsForm({ initial }: { initial?: NotificationPrefs }) {
 
       toast({
         title: "Contraseña actualizada",
-        description: "Tu contraseña se ha cambiado correctamente.",
+        description: hasPassword
+          ? "Tu contraseña se ha cambiado correctamente."
+          : "Ya puedes iniciar sesión con tu email y contraseña.",
       })
       resetPasswordForm()
       setPasswordDialogOpen(false)
+      if (!hasPassword) router.refresh()
     } catch {
       setPasswordChangeError("Error inesperado. Intenta nuevamente.")
     } finally {
@@ -340,36 +348,38 @@ export function SettingsForm({ initial }: { initial?: NotificationPrefs }) {
             <DialogTrigger asChild>
               <Button variant="brandOutline">
                 <Lock className="h-4 w-4" />
-                Cambiar contraseña
+                {passwordAction}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
               <DialogHeader>
-                <DialogTitle>Cambiar contraseña</DialogTitle>
+                <DialogTitle>{passwordAction}</DialogTitle>
               </DialogHeader>
               <div className="space-y-3 pt-2">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Contraseña actual</Label>
-                  <div className="relative">
-                    <Input
-                      id="currentPassword"
-                      type={showCurrentPassword ? "text" : "password"}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Tu contraseña actual"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      aria-label={showCurrentPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                    >
-                      {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
+                {hasPassword && (
+                  <div className="space-y-2">
+                    <Label htmlFor="currentPassword">Contraseña actual</Label>
+                    <div className="relative">
+                      <Input
+                        id="currentPassword"
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="Tu contraseña actual"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        aria-label={showCurrentPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      >
+                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="newPassword">Nueva contraseña</Label>
                   <div className="relative">
@@ -429,7 +439,7 @@ export function SettingsForm({ initial }: { initial?: NotificationPrefs }) {
                       Cambiando...
                     </>
                   ) : (
-                    "Cambiar contraseña"
+                    passwordAction
                   )}
                 </Button>
               </div>

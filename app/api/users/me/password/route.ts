@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuth } from '@/lib/middleware/auth'
 import { validateUpdatePassword } from '@/lib/schemas/userSchemas'
+import { userHasPassword } from '@/lib/auth/password'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { apiSuccess, handleError, validationError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
@@ -14,27 +15,35 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
     const { currentPassword, newPassword } = validateUpdatePassword(body)
 
-    // Verify current password using a temporary anon client
-    const anonClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      SUPABASE_PUBLISHABLE_KEY,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    )
+    const hasPassword = userHasPassword(user)
 
-    const { error: signInError } = await anonClient.auth.signInWithPassword({
-      email: user.email!,
-      password: currentPassword,
-    })
+    // Verify the current password; OAuth-only users are setting their first one.
+    if (hasPassword) {
+      if (!currentPassword) {
+        return validationError('La contraseña actual es requerida')
+      }
 
-    if (signInError) {
-      return validationError(ERROR_MESSAGES.INVALID_CURRENT_PASSWORD)
+      const anonClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        SUPABASE_PUBLISHABLE_KEY,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      )
+
+      const { error: signInError } = await anonClient.auth.signInWithPassword({
+        email: user.email!,
+        password: currentPassword,
+      })
+
+      if (signInError) {
+        return validationError(ERROR_MESSAGES.INVALID_CURRENT_PASSWORD)
+      }
     }
 
     // Update password using admin client
     const adminClient = createAdminClient()
     const { error: updateError } = await adminClient.auth.admin.updateUserById(
       user.id,
-      { password: newPassword }
+      hasPassword ? { password: newPassword } : { password: newPassword, app_metadata: { has_password: true } }
     )
 
     if (updateError) {

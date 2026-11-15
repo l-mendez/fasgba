@@ -111,9 +111,10 @@ function ResetPasswordContent() {
         return
       }
 
-      // Update the password
+      // Update the password (has_password: OAuth-only users now have one too)
       const { error } = await supabase.auth.updateUser({
-        password: password
+        password: password,
+        data: { has_password: true },
       })
 
       if (error) {

@@ -17,7 +17,8 @@ export const updateUserProfileSchema = z.object({
 
 // Schema for password update (requires current password verification)
 export const updatePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'La contraseña actual es requerida'),
+  // Omitted by OAuth-only users setting their first password.
+  currentPassword: z.string().optional(),
   newPassword: z.string()
     .max(PASSWORD_MAX_LENGTH, 'La contraseña es demasiado larga')
     .superRefine((password, ctx) => {

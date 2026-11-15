@@ -5,6 +5,7 @@ import { PageHero } from "@/components/page-hero"
 import { SettingsForm } from "@/components/settings-form"
 import { createClient as createServerSupabase } from "@/lib/supabase/server"
 import UnsubscribeHandler from "@/components/unsubscribe-handler"
+import { userHasPassword } from "@/lib/auth/password"
 
 export const metadata: Metadata = { title: "Ajustes" }
 
@@ -37,7 +38,7 @@ export default async function AjustesPage({
           <div className="max-w-3xl">
             {/* Auto-unsubscribe via query param notifications=off */}
             <UnsubscribeHandler />
-            <SettingsForm initial={initial || undefined} />
+            <SettingsForm initial={initial || undefined} hasPassword={userHasPassword(user)} />
           </div>
         </div>
       </section>
