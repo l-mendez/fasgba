@@ -67,7 +67,9 @@ function GoogleSignInContent({ context, oneTap = false }: GoogleSignInProps) {
   useEffect(() => {
     const id = window.google?.accounts.id
     const parent = buttonRef.current
-    if (!useGis || !gisLoaded || !id || !parent || !GOOGLE_CLIENT_ID) return
+    // resolvedTheme is undefined until next-themes mounts; initializing before
+    // then re-runs this effect, whose cleanup cancels One Tap mid-request.
+    if (!useGis || !gisLoaded || !resolvedTheme || !id || !parent || !GOOGLE_CLIENT_ID) return
 
     let cancelled = false
     // Google renders a 0×0 iframe when it rejects the origin or client (403),
