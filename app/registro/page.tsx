@@ -8,6 +8,7 @@ import { SignupButton } from "@/app/components/signup-button"
 import { PasswordRequirements } from "@/components/password-requirements"
 import { validatePassword } from "@/lib/utils/passwordValidation"
 import { AuthShell, authLinkClass } from "@/app/auth/components/auth-shell"
+import { GoogleSignIn } from "@/components/auth/google-sign-in"
 import { PasswordInput } from "@/app/auth/components/password-input"
 
 export default function Signup() {
@@ -79,7 +80,8 @@ export default function Signup() {
         </p>
       }
     >
-      <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+      <GoogleSignIn context="signup" oneTap />
+      <form className="mt-4 space-y-4" onSubmit={(e) => e.preventDefault()}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="nombre">Nombre</Label>

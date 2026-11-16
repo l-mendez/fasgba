@@ -133,6 +133,7 @@ Key files:
 - `lib/middleware/auth.ts`: API auth helpers.
 - `hooks/useAuth.ts`: client auth/permission state.
 - `app/api/users/me/permissions/route.ts`: permission response for UI state.
+- `docs/google-sign-in.md`: Google sign-in (One Tap/button and redirect flow) and its setup.
 
 ## Types And DTOs
 

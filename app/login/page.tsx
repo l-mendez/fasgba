@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { LoginButton } from "@/app/components/login-button"
 import { AuthShell, authLinkClass } from "@/app/auth/components/auth-shell"
+import { GoogleSignIn } from "@/components/auth/google-sign-in"
 import { PasswordInput } from "@/app/auth/components/password-input"
 
 export default function Login() {
@@ -31,7 +32,8 @@ export default function Login() {
         </>
       }
     >
-      <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+      <GoogleSignIn context="signin" oneTap />
+      <form className="mt-4 space-y-4" onSubmit={(e) => e.preventDefault()}>
         <div className="space-y-2">
           <Label htmlFor="email">Correo electrónico</Label>
           <Input
