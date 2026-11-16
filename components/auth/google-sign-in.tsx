@@ -16,7 +16,9 @@ import { GSI_SCRIPT_SRC, createNonce, type GoogleCredentialResponse } from "@/li
 // Without it (e.g. Vercel previews) the redirect flow is used.
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
 
-const ERROR_MESSAGE = "No se pudo iniciar sesión con Google. Intenta nuevamente."
+const GIS_RENDER_TIMEOUT_MS = 4000
+
+const ERROR_MESSAGE ="No se pudo iniciar sesión con Google. Intenta nuevamente."
 
 interface GoogleSignInProps {
   context: "signin" | "signup"
@@ -68,6 +70,12 @@ function GoogleSignInContent({ context, oneTap = false }: GoogleSignInProps) {
     if (!useGis || !gisLoaded || !id || !parent || !GOOGLE_CLIENT_ID) return
 
     let cancelled = false
+    // Google renders a 0×0 iframe when it rejects the origin or client (403),
+    // so fall back to the redirect button if nothing visible appears.
+    const fallbackTimer = window.setTimeout(() => {
+      if (!parent.querySelector("iframe")?.offsetHeight) setUseGis(false)
+    }, GIS_RENDER_TIMEOUT_MS)
+
     void createNonce().then(({ raw, hashed }) => {
       if (cancelled) return
       id.initialize({
@@ -100,6 +108,7 @@ function GoogleSignInContent({ context, oneTap = false }: GoogleSignInProps) {
 
     return () => {
       cancelled = true
+      window.clearTimeout(fallbackTimer)
       id.cancel()
     }
   }, [useGis, gisLoaded, context, oneTap, resolvedTheme])
