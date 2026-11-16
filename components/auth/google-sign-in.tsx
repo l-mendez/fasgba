@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { GoogleIcon } from "@/components/auth/google-icon"
 import { createClient } from "@/lib/supabase/client"
-import { ensureProfileNames } from "@/lib/auth/profile-names"
+import { signInWithGoogleCredential } from "@/lib/auth/google-session"
 import { getPostLoginDestination } from "@/lib/auth/redirect"
 import { GSI_SCRIPT_SRC, createNonce, type GoogleCredentialResponse } from "@/lib/auth/google-identity"
 
@@ -45,23 +45,18 @@ function GoogleSignInContent({ context, oneTap = false }: GoogleSignInProps) {
     searchParams?.get("error") === "oauth" ? ERROR_MESSAGE : null
   )
 
-  const finishSignIn = async (sessionPromise: ReturnType<typeof signInWithIdToken>) => {
+  const onCredential = useEffectEvent(async (response: GoogleCredentialResponse, rawNonce: string) => {
     setIsLoading(true)
     setError(null)
-    const { data, error: authError } = await sessionPromise
-    if (authError || !data.user) {
-      console.error("Google sign-in failed:", authError?.message)
+    const { error: authError } = await signInWithGoogleCredential(response.credential, rawNonce)
+    if (authError) {
+      console.error("Google sign-in failed:", authError)
       setError(ERROR_MESSAGE)
       setIsLoading(false)
       return
     }
-    await ensureProfileNames(createClient(), data.user)
     router.push(getPostLoginDestination(searchParams))
     router.refresh()
-  }
-
-  const onCredential = useEffectEvent((response: GoogleCredentialResponse, rawNonce: string) => {
-    void finishSignIn(signInWithIdToken(response.credential, rawNonce))
   })
 
   useEffect(() => {
@@ -89,7 +84,7 @@ function GoogleSignInContent({ context, oneTap = false }: GoogleSignInProps) {
         itp_support: true,
         use_fedcm_for_prompt: true,
         use_fedcm_for_button: true,
-        callback: (response) => onCredential(response, raw),
+        callback: (response) => void onCredential(response, raw),
       })
       parent.replaceChildren()
       id.renderButton(parent, {
@@ -175,10 +170,6 @@ function GoogleSignInContent({ context, oneTap = false }: GoogleSignInProps) {
       </div>
     </div>
   )
-}
-
-function signInWithIdToken(token: string, nonce: string) {
-  return createClient().auth.signInWithIdToken({ provider: "google", token, nonce })
 }
 
 export function GoogleSignIn(props: GoogleSignInProps) {

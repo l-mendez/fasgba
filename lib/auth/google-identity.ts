@@ -36,6 +36,7 @@ interface GoogleIdApi {
   renderButton: (parent: HTMLElement, options: GoogleButtonConfig) => void
   prompt: () => void
   cancel: () => void
+  disableAutoSelect: () => void
 }
 
 declare global {

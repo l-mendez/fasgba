@@ -18,6 +18,27 @@ Supabase links Google to an existing account with the same verified email.
 Google-only users can create a password in `/ajustes`; `userHasPassword`
 (`lib/auth/password.ts`) decides whether the current password is required.
 
+## One Tap on public pages
+
+`components/auth/google-one-tap.tsx` is mounted in `SiteHeader`, so every page
+with the public header prompts signed-out visitors once per page load (not on
+`/login`, `/registro`, `/admin`, `/club-admin`). It uses `auto_select`: users
+who already granted consent are signed in without a click (Chrome allows one
+automatic attempt every 10 minutes). The visitor stays on the page.
+
+Every sign-out must call `disableGoogleAutoSelect()` (`lib/auth/google-session.ts`),
+or One Tap signs the user straight back in. It sets a localStorage flag that the
+next Google sign-in clears.
+
+## Saved passwords
+
+"Iniciar sesión" in the header and mobile menu (`useSavedPasswordLogin`) first
+opens Chrome's saved-password chooser (`navigator.credentials.get({ password: true })`,
+`lib/auth/password-credential.ts`) and signs in in place. Without saved
+passwords, on cancel, or in other browsers it goes to `/login`. Password logins
+call `savePassword()` so Chrome offers to save them. Login/registro inputs keep
+`name` and `autocomplete="username"`/`current-password`/`new-password`.
+
 ## Setup
 
 Google Cloud (APIs & Services):

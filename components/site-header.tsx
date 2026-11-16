@@ -2,6 +2,7 @@ import { MobileNavigation } from "@/components/mobile-navigation"
 import { AuthButtons } from "@/components/auth-buttons"
 import { MainNav } from "@/components/main-nav"
 import { SiteLogo } from "@/components/site-logo"
+import { GoogleOneTap } from "@/components/auth/google-one-tap"
 
 export function SiteHeader() {
   return (
@@ -23,6 +24,8 @@ export function SiteHeader() {
         </div>
         <div className="h-10 w-10" />
       </div>
+
+      <GoogleOneTap />
     </header>
   )
 }
