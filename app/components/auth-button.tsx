@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react"
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { getPostLoginDestination } from "@/lib/auth/redirect"
+import { savePassword } from "@/lib/auth/password-credential"
 
 export interface AuthButtonProps {
   email: string
@@ -104,6 +105,7 @@ export function AuthButton({
         
         if (mode === "signin" || data.session) {
           // Signed in (signup returns a session when email confirmation is off)
+          void savePassword(email, password)
           router.push(destination)
           router.refresh()
         } else {

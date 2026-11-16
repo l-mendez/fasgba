@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
+import { useState, type MouseEvent } from "react"
 import { CastleIcon, LogIn, LogOut, Menu, Settings, Shield, UserPlus, type LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import { SiteLogo } from "@/components/site-logo"
 import { isActivePath, navLinks } from "@/components/main-nav"
 import { useSignOut } from "@/components/auth-buttons"
+import { useSavedPasswordLogin } from "@/components/auth/use-saved-password-login"
 
 // Same hover surface as ghost buttons (accent token), readable in light and dark.
 const itemClass =
@@ -23,12 +24,13 @@ export function MobileNavigation() {
   const pathname = usePathname()
   const signOut = useSignOut()
   const close = () => setIsOpen(false)
+  const pickSavedPassword = useSavedPasswordLogin()
 
-  const item = (href: string, label: string, Icon: LucideIcon) => (
+  const item = (href: string, label: string, Icon: LucideIcon, onClick: (event: MouseEvent<HTMLAnchorElement>) => void = close) => (
     <Link
       key={href}
       href={href}
-      onClick={close}
+      onClick={onClick}
       className={cn(itemClass, isActivePath(pathname, href) ? "text-terracotta" : "text-foreground")}
     >
       <Icon className="h-5 w-5 text-amber" />
@@ -63,7 +65,10 @@ export function MobileNavigation() {
             </div>
           ) : !isAuthenticated ? (
             <>
-              {item("/login", "Iniciar sesión", LogIn)}
+              {item("/login", "Iniciar sesión", LogIn, (event) => {
+                close()
+                void pickSavedPassword(event)
+              })}
               {item("/registro", "Registrarse", UserPlus)}
             </>
           ) : (

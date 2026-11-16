@@ -8,6 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/hooks/useAuth"
 import { isActivePath } from "@/components/main-nav"
+import { disableGoogleAutoSelect } from "@/lib/auth/google-session"
+import { useSavedPasswordLogin } from "@/components/auth/use-saved-password-login"
 
 // Signs out and returns to the home page. Shared with the mobile menu.
 export function useSignOut() {
@@ -20,6 +22,7 @@ export function useSignOut() {
         console.error('Error signing out:', error.message)
         return
       }
+      disableGoogleAutoSelect()
       router.push('/')
       router.refresh()
     } catch (error) {
@@ -32,6 +35,7 @@ export function AuthButtons() {
   const { isAuthenticated, isAdmin, isClubAdmin, isLoading } = useAuth()
   const signOut = useSignOut()
   const pathname = usePathname()
+  const pickSavedPassword = useSavedPasswordLogin()
 
   // While the session resolves, hold the layout with a fixed-size placeholder
   // so there's no flash of logged-out state and no layout shift.
@@ -48,7 +52,7 @@ export function AuthButtons() {
     return (
       <div className="flex items-center gap-2">
         <Button asChild variant="outline" size="sm" className="border-terracotta/40 text-terracotta hover:text-terracotta">
-          <Link href="/login">Iniciar sesión</Link>
+          <Link href="/login" onClick={(event) => void pickSavedPassword(event)}>Iniciar sesión</Link>
         </Button>
         <Button asChild size="sm">
           <Link href="/registro">Registrarse</Link>

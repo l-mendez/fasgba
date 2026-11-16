@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { createClient } from "@/lib/supabase/client"
+import { disableGoogleAutoSelect } from "@/lib/auth/google-session"
 import { PasswordRequirements } from "@/components/password-requirements"
 import { validatePassword } from "@/lib/utils/passwordValidation"
 
@@ -93,6 +94,7 @@ export function SettingsForm({ initial, hasPassword = true }: {
         })
         return
       }
+      disableGoogleAutoSelect()
       router.push('/')
       router.refresh()
     } catch {

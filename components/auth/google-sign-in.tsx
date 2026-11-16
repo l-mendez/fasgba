@@ -8,9 +8,9 @@ import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { GoogleIcon } from "@/components/auth/google-icon"
 import { createClient } from "@/lib/supabase/client"
-import { ensureProfileNames } from "@/lib/auth/profile-names"
+import { initGoogleIdentity, promptGoogleOneTap, setGoogleCredentialHandler } from "@/lib/auth/google-gis"
 import { getPostLoginDestination } from "@/lib/auth/redirect"
-import { GSI_SCRIPT_SRC, createNonce, type GoogleCredentialResponse } from "@/lib/auth/google-identity"
+import { GSI_SCRIPT_SRC } from "@/lib/auth/google-identity"
 
 // Set only where the origin is authorized in Google Cloud (production, localhost).
 // Without it (e.g. Vercel previews) the redirect flow is used.
@@ -36,8 +36,6 @@ function GoogleSignInContent({ context, oneTap = false }: GoogleSignInProps) {
   const searchParams = useSearchParams()
   const { resolvedTheme } = useTheme()
   const buttonRef = useRef<HTMLDivElement>(null)
-  // One Tap shows once per mount, not again when the theme re-renders the button.
-  const promptedRef = useRef(false)
   const [useGis, setUseGis] = useState(Boolean(GOOGLE_CLIENT_ID))
   const [gisLoaded, setGisLoaded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -45,30 +43,33 @@ function GoogleSignInContent({ context, oneTap = false }: GoogleSignInProps) {
     searchParams?.get("error") === "oauth" ? ERROR_MESSAGE : null
   )
 
-  const finishSignIn = async (sessionPromise: ReturnType<typeof signInWithIdToken>) => {
-    setIsLoading(true)
-    setError(null)
-    const { data, error: authError } = await sessionPromise
-    if (authError || !data.user) {
-      console.error("Google sign-in failed:", authError?.message)
+  const onResult = useEffectEvent(({ error: authError }: { error: string | null }) => {
+    if (authError) {
+      console.error("Google sign-in failed:", authError)
       setError(ERROR_MESSAGE)
       setIsLoading(false)
       return
     }
-    await ensureProfileNames(createClient(), data.user)
     router.push(getPostLoginDestination(searchParams))
     router.refresh()
-  }
-
-  const onCredential = useEffectEvent((response: GoogleCredentialResponse, rawNonce: string) => {
-    void finishSignIn(signInWithIdToken(response.credential, rawNonce))
   })
+
+  useEffect(() => {
+    if (!useGis) return
+    return setGoogleCredentialHandler({
+      onStart: () => {
+        setIsLoading(true)
+        setError(null)
+      },
+      onResult: (result) => onResult(result),
+    })
+  }, [useGis])
 
   useEffect(() => {
     const id = window.google?.accounts.id
     const parent = buttonRef.current
-    // resolvedTheme is undefined until next-themes mounts; initializing before
-    // then re-runs this effect, whose cleanup cancels One Tap mid-request.
+    // resolvedTheme is undefined until next-themes mounts; wait so the button
+    // renders once with the right theme.
     if (!useGis || !gisLoaded || !resolvedTheme || !id || !parent || !GOOGLE_CLIENT_ID) return
 
     let cancelled = false
@@ -78,40 +79,25 @@ function GoogleSignInContent({ context, oneTap = false }: GoogleSignInProps) {
       if (!parent.querySelector("iframe")?.offsetHeight) setUseGis(false)
     }, GIS_RENDER_TIMEOUT_MS)
 
-    void createNonce().then(({ raw, hashed }) => {
+    void initGoogleIdentity(id, GOOGLE_CLIENT_ID).then(() => {
       if (cancelled) return
-      id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        nonce: hashed,
-        context,
-        ux_mode: "popup",
-        cancel_on_tap_outside: true,
-        itp_support: true,
-        use_fedcm_for_prompt: true,
-        use_fedcm_for_button: true,
-        callback: (response) => onCredential(response, raw),
-      })
       parent.replaceChildren()
       id.renderButton(parent, {
         type: "standard",
         theme: resolvedTheme === "dark" ? "filled_black" : "outline",
         size: "large",
-        text: "continue_with",
+        text: context === "signup" ? "signup_with" : "continue_with",
         shape: "rectangular",
         logo_alignment: "center",
         width: Math.min(400, Math.max(200, parent.offsetWidth)),
         locale: "es-419",
       })
-      if (oneTap && !promptedRef.current) {
-        promptedRef.current = true
-        id.prompt()
-      }
+      if (oneTap) promptGoogleOneTap(id)
     })
 
     return () => {
       cancelled = true
       window.clearTimeout(fallbackTimer)
-      id.cancel()
     }
   }, [useGis, gisLoaded, context, oneTap, resolvedTheme])
 
@@ -175,10 +161,6 @@ function GoogleSignInContent({ context, oneTap = false }: GoogleSignInProps) {
       </div>
     </div>
   )
-}
-
-function signInWithIdToken(token: string, nonce: string) {
-  return createClient().auth.signInWithIdToken({ provider: "google", token, nonce })
 }
 
 export function GoogleSignIn(props: GoogleSignInProps) {
