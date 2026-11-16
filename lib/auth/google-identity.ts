@@ -31,10 +31,14 @@ interface GoogleButtonConfig {
   locale?: string
 }
 
-interface GoogleIdApi {
+interface PromptMomentNotification {
+  isDismissedMoment: () => boolean
+}
+
+export interface GoogleIdApi {
   initialize: (config: GoogleIdConfig) => void
   renderButton: (parent: HTMLElement, options: GoogleButtonConfig) => void
-  prompt: () => void
+  prompt: (listener?: (notification: PromptMomentNotification) => void) => void
   cancel: () => void
   disableAutoSelect: () => void
 }
