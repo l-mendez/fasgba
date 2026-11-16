@@ -26,12 +26,6 @@ with the public header prompts signed-out visitors once per page load (not on
 who already granted consent are signed in without a click (Chrome allows one
 automatic attempt every 10 minutes). The visitor stays on the page.
 
-GIS is initialized once per page load (`lib/auth/google-gis.ts`) and shared by
-the header One Tap and the login/registro button. Never `initialize()` again or
-`cancel()` on navigation: both abort Google's pending FedCM request
-(`AbortError`). An open prompt stays usable on the next page, whose handler
-takes the credential.
-
 Every sign-out must call `disableGoogleAutoSelect()` (`lib/auth/google-session.ts`),
 or One Tap signs the user straight back in. It sets a localStorage flag that the
 next Google sign-in clears.

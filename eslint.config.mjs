@@ -17,6 +17,31 @@ const longDescriptionRules = [
   `VariableDeclarator[id.name='SITE_DESCRIPTION'] > Literal[value=${LONG_DESCRIPTION}]`,
 ].map((selector) => ({ selector, message: longDescriptionMessage }))
 
+// Google Identity Services is initialized once per page load in
+// lib/auth/google-gis.ts. Calling initialize/prompt/cancel elsewhere (e.g. on
+// unmount) aborts Google's pending FedCM request: "FedCM get() rejects with
+// AbortError". Matches `id.x()` and `google.accounts.id.x()`.
+const GIS_FILE = 'lib/auth/google-gis.ts'
+const gisRule = {
+  selector:
+    "CallExpression[callee.property.name=/^(initialize|prompt|cancel)$/]:matches([callee.object.name='id'], [callee.object.property.name='id'])",
+  message: `Use initGoogleIdentity/promptGoogleOneTap/cancelGoogleOneTap from @/${GIS_FILE}: direct GIS calls abort One Tap on navigation.`,
+}
+
+const restrictedSyntax = [
+  { selector: `Literal[value=${OFF_PALETTE}]`, message: offPaletteMessage },
+  { selector: `TemplateElement[value.raw=${OFF_PALETTE}]`, message: offPaletteMessage },
+  {
+    selector: "TSTypeReference[typeName.name='SupabaseClient']:not([typeArguments])",
+    message: 'Use DbClient from @/lib/db-types (schema-typed) instead of a bare SupabaseClient.',
+  },
+  {
+    selector: "TSAsExpression > TSAsExpression.expression[typeAnnotation.type='TSUnknownKeyword']",
+    message: 'No `as unknown as` casts: type the source or narrow with a type guard.',
+  },
+  ...longDescriptionRules,
+]
+
 const eslintConfig = [
   ...nextCoreWebVitals,
   ...nextTypescript,
@@ -35,21 +60,12 @@ const eslintConfig = [
       ],
       'react-hooks/exhaustive-deps': 'error',
       'prefer-const': 'error',
-      'no-restricted-syntax': [
-        'error',
-        { selector: `Literal[value=${OFF_PALETTE}]`, message: offPaletteMessage },
-        { selector: `TemplateElement[value.raw=${OFF_PALETTE}]`, message: offPaletteMessage },
-        {
-          selector: "TSTypeReference[typeName.name='SupabaseClient']:not([typeArguments])",
-          message: 'Use DbClient from @/lib/db-types (schema-typed) instead of a bare SupabaseClient.',
-        },
-        {
-          selector: "TSAsExpression > TSAsExpression.expression[typeAnnotation.type='TSUnknownKeyword']",
-          message: 'No `as unknown as` casts: type the source or narrow with a type guard.',
-        },
-        ...longDescriptionRules,
-      ],
+      'no-restricted-syntax': ['error', ...restrictedSyntax, gisRule],
     },
+  },
+  {
+    files: [GIS_FILE],
+    rules: { 'no-restricted-syntax': ['error', ...restrictedSyntax] },
   },
 ]
 

@@ -95,7 +95,6 @@ function GoogleSignInContent({ context, oneTap = false }: GoogleSignInProps) {
       if (oneTap) promptGoogleOneTap(id)
     })
 
-    // No id.cancel(): an open One Tap stays usable after navigating away.
     return () => {
       cancelled = true
       window.clearTimeout(fallbackTimer)
