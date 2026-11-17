@@ -21,7 +21,8 @@ const PRIVATE_PATHS = [
 ]
 
 // AI search and assistant crawlers are explicitly welcome: being cited by
-// ChatGPT, Perplexity, Claude, Gemini and Google AI Overviews is a goal.
+// ChatGPT, Perplexity, Claude, Gemini, Le Chat, DuckAssist and Google AI
+// Overviews is a goal.
 const AI_CRAWLERS = [
   'OAI-SearchBot',
   'ChatGPT-User',
@@ -34,6 +35,8 @@ const AI_CRAWLERS = [
   'Google-Extended',
   'Applebot-Extended',
   'Bingbot',
+  'DuckAssistBot',
+  'MistralAI-User',
 ]
 
 export default function robots(): MetadataRoute.Robots {

@@ -16,6 +16,9 @@ const CRAWLERS: { userAgent: RegExp; rangesUrl: string }[] = [
   { userAgent: /Perplexity-User/i, rangesUrl: 'https://www.perplexity.ai/perplexity-user.json' },
   { userAgent: /ClaudeBot|Claude-SearchBot|Claude-User/i, rangesUrl: 'https://claude.com/crawling/bots.json' },
   { userAgent: /Applebot/i, rangesUrl: 'https://search.developer.apple.com/applebot.json' },
+  { userAgent: /DuckDuckBot/i, rangesUrl: 'https://duckduckgo.com/duckduckbot.json' },
+  { userAgent: /DuckAssistBot/i, rangesUrl: 'https://duckduckgo.com/duckassistbot.json' },
+  { userAgent: /MistralAI-User/i, rangesUrl: 'https://mistral.ai/mistralai-user-ips.json' },
 ]
 
 const RANGES_TTL_MS = 24 * 60 * 60 * 1000
