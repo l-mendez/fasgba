@@ -6,12 +6,13 @@ import { Building2, Calendar, ChevronLeft, Tag, User } from "lucide-react"
 
 import { InfoPill } from "@/components/info-pill"
 import { NewsCard } from "@/components/news-card"
-import { getNewsById, getRelatedNews } from "@/lib/newsUtils"
+import { getAdjacentNews, getNewsById, getRelatedNews } from "@/lib/newsUtils"
 import { getImageUrlNullable } from "@/lib/imageUtils"
 import { formatArgentinaDateOnly } from "@/lib/dateUtils"
 import { buildNoticiasUrl, FEDERATION_NAME } from "@/lib/newsDisplay"
 import { extractShortTextFromContentBlocks } from "@/lib/textUtils"
 import { NewsContent } from "./news-content"
+import { NewsPager } from "./news-pager"
 import { JsonLd } from "@/components/json-ld"
 import type { NewsDisplay } from "@/lib/newsUtils"
 import { absoluteUrl, breadcrumbJsonLd, LOGO_URL, organizationRef, pageMetadata, withContext, type JsonLdObject } from "@/lib/seo"
@@ -103,7 +104,11 @@ export default async function NoticiaPage({ params }: { params: Promise<{ id: st
   if (!newsItem) notFound()
 
   // Fetch related news (limit 3 since the util filters out current after limiting)
-  const relatedNews = (await getRelatedNews(newsItem.id, 3)).slice(0, 2)
+  const [related, adjacent] = await Promise.all([
+    getRelatedNews(newsItem.id, 3),
+    getAdjacentNews(newsItem.id, newsItem.date),
+  ])
+  const relatedNews = related.slice(0, 2)
   const imageUrl = getImageUrlNullable(newsItem.image)
   const tags = newsItem.tags ?? []
 
@@ -179,6 +184,8 @@ export default async function NoticiaPage({ params }: { params: Promise<{ id: st
         <div className="mt-6">
           <NewsContent text={newsItem.text} coverUrl={imageUrl} />
         </div>
+
+        <NewsPager older={adjacent.older} newer={adjacent.newer} />
       </article>
 
       {relatedNews.length > 0 && (
