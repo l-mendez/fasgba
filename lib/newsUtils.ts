@@ -480,6 +480,43 @@ export async function getRelatedNews(newsId: number, limit: number = 4): Promise
   return data.filter(news => news.id !== newsId)
 }
 
+export type AdjacentNews = Pick<NewsRow, 'id' | 'title'>
+
+/**
+ * The chronologically older and newer article (by date, then id). Linking every
+ * article to its neighbours keeps the whole archive reachable by crawlers: the
+ * /noticias listing paginates on the client, so older articles have no other link.
+ */
+export async function getAdjacentNews(
+  newsId: number,
+  date: string | null
+): Promise<{ older: AdjacentNews | null; newer: AdjacentNews | null }> {
+  if (!date) return { older: null, newer: null }
+  const supabase = getAdminClient()
+  const [older, newer] = await Promise.all([
+    supabase
+      .from('news')
+      .select('id, title')
+      .or(`date.lt.${date},and(date.eq.${date},id.lt.${newsId})`)
+      .order('date', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('news')
+      .select('id, title')
+      .or(`date.gt.${date},and(date.eq.${date},id.gt.${newsId})`)
+      .order('date', { ascending: true })
+      .order('id', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ])
+  if (older.error || newer.error) {
+    console.error('Error fetching adjacent news:', older.error ?? newer.error)
+  }
+  return { older: older.data ?? null, newer: newer.data ?? null }
+}
+
 /**
  * Gets unique tags from all news
  */
