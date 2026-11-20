@@ -36,12 +36,18 @@ export async function generateMetadata({ params }: ClubDetailPageProps): Promise
   if (!clubId || !clubData) return { title: 'Club no encontrado' }
 
   const locality = clubLocality(clubData.address)
-  return pageMetadata({
+  const where = locality ? ` en ${locality}` : ''
+  const metadata = pageMetadata({
     title: locality && !clubData.name.includes(locality) ? `${clubData.name} (${locality})` : clubData.name,
-    description: `${clubData.name}, club de ajedrez afiliado a FASGBA${locality ? ` en ${locality}` : ''}. Dirección, horarios, contacto, equipos y noticias del club.`,
+    description: clubData.affiliated
+      ? `${clubData.name}, club de ajedrez afiliado a FASGBA${where}. Dirección, horarios, contacto, equipos y noticias del club.`
+      : `${clubData.name}, club de ajedrez${where} que participa en torneos de FASGBA. Equipos y noticias del club.`,
     path: `/clubes/${clubId}`,
     image: getImageUrlNullable(clubData.image),
   })
+  // Non-affiliated clubs only exist as tournament participants: thin pages,
+  // kept out of the sitemap and the index, but their links are still followed.
+  return clubData.affiliated ? metadata : { ...metadata, robots: { index: false, follow: true } }
 }
 
 function clubJsonLd(club: ClubWithStats, imageUrl: string | null): JsonLdObject {
@@ -64,7 +70,7 @@ function clubJsonLd(club: ClubWithStats, imageUrl: string | null): JsonLdObject 
           addressCountry: 'AR',
         }
       : undefined,
-    memberOf: organizationRef,
+    memberOf: club.affiliated ? organizationRef : undefined,
   }
 }
 
