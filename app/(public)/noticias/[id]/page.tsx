@@ -17,12 +17,16 @@ import { JsonLd } from "@/components/json-ld"
 import type { NewsDisplay } from "@/lib/newsUtils"
 import { absoluteUrl, breadcrumbJsonLd, LOGO_URL, organizationRef, pageMetadata, withContext, type JsonLdObject } from "@/lib/seo"
 
-// No time-based revalidation. The build marks this route dynamic (rendered per
-// request, absent from prerender-manifest's dynamicRoutes), so there is no ISR
-// entry to expire today; the export guards against reintroducing a per-article
-// timer if it ever becomes prerenderable. revalidateNewsCache(id) already purges
-// `/noticias/${id}` on edit or delete, so that path is covered either way.
+// Rendered on the first visit, then cached indefinitely: the empty
+// generateStaticParams opts the route into on-demand ISR (without it every
+// article rendered per request, 1-13 s each). Never time-based.
+// revalidateNewsCache and revalidateClubsCache purge every article, since each
+// one shows its neighbours, related news and club name.
 export const revalidate = false
+
+export function generateStaticParams() {
+  return []
+}
 
 // Generate metadata for better link previews
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {

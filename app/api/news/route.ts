@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     const createdNews = await createNews(newsData)
-    revalidateNewsCache(createdNews.id)
+    revalidateNewsCache()
 
     // Run broadcast after the response is sent so the 201 isn't blocked
     // by SMTP latency. `after()` is reliable in serverless (unlike bare
