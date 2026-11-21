@@ -8,8 +8,10 @@ import { revalidatePartidoPages } from './partidos'
 // directory itself) plus /arbitraje and /profesores, which render club names
 // through a `clubs(name)` join and would otherwise show a renamed or deleted
 // club forever. All four are prerendered with `revalidate = false`, so this is
-// their only invalidation path. /profesores/[id] joins the same club name but
-// is not purged here: it renders per request, so it can never hold a stale one.
+// their only invalidation path. Every /noticias/[id] page is purged too: they
+// are cached on first visit and show the publishing club's name and link.
+// /profesores/[id] joins the same club name but is not purged here: it renders
+// per request, so it can never hold a stale one.
 // revalidateTag with the 'max' profile works in Route Handlers, where these
 // mutations run; updateTag throws outside Server Actions.
 export function revalidateClubsCache() {
@@ -18,5 +20,6 @@ export function revalidateClubsCache() {
   revalidatePath('/clubes')
   revalidatePath('/arbitraje')
   revalidatePath('/profesores')
+  revalidatePath('/noticias/[id]', 'page')
   revalidatePartidoPages()
 }

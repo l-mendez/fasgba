@@ -68,7 +68,7 @@ export async function updateNewsAction(newsId: number, input: unknown): Promise<
 
     const validated = validateUpdateNews(input)
     await updateNews(newsId, validated)
-    revalidateNewsCache(newsId)
+    revalidateNewsCache()
     return { ok: true }
   } catch (err) {
     return mapErrorToResult(err)
@@ -127,7 +127,7 @@ export async function deleteNewsAction(newsId: number): Promise<{ ok: true } | A
     if (!(await canUserEditNews(newsId, user.id))) throw new ForbiddenError('You do not have permission to delete this news item')
 
     await deleteNews(newsId)
-    revalidateNewsCache(newsId)
+    revalidateNewsCache()
     return { ok: true }
   } catch (err) {
     return mapErrorToResult(err)

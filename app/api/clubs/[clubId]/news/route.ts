@@ -98,7 +98,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const createdNews = await createNews(newsData)
-    revalidateNewsCache(createdNews.id)
+    revalidateNewsCache()
 
     return apiSuccess(createdNews, 201)
   } catch (error) {
