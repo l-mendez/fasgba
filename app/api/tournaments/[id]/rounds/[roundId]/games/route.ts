@@ -4,6 +4,7 @@ import { apiSuccess, handleError, notFoundError, validationError, unauthorizedEr
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
 import { z } from 'zod'
+import { revalidatePartidasCache } from '@/lib/cache/partidas'
 
 // Validation schemas
 const gameResultSchema = z.enum(['1-0', '0-1', '1/2-1/2', '*'])
@@ -228,6 +229,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         throw new Error('Failed to create team game')
       }
 
+      revalidatePartidasCache()
       return apiSuccess(newGame, 201)
     } else {
       // Create individual game
@@ -251,6 +253,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         throw new Error('Failed to create individual game')
       }
 
+      revalidatePartidasCache()
       return apiSuccess(newGame, 201)
     }
   } catch (error) {

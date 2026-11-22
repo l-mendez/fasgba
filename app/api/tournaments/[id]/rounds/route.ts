@@ -4,6 +4,7 @@ import { apiSuccess, handleError, notFoundError, validationError, noContent, una
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
 import { z } from 'zod'
+import { revalidatePartidasCache } from '@/lib/cache/partidas'
 
 // Validation schemas
 const roundSchema = z.object({
@@ -202,6 +203,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       throw new Error('Failed to delete tournament rounds')
     }
 
+    revalidatePartidasCache()
     return noContent()
   } catch (error) {
     return handleError(error)
