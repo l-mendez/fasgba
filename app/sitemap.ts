@@ -8,8 +8,8 @@ import { PARTIDOS } from '@/lib/partidos'
 // Rendered per request: Vercel serves a prerendered sitemap.xml as a static
 // file that revalidatePath('/sitemap.xml') never purges, so new news/torneos
 // never reached it. The queries are cached indefinitely under the tags the
-// lib/cache invalidators already purge (news, clubs, torneos, profesores), so
-// a request only reads the DB after a mutation. Never time-based.
+// lib/cache invalidators already purge (news, clubs, torneos, profesores,
+// partidas), so a request only reads the DB after a mutation. Never time-based.
 export const dynamic = 'force-dynamic'
 
 type Entry = MetadataRoute.Sitemap[number]
@@ -30,6 +30,64 @@ const STATIC_PAGES: { path: string; priority: number; changeFrequency: Entry['ch
 
 const toDate = (value: string | null) => (value ? new Date(value) : undefined)
 
+// PostgREST embeds many-to-one relations as objects, but the inferred type is an array.
+const one = <T,>(value: T | T[] | null | undefined) => (Array.isArray(value) ? value[0] : value)
+
+const PAGE_SIZE = 1000 // PostgREST caps each response at 1000 rows.
+
+// Every page of a query, so the sitemap never silently stops at the row cap.
+async function fetchAll<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
+): Promise<T[]> {
+  const rows: T[] = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await page(from, from + PAGE_SIZE - 1)
+    if (error) throw new Error(`sitemap query failed: ${error.message}`)
+    rows.push(...(data ?? []))
+    if (!data || data.length < PAGE_SIZE) return rows
+  }
+}
+
+// Games with a PGN have their own page (board, moves, PGN download); games
+// without one are a bare result and stay out of the sitemap.
+const getSitemapGames = unstable_cache(
+  async () => {
+    const supabase = getAdminClient()
+    const [individual, team] = await Promise.all([
+      fetchAll((from, to) =>
+        supabase
+          .from('individual_games')
+          .select('id, round:rounds(tournament_id)')
+          .not('pgn', 'is', null)
+          .neq('pgn', '')
+          .order('id')
+          .range(from, to)
+      ),
+      fetchAll((from, to) =>
+        supabase
+          .from('match_games')
+          .select('id, match:matches(round:rounds(tournament_id))')
+          .not('pgn', 'is', null)
+          .neq('pgn', '')
+          .order('id')
+          .range(from, to)
+      ),
+    ])
+    const games: { id: number; tournamentId: number }[] = []
+    for (const game of individual) {
+      const tournamentId = one(game.round)?.tournament_id
+      if (tournamentId) games.push({ id: game.id, tournamentId })
+    }
+    for (const game of team) {
+      const tournamentId = one(one(game.match)?.round)?.tournament_id
+      if (tournamentId) games.push({ id: game.id, tournamentId })
+    }
+    return games
+  },
+  ['sitemap-games'],
+  { revalidate: false, tags: ['partidas', 'torneos'] }
+)
+
 // Throws on a failed query so the error is never cached.
 const getSitemapData = unstable_cache(
   async () => {
@@ -49,7 +107,7 @@ const getSitemapData = unstable_cache(
 )
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const { news, clubs, tournaments, profesores } = await getSitemapData()
+  const [{ news, clubs, tournaments, profesores }, games] = await Promise.all([getSitemapData(), getSitemapGames()])
 
   const pages: MetadataRoute.Sitemap = STATIC_PAGES.map(({ path, priority, changeFrequency }) => ({
     url: absoluteUrl(path),
@@ -68,6 +126,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
   for (const item of profesores) {
     pages.push({ url: absoluteUrl(`/profesores/${item.id}`), lastModified: toDate(item.updated_at), priority: 0.4 })
+  }
+  for (const game of games) {
+    pages.push({ url: absoluteUrl(`/torneos/${game.tournamentId}/partidas/${game.id}`), priority: 0.3 })
   }
 
   return pages

@@ -4,6 +4,7 @@ import { apiSuccess, handleError, notFoundError, validationError, unauthorizedEr
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { z } from 'zod'
 import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
+import { revalidatePartidasCache } from '@/lib/cache/partidas'
 
 interface RouteParams {
   params: Promise<{
@@ -143,6 +144,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return notFoundError('Match not found after update')
     }
 
+    revalidatePartidasCache()
     return apiSuccess({
       match: updatedMatch,
       games_deleted: true,
@@ -243,6 +245,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       throw new Error('Failed to delete match')
     }
 
+    revalidatePartidasCache()
     return apiSuccess({
       message: 'Match deleted successfully',
       games_deleted: gamesCount || 0

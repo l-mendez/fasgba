@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { handleError, notFoundError, validationError, noContent, unauthorizedError, forbiddenError } from '@/lib/utils/apiResponse'
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
+import { revalidatePartidasCache } from '@/lib/cache/partidas'
 
 interface RouteParams {
   params: Promise<{
@@ -81,6 +82,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       throw new Error('Failed to delete round')
     }
 
+    revalidatePartidasCache()
     return noContent()
   } catch (error) {
     return handleError(error)

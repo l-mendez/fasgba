@@ -4,6 +4,7 @@ import { apiSuccess, handleError, notFoundError, validationError, noContent, una
 import { ERROR_MESSAGES } from '@/lib/utils/constants'
 import { authenticateAndAuthorize } from '@/lib/middleware/tournamentAuth'
 import { z } from 'zod'
+import { revalidatePartidasCache } from '@/lib/cache/partidas'
 
 // Validation schemas
 const gameResultSchema = z.enum(['1-0', '0-1', '1/2-1/2', '*'])
@@ -126,6 +127,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         return notFoundError('Game not found')
       }
 
+      revalidatePartidasCache()
       return apiSuccess(updatedGame)
     } else {
       // Update individual game
@@ -150,6 +152,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         return notFoundError('Game not found')
       }
 
+      revalidatePartidasCache()
       return apiSuccess(updatedGame)
     }
   } catch (error) {
@@ -249,6 +252,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       }
     }
 
+    revalidatePartidasCache()
     return noContent()
   } catch (error) {
     return handleError(error)
