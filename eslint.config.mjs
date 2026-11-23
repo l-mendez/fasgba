@@ -43,6 +43,8 @@ const restrictedSyntax = [
 ]
 
 const eslintConfig = [
+  // pnpm install hook (CommonJS), outside the Next.js lint config's file globs.
+  { ignores: ['.pnpmfile.cjs'] },
   ...nextCoreWebVitals,
   ...nextTypescript,
   {
