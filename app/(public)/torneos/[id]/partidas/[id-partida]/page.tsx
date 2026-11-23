@@ -73,11 +73,14 @@ export async function generateMetadata({ params }: {
       return { title: 'Partida no encontrada' }
     }
 
-    return pageMetadata({
+    const metadata = pageMetadata({
       title: `${game.white} vs ${game.black} · ${tournament.title}`,
-      description: `Partida de ajedrez de la ronda ${game.round} entre ${game.white} y ${game.black} en el torneo ${tournament.title}: movimientos y PGN.`,
+      description: `Partida de ajedrez de la ronda ${game.round} entre ${game.white} y ${game.black} en el torneo ${tournament.title}: ${game.pgn ? 'movimientos y PGN' : 'resultado'}.`,
       path: `/torneos/${tournamentId}/partidas/${gameId}`,
     })
+    // Without a PGN the page is only a result already shown on the torneo page:
+    // keep it out of the index, like the sitemap does, but let crawlers follow it.
+    return game.pgn ? metadata : { ...metadata, robots: { index: false, follow: true } }
   } catch {
     return { title: 'Partida' }
   }
