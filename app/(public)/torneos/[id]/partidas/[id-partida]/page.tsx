@@ -12,7 +12,8 @@ import { formatArgentinaDateOnly } from "@/lib/dateUtils"
 import { Calendar, CheckCircle2, ChevronLeft, Clock, Hash, ListOrdered, PlayCircle } from "lucide-react"
 import Link from "next/link"
 import { Metadata } from "next"
-import { pageMetadata } from "@/lib/seo"
+import { JsonLd } from "@/components/json-ld"
+import { breadcrumbJsonLd, pageMetadata } from "@/lib/seo"
 import ChessGameDisplay from "./components/chess-game-display"
 
 // Force dynamic rendering for SSR
@@ -134,6 +135,14 @@ export default async function GamePage({ params }: {
 
   return (
     <>
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: 'Inicio', path: '/' },
+          { name: 'Torneos', path: '/torneos' },
+          { name: tournament.title, path: `/torneos/${tournamentId}` },
+          { name: `${game.white} vs ${game.black}`, path: `/torneos/${tournamentId}/partidas/${gameId}` },
+        ])}
+      />
       <section className="w-full pt-8 md:pt-12">
         <div className="container space-y-3 px-4 md:px-6">
           <Link
