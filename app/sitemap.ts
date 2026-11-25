@@ -94,7 +94,7 @@ const getSitemapData = unstable_cache(
     const supabase = getAdminClient()
     const [news, clubs, tournaments, profesores] = await Promise.all([
       supabase.from('news').select('id, date, updated_at').order('id', { ascending: false }),
-      supabase.from('clubs').select('id').eq('affiliated', true),
+      supabase.from('clubs').select('id, teams(count)').eq('affiliated', true),
       supabase.from('tournaments').select('id').order('id', { ascending: false }),
       supabase.from('profesores').select('id, updated_at'),
     ])
@@ -123,6 +123,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
   for (const item of clubs) {
     pages.push({ url: absoluteUrl(`/clubes/${item.id}`), priority: 0.6 })
+    // The team page is noindex while the club has no teams.
+    if ((one(item.teams)?.count ?? 0) > 0) {
+      pages.push({ url: absoluteUrl(`/clubes/${item.id}/equipos`), priority: 0.4 })
+    }
   }
   for (const item of profesores) {
     pages.push({ url: absoluteUrl(`/profesores/${item.id}`), lastModified: toDate(item.updated_at), priority: 0.4 })
