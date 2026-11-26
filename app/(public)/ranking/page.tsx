@@ -7,8 +7,13 @@ import {
   getCachedLatestRankingData,
   getCachedPublicRankingOptions,
 } from "@/lib/rankingStorage"
-import { normalizePlayer, selectPlayersPage, sortPlayersByRatingType } from "@/lib/rankingDisplay"
-import { TopRanking } from "@/components/home/top-ranking"
+import {
+  normalizePlayer,
+  RANKING_PAGE_SIZE,
+  selectPlayersPage,
+  sortPlayersByRatingType,
+} from "@/lib/rankingDisplay"
+import { RankingTable } from "./components/RankingTable"
 import { safe } from "@/lib/utils/safe"
 import type { Player } from "@/lib/rankingUtils"
 import { JsonLd } from "@/components/json-ld"
@@ -38,7 +43,12 @@ export default async function RankingPage() {
   ])
 
   const initialPlayers: Player[] = latest.players.map(normalizePlayer)
-  const topPlayers = selectPlayersPage(sortPlayersByRatingType(initialPlayers, 'standard'), { activeFilter: 'active', pageSize: 10 }).players
+  // The list's default view: active players by standard rating, first page.
+  const firstPage = selectPlayersPage(sortPlayersByRatingType(initialPlayers, 'standard'), {
+    activeFilter: 'active',
+    pageSize: RANKING_PAGE_SIZE,
+  })
+  const rankingName = availableRankings[0]?.displayName
 
   return (
     <>
@@ -51,11 +61,15 @@ export default async function RankingPage() {
       <PageHero title="Ranking" />
       <section className="w-full pt-6 pb-12 md:pt-8 md:pb-16">
         {/* PlayerList reads search params, so it renders on the client only; the
-            fallback puts the top 10 in the HTML for crawlers that don't run JS. */}
+            fallback puts its default first page in the HTML for crawlers that
+            don't run JS. */}
         <Suspense
           fallback={
             <div className="container px-4 md:px-6">
-              <TopRanking players={topPlayers} />
+              <p className="mb-3 text-sm text-muted-foreground">
+                {firstPage.total} jugadores activos{rankingName && ` · Ranking ${rankingName}`}
+              </p>
+              <RankingTable players={firstPage.players} sortBy="standard" />
             </div>
           }
         >

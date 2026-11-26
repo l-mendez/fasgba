@@ -67,6 +67,9 @@ export interface SelectPlayersOptions {
  * Applies the active filter (renumbering positions within it), then the search,
  * then paginates an (already sorted) player list.
  */
+// Players per page on /ranking (client list and its server-rendered fallback).
+export const RANKING_PAGE_SIZE = 50
+
 export function selectPlayersPage(
   players: Player[],
   { search = '', activeFilter = 'all', page = 1, pageSize = 50 }: SelectPlayersOptions = {}
