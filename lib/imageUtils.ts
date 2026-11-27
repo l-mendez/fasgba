@@ -194,10 +194,19 @@ export async function deleteNewsImages(newsId: number): Promise<void> {
   }
 }
 
+// An image column should hold a bucket path or a URL. Legacy rows can hold an
+// inline `data:` URI instead (tournament 49 has a 380 KB one): prefixing it with
+// the bucket URL yields a broken og:image and JSON-LD image, and passing it to
+// the client ships it in the HTML several times over. Treat those as no image.
+export function isImageReference(value: string | null | undefined): value is string {
+  return !!value && !value.startsWith('data:')
+}
+
 // Public URL of a path in the "images" bucket, built as a plain string (same
 // format as supabase.storage.getPublicUrl) so no Supabase client is created per
 // call. Works in both server and client contexts.
 function buildPublicImageUrl(imagePath: string): string | null {
+  if (!isImageReference(imagePath)) return null
   // Already a full URL: return as is
   if (imagePath.startsWith('http')) return imagePath
 
