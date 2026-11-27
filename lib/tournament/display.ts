@@ -1,4 +1,5 @@
 import { formatArgentinaCalendarDate } from '@/lib/dateUtils'
+import { isImageReference } from '@/lib/imageUtils'
 import type { TournamentStatus, TournamentStatusFilter } from '@/lib/utils/constants'
 import type { Tournament, TournamentDisplay, TournamentWithDates } from './types'
 
@@ -41,6 +42,8 @@ export function transformTournamentToDisplay(tournamentWithDates: TournamentWith
 
   return {
     ...tournament,
+    // No public page renders the image itself; only keep a usable reference.
+    image: isImageReference(tournament.image) ? tournament.image : null,
     start_date: startDate,
     end_date: endDate,
     formatted_start_date: formatDate(startDate),
