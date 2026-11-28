@@ -11,6 +11,7 @@ import TournamentClient from "@/components/tournament/tournament-client"
 import { Metadata } from "next"
 import { JsonLd } from "@/components/json-ld"
 import { getImageUrlNullable } from "@/lib/imageUtils"
+import { findLocality } from "@/lib/partidos"
 import type { TournamentDisplay } from "@/lib/tournament/types"
 import {
   absoluteUrl,
@@ -112,6 +113,20 @@ export default async function TournamentPage({ params }: PageProps) {
 const isoDay = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
+// Venue fields are free text: only text with a street number is a street
+// address ("Sedes rotativas" or a bare venue name is not), and the locality is
+// the known one named in the address, else in the venue name.
+function tournamentAddress({ place, location }: TournamentDisplay): JsonLdObject {
+  const street = location || place
+  return {
+    '@type': 'PostalAddress',
+    streetAddress: street && /\d/.test(street) ? street : undefined,
+    addressLocality: (findLocality(location) ?? findLocality(place))?.locality,
+    addressRegion: 'Buenos Aires',
+    addressCountry: 'AR',
+  }
+}
+
 function tournamentJsonLd(tournament: TournamentDisplay): JsonLdObject {
   const image = getImageUrlNullable(tournament.image)
   return {
@@ -129,12 +144,7 @@ function tournamentJsonLd(tournament: TournamentDisplay): JsonLdObject {
     location: {
       '@type': 'Place',
       name: tournament.place || tournament.location || FEDERATION_FULL_NAME,
-      address: {
-        '@type': 'PostalAddress',
-        streetAddress: tournament.location || tournament.place || undefined,
-        addressRegion: 'Buenos Aires',
-        addressCountry: 'AR',
-      },
+      address: tournamentAddress(tournament),
     },
     organizer: organizationRef,
   }
